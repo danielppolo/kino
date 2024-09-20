@@ -1,0 +1,11 @@
+name,icon,type,user_id
+Groceries,apple,expense,e10f8960-884e-493e-a4fc-381f629bf3b7
+Transport,car,expense,e10f8960-884e-493e-a4fc-381f629bf3b7
+Entertainment,film,expense,e10f8960-884e-493e-a4fc-381f629bf3b7
+Healthcare,heart-pulse,expense,e10f8960-884e-493e-a4fc-381f629bf3b7
+Utilities,lightbulb,expense,e10f8960-884e-493e-a4fc-381f629bf3b7
+Salary,briefcase,income,e10f8960-884e-493e-a4fc-381f629bf3b7
+Investments,briefcase,income,e10f8960-884e-493e-a4fc-381f629bf3b7
+Gift,briefcase,income,e10f8960-884e-493e-a4fc-381f629bf3b7
+Freelancing,biceps-flexed,income,e10f8960-884e-493e-a4fc-381f629bf3b7
+Bonuses,party-popper,income,e10f8960-884e-493e-a4fc-381f629bf3b7
