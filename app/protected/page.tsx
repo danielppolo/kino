@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 
+import DateRangeFilter from "@/components/shared/date-range-filter";
 import TransactionForm from "@/components/shared/transaction-form";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -16,13 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Icon } from "@/components/ui/icon";
-import { Label } from "@/components/ui/label";
 import { Pagination } from "@/components/ui/pagination";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Table,
   TableBody,
@@ -32,16 +26,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { createClient } from "@/utils/supabase/client";
+import { Category, Intention, Transaction } from "@/utils/supabase/types";
 // import { BarChart, LineChart } from "@/components/ui/charts"
 
 const ITEMS_PER_PAGE = 10;
 
 export default function TransactionDashboard() {
   const supabase = createClient();
-  const [transactions, setTransactions] = useState([]);
-  const [intentions, setIntentions] = useState([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [intentions, setIntentions] = useState<Intention[]>([]);
   const [categoriesDictionary, setCategoriesDictionary] = useState({});
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [dateRange, setDateRange] = useState({ start: null, end: null });
@@ -237,99 +232,7 @@ export default function TransactionDashboard() {
         </Card>
       </div>
 
-      <div className="mb-6">
-        <Label>Date Range</Label>
-        <div className="flex space-x-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline">
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateRange.start ? (
-                  format(dateRange.start, "PPP")
-                ) : (
-                  <span>Start date</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={dateRange.start}
-                onSelect={(date) =>
-                  handleDateRangeChange({ ...dateRange, start: date })
-                }
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline">
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateRange.end ? (
-                  format(dateRange.end, "PPP")
-                ) : (
-                  <span>End date</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={dateRange.end}
-                onSelect={(date) =>
-                  handleDateRangeChange({ ...dateRange, end: date })
-                }
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-          <Button
-            onClick={() => handleDateRangeChange({ start: null, end: null })}
-          >
-            Reset
-          </Button>
-        </div>
-        <div className="flex space-x-2 mt-2">
-          <Button
-            onClick={() =>
-              handleDateRangeChange({
-                start: new Date(new Date().setDate(new Date().getDate() - 7)),
-                end: new Date(),
-              })
-            }
-          >
-            Last Week
-          </Button>
-          <Button
-            onClick={() =>
-              handleDateRangeChange({
-                start: new Date(new Date().setMonth(new Date().getMonth() - 1)),
-                end: new Date(),
-              })
-            }
-          >
-            Last Month
-          </Button>
-          <Button
-            onClick={() =>
-              handleDateRangeChange({
-                start: new Date(
-                  new Date().setFullYear(new Date().getFullYear() - 1),
-                ),
-                end: new Date(),
-              })
-            }
-          >
-            Last Year
-          </Button>
-          <Button
-            onClick={() => handleDateRangeChange({ start: null, end: null })}
-          >
-            All Time
-          </Button>
-        </div>
-      </div>
+      <DateRangeFilter />
 
       <Table>
         <TableHeader>

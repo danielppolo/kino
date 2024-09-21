@@ -2,19 +2,31 @@ import { useForm } from "react-hook-form";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 
-import { Button } from "../ui/button";
-import { Calendar } from "../ui/calendar";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
-
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { Database } from "@/utils/supabase/database.types";
 
 interface TransactionFormProps {
@@ -30,142 +42,187 @@ const TransactionForm = ({
   categories,
   onSubmit,
 }: TransactionFormProps) => {
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors },
-  } = useForm<Database["public"]["Tables"]["transactions"]["Insert"]>({
+  const form = useForm<Database["public"]["Tables"]["transactions"]["Insert"]>({
     defaultValues: {
       wallet_id: "bfcf3a6d-8bbb-4aa6-a9fe-4d2cffc38d4d",
     },
   });
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      {/* Category (Icon) */}
-      <div>
-        <Label htmlFor="category">Category</Label>
-        <Select onValueChange={(value) => setValue("category_id", value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select category" />
-          </SelectTrigger>
-          <SelectContent>
-            {categories.map((category) => (
-              <SelectItem key={category.id} value={category.id}>
-                {category.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {errors.category_id && (
-          <p className="text-red-500">Category is required</p>
-        )}
-      </div>
-
-      {/* Amount */}
-      <div>
-        <Label htmlFor="amount_cents">Amount</Label>
-        <Input
-          type="number"
-          id="amount_cents"
-          {...register("amount_cents", { required: true })}
-          placeholder="Enter amount"
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {/* Category */}
+        <FormField
+          control={form.control}
+          name="category_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Category</FormLabel>
+              <FormControl>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value ?? undefined}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-        {errors.amount_cents && (
-          <p className="text-red-500">Amount is required</p>
-        )}
-      </div>
 
-      {/* Description */}
-      <div>
-        <Label htmlFor="description">Description</Label>
-        <Input
-          type="text"
-          id="description"
-          {...register("description", { required: true })}
-          placeholder="Enter description"
+        {/* Amount */}
+        <FormField
+          control={form.control}
+          name="amount_cents"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Amount</FormLabel>
+              <FormControl>
+                <Input type="number" placeholder="Enter amount" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-        {errors.description && (
-          <p className="text-red-500">Description is required</p>
-        )}
-      </div>
 
-      {/* Date */}
-      <div>
-        <Label>Date</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline">
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {watch("date") ? (
-                format(watch("date"), "PPP")
-              ) : (
-                <span>Pick a date</span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar
-              mode="single"
-              selected={watch("date")}
-              onSelect={(date) => setValue("date", date)}
-              initialFocus
-            />
-          </PopoverContent>
-        </Popover>
-        {errors.date && <p className="text-red-500">Date is required</p>}
-      </div>
+        {/* Description */}
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Input type="text" placeholder="Enter description" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      {/* intention (Color) */}
-      <div>
-        <Label htmlFor="intention">intention</Label>
-        <Select onValueChange={(value) => setValue("intention_id", value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select intention" />
-          </SelectTrigger>
-          <SelectContent>
-            {intentions.map((intention) => (
-              <SelectItem key={intention.id} value={intention.id}>
-                <span
-                  className="mr-2"
-                  style={{
-                    backgroundColor: intention.color,
-                    width: 16,
-                    height: 16,
-                  }}
-                />
-                {intention.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {errors.intention_id && (
-          <p className="text-red-500">intention is required</p>
-        )}
-      </div>
+        {/* Date */}
+        <FormField
+          control={form.control}
+          name="date"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Date</FormLabel>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-[240px] pl-3 text-left font-normal",
+                        !field.value && "text-muted-foreground",
+                      )}
+                    >
+                      {field.value ? (
+                        format(field.value, "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={field.value}
+                    onSelect={field.onChange}
+                    disabled={(date) =>
+                      date > new Date() || date < new Date("1900-01-01")
+                    }
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <FormDescription>
+                This date is required for the transaction.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      {/* Currency */}
-      <div>
-        <Label htmlFor="currency">Currency</Label>
-        <Select onValueChange={(value) => setValue("currency", value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select currency" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="USD">USD</SelectItem>
-            <SelectItem value="EUR">EUR</SelectItem>
-            <SelectItem value="GBP">GBP</SelectItem>
-          </SelectContent>
-        </Select>
-        {errors.currency && (
-          <p className="text-red-500">Currency is required</p>
-        )}
-      </div>
+        {/* Intention */}
+        <FormField
+          control={form.control}
+          name="intention_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Intention</FormLabel>
+              <FormControl>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select intention" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {intentions.map((intention) => (
+                      <SelectItem key={intention.id} value={intention.id}>
+                        <span
+                          className="mr-2"
+                          style={{
+                            backgroundColor: intention.color,
+                            width: 16,
+                            height: 16,
+                          }}
+                        />
+                        {intention.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      <Button type="submit">Add Transaction</Button>
-    </form>
+        {/* Currency */}
+        <FormField
+          control={form.control}
+          name="currency"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Currency</FormLabel>
+              <FormControl>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                    <SelectItem value="GBP">GBP</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <Button type="submit">Add Transaction</Button>
+      </form>
+    </Form>
   );
 };
 
