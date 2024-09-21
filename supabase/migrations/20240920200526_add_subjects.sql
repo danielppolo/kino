@@ -1,13 +1,13 @@
 create table
-  public.categories (
+  public.subjects (
     id uuid not null default uuid_generate_v4 (),
     name text not null,
     icon text not null,
     type text null,
     user_id uuid null,
-    constraint categories_pkey primary key (id),
-    constraint categories_user_id_fkey foreign key (user_id) references auth.users (id) on delete cascade,
-    constraint categories_type_check check (
+    constraint subjects_pkey primary key (id),
+    constraint subjects_user_id_fkey foreign key (user_id) references auth.users (id) on delete cascade,
+    constraint subjects_type_check check (
       (
         type = any (array['income'::text, 'expense'::text])
       )

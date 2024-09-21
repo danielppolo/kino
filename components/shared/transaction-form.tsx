@@ -2,6 +2,9 @@ import { useForm } from "react-hook-form";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 
+import { Input } from "../ui/input";
+
+import SubjectPicker from "@/components/shared/subject-picker";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -13,7 +16,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
@@ -30,16 +32,16 @@ import { cn } from "@/lib/utils";
 import { Database } from "@/utils/supabase/database.types";
 
 interface TransactionFormProps {
-  intentions: Database["public"]["Tables"]["intentions"]["Row"][];
   categories: Database["public"]["Tables"]["categories"]["Row"][];
+  subjects: Database["public"]["Tables"]["subjects"]["Row"][];
   onSubmit: (
     data: Database["public"]["Tables"]["transactions"]["Insert"],
   ) => void;
 }
 
 const TransactionForm = ({
-  intentions,
   categories,
+  subjects,
   onSubmit,
 }: TransactionFormProps) => {
   const form = useForm<Database["public"]["Tables"]["transactions"]["Insert"]>({
@@ -51,29 +53,30 @@ const TransactionForm = ({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        {/* Category */}
+        {/* Subject */}
         <FormField
           control={form.control}
-          name="category_id"
+          name="subject_id"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Category</FormLabel>
+              <FormLabel>Subject</FormLabel>
               <FormControl>
-                <Select
+                <SubjectPicker options={subjects} {...field} />
+                {/* <Select
                   onValueChange={field.onChange}
                   defaultValue={field.value ?? undefined}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
+                    <SelectValue placeholder="Select subject" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
+                    {subjects.map((subject) => (
+                      <SelectItem key={subject.id} value={subject.id}>
+                        {subject.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
-                </Select>
+                </Select> */}
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -156,33 +159,33 @@ const TransactionForm = ({
           )}
         />
 
-        {/* Intention */}
+        {/* Category */}
         <FormField
           control={form.control}
-          name="intention_id"
+          name="category_id"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Intention</FormLabel>
+              <FormLabel>Category</FormLabel>
               <FormControl>
                 <Select
                   onValueChange={field.onChange}
                   defaultValue={field.value}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select intention" />
+                    <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {intentions.map((intention) => (
-                      <SelectItem key={intention.id} value={intention.id}>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
                         <span
                           className="mr-2"
                           style={{
-                            backgroundColor: intention.color,
+                            backgroundColor: category.color,
                             width: 16,
                             height: 16,
                           }}
                         />
-                        {intention.name}
+                        {category.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

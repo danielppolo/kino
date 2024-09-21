@@ -3,8 +3,12 @@
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { Plus } from "lucide-react";
+// import { BarChart, LineChart } from "@/components/ui/charts"
+import { useSearchParams } from "next/navigation";
 
+import CategoryFilter from "@/components/shared/category-filter";
 import DateRangeFilter from "@/components/shared/date-range-filter";
+import SubjectFilter from "@/components/shared/subject-filter";
 import TransactionForm from "@/components/shared/transaction-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,86 +30,89 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { createClient } from "@/utils/supabase/client";
-import { Category, Intention, Transaction } from "@/utils/supabase/types";
-// import { BarChart, LineChart } from "@/components/ui/charts"
+import { Database } from "@/utils/supabase/database.types";
+import { Category, Subject, Transaction } from "@/utils/supabase/types";
 
 const ITEMS_PER_PAGE = 10;
 
 export default function TransactionDashboard() {
+  const searchParams = useSearchParams();
+
   const supabase = createClient();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [intentions, setIntentions] = useState<Intention[]>([]);
-  const [categoriesDictionary, setCategoriesDictionary] = useState({});
   const [categories, setCategories] = useState<Category[]>([]);
+  const [subjectsDictionary, setSubjectsDictionary] = useState({});
+  const [subjects, setSubjects] = useState<Subject[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [dateRange, setDateRange] = useState({ start: null, end: null });
   const [stats, setStats] = useState({ total: 0, in: 0, out: 0 });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
+    const fetchTransactions = async () => {
+      let query = supabase
+        .from("transactions")
+        .select("*", { count: "exact" })
+        .range(
+          (currentPage - 1) * ITEMS_PER_PAGE,
+          currentPage * ITEMS_PER_PAGE - 1,
+        )
+        .order("date", { ascending: false });
+
+      const from = searchParams.get("from");
+      const to = searchParams.get("to");
+      if (from && to) {
+        query = query.gte("date", from).lte("date", to);
+      }
+
+      const { data, count, error } = await query;
+
+      if (error) {
+        console.error("Error fetching transactions:", error);
+      } else {
+        setTransactions(data);
+        setTotalPages(Math.ceil(count / ITEMS_PER_PAGE));
+        calculateStats(data);
+      }
+    };
+
     fetchTransactions();
-  }, [currentPage, dateRange]);
+  }, [currentPage, searchParams, supabase]);
 
   useEffect(() => {
-    fetchIntentions();
+    const fetchCategories = async () => {
+      let query = supabase.from("categories").select("*");
+
+      const { data, count, error } = await query;
+
+      if (error) {
+        console.error("Error fetching transactions:", error);
+      } else {
+        setCategories(data);
+      }
+    };
+
+    const fetchSubjects = async () => {
+      let query = supabase.from("subjects").select("*");
+
+      const { data, count, error } = await query;
+
+      if (error) {
+        console.error("Error fetching transactions:", error);
+      } else {
+        setSubjects(data);
+        setSubjectsDictionary(
+          data.reduce((acc, cat) => {
+            acc[cat.id] = cat.icon;
+            return acc;
+          }, {}),
+        );
+      }
+    };
+
     fetchCategories();
-  }, []);
-
-  const fetchTransactions = async () => {
-    let query = supabase
-      .from("transactions")
-      .select("*", { count: "exact" })
-      .range(
-        (currentPage - 1) * ITEMS_PER_PAGE,
-        currentPage * ITEMS_PER_PAGE - 1,
-      )
-      .order("date", { ascending: false });
-
-    if (dateRange.start && dateRange.end) {
-      query = query.gte("date", dateRange.start).lte("date", dateRange.end);
-    }
-
-    const { data, count, error } = await query;
-
-    if (error) {
-      console.error("Error fetching transactions:", error);
-    } else {
-      setTransactions(data);
-      setTotalPages(Math.ceil(count / ITEMS_PER_PAGE));
-      calculateStats(data);
-    }
-  };
-
-  const fetchIntentions = async () => {
-    let query = supabase.from("intentions").select("*");
-
-    const { data, count, error } = await query;
-
-    if (error) {
-      console.error("Error fetching transactions:", error);
-    } else {
-      setIntentions(data);
-    }
-  };
-
-  const fetchCategories = async () => {
-    let query = supabase.from("categories").select("*");
-
-    const { data, count, error } = await query;
-
-    if (error) {
-      console.error("Error fetching transactions:", error);
-    } else {
-      setCategories(data);
-      setCategoriesDictionary(
-        data.reduce((acc, cat) => {
-          acc[cat.id] = cat.icon;
-          return acc;
-        }, {}),
-      );
-    }
-  };
+    fetchSubjects();
+  }, [supabase]);
 
   const calculateStats = (data) => {
     const stats = data.reduce(
@@ -124,7 +131,9 @@ export default function TransactionDashboard() {
     setStats(stats);
   };
 
-  const handleAddTransaction = async (newTransaction) => {
+  const handleAddTransaction = async (
+    newTransaction: Database["public"]["Tables"]["transactions"]["Insert"],
+  ) => {
     const { data, error } = await supabase
       .from("transactions")
       .insert([newTransaction]);
@@ -133,13 +142,8 @@ export default function TransactionDashboard() {
       console.error("Error adding transaction:", error);
     } else {
       setIsDialogOpen(false);
-      fetchTransactions();
+      // fetchTransactions();
     }
-  };
-
-  const handleDateRangeChange = (range) => {
-    setDateRange(range);
-    setCurrentPage(1);
   };
 
   return (
@@ -157,8 +161,8 @@ export default function TransactionDashboard() {
               <DialogTitle>Add New Transaction</DialogTitle>
             </DialogHeader>
             <TransactionForm
-              intentions={intentions}
               categories={categories}
+              subjects={subjects}
               onSubmit={handleAddTransaction}
             />
           </DialogContent>
@@ -233,14 +237,16 @@ export default function TransactionDashboard() {
       </div>
 
       <DateRangeFilter />
+      <SubjectFilter options={subjects} />
+      <CategoryFilter options={categories} />
 
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Category</TableHead>
+            <TableHead>Subject</TableHead>
             <TableHead>Description</TableHead>
             <TableHead>Amount</TableHead>
-            <TableHead>Intention</TableHead>
+            <TableHead>Category</TableHead>
             <TableHead>Date</TableHead>
           </TableRow>
         </TableHeader>
@@ -248,9 +254,9 @@ export default function TransactionDashboard() {
           {transactions.map((transaction) => (
             <TableRow key={transaction.id}>
               <TableCell>
-                {transaction.category_id && (
+                {transaction.subject_id && (
                   <Icon
-                    name={categoriesDictionary[transaction.category_id]}
+                    name={subjectsDictionary[transaction.subject_id]}
                     color="red"
                     size={20}
                   />
@@ -260,7 +266,7 @@ export default function TransactionDashboard() {
               <TableCell>
                 {transaction.amount_cents.toFixed(2)} {transaction.currency}
               </TableCell>
-              <TableCell>{transaction.intention_id}</TableCell>
+              <TableCell>{transaction.category_id}</TableCell>
               <TableCell>{format(new Date(transaction.date), "PPP")}</TableCell>
             </TableRow>
           ))}

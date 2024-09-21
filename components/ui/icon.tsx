@@ -1,14 +1,22 @@
-import React from "react";
+import { ElementType } from "react";
 import { LucideProps } from "lucide-react";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import dynamic from "next/dynamic";
 
 interface IconProps extends LucideProps {
-  name: keyof typeof dynamicIconImports;
+  name: string;
 }
 
-export const Icon = ({ name, ...props }: IconProps) => {
-  const LucideIcon = dynamic(dynamicIconImports[name]);
+const loaded: Partial<Record<keyof typeof dynamicIconImports, ElementType>> =
+  {};
+
+const Icon = ({ name, ...props }: IconProps) => {
+  loaded[name as keyof typeof dynamicIconImports] ||= dynamic(
+    dynamicIconImports[name as keyof typeof dynamicIconImports],
+  );
+  const LucideIcon = loaded[name as keyof typeof dynamicIconImports];
 
   return <LucideIcon {...props} />;
 };
+
+export { Icon };

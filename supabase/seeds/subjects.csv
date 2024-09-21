@@ -1,0 +1,46 @@
+name,icon,user_id,type
+Groceries,shopping-cart,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Restaurants,utensils,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Coffee,coffee,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Cinema,film,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Alcohol,wine,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Gifts,gift,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Party,party-popper,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Internet,wifi,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Water,droplet,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Electricity,zap,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Gas,flame,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Clothing,shirt,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Gadgets,smartphone,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+"Streaming Services (Hulu, Amazon Prime)",tv-minimal-play,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Plants,leaf,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Rent,house-plug,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Home Cleaning,sparkles,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Home Maintenance,hammer,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Public Transportation,bus,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+"Taxis/Ridesharing (Uber, Lyft)",car,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Parking,circle-parking,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Airline Tickets,plane,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Health Insurance,briefcase-medical,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Gym Membership,biceps-flexed,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Fitness Equipment,dumbbell,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Medical Expenses,stethoscope,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Pharmacy,pill,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Furniture,sofa,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Therapy,brain,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Travel,plane,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Hotel Stays,bed,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Concerts/Events,music,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Haircuts/Salon,scissors,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+"Personal Care (Skincare, Beauty Products)",book-heart,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Hobbies,shapes,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Hiking,tent-tree,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Education Courses,blocks,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Books,book-open,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Museums / Exhibitions,amphora,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Performance,drama,7b02663c-ee54-4688-a743-5fec05d3e16f,expense
+Salary,hand-coins,7b02663c-ee54-4688-a743-5fec05d3e16f,income
+Freelance,coins,7b02663c-ee54-4688-a743-5fec05d3e16f,income
+Savings,piggy-bank,7b02663c-ee54-4688-a743-5fec05d3e16f,income
+Investments,trending-up,7b02663c-ee54-4688-a743-5fec05d3e16f,income
+Taxes,calculator,7b02663c-ee54-4688-a743-5fec05d3e16f,income

@@ -1,49 +1,42 @@
 "use client";
 
 import { useState } from "react";
-import { add, format, sub } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { add, sub } from "date-fns";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { DatePickerWithRange } from "../ui/date-picker";
+
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 
 const DateRangeFilter = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  // Initialize dateRange from search params or default to null
   const [dateRange, setDateRange] = useState({
-    start: searchParams.get("start")
-      ? new Date(searchParams.get("start") as string)
+    from: searchParams.get("from")
+      ? new Date(searchParams.get("from") as string)
       : null,
-    end: searchParams.get("end")
-      ? new Date(searchParams.get("end") as string)
+    to: searchParams.get("to")
+      ? new Date(searchParams.get("to") as string)
       : null,
   });
 
   const updateSearchParams = (newRange: {
-    start: Date | null;
-    end: Date | null;
+    from: Date | null;
+    to: Date | null;
   }) => {
     const params = new URLSearchParams(searchParams.toString());
 
-    // Set start and end in the URL
-    if (newRange.start) {
-      params.set("start", newRange.start.toISOString());
+    // Set from and to in the URL
+    if (newRange.from) {
+      params.set("from", newRange.from.toISOString());
     } else {
-      params.delete("start");
+      params.delete("from");
     }
 
-    if (newRange.end) {
-      params.set("end", newRange.end.toISOString());
+    if (newRange.to) {
+      params.set("to", newRange.to.toISOString());
     } else {
-      params.delete("end");
+      params.delete("to");
     }
 
     // Push new URL with updated query parameters
@@ -52,31 +45,31 @@ const DateRangeFilter = () => {
   };
 
   const handleDateRangeChange = (newRange: {
-    start: Date | null;
-    end: Date | null;
+    from: Date | null;
+    to: Date | null;
   }) => {
     setDateRange(newRange);
     updateSearchParams(newRange);
   };
 
   const handlePreviousPeriod = () => {
-    if (dateRange.start && dateRange.end) {
-      const diff = dateRange.end.getTime() - dateRange.start.getTime();
+    if (dateRange.from && dateRange.to) {
+      const diff = dateRange.to.getTime() - dateRange.from.getTime();
       const seconds = diff / 1000;
       handleDateRangeChange({
-        start: sub(dateRange.start, { seconds }),
-        end: sub(dateRange.end, { seconds }),
+        from: sub(dateRange.from, { seconds }),
+        to: sub(dateRange.to, { seconds }),
       });
     }
   };
 
   const handleNextPeriod = () => {
-    if (dateRange.start && dateRange.end) {
-      const diff = dateRange.end.getTime() - dateRange.start.getTime();
+    if (dateRange.from && dateRange.to) {
+      const diff = dateRange.to.getTime() - dateRange.from.getTime();
       const seconds = diff / 1000;
       handleDateRangeChange({
-        start: add(dateRange.start, { seconds }),
-        end: add(dateRange.end, { seconds }),
+        from: add(dateRange.from, { seconds }),
+        to: add(dateRange.to, { seconds }),
       });
     }
   };
@@ -88,8 +81,8 @@ const DateRangeFilter = () => {
         <Button
           onClick={() =>
             handleDateRangeChange({
-              start: sub(new Date(), { days: 7 }),
-              end: new Date(),
+              from: sub(new Date(), { days: 7 }),
+              to: new Date(),
             })
           }
         >
@@ -98,8 +91,8 @@ const DateRangeFilter = () => {
         <Button
           onClick={() =>
             handleDateRangeChange({
-              start: sub(new Date(), { months: 1 }),
-              end: new Date(),
+              from: sub(new Date(), { months: 1 }),
+              to: new Date(),
             })
           }
         >
@@ -108,41 +101,26 @@ const DateRangeFilter = () => {
         <Button
           onClick={() =>
             handleDateRangeChange({
-              start: sub(new Date(), { years: 1 }),
-              end: new Date(),
+              from: sub(new Date(), { years: 1 }),
+              to: new Date(),
             })
           }
         >
           Year
         </Button>
-        <Button
-          onClick={() => handleDateRangeChange({ start: null, end: null })}
-        >
+        <Button onClick={() => handleDateRangeChange({ from: null, to: null })}>
           All Time
         </Button>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline">
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {dateRange.start && dateRange.end
-                ? `${format(dateRange.start, "PPP")} - ${format(dateRange.end, "PPP")}`
-                : "Custom"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar
-              mode="range"
-              selected={dateRange}
-              onSelect={(range) =>
-                handleDateRangeChange({
-                  start: range?.from || null,
-                  end: range?.to || null,
-                })
-              }
-              initialFocus
-            />
-          </PopoverContent>
-        </Popover>
+
+        <DatePickerWithRange
+          selected={dateRange}
+          onSelect={(range) => {
+            handleDateRangeChange({
+              from: range?.from || null,
+              to: range?.to || null,
+            });
+          }}
+        />
       </div>
 
       {/* Pagination Buttons */}
