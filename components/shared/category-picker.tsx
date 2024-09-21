@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
+
 import Category from "./category";
 
 import { Button } from "@/components/ui/button";
@@ -8,16 +10,19 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { createClient } from "@/utils/supabase/client";
+import { listCategories } from "@/utils/supabase/queries";
 import { Category as CategoryType } from "@/utils/supabase/types";
 
 interface CategoryPickerProps {
-  options: CategoryType[];
-  name: string;
+  defaultValue?: CategoryType;
   onChange: (id: string) => void;
 }
 
-const CategoryPicker = ({ options, onChange }: CategoryPickerProps) => {
-  const [selected, setSelected] = useState<CategoryType | null>(null);
+const CategoryPicker = ({ onChange, defaultValue }: CategoryPickerProps) => {
+  const supabase = createClient();
+  const { data: categories } = useQuery(listCategories(supabase));
+  const [selected, setSelected] = useState(defaultValue);
 
   return (
     <Popover>
@@ -34,7 +39,7 @@ const CategoryPicker = ({ options, onChange }: CategoryPickerProps) => {
       </PopoverTrigger>
       <PopoverContent className="w-full">
         <div className="grid grid-cols-8 gap-2 p-2">
-          {options.map((subject) => (
+          {categories?.map((subject) => (
             <Category
               key={subject.id}
               category={subject}

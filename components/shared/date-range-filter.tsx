@@ -4,7 +4,7 @@ import { useState } from "react";
 import { add, sub } from "date-fns";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { DatePickerWithRange } from "../ui/date-picker";
+import { DaterRangePicker } from "../ui/date-range-picker";
 
 import { Button } from "@/components/ui/button";
 
@@ -112,7 +112,7 @@ const DateRangeFilter = () => {
           All Time
         </Button>
 
-        <DatePickerWithRange
+        <DaterRangePicker
           selected={dateRange}
           onSelect={(range) => {
             handleDateRangeChange({

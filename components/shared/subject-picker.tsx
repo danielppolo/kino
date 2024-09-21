@@ -1,6 +1,7 @@
 import { useState } from "react";
 
-import { Icon } from "../ui/icon";
+import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
+
 import Subject from "./subject";
 
 import { Button } from "@/components/ui/button";
@@ -9,16 +10,19 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { createClient } from "@/utils/supabase/client";
+import { listSubjects } from "@/utils/supabase/queries";
 import { Subject as SubjectType } from "@/utils/supabase/types";
 
 interface SubjectPickerProps {
-  options: SubjectType[];
-  name: string;
+  defaultValue?: SubjectType;
   onChange: (id: string) => void;
 }
 
-const SubjectPicker = ({ options, onChange }: SubjectPickerProps) => {
-  const [selected, setSelected] = useState<SubjectType | null>(null);
+const SubjectPicker = ({ onChange, defaultValue }: SubjectPickerProps) => {
+  const [selected, setSelected] = useState(defaultValue);
+  const supabase = createClient();
+  const { data: subjects } = useQuery(listSubjects(supabase));
 
   return (
     <Popover>
@@ -35,7 +39,7 @@ const SubjectPicker = ({ options, onChange }: SubjectPickerProps) => {
       </PopoverTrigger>
       <PopoverContent className="w-full">
         <div className="grid grid-cols-8 gap-2 p-2">
-          {options.map((subject) => (
+          {subjects?.map((subject) => (
             <Subject
               key={subject.id}
               subject={subject}

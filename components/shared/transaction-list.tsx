@@ -1,4 +1,21 @@
+"use client";
+
 import { format } from "date-fns";
+import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
+
+import {
+  useQuery,
+  useUpdateMutation,
+} from "@supabase-cache-helpers/postgrest-react-query";
+
+import { DaterPicker } from "../ui/date-picker";
+import { AmountInput } from "./amount-input";
+import Category from "./category";
+import CategoryPicker from "./category-picker";
+import { DescriptionInput } from "./description-input";
+import Subject from "./subject";
+import SubjectPicker from "./subject-picker";
 
 import {
   Table,
@@ -8,15 +25,71 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { createClient } from "@/utils/supabase/client";
+import { Database } from "@/utils/supabase/database.types";
+import {
+  listCategories,
+  listSubjects,
+  listTransactions,
+} from "@/utils/supabase/queries";
 import { Transaction } from "@/utils/supabase/types";
 
-interface TransactionListProps {
-  transactions?: Transaction[];
-}
+export default function TransactionList() {
+  const searchParams = useSearchParams();
+  const supabase = createClient();
+  const params = Object.fromEntries(searchParams.entries());
+  const { data } = useQuery(listTransactions(supabase, params));
+  const { data: categories } = useQuery(listCategories(supabase), {
+    select(res) {
+      const data = res.data?.reduce((acc, cat) => {
+        acc[cat.id] = cat;
+        return acc;
+      }, {});
+      return { ...res, data };
+    },
+  });
+  const { data: subjects } = useQuery(listSubjects(supabase), {
+    select(res) {
+      const data = res.data?.reduce((acc, subject) => {
+        acc[subject.id] = subject;
+        return acc;
+      }, {});
+      return { ...res, data };
+    },
+  });
+  const { mutateAsync: update } = useUpdateMutation(
+    supabase.from("transactions"),
+    ["id"],
+    "*",
+    {
+      onSuccess: () => console.log("Success!"),
+    },
+  );
 
-export default async function TransactionList({
-  transactions,
-}: TransactionListProps) {
+  const onChange = async (
+    transaction: Transaction,
+    newTransaction: Database["public"]["Tables"]["transactions"]["Update"],
+  ) => {
+    const updatedFields = Object.keys(newTransaction);
+    const hasChanges = updatedFields.some(
+      (field) => newTransaction[field] !== transaction[field],
+    );
+
+    if (!hasChanges) {
+      return;
+    }
+
+    try {
+      const data = await update({
+        ...transaction,
+        ...newTransaction,
+      });
+      toast.success("Transaction updated!");
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
   return (
     <Table>
       <TableHeader>
@@ -29,24 +102,50 @@ export default async function TransactionList({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {transactions?.map((transaction) => (
+        {data?.map((transaction) => (
           <TableRow key={transaction.id}>
             <TableCell>
-              {/* {transaction.subject_id && (
-                <Icon
-                  name={subjectsDictionary[]}
-                  color="red"
-                  size={20}
-                />
-              )} */}
-              {transaction.subject_id}
+              <SubjectPicker
+                defaultValue={subjects[transaction.subject_id]}
+                onChange={(id: string) => {
+                  onChange(transaction, { subject_id: id });
+                }}
+              />
             </TableCell>
-            <TableCell>{transaction.description}</TableCell>
             <TableCell>
-              {transaction.amount_cents.toFixed(2)} {transaction.currency}
+              <DescriptionInput
+                defaultValue={transaction.description}
+                onBlur={(event) => {
+                  onChange(transaction, { description: event.target.value });
+                }}
+              />
             </TableCell>
-            <TableCell>{transaction.category_id}</TableCell>
-            <TableCell>{format(new Date(transaction.date), "PPP")}</TableCell>
+            <TableCell>
+              <AmountInput
+                defaultValue={transaction.amount_cents}
+                onBlur={(event) => {
+                  onChange(transaction, {
+                    amount_cents: Number(event.target.value),
+                  });
+                }}
+              />
+            </TableCell>
+            <TableCell>
+              <CategoryPicker
+                defaultValue={categories[transaction.category_id]}
+                onChange={(id: string) => {
+                  onChange(transaction, { category_id: id });
+                }}
+              />
+            </TableCell>
+            <TableCell>
+              <DaterPicker
+                value={new Date(transaction.date)}
+                onChange={(newDate: Date) => {
+                  onChange(transaction, { date: newDate });
+                }}
+              />
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>

@@ -18,8 +18,8 @@ interface SubjectFilterProps {
 const SubjectFilter = (props: SubjectFilterProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = createClient();
   const value = searchParams.get("subject_id");
+  const supabase = createClient();
   const { data } = useQuery(listSubjects(supabase));
 
   const handleCategoryClick = (id: string) => {
