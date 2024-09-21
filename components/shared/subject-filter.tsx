@@ -2,20 +2,25 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
+
 import Subject from "./subject";
 
+import { createClient } from "@/utils/supabase/client";
+import { listSubjects } from "@/utils/supabase/queries";
 import { Subject as SubjectType } from "@/utils/supabase/types";
 
 interface SubjectFilterProps {
-  options: SubjectType[];
   value?: string;
   onChange?: (id: string) => void;
 }
 
-const SubjectFilter = ({ options }: SubjectFilterProps) => {
+const SubjectFilter = (props: SubjectFilterProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const supabase = createClient();
   const value = searchParams.get("subject_id");
+  const { data } = useQuery(listSubjects(supabase));
 
   const handleCategoryClick = (id: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -32,7 +37,7 @@ const SubjectFilter = ({ options }: SubjectFilterProps) => {
   };
   return (
     <div className="grid grid-cols-8 gap-2 p-2">
-      {options.map((subject) => (
+      {data?.map((subject) => (
         <Subject
           key={subject.id}
           subject={subject}

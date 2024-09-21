@@ -2,18 +2,24 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
+
 import Category from "./category";
 
+import { createClient } from "@/utils/supabase/client";
+import { listCategories } from "@/utils/supabase/queries";
 import { Category as CategoryType } from "@/utils/supabase/types";
 
 interface CategoryFilterProps {
-  options: CategoryType[];
+  options?: CategoryType[];
 }
 
-const CategoryFilter = ({ options }: CategoryFilterProps) => {
+const CategoryFilter = (props: CategoryFilterProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const value = searchParams.get("category_id");
+  const supabase = createClient();
+  const { data } = useQuery(listCategories(supabase));
 
   const handleCategoryClick = (id: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -31,7 +37,7 @@ const CategoryFilter = ({ options }: CategoryFilterProps) => {
 
   return (
     <div className="grid grid-cols-8 gap-2 p-2">
-      {options.map((item) => (
+      {data?.map((item) => (
         <Category
           key={item.id}
           category={item}

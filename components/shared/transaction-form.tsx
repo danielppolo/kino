@@ -32,8 +32,8 @@ import { cn } from "@/lib/utils";
 import { Database } from "@/utils/supabase/database.types";
 
 interface TransactionFormProps {
-  categories: Database["public"]["Tables"]["categories"]["Row"][];
-  subjects: Database["public"]["Tables"]["subjects"]["Row"][];
+  categories?: Database["public"]["Tables"]["categories"]["Row"][];
+  subjects?: Database["public"]["Tables"]["subjects"]["Row"][];
   onSubmit: (
     data: Database["public"]["Tables"]["transactions"]["Insert"],
   ) => void;
@@ -175,7 +175,7 @@ const TransactionForm = ({
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((category) => (
+                    {categories?.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
                         <span
                           className="mr-2"

@@ -7,6 +7,14 @@
   resolved "https://registry.yarnpkg.com/@alloc/quick-lru/-/quick-lru-5.2.0.tgz#7bf68b20c0a350f936915fcae06f58e32007ce30"
   integrity sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==
 
+"@babel/runtime-corejs3@^7.16.5":
+  version "7.25.6"
+  resolved "https://registry.yarnpkg.com/@babel/runtime-corejs3/-/runtime-corejs3-7.25.6.tgz#5e3facf42775cc95bcde95746e940061931286e4"
+  integrity sha512-Gz0Nrobx8szge6kQQ5Z5MX9L3ObqNwCQY1PSwSNzreFL7aHGxv8Fp2j3ETV6/wWdbiV+mW6OSm8oQhg3Tcsniw==
+  dependencies:
+    core-js-pure "^3.30.2"
+    regenerator-runtime "^0.14.0"
+
 "@eslint-community/eslint-utils@^4.2.0", "@eslint-community/eslint-utils@^4.4.0":
   version "4.4.0"
   resolved "https://registry.yarnpkg.com/@eslint-community/eslint-utils/-/eslint-utils-4.4.0.tgz#a23514e8fb9af1269d5f7788aa556798d61c6b59"
@@ -133,6 +141,11 @@
   dependencies:
     "@jridgewell/resolve-uri" "^3.1.0"
     "@jridgewell/sourcemap-codec" "^1.4.14"
+
+"@lukemorales/query-key-factory@^1.3.4":
+  version "1.3.4"
+  resolved "https://registry.yarnpkg.com/@lukemorales/query-key-factory/-/query-key-factory-1.3.4.tgz#d14001dbd781b024df93ca73bd785db590924486"
+  integrity sha512-A3frRDdkmaNNQi6mxIshsDk4chRXWoXa05US8fBo4kci/H+lVmujS6QrwQLLGIkNIRFGjMqp2uKjC4XsLdydRw==
 
 "@next/env@14.2.13":
   version "14.2.13"
@@ -566,6 +579,24 @@
   resolved "https://registry.yarnpkg.com/@rushstack/eslint-patch/-/eslint-patch-1.10.4.tgz#427d5549943a9c6fce808e39ea64dbe60d4047f1"
   integrity sha512-WJgX9nzTqknM393q1QJDJmoW28kUfEnybeTfVNcNAPnIx210RXm2DiXiHzfNPJNIUUb1tJnz/l4QGtJ30PgWmA==
 
+"@supabase-cache-helpers/postgrest-core@0.8.1":
+  version "0.8.1"
+  resolved "https://registry.yarnpkg.com/@supabase-cache-helpers/postgrest-core/-/postgrest-core-0.8.1.tgz#8d10125f17d46acacdd84bfecef1283a521c391e"
+  integrity sha512-WlmpQBBui54jQPQ9CwE7rdDcdPcMQLRl37aRJ+AEpEm47HMn0lJ/0cTuC8BT0aBMHK8BgOSx0dZ1QjgND1sB6g==
+  dependencies:
+    fast-equals "5.0.1"
+    flat "6.0.1"
+    merge-anything "5.1.7"
+    xregexp "5.1.1"
+
+"@supabase-cache-helpers/postgrest-react-query@^1.10.1":
+  version "1.10.1"
+  resolved "https://registry.yarnpkg.com/@supabase-cache-helpers/postgrest-react-query/-/postgrest-react-query-1.10.1.tgz#b51ec66f89af9211966fc0a7c233725ce3db13b2"
+  integrity sha512-BGGrEKue6mSH0el1iO1+iOSuyGqQxsHQ2B8dXWlDvYGmU7rmw5AGqXqDWngMBX68LcoHVJEogdbXP0pH4+1Tuw==
+  dependencies:
+    "@supabase-cache-helpers/postgrest-core" "0.8.1"
+    flat "6.0.1"
+
 "@supabase/auth-js@2.65.0":
   version "2.65.0"
   resolved "https://registry.yarnpkg.com/@supabase/auth-js/-/auth-js-2.65.0.tgz#e345c492f8cbc31cd6289968eae0e349ff0f39e9"
@@ -642,6 +673,59 @@
   dependencies:
     "@swc/counter" "^0.1.3"
     tslib "^2.4.0"
+
+"@tanstack/eslint-plugin-query@^5.57.1":
+  version "5.57.1"
+  resolved "https://registry.yarnpkg.com/@tanstack/eslint-plugin-query/-/eslint-plugin-query-5.57.1.tgz#e3bce3c69916a7bcdc0fbad5b197b8997af19270"
+  integrity sha512-HrfX4NqVseUZiRFBEOjS61bYIU5Qb9TeLEraOj0yMruCFIXz4reP62Cpq6BwZfMMASV7GfWAFiRvMbg7J/U05Q==
+  dependencies:
+    "@typescript-eslint/utils" "^8.3.0"
+
+"@tanstack/query-core@5.56.2":
+  version "5.56.2"
+  resolved "https://registry.yarnpkg.com/@tanstack/query-core/-/query-core-5.56.2.tgz#2def2fb0290cd2836bbb08afb0c175595bb8109b"
+  integrity sha512-gor0RI3/R5rVV3gXfddh1MM+hgl0Z4G7tj6Xxpq6p2I03NGPaJ8dITY9Gz05zYYb/EJq9vPas/T4wn9EaDPd4Q==
+
+"@tanstack/query-devtools@5.56.1":
+  version "5.56.1"
+  resolved "https://registry.yarnpkg.com/@tanstack/query-devtools/-/query-devtools-5.56.1.tgz#319c362dd19c6cfe005e74a8777baefa4a4f72de"
+  integrity sha512-xnp9jq/9dHfSCDmmf+A5DjbIjYqbnnUL2ToqlaaviUQGRTapXQ8J+GxusYUu1IG0vZMaWdiVUA4HRGGZYAUU+A==
+
+"@tanstack/query-persist-client-core@5.56.2":
+  version "5.56.2"
+  resolved "https://registry.yarnpkg.com/@tanstack/query-persist-client-core/-/query-persist-client-core-5.56.2.tgz#62b860aa9f9eadb290f5014c069094bb2293e73b"
+  integrity sha512-4OZ/rLAxCiQWaJCQjb5q1+UbSNIZclmF4pRMHrav1q2EUj3bjrqWzwTwdy2bUxrMTdY15ZKsFwCpAFGG4r+orA==
+  dependencies:
+    "@tanstack/query-core" "5.56.2"
+
+"@tanstack/query-sync-storage-persister@^5.56.2":
+  version "5.56.2"
+  resolved "https://registry.yarnpkg.com/@tanstack/query-sync-storage-persister/-/query-sync-storage-persister-5.56.2.tgz#64390933f210dacf149c2cbfb8d7a3fa442a0f2b"
+  integrity sha512-aNupwjlJgaDwYW01DThrblkBSarH9E8sKVl3ATafOLpZoGvDg5Jc4SVMCiMmOC1U+PRuRbt5bpS6a8lZnbiYaA==
+  dependencies:
+    "@tanstack/query-core" "5.56.2"
+    "@tanstack/query-persist-client-core" "5.56.2"
+
+"@tanstack/react-query-devtools@^5.56.2":
+  version "5.56.2"
+  resolved "https://registry.yarnpkg.com/@tanstack/react-query-devtools/-/react-query-devtools-5.56.2.tgz#c129cdb811927085434ea27691e4b7f605eb4128"
+  integrity sha512-7nINJtRZZVwhTTyDdMIcSaXo+EHMLYJu1S2e6FskvvD5prx87LlAXXWZDfU24Qm4HjshEtM5lS3HIOszNGblcw==
+  dependencies:
+    "@tanstack/query-devtools" "5.56.1"
+
+"@tanstack/react-query-persist-client@^5.56.2":
+  version "5.56.2"
+  resolved "https://registry.yarnpkg.com/@tanstack/react-query-persist-client/-/react-query-persist-client-5.56.2.tgz#4a12d38f109f8322b8b093a0bae59f333a9a060f"
+  integrity sha512-bVC0Io6ivxr3cJjOFYSeqPcwXyKBHWlhCPUuiriShvz+C4LPpYAGCExwkPke8Z8YV7RWiX0Le4kIbeIV9pzM+A==
+  dependencies:
+    "@tanstack/query-persist-client-core" "5.56.2"
+
+"@tanstack/react-query@^5.56.2":
+  version "5.56.2"
+  resolved "https://registry.yarnpkg.com/@tanstack/react-query/-/react-query-5.56.2.tgz#3a0241b9d010910905382f5e99160997b8795f91"
+  integrity sha512-SR0GzHVo6yzhN72pnRhkEFRAHMsUo5ZPzAxfTMvUxFIDVS6W9LYUp6nXW3fcHVdg0ZJl8opSH85jqahvm6DSVg==
+  dependencies:
+    "@tanstack/query-core" "5.56.2"
 
 "@types/json5@^0.0.29":
   version "0.0.29"
@@ -771,7 +855,7 @@
     semver "^7.6.0"
     ts-api-utils "^1.3.0"
 
-"@typescript-eslint/utils@8.6.0":
+"@typescript-eslint/utils@8.6.0", "@typescript-eslint/utils@^8.3.0":
   version "8.6.0"
   resolved "https://registry.yarnpkg.com/@typescript-eslint/utils/-/utils-8.6.0.tgz#175fe893f32804bed1e72b3364ea6bbe1044181c"
   integrity sha512-eNp9cWnYf36NaOVjkEUznf6fEgVy1TWpE0o52e4wtojjBx7D1UV2WAWGzR+8Y5lVFtpMLPwNbC67T83DWSph4A==
@@ -1142,6 +1226,11 @@ cookie@^0.6.0:
   version "0.6.0"
   resolved "https://registry.yarnpkg.com/cookie/-/cookie-0.6.0.tgz#2798b04b071b0ecbff0dbb62a505a8efa4e19051"
   integrity sha512-U71cyTamuh1CRNCfpGY6to28lxvNwPG4Guz/EVjgf3Jmzv0vlDp1atT9eS5dDjMYHucpHbWns6Lwf3BKz6svdw==
+
+core-js-pure@^3.30.2:
+  version "3.38.1"
+  resolved "https://registry.yarnpkg.com/core-js-pure/-/core-js-pure-3.38.1.tgz#e8534062a54b7221344884ba9b52474be495ada3"
+  integrity sha512-BY8Etc1FZqdw1glX0XNOq2FDwfrg/VGqoZOZCdaL+UmdaqDwQwYXkMJT4t6In+zfEfOJDcM9T0KdbBeJg8KKCQ==
 
 cross-spawn@^7.0.0, cross-spawn@^7.0.2:
   version "7.0.3"
@@ -1692,6 +1781,11 @@ fast-deep-equal@^3.1.1, fast-deep-equal@^3.1.3:
   resolved "https://registry.yarnpkg.com/fast-deep-equal/-/fast-deep-equal-3.1.3.tgz#3a7d56b559d6cbc3eb512325244e619a65c6c525"
   integrity sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==
 
+fast-equals@5.0.1:
+  version "5.0.1"
+  resolved "https://registry.yarnpkg.com/fast-equals/-/fast-equals-5.0.1.tgz#a4eefe3c5d1c0d021aeed0bc10ba5e0c12ee405d"
+  integrity sha512-WF1Wi8PwwSY7/6Kx0vKXtw8RwuSGoM1bvDaJbu7MxDlR1vovZjIAKrnzyrThgAjm6JDTu0fVgWXDlMGspodfoQ==
+
 fast-glob@^3.2.5, fast-glob@^3.3.0, fast-glob@^3.3.2:
   version "3.3.2"
   resolved "https://registry.yarnpkg.com/fast-glob/-/fast-glob-3.3.2.tgz#a904501e57cfdd2ffcded45e99a54fef55e46129"
@@ -1750,6 +1844,11 @@ flat-cache@^3.0.4:
     flatted "^3.2.9"
     keyv "^4.5.3"
     rimraf "^3.0.2"
+
+flat@6.0.1:
+  version "6.0.1"
+  resolved "https://registry.yarnpkg.com/flat/-/flat-6.0.1.tgz#09070cf918293b401577f20843edeadf4d3e8755"
+  integrity sha512-/3FfIa8mbrg3xE7+wAhWeV+bd7L2Mof+xtZb5dRDKZ+wDvYJK4WDYeIOuOhre5Yv5aQObZrlbRmk3RTSiuQBtw==
 
 flatted@^3.2.9:
   version "3.3.1"
@@ -2209,6 +2308,11 @@ is-weakset@^2.0.3:
     call-bind "^1.0.7"
     get-intrinsic "^1.2.4"
 
+is-what@^4.1.8:
+  version "4.1.16"
+  resolved "https://registry.yarnpkg.com/is-what/-/is-what-4.1.16.tgz#1ad860a19da8b4895ad5495da3182ce2acdd7a6f"
+  integrity sha512-ZhMwEosbFJkA0YhFnNDgTM4ZxDRsS6HqTo7qsZM08fehyRYIYa0yHu5R6mgo1n/8MgaPBXiPimPD77baVFYg+A==
+
 isarray@^2.0.5:
   version "2.0.5"
   resolved "https://registry.yarnpkg.com/isarray/-/isarray-2.0.5.tgz#8af1e4c1221244cc62459faf38940d4e644a5723"
@@ -2367,6 +2471,13 @@ lucide-react@^0.436.0:
   version "0.436.0"
   resolved "https://registry.yarnpkg.com/lucide-react/-/lucide-react-0.436.0.tgz#020c75031fbba5e01f7188991fa5a50195098f50"
   integrity sha512-N292bIxoqm1aObAg0MzFtvhYwgQE6qnIOWx/GLj5ONgcTPH6N0fD9bVq/GfdeC9ZORBXozt/XeEKDpiB3x3vlQ==
+
+merge-anything@5.1.7:
+  version "5.1.7"
+  resolved "https://registry.yarnpkg.com/merge-anything/-/merge-anything-5.1.7.tgz#94f364d2b0cf21ac76067b5120e429353b3525d7"
+  integrity sha512-eRtbOb1N5iyH0tkQDAoQ4Ipsp/5qSR79Dzrz8hEPxRX10RWWR/iQXdoKmBSRCThY1Fh5EhISDtpSc93fpxUniQ==
+  dependencies:
+    is-what "^4.1.8"
 
 merge2@^1.3.0:
   version "1.4.1"
@@ -2834,6 +2945,11 @@ reflect.getprototypeof@^1.0.4:
     get-intrinsic "^1.2.4"
     globalthis "^1.0.3"
     which-builtin-type "^1.1.3"
+
+regenerator-runtime@^0.14.0:
+  version "0.14.1"
+  resolved "https://registry.yarnpkg.com/regenerator-runtime/-/regenerator-runtime-0.14.1.tgz#356ade10263f685dda125100cd862c1db895327f"
+  integrity sha512-dYnhHh0nJoMfnkZs6GmmhFknAGRrLznOu5nc9ML+EJxGvrx6H7teuevqVqCuPcPK//3eDrrjQhehXVx9cnkGdw==
 
 regexp.prototype.flags@^1.5.1, regexp.prototype.flags@^1.5.2:
   version "1.5.2"
@@ -3468,6 +3584,13 @@ ws@^8.14.2:
   version "8.18.0"
   resolved "https://registry.yarnpkg.com/ws/-/ws-8.18.0.tgz#0d7505a6eafe2b0e712d232b42279f53bc289bbc"
   integrity sha512-8VbfWfHLbbwu3+N6OKsOMpBdT4kXPDDB9cJk2bJ6mh9ucxdlnNvH1e+roYkKmN9Nxw2yjz7VzeO9oOz2zJ04Pw==
+
+xregexp@5.1.1:
+  version "5.1.1"
+  resolved "https://registry.yarnpkg.com/xregexp/-/xregexp-5.1.1.tgz#6d3fe18819e3143aaf52f9284d34f49a59583ebb"
+  integrity sha512-fKXeVorD+CzWvFs7VBuKTYIW63YD1e1osxwQ8caZ6o1jg6pDAbABDG54LCIq0j5cy7PjRvGIq6sef9DYPXpncg==
+  dependencies:
+    "@babel/runtime-corejs3" "^7.16.5"
 
 yaml@^2.3.4:
   version "2.5.1"
