@@ -6,10 +6,6 @@ import {
 } from "@tanstack/react-query";
 import { persistQueryClient } from "@tanstack/react-query-persist-client";
 
-const localStoragePersister = createSyncStoragePersister({
-  storage: window.localStorage,
-});
-
 function makeQueryClient() {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -25,6 +21,13 @@ function makeQueryClient() {
       },
     },
   });
+
+  if (isServer) return queryClient;
+
+  const localStoragePersister = createSyncStoragePersister({
+    storage: window.localStorage,
+  });
+
   persistQueryClient({
     queryClient,
     persister: localStoragePersister,

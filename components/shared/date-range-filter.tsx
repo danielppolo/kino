@@ -5,8 +5,7 @@ import { add, sub } from "date-fns";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { DaterRangePicker } from "../ui/date-range-picker";
-
-import { Button } from "@/components/ui/button";
+import { PaginationNext, PaginationPrevious } from "../ui/pagination";
 
 const DateRangeFilter = () => {
   const router = useRouter();
@@ -75,59 +74,18 @@ const DateRangeFilter = () => {
   };
 
   return (
-    <div className="flex items-center justify-between space-x-2 mb-6">
-      {/* Preset Date Range Buttons */}
-      <div className="flex space-x-2">
-        <Button
-          onClick={() =>
-            handleDateRangeChange({
-              from: sub(new Date(), { days: 7 }),
-              to: new Date(),
-            })
-          }
-        >
-          Week
-        </Button>
-        <Button
-          onClick={() =>
-            handleDateRangeChange({
-              from: sub(new Date(), { months: 1 }),
-              to: new Date(),
-            })
-          }
-        >
-          Month
-        </Button>
-        <Button
-          onClick={() =>
-            handleDateRangeChange({
-              from: sub(new Date(), { years: 1 }),
-              to: new Date(),
-            })
-          }
-        >
-          Year
-        </Button>
-        <Button onClick={() => handleDateRangeChange({ from: null, to: null })}>
-          All Time
-        </Button>
-
-        <DaterRangePicker
-          selected={dateRange}
-          onSelect={(range) => {
-            handleDateRangeChange({
-              from: range?.from || null,
-              to: range?.to || null,
-            });
-          }}
-        />
-      </div>
-
-      {/* Pagination Buttons */}
-      <div className="flex space-x-2">
-        <Button onClick={handlePreviousPeriod}>Previous</Button>
-        <Button onClick={handleNextPeriod}>Next</Button>
-      </div>
+    <div className="w-full flex justify-center items-center gap-2 p-2">
+      <PaginationPrevious onClick={handlePreviousPeriod} />
+      <DaterRangePicker
+        selected={dateRange}
+        onSelect={(range) => {
+          handleDateRangeChange({
+            from: range?.from || null,
+            to: range?.to || null,
+          });
+        }}
+      />
+      <PaginationNext onClick={handleNextPeriod} />
     </div>
   );
 };

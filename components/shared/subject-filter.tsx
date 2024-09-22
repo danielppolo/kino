@@ -6,9 +6,9 @@ import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
 
 import Subject from "./subject";
 
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { createClient } from "@/utils/supabase/client";
 import { listSubjects } from "@/utils/supabase/queries";
-import { Subject as SubjectType } from "@/utils/supabase/types";
 
 interface SubjectFilterProps {
   value?: string;
@@ -22,7 +22,7 @@ const SubjectFilter = (props: SubjectFilterProps) => {
   const supabase = createClient();
   const { data } = useQuery(listSubjects(supabase));
 
-  const handleCategoryClick = (id: string) => {
+  const handleSubjectClick = (id: string) => {
     const params = new URLSearchParams(searchParams.toString());
 
     // Update the 'subject_id' search param
@@ -36,18 +36,22 @@ const SubjectFilter = (props: SubjectFilterProps) => {
     router.push(`?${params.toString()}`, { scroll: false });
   };
   return (
-    <div className="grid grid-cols-8 gap-2 p-2">
+    <ToggleGroup
+      type="single"
+      defaultValue={value ?? undefined}
+      onValueChange={handleSubjectClick}
+      className="flex justify-start overflow-x-auto no-scrollbar flex-nowrap gap-2 p-2"
+    >
       {data?.map((subject) => (
-        <Subject
+        <ToggleGroupItem
           key={subject.id}
-          subject={subject}
-          isSelected={value === subject.id}
-          onClick={() => {
-            handleCategoryClick(subject.id);
-          }}
-        />
+          value={subject.id}
+          aria-label="Toggle bold"
+        >
+          <Subject subject={subject} />
+        </ToggleGroupItem>
       ))}
-    </div>
+    </ToggleGroup>
   );
 };
 

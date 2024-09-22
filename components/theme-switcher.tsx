@@ -20,7 +20,7 @@ const ThemeSwitcher = () => {
     return null;
   }
 
-  const ICON_SIZE = 16;
+  const ICON_SIZE = 20;
 
   // Function to cycle between light, dark, and system themes
   const cycleTheme = () => {
@@ -31,7 +31,7 @@ const ThemeSwitcher = () => {
   };
 
   return (
-    <Button variant="ghost" size={"sm"} onClick={cycleTheme}>
+    <Button variant="ghost" onClick={cycleTheme}>
       {theme === "light" ? (
         <Sun key="light" size={ICON_SIZE} className={"text-muted-foreground"} />
       ) : theme === "dark" ? (

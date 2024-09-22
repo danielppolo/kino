@@ -2,8 +2,17 @@
 
 import * as React from "react";
 import { DateRange } from "react-day-picker";
-import { format } from "date-fns";
+import { format, sub } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./select";
+import { ToggleGroup, ToggleGroupItem } from "./toggle-group";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -22,6 +31,31 @@ export function DaterRangePicker({
   selected?: DateRange;
   onSelect: (range?: DateRange) => void;
 }) {
+  const handlePresetChange = (value: "week" | "month" | "year" | "all") => {
+    if (value === "week") {
+      return onSelect({
+        from: sub(new Date(), { days: 7 }),
+        to: new Date(),
+      });
+    }
+
+    if (value === "month") {
+      return onSelect({
+        from: sub(new Date(), { months: 1 }),
+        to: new Date(),
+      });
+    }
+
+    if (value === "year") {
+      return onSelect({
+        from: sub(new Date(), { years: 1 }),
+        to: new Date(),
+      });
+    }
+
+    onSelect({ from: null, to: null });
+  };
+
   return (
     <div className={cn("grid gap-2", className)}>
       <Popover>
@@ -49,7 +83,22 @@ export function DaterRangePicker({
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent
+          className="w-auto p-0"
+          align="center"
+          //  className="flex w-auto flex-col space-y-2 p-2"
+        >
+          <ToggleGroup
+            type="single"
+            // defaultValue="month"
+            onValueChange={handlePresetChange}
+            className="flex justify-center gap-2 m-2"
+          >
+            <ToggleGroupItem value="week">This week</ToggleGroupItem>
+            <ToggleGroupItem value="month">This month</ToggleGroupItem>
+            <ToggleGroupItem value="year">This year</ToggleGroupItem>
+            <ToggleGroupItem value="all">All time</ToggleGroupItem>
+          </ToggleGroup>
           <Calendar
             initialFocus
             mode="range"

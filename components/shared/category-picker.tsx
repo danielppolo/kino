@@ -1,7 +1,6 @@
-import { useState } from "react";
-
 import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
 
+import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import Category from "./category";
 
 import { Button } from "@/components/ui/button";
@@ -10,27 +9,32 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import useCategoryDictionary from "@/hooks/useCategoryDictionary";
 import { createClient } from "@/utils/supabase/client";
 import { listCategories } from "@/utils/supabase/queries";
-import { Category as CategoryType } from "@/utils/supabase/types";
 
 interface CategoryPickerProps {
-  defaultValue?: CategoryType;
+  defaultValue?: string;
+  value?: string;
   onChange: (id: string) => void;
 }
 
-const CategoryPicker = ({ onChange, defaultValue }: CategoryPickerProps) => {
+const CategoryPicker = ({
+  onChange,
+  defaultValue,
+  value,
+}: CategoryPickerProps) => {
   const supabase = createClient();
   const { data: categories } = useQuery(listCategories(supabase));
-  const [selected, setSelected] = useState(defaultValue);
+  const categoriesDict = useCategoryDictionary();
 
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="w-full">
-          {selected ? (
+        <Button variant="ghost">
+          {value && categoriesDict[value] ? (
             <>
-              <Category key={selected.id} category={selected} />
+              <Category category={categoriesDict[value]} size="small" />
             </>
           ) : (
             "Choose Icon"
@@ -38,18 +42,18 @@ const CategoryPicker = ({ onChange, defaultValue }: CategoryPickerProps) => {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full">
-        <div className="grid grid-cols-8 gap-2 p-2">
-          {categories?.map((subject) => (
-            <Category
-              key={subject.id}
-              category={subject}
-              onClick={() => {
-                setSelected(subject);
-                onChange(subject.id);
-              }}
-            />
+        <ToggleGroup
+          type="single"
+          defaultValue={defaultValue}
+          onValueChange={onChange}
+          className="grid grid-cols-8 gap-2 p-2"
+        >
+          {categories?.map((category) => (
+            <ToggleGroupItem key={category.id} value={category.id}>
+              <Category category={category} size="small" />
+            </ToggleGroupItem>
           ))}
-        </div>
+        </ToggleGroup>
       </PopoverContent>
     </Popover>
   );

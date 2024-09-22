@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
 
+import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import Subject from "./subject";
 
 import { Button } from "@/components/ui/button";
@@ -10,27 +11,33 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import useSubjectDictionary from "@/hooks/useSubjectDictionary";
 import { createClient } from "@/utils/supabase/client";
 import { listSubjects } from "@/utils/supabase/queries";
 import { Subject as SubjectType } from "@/utils/supabase/types";
 
 interface SubjectPickerProps {
-  defaultValue?: SubjectType;
+  defaultValue?: string;
+  value?: string;
   onChange: (id: string) => void;
 }
 
-const SubjectPicker = ({ onChange, defaultValue }: SubjectPickerProps) => {
-  const [selected, setSelected] = useState(defaultValue);
+const SubjectPicker = ({
+  onChange,
+  value,
+  defaultValue,
+}: SubjectPickerProps) => {
   const supabase = createClient();
   const { data: subjects } = useQuery(listSubjects(supabase));
+  const subjectDict = useSubjectDictionary();
 
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="w-full">
-          {selected ? (
+        <Button variant="ghost">
+          {value && subjectDict[value] ? (
             <>
-              <Subject key={selected.id} subject={selected} />
+              <Subject subject={subjectDict[value]} />
             </>
           ) : (
             "Choose Icon"
@@ -38,18 +45,18 @@ const SubjectPicker = ({ onChange, defaultValue }: SubjectPickerProps) => {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full">
-        <div className="grid grid-cols-8 gap-2 p-2">
+        <ToggleGroup
+          type="single"
+          defaultValue={defaultValue}
+          onValueChange={onChange}
+          className="grid grid-cols-8 gap-2 p-2"
+        >
           {subjects?.map((subject) => (
-            <Subject
-              key={subject.id}
-              subject={subject}
-              onClick={() => {
-                setSelected(subject);
-                onChange(subject.id);
-              }}
-            />
+            <ToggleGroupItem key={subject.id} value={subject.id}>
+              <Subject subject={subject} />
+            </ToggleGroupItem>
           ))}
-        </div>
+        </ToggleGroup>
       </PopoverContent>
     </Popover>
   );

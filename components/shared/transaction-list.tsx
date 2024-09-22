@@ -1,6 +1,6 @@
 "use client";
 
-import { format } from "date-fns";
+import { useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
@@ -8,13 +8,19 @@ import {
   useQuery,
   useUpdateMutation,
 } from "@supabase-cache-helpers/postgrest-react-query";
+import {
+  ColumnDef,
+  ColumnResizeDirection,
+  ColumnResizeMode,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
 
 import { DaterPicker } from "../ui/date-picker";
 import { AmountInput } from "./amount-input";
-import Category from "./category";
 import CategoryPicker from "./category-picker";
 import { DescriptionInput } from "./description-input";
-import Subject from "./subject";
 import SubjectPicker from "./subject-picker";
 
 import {
@@ -27,11 +33,7 @@ import {
 } from "@/components/ui/table";
 import { createClient } from "@/utils/supabase/client";
 import { Database } from "@/utils/supabase/database.types";
-import {
-  listCategories,
-  listSubjects,
-  listTransactions,
-} from "@/utils/supabase/queries";
+import { listTransactions } from "@/utils/supabase/queries";
 import { Transaction } from "@/utils/supabase/types";
 
 export default function TransactionList() {
@@ -39,113 +41,187 @@ export default function TransactionList() {
   const supabase = createClient();
   const params = Object.fromEntries(searchParams.entries());
   const { data } = useQuery(listTransactions(supabase, params));
-  const { data: categories } = useQuery(listCategories(supabase), {
-    select(res) {
-      const data = res.data?.reduce((acc, cat) => {
-        acc[cat.id] = cat;
-        return acc;
-      }, {});
-      return { ...res, data };
-    },
-  });
-  const { data: subjects } = useQuery(listSubjects(supabase), {
-    select(res) {
-      const data = res.data?.reduce((acc, subject) => {
-        acc[subject.id] = subject;
-        return acc;
-      }, {});
-      return { ...res, data };
-    },
-  });
+
   const { mutateAsync: update } = useUpdateMutation(
     supabase.from("transactions"),
     ["id"],
     "*",
     {
-      onSuccess: () => console.log("Success!"),
+      onSuccess: (data) => {
+        toast.success("Transaction updated!");
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
     },
   );
 
-  const onChange = async (
-    transaction: Transaction,
-    newTransaction: Database["public"]["Tables"]["transactions"]["Update"],
-  ) => {
-    const updatedFields = Object.keys(newTransaction);
-    const hasChanges = updatedFields.some(
-      (field) => newTransaction[field] !== transaction[field],
-    );
+  const onChange = useCallback(
+    async (
+      transaction: Transaction,
+      newTransaction: Database["public"]["Tables"]["transactions"]["Update"],
+    ) => {
+      const updatedFields = Object.keys(newTransaction);
+      const hasChanges = updatedFields.some(
+        (field) => newTransaction[field] !== transaction[field],
+      );
 
-    if (!hasChanges) {
-      return;
-    }
+      if (!hasChanges) {
+        return;
+      }
 
-    try {
-      const data = await update({
+      update({
         ...transaction,
         ...newTransaction,
       });
-      toast.success("Transaction updated!");
-    } catch (error) {
-      toast.error(error.message);
-    }
-  };
+    },
+    [update],
+  );
+
+  // Define the columns for the React Table
+  const columns: ColumnDef<Transaction>[] = useMemo(
+    () => [
+      {
+        accessorKey: "category_id",
+        header: "",
+        size: 20, // Set the column width to a smaller value
+        cell: ({ row }) => (
+          <CategoryPicker
+            value={row.original.category_id}
+            onChange={(id: string) => {
+              onChange(row.original, { category_id: id });
+            }}
+          />
+        ),
+      },
+      {
+        accessorKey: "subject_id",
+        header: "",
+        size: 20, // Set the column width to a smaller value
+        cell: ({ row }) => (
+          <SubjectPicker
+            value={row.original.subject_id}
+            onChange={(id: string) => {
+              onChange(row.original, { subject_id: id });
+            }}
+          />
+        ),
+      },
+      {
+        accessorKey: "amount_cents",
+        header: "Amount",
+        size: 50,
+        cell: ({ row }) => (
+          <AmountInput
+            variant="ghost"
+            defaultValue={row.original.amount_cents}
+            onBlur={(event) => {
+              onChange(row.original, {
+                amount_cents: Number(event.target.value),
+              });
+            }}
+          />
+        ),
+      },
+      {
+        accessorKey: "description",
+        header: "Description",
+        cell: ({ row }) => (
+          <DescriptionInput
+            variant="ghost"
+            defaultValue={row.original.description}
+            onBlur={(event) => {
+              onChange(row.original, { description: event.target.value });
+            }}
+          />
+        ),
+      },
+      {
+        accessorKey: "date",
+        header: "Date",
+        cell: ({ row }) => (
+          <DaterPicker
+            variant="ghost"
+            value={new Date(row.original.date)}
+            onChange={(newDate: Date) => {
+              onChange(row.original, { date: newDate });
+            }}
+          />
+        ),
+      },
+    ],
+    [onChange],
+  );
+
+  // Create the table instance using Tanstack Table
+  const table = useReactTable({
+    data: data || [],
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    columnResizeMode: "onEnd", // Can also use "onChange"
+    columnResizeDirection: "rtl",
+    enableColumnResizing: true,
+  });
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Subject</TableHead>
-          <TableHead>Description</TableHead>
-          <TableHead>Amount</TableHead>
-          <TableHead>Category</TableHead>
-          <TableHead>Date</TableHead>
-        </TableRow>
-      </TableHeader>
+    <Table className="table-fixed">
+      {/* <TableHeader>
+        {table.getHeaderGroups().map((headerGroup) => (
+          <TableRow key={headerGroup.id}>
+            {headerGroup.headers.map((header) => (
+              <TableHead
+                key={header.id}
+                {...{
+                  colSpan: header.colSpan,
+                  style: {
+                    width: header.getSize(),
+                    position: "relative",
+                  },
+                }}
+              >
+                {header.isPlaceholder
+                  ? null
+                  : flexRender(
+                      header.column.columnDef.header,
+                      header.getContext(),
+                    )}
+                <div
+                  {...{
+                    onDoubleClick: () => header.column.resetSize(),
+                    onMouseDown: header.getResizeHandler(),
+                    onTouchStart: header.getResizeHandler(),
+                    className: `resizer ${
+                      table.options.columnResizeDirection
+                    } ${header.column.getIsResizing() ? "isResizing" : ""}`,
+                    style: {
+                      transform: header.column.getIsResizing()
+                        ? `translateX(${
+                            (table.options.columnResizeDirection === "rtl"
+                              ? -1
+                              : 1) *
+                            (table.getState().columnSizingInfo.deltaOffset ?? 0)
+                          }px)`
+                        : "",
+                    },
+                  }}
+                />
+              </TableHead>
+            ))}
+          </TableRow>
+        ))}
+      </TableHeader> */}
       <TableBody>
-        {data?.map((transaction) => (
-          <TableRow key={transaction.id}>
-            <TableCell>
-              <SubjectPicker
-                defaultValue={subjects[transaction.subject_id]}
-                onChange={(id: string) => {
-                  onChange(transaction, { subject_id: id });
-                }}
-              />
-            </TableCell>
-            <TableCell>
-              <DescriptionInput
-                defaultValue={transaction.description}
-                onBlur={(event) => {
-                  onChange(transaction, { description: event.target.value });
-                }}
-              />
-            </TableCell>
-            <TableCell>
-              <AmountInput
-                defaultValue={transaction.amount_cents}
-                onBlur={(event) => {
-                  onChange(transaction, {
-                    amount_cents: Number(event.target.value),
-                  });
-                }}
-              />
-            </TableCell>
-            <TableCell>
-              <CategoryPicker
-                defaultValue={categories[transaction.category_id]}
-                onChange={(id: string) => {
-                  onChange(transaction, { category_id: id });
-                }}
-              />
-            </TableCell>
-            <TableCell>
-              <DaterPicker
-                value={new Date(transaction.date)}
-                onChange={(newDate: Date) => {
-                  onChange(transaction, { date: newDate });
-                }}
-              />
-            </TableCell>
+        {table.getRowModel().rows.map((row) => (
+          <TableRow key={row.id}>
+            {row.getVisibleCells().map((cell) => (
+              <TableCell
+                key={cell.id}
+                className="p-2"
+                style={{ width: cell.column.getSize() }}
+              >
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </TableCell>
+            ))}
           </TableRow>
         ))}
       </TableBody>

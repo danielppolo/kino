@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
 
+import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import Category from "./category";
 
 import { createClient } from "@/utils/supabase/client";
@@ -36,16 +37,17 @@ const CategoryFilter = (props: CategoryFilterProps) => {
   };
 
   return (
-    <div className="grid grid-cols-8 gap-2 p-2">
+    <ToggleGroup
+      type="single"
+      onValueChange={handleCategoryClick}
+      className="w-full overflow-x-auto no-scrollbar p-2"
+    >
       {data?.map((item) => (
-        <Category
-          key={item.id}
-          category={item}
-          isSelected={value === item.id}
-          onClick={() => handleCategoryClick(item.id)}
-        />
+        <ToggleGroupItem key={item.id} value={item.id} aria-label="Toggle bold">
+          <Category category={item} />
+        </ToggleGroupItem>
       ))}
-    </div>
+    </ToggleGroup>
   );
 };
 
