@@ -1,17 +1,6 @@
 {
-    "extends": "next/core-web-vitals",
-    "plugins": [ "simple-import-sort"],
-    "rules": {
-      "@next/next/no-img-element": "off",
-      "simple-import-sort/imports": [
-        "warn",
-        {
-          "groups": [
-            ["^react", "^[a-zA-Z_]+"],
-            ["^@?\\w"],
-            ["^\\."]
-          ]
-        }
-      ]
-    }
-  }
+  "extends": [
+    "next/core-web-vitals",
+    "next/typescript"
+  ]
+}

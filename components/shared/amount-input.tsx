@@ -12,13 +12,14 @@ export function AmountInput({
   ...props
 }: React.HTMLAttributes<HTMLInputElement> & {
   defaultValue?: number;
-  variant: "ghost" | "outline";
+  variant?: "ghost" | "outline";
 }) {
   return (
     <Input
       type="number"
+      min={0}
       placeholder="Enter amount"
-      defaultValue={defaultValue}
+      defaultValue={Math.abs(defaultValue || 0)}
       className={cn(
         clsx({
           "border-none": variant === "ghost",

@@ -1,12 +1,9 @@
 import { useForm } from "react-hook-form";
-import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { useInsertMutation } from "@supabase-cache-helpers/postgrest-react-query";
 
-import { DaterPicker } from "../ui/date-picker";
-import { Input } from "../ui/input";
+import DaterPicker from "../ui/date-picker";
 import { AmountInput } from "./amount-input";
 import CategoryPicker from "./category-picker";
 import { DescriptionInput } from "./description-input";
@@ -14,7 +11,6 @@ import WalletPicker from "./wallet-picker";
 
 import SubjectPicker from "@/components/shared/subject-picker";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Form,
   FormControl,
@@ -25,18 +21,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
 import { Database } from "@/utils/supabase/database.types";
 

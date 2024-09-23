@@ -1,4 +1,5 @@
 import simpleImportSort from "eslint-plugin-simple-import-sort";
+import unusedImports from "eslint-plugin-unused-imports";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -16,6 +17,7 @@ const compat = new FlatCompat({
 export default [...compat.extends("next/core-web-vitals"), {
     plugins: {
         "simple-import-sort": simpleImportSort,
+        "unused-imports": unusedImports,
     },
 
     rules: {
@@ -24,5 +26,16 @@ export default [...compat.extends("next/core-web-vitals"), {
         "simple-import-sort/imports": ["warn", {
             groups: [["^react", "^[a-zA-Z_]+"], ["^@?\\w"], ["^\\."]],
         }],
+        "no-unused-vars": "off",
+        "unused-imports/no-unused-imports": "error",
+        "unused-imports/no-unused-vars": [
+            "warn",
+            {
+                "vars": "all",
+                "varsIgnorePattern": "^_",
+                "args": "after-used",
+                "argsIgnorePattern": "^_"
+            }
+        ]
     },
 }];

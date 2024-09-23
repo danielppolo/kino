@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
@@ -10,27 +10,18 @@ import {
 } from "@supabase-cache-helpers/postgrest-react-query";
 import {
   ColumnDef,
-  ColumnResizeDirection,
-  ColumnResizeMode,
   flexRender,
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 
-import { DaterPicker } from "../ui/date-picker";
+import DaterPicker from "../ui/date-picker";
 import { AmountInput } from "./amount-input";
 import CategoryPicker from "./category-picker";
 import { DescriptionInput } from "./description-input";
 import SubjectPicker from "./subject-picker";
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { createClient } from "@/utils/supabase/client";
 import { Database } from "@/utils/supabase/database.types";
 import { listTransactions } from "@/utils/supabase/queries";
@@ -100,7 +91,7 @@ export default function TransactionList() {
         size: 20, // Set the column width to a smaller value
         cell: ({ row }) => (
           <SubjectPicker
-            value={row.original.subject_id}
+            value={row.original.subject_id ?? undefined}
             onChange={(id: string) => {
               onChange(row.original, { subject_id: id });
             }}
@@ -114,10 +105,10 @@ export default function TransactionList() {
         cell: ({ row }) => (
           <AmountInput
             variant="ghost"
-            defaultValue={row.original.amount_cents}
+            defaultValue={row.original.amount_cents / 100}
             onBlur={(event) => {
               onChange(row.original, {
-                amount_cents: Number(event.target.value),
+                amount_cents: Number(event.target.value) * 100,
               });
             }}
           />
@@ -129,7 +120,7 @@ export default function TransactionList() {
         cell: ({ row }) => (
           <DescriptionInput
             variant="ghost"
-            defaultValue={row.original.description}
+            defaultValue={row.original.description ?? undefined}
             onBlur={(event) => {
               onChange(row.original, { description: event.target.value });
             }}
@@ -142,9 +133,9 @@ export default function TransactionList() {
         cell: ({ row }) => (
           <DaterPicker
             variant="ghost"
-            value={new Date(row.original.date)}
-            onChange={(newDate: Date) => {
-              onChange(row.original, { date: newDate });
+            value={row.original.date}
+            onChange={(date: string) => {
+              onChange(row.original, { date });
             }}
           />
         ),

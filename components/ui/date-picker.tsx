@@ -16,15 +16,18 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-export function DaterPicker({
+function DaterPicker({
   value,
   variant = "outline",
   onChange,
 }: React.HTMLAttributes<HTMLInputElement> & {
-  value?: Date;
+  value?: string;
   variant?: "outline" | "ghost";
-  onChange: (date: Date) => void;
+  onChange: (date: string) => void;
 }) {
+  const handleChange = (date: Date) => {
+    onChange(format(date, "yyyy-MM-dd"));
+  };
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -35,18 +38,20 @@ export function DaterPicker({
             !value && "text-muted-foreground",
           )}
         >
-          {value ? format(value, "PP") : <span>Pick a date</span>}
+          {value ? format(new Date(value), "PP") : <span>Pick a date</span>}
           {variant === "outline" && <CalendarIcon className="w-4 h-4 ml-2" />}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
           mode="single"
-          selected={value}
-          onSelect={onChange}
+          selected={value ? new Date(value) : undefined}
+          onSelect={handleChange}
           initialFocus
         />
       </PopoverContent>
     </Popover>
   );
 }
+
+export default React.memo(DaterPicker);
