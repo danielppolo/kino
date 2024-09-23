@@ -14,7 +14,7 @@ const compat = new FlatCompat({
     allConfig: js.configs.all
 });
 
-export default [...compat.extends("next/core-web-vitals"), {
+const config = [...compat.extends("next/core-web-vitals", "next/typescript"), {
     plugins: {
         "simple-import-sort": simpleImportSort,
         "unused-imports": unusedImports,
@@ -39,3 +39,5 @@ export default [...compat.extends("next/core-web-vitals"), {
         ]
     },
 }];
+
+export default config
