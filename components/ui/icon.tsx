@@ -16,7 +16,7 @@ const Icon = ({ name, ...props }: IconProps) => {
   );
   const LucideIcon = loaded[name as keyof typeof dynamicIconImports];
 
-  return <LucideIcon {...props} />;
+  return LucideIcon ? <LucideIcon {...props} /> : null;
 };
 
 export { Icon };

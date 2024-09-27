@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
 
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
@@ -14,11 +12,10 @@ import {
 import useSubjectDictionary from "@/hooks/useSubjectDictionary";
 import { createClient } from "@/utils/supabase/client";
 import { listSubjects } from "@/utils/supabase/queries";
-import { Subject as SubjectType } from "@/utils/supabase/types";
 
 interface SubjectPickerProps {
   defaultValue?: string;
-  value?: string;
+  value?: string | null;
   onChange: (id: string) => void;
 }
 
@@ -34,7 +31,7 @@ const SubjectPicker = ({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost">
+        <Button variant="ghost" size="sm">
           {value && subjectDict[value] ? (
             <>
               <Subject subject={subjectDict[value]} />

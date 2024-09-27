@@ -31,7 +31,7 @@ const CategoryPicker = ({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost">
+        <Button variant="ghost" size="sm">
           {value && categoriesDict[value] ? (
             <>
               <Category category={categoriesDict[value]} size="small" />

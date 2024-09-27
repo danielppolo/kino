@@ -5,13 +5,6 @@ import { DateRange } from "react-day-picker";
 import { format, sub } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./select";
 import { ToggleGroup, ToggleGroupItem } from "./toggle-group";
 
 import { Button } from "@/components/ui/button";
@@ -27,7 +20,7 @@ export function DaterRangePicker({
   selected,
   className,
   onSelect,
-}: React.HTMLAttributes<HTMLDivElement> & {
+}: Omit<React.HTMLAttributes<HTMLDivElement>, "onSelect"> & {
   selected?: DateRange;
   onSelect: (range?: DateRange) => void;
 }) {
@@ -53,7 +46,7 @@ export function DaterRangePicker({
       });
     }
 
-    onSelect({ from: null, to: null });
+    onSelect({ from: undefined, to: undefined });
   };
 
   return (

@@ -43,6 +43,7 @@ const TransactionForm = () => {
 
   const form = useForm<Database["public"]["Tables"]["transactions"]["Insert"]>({
     defaultValues: {
+      type: "income",
       wallet_id: "610cc3f6-ecc5-4f57-8911-4d530f294c7b",
     },
   });
@@ -51,7 +52,7 @@ const TransactionForm = () => {
     newTransaction: Database["public"]["Tables"]["transactions"]["Insert"],
   ) => {
     try {
-      const data = await insert([newTransaction]);
+      await insert([newTransaction]);
       toast.success("Transaction added successfully!");
     } catch (error) {
       toast.error(error.message);
@@ -140,7 +141,7 @@ const TransactionForm = () => {
             <FormItem>
               <FormLabel>Category</FormLabel>
               <FormControl>
-                <CategoryPicker onChange={field.onChange} {...field} />
+                <CategoryPicker {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

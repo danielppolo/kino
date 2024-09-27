@@ -13,15 +13,15 @@ const DateRangeFilter = () => {
   const [dateRange, setDateRange] = useState({
     from: searchParams.get("from")
       ? new Date(searchParams.get("from") as string)
-      : null,
+      : undefined,
     to: searchParams.get("to")
       ? new Date(searchParams.get("to") as string)
-      : null,
+      : undefined,
   });
 
   const updateSearchParams = (newRange: {
-    from: Date | null;
-    to: Date | null;
+    from: Date | undefined;
+    to: Date | undefined;
   }) => {
     const params = new URLSearchParams(searchParams.toString());
 
@@ -44,8 +44,8 @@ const DateRangeFilter = () => {
   };
 
   const handleDateRangeChange = (newRange: {
-    from: Date | null;
-    to: Date | null;
+    from: Date | undefined;
+    to: Date | undefined;
   }) => {
     setDateRange(newRange);
     updateSearchParams(newRange);
@@ -80,8 +80,8 @@ const DateRangeFilter = () => {
         selected={dateRange}
         onSelect={(range) => {
           handleDateRangeChange({
-            from: range?.from || null,
-            to: range?.to || null,
+            from: range?.from || undefined,
+            to: range?.to || undefined,
           });
         }}
       />

@@ -1,11 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
-
-import { FormControl } from "./form";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -20,19 +17,20 @@ function DaterPicker({
   value,
   variant = "outline",
   onChange,
-}: React.HTMLAttributes<HTMLInputElement> & {
+}: Omit<React.HTMLAttributes<HTMLInputElement>, "onChange"> & {
   value?: string;
   variant?: "outline" | "ghost";
-  onChange: (date: string) => void;
+  onChange: (date?: string) => void;
 }) {
-  const handleChange = (date: Date) => {
-    onChange(format(date, "yyyy-MM-dd"));
+  const handleChange = (date?: Date) => {
+    onChange(date && format(date, "yyyy-MM-dd"));
   };
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button
           variant={variant}
+          size="sm"
           className={cn(
             "text-left font-normal",
             !value && "text-muted-foreground",

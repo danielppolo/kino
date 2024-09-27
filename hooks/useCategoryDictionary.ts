@@ -1,7 +1,7 @@
 import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
 
 import { createClient } from "@/utils/supabase/client";
-import { listCategories, listSubjects } from "@/utils/supabase/queries";
+import { listCategories } from "@/utils/supabase/queries";
 import { Category } from "@/utils/supabase/types";
 
 const useCategoryDictionary = () => {

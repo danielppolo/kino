@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { useCallback, useMemo, useRef } from "react";
 import { toast } from "sonner";
 
 import {
@@ -14,6 +13,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 import DaterPicker from "../ui/date-picker";
 import { AmountInput } from "./amount-input";
@@ -21,6 +21,7 @@ import CategoryPicker from "./category-picker";
 import { DescriptionInput } from "./description-input";
 import SubjectPicker from "./subject-picker";
 
+import { useFilter } from "@/app/protected/filter-context";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { createClient } from "@/utils/supabase/client";
 import { Database } from "@/utils/supabase/database.types";
@@ -28,17 +29,17 @@ import { listTransactions } from "@/utils/supabase/queries";
 import { Transaction } from "@/utils/supabase/types";
 
 export default function TransactionList() {
-  const searchParams = useSearchParams();
   const supabase = createClient();
-  const params = Object.fromEntries(searchParams.entries());
-  const { data } = useQuery(listTransactions(supabase, params));
+  const { filters } = useFilter();
+  const query = useQuery(listTransactions(supabase, filters));
+  const data = useMemo(() => query.data ?? [], [query]);
 
   const { mutateAsync: update } = useUpdateMutation(
     supabase.from("transactions"),
     ["id"],
     "*",
     {
-      onSuccess: (data) => {
+      onSuccess: () => {
         toast.success("Transaction updated!");
       },
       onError: (error) => {
@@ -52,7 +53,9 @@ export default function TransactionList() {
       transaction: Transaction,
       newTransaction: Database["public"]["Tables"]["transactions"]["Update"],
     ) => {
-      const updatedFields = Object.keys(newTransaction);
+      const updatedFields = Object.keys(
+        newTransaction,
+      ) as (keyof Transaction)[];
       const hasChanges = updatedFields.some(
         (field) => newTransaction[field] !== transaction[field],
       );
@@ -101,11 +104,16 @@ export default function TransactionList() {
       {
         accessorKey: "amount_cents",
         header: "Amount",
-        size: 50,
         cell: ({ row }) => (
           <AmountInput
+            id={`amount-${row.original.id}`}
             variant="ghost"
             defaultValue={row.original.amount_cents / 100}
+            className={
+              row.original.type === "income"
+                ? "text-emerald-600"
+                : "text-red-500"
+            }
             onBlur={(event) => {
               onChange(row.original, {
                 amount_cents: Number(event.target.value) * 100,
@@ -119,6 +127,7 @@ export default function TransactionList() {
         header: "Description",
         cell: ({ row }) => (
           <DescriptionInput
+            id={`desc-${row.original.id}`}
             variant="ghost"
             defaultValue={row.original.description ?? undefined}
             onBlur={(event) => {
@@ -132,9 +141,10 @@ export default function TransactionList() {
         header: "Date",
         cell: ({ row }) => (
           <DaterPicker
+            id={`date-${row.original.id}`}
             variant="ghost"
             value={row.original.date}
-            onChange={(date: string) => {
+            onChange={(date?: string) => {
               onChange(row.original, { date });
             }}
           />
@@ -146,7 +156,7 @@ export default function TransactionList() {
 
   // Create the table instance using Tanstack Table
   const table = useReactTable({
-    data: data || [],
+    data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     columnResizeMode: "onEnd", // Can also use "onChange"
@@ -154,68 +164,56 @@ export default function TransactionList() {
     enableColumnResizing: true,
   });
 
+  // Virtualization Setup
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: table.getRowModel().rows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 40,
+    overscan: 20, // Number of extra rows to render outside the viewport for smoother scrolling
+  });
+
   return (
-    <Table className="table-fixed">
-      {/* <TableHeader>
-        {table.getHeaderGroups().map((headerGroup) => (
-          <TableRow key={headerGroup.id}>
-            {headerGroup.headers.map((header) => (
-              <TableHead
-                key={header.id}
-                {...{
-                  colSpan: header.colSpan,
-                  style: {
-                    width: header.getSize(),
-                    position: "relative",
-                  },
+    <div
+      ref={parentRef}
+      style={{ height: window.innerHeight, overflow: "auto" }}
+    >
+      <Table className="table-fixed">
+        <TableBody
+          style={{
+            height: `${rowVirtualizer.getTotalSize()}px`,
+            position: "relative",
+          }}
+        >
+          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+            const row = table.getRowModel().rows[virtualRow.index];
+            return (
+              <TableRow
+                key={row.id}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  transform: `translateY(${virtualRow.start}px)`,
+                  height: `${virtualRow.size}px`,
                 }}
               >
-                {header.isPlaceholder
-                  ? null
-                  : flexRender(
-                      header.column.columnDef.header,
-                      header.getContext(),
-                    )}
-                <div
-                  {...{
-                    onDoubleClick: () => header.column.resetSize(),
-                    onMouseDown: header.getResizeHandler(),
-                    onTouchStart: header.getResizeHandler(),
-                    className: `resizer ${
-                      table.options.columnResizeDirection
-                    } ${header.column.getIsResizing() ? "isResizing" : ""}`,
-                    style: {
-                      transform: header.column.getIsResizing()
-                        ? `translateX(${
-                            (table.options.columnResizeDirection === "rtl"
-                              ? -1
-                              : 1) *
-                            (table.getState().columnSizingInfo.deltaOffset ?? 0)
-                          }px)`
-                        : "",
-                    },
-                  }}
-                />
-              </TableHead>
-            ))}
-          </TableRow>
-        ))}
-      </TableHeader> */}
-      <TableBody>
-        {table.getRowModel().rows.map((row) => (
-          <TableRow key={row.id}>
-            {row.getVisibleCells().map((cell) => (
-              <TableCell
-                key={cell.id}
-                className="p-2"
-                style={{ width: cell.column.getSize() }}
-              >
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </TableCell>
-            ))}
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell
+                    key={cell.id}
+                    className="px-2 py-1 h-10"
+                    style={{ width: cell.column.getSize() }}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
   );
 }

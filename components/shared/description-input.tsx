@@ -12,7 +12,7 @@ export function DescriptionInput({
   ...props
 }: React.HTMLAttributes<HTMLInputElement> & {
   defaultValue?: string;
-  variant: "ghost" | "outline";
+  variant?: "ghost" | "outline";
 }) {
   return (
     <Input
