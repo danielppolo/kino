@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 
 import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
@@ -18,8 +20,9 @@ interface WalletPickerProps {
   onChange: (id: string) => void;
 }
 
+const supabase = createClient();
+
 const WalletPicker: React.FC<WalletPickerProps> = ({ onChange, value }) => {
-  const supabase = createClient();
   const { data: wallets } = useQuery(listWallets(supabase));
 
   return (

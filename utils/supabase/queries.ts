@@ -1,16 +1,9 @@
+import { Filters } from "@/app/protected/filter-context";
 import { TypedSupabaseClient } from "@/utils/supabase/types";
-
-interface Params {
-  from?: string;
-  to?: string;
-  category_id?: string;
-  subject_id?: string;
-  wallet_id?: string;
-}
 
 export const listTransactions = (
   client: TypedSupabaseClient,
-  params?: Params,
+  params?: Filters,
 ) => {
   let query = client
     .from("transactions")
@@ -18,8 +11,10 @@ export const listTransactions = (
     .order("date", { ascending: false });
 
   // Date range filtering
-  if (params?.from && params?.to) {
-    query = query.gte("date", params.from).lte("date", params.to);
+  if (params?.dateRange.from && params?.dateRange.to) {
+    query = query
+      .gte("date", params.dateRange.from.toISOString())
+      .lte("date", params.dateRange.to.toISOString());
   }
 
   // Filter by category_id if available

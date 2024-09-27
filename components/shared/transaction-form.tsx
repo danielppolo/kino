@@ -1,3 +1,5 @@
+"use client";
+
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -30,8 +32,9 @@ import {
 import { createClient } from "@/utils/supabase/client";
 import { Database } from "@/utils/supabase/database.types";
 
+const supabase = createClient();
+
 const TransactionForm = () => {
-  const supabase = createClient();
   const { mutateAsync: insert } = useInsertMutation(
     supabase.from("transactions"),
     ["id"],

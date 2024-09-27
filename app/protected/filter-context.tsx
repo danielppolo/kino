@@ -19,12 +19,15 @@ const updateUrlParams = (key: string, value: string | undefined) => {
   window.history.replaceState(null, "", url.toString());
 };
 
-// Define the shape of the filter state
-interface Filters {
+type Range = {
+  to: Date | undefined;
+  from: Date | undefined;
+};
+
+export interface Filters {
   category_id: string | undefined;
   subject_id: string | undefined;
-  from: string | undefined;
-  to: string | undefined;
+  dateRange: Range;
   wallet_id: string | undefined;
 }
 
@@ -32,8 +35,7 @@ interface Filters {
 type FilterAction =
   | { type: "SET_CATEGORY_ID"; payload: string | undefined }
   | { type: "SET_SUBJECT_ID"; payload: string | undefined }
-  | { type: "SET_FROM"; payload: string | undefined }
-  | { type: "SET_TO"; payload: string | undefined }
+  | { type: "SET_DATE_RANGE"; payload: Range }
   | { type: "SET_WALLET_ID"; payload: string | undefined };
 
 // Define the reducer function
@@ -43,10 +45,8 @@ const filterReducer = (state: Filters, action: FilterAction): Filters => {
       return { ...state, category_id: action.payload };
     case "SET_SUBJECT_ID":
       return { ...state, subject_id: action.payload };
-    case "SET_FROM":
-      return { ...state, from: action.payload };
-    case "SET_TO":
-      return { ...state, to: action.payload };
+    case "SET_DATE_RANGE":
+      return { ...state, dateRange: action.payload };
     case "SET_WALLET_ID":
       return { ...state, wallet_id: action.payload };
     default:
@@ -60,8 +60,7 @@ const FilterContext = createContext<
       filters: Filters;
       setCategoryId: (category_id: string | undefined) => void;
       setSubjectId: (subject_id: string | undefined) => void;
-      setFrom: (from: string | undefined) => void;
-      setTo: (to: string | undefined) => void;
+      setDateRange: (range: Range) => void;
       setWalletId: (wallet_id: string | undefined) => void;
     }
   | undefined
@@ -75,8 +74,14 @@ export const FilterProvider: React.FC<{ children: React.ReactNode }> = ({
   const [filters, dispatch] = useReducer(filterReducer, {
     category_id: searchParams.get("category_id") || undefined,
     subject_id: searchParams.get("subject_id") || undefined,
-    from: searchParams.get("from") || undefined,
-    to: searchParams.get("to") || undefined,
+    dateRange: {
+      from: searchParams.get("from")
+        ? new Date(searchParams.get("from") as string)
+        : undefined,
+      to: searchParams.get("to")
+        ? new Date(searchParams.get("to") as string)
+        : undefined,
+    },
     wallet_id: searchParams.get("wallet_id") || undefined,
   });
 
@@ -88,11 +93,8 @@ export const FilterProvider: React.FC<{ children: React.ReactNode }> = ({
       setSubjectId: (subject_id: string | undefined) =>
         dispatch({ type: "SET_SUBJECT_ID", payload: subject_id }),
 
-      setFrom: (from: string | undefined) =>
-        dispatch({ type: "SET_FROM", payload: from }),
-
-      setTo: (to: string | undefined) =>
-        dispatch({ type: "SET_TO", payload: to }),
+      setDateRange: (range: Range) =>
+        dispatch({ type: "SET_DATE_RANGE", payload: range }),
 
       setWalletId: (wallet_id: string | undefined) =>
         dispatch({ type: "SET_WALLET_ID", payload: wallet_id }),
@@ -104,8 +106,8 @@ export const FilterProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     updateUrlParams("category_id", filters.category_id);
     updateUrlParams("subject_id", filters.subject_id);
-    updateUrlParams("from", filters.from);
-    updateUrlParams("to", filters.to);
+    updateUrlParams("from", filters.dateRange.from?.toISOString());
+    updateUrlParams("to", filters.dateRange.to?.toISOString());
     updateUrlParams("wallet_id", filters.wallet_id);
   }, [filters]);
 

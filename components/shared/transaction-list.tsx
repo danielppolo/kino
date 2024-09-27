@@ -28,12 +28,12 @@ import { Database } from "@/utils/supabase/database.types";
 import { listTransactions } from "@/utils/supabase/queries";
 import { Transaction } from "@/utils/supabase/types";
 
+const supabase = createClient();
+
 export default function TransactionList() {
-  const supabase = createClient();
   const { filters } = useFilter();
   const query = useQuery(listTransactions(supabase, filters));
-  const data = useMemo(() => query.data ?? [], [query]);
-
+  const data = useMemo(() => query.data ?? [], [query.dataUpdatedAt]);
   const { mutateAsync: update } = useUpdateMutation(
     supabase.from("transactions"),
     ["id"],
