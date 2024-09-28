@@ -1,3 +1,7 @@
+"use client";
+
+import { CircleDashed } from "lucide-react";
+
 import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
 
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
@@ -19,12 +23,13 @@ interface CategoryPickerProps {
   onChange: (id: string) => void;
 }
 
+const supabase = createClient();
+
 const CategoryPicker = ({
   onChange,
   defaultValue,
   value,
 }: CategoryPickerProps) => {
-  const supabase = createClient();
   const { data: categories } = useQuery(listCategories(supabase));
   const categoriesDict = useCategoryDictionary();
 
@@ -37,7 +42,7 @@ const CategoryPicker = ({
               <Category category={categoriesDict[value]} size="sm" />
             </>
           ) : (
-            "Choose Icon"
+            <CircleDashed className="w-3 h-3" />
           )}
         </Button>
       </PopoverTrigger>

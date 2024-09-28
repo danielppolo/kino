@@ -42,7 +42,7 @@ const DateRangeFilter = () => {
   };
 
   return (
-    <div className="w-full flex justify-center items-center gap-2 p-2">
+    <div className="flex items-center gap-2">
       {/* <PaginationPrevious onClick={handlePreviousPeriod} /> */}
       <DaterRangePicker
         selected={dateRange}

@@ -31,10 +31,7 @@ function DaterPicker({
         <Button
           variant={variant}
           size="sm"
-          className={cn(
-            "text-left font-normal",
-            !value && "text-muted-foreground",
-          )}
+          className={cn("text-left font-normal", "text-muted-foreground")}
         >
           {value ? format(new Date(value), "PP") : <span>Pick a date</span>}
           {variant === "outline" && <CalendarIcon className="w-4 h-4 ml-2" />}

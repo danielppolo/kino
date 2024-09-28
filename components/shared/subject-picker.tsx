@@ -1,3 +1,7 @@
+"use client";
+
+import { CircleDotDashed } from "lucide-react";
+
 import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
 
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
@@ -18,13 +22,13 @@ interface SubjectPickerProps {
   value?: string | null;
   onChange: (id: string) => void;
 }
+const supabase = createClient();
 
 const SubjectPicker = ({
   onChange,
   value,
   defaultValue,
 }: SubjectPickerProps) => {
-  const supabase = createClient();
   const { data: subjects } = useQuery(listSubjects(supabase));
   const subjectDict = useSubjectDictionary();
 
@@ -37,7 +41,7 @@ const SubjectPicker = ({
               <Subject subject={subjectDict[value]} />
             </>
           ) : (
-            "Choose Icon"
+            <CircleDotDashed className="w-3 h-3" />
           )}
         </Button>
       </PopoverTrigger>

@@ -3,12 +3,11 @@
 import { useMemo } from "react";
 import { format } from "date-fns";
 import { TrendingUp } from "lucide-react";
-import { Bold, Italic, Underline } from "lucide-react";
-import { useSearchParams } from "next/navigation";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid } from "recharts";
 
 import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
 
+import { useFilter } from "@/app/protected/filter-context";
 import {
   Card,
   CardContent,
@@ -17,12 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
+import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { createClient } from "@/utils/supabase/client";
 import { listCategories, listTransactions } from "@/utils/supabase/queries";
 import { Category, Transaction } from "@/utils/supabase/types";
@@ -92,11 +86,11 @@ const getChartConfig = (categories: Category[]) => {
   }, {});
 };
 
+const supabase = createClient();
+
 export function TransactionsAreaChart() {
-  const searchParams = useSearchParams();
-  const supabase = createClient();
-  const params = Object.fromEntries(searchParams.entries());
-  const { data: transactions } = useQuery(listTransactions(supabase, params));
+  const { filters } = useFilter();
+  const { data: transactions } = useQuery(listTransactions(supabase, filters));
   const { data: categories } = useQuery(listCategories(supabase));
 
   const chartData = useMemo(
