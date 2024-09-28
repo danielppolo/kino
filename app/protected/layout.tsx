@@ -13,7 +13,7 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <FilterProvider>
-      <div className="flex">
+      <div className="flex divide-x">
         {/*  border-b border-b-foreground/10 */}
         <div className="divide-y w-96 shrink-0">
           {/* <TransactionsAreaChart /> */}

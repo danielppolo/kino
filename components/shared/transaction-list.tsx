@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useMemo, useRef } from "react";
+import { Trash } from "lucide-react";
 import { toast } from "sonner";
 
 import {
+  useDeleteMutation,
   useQuery,
   useUpdateMutation,
 } from "@supabase-cache-helpers/postgrest-react-query";
@@ -15,6 +17,7 @@ import {
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
+import { Button } from "../ui/button";
 import DaterPicker from "../ui/date-picker";
 import { AmountInput } from "./amount-input";
 import CategoryPicker from "./category-picker";
@@ -41,6 +44,19 @@ export default function TransactionList() {
     {
       onSuccess: () => {
         toast.success("Transaction updated!");
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    },
+  );
+  const { mutateAsync: destroy } = useDeleteMutation(
+    supabase.from("transactions"),
+    ["id"],
+    "*",
+    {
+      onSuccess: () => {
+        toast.success("Transaction deleted!");
       },
       onError: (error) => {
         toast.error(error.message);
@@ -150,6 +166,23 @@ export default function TransactionList() {
           />
         ),
       },
+      {
+        accessorKey: "id",
+        header: "Delete",
+        cell: ({ row }) => (
+          <Button
+            className="hidden group-hover:block"
+            size="sm"
+            id={`remove-${row.original.id}`}
+            variant="ghost"
+            onClick={() => {
+              destroy({ id: row.original.id });
+            }}
+          >
+            <Trash className="h-3 w-3" />
+          </Button>
+        ),
+      },
     ],
     [onChange],
   );
@@ -192,6 +225,7 @@ export default function TransactionList() {
             return (
               <TableRow
                 key={row.id}
+                className="group"
                 style={{
                   position: "absolute",
                   top: 0,
