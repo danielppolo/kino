@@ -20,7 +20,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <SubjectFilter />
           <CategoryFilter />
         </div>
-        <div className="grow">{children}</div>
+        <div className="grow">
+          <div className="h-12">hello world</div>
+          {children}
+        </div>
       </div>
     </FilterProvider>
   );

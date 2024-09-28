@@ -85,7 +85,7 @@ export function DaterRangePicker({
             type="single"
             // defaultValue="month"
             onValueChange={handlePresetChange}
-            className="flex justify-center gap-2 m-2"
+            className="flex flex-col justify-center gap-2 m-2"
           >
             <ToggleGroupItem value="week">This week</ToggleGroupItem>
             <ToggleGroupItem value="month">This month</ToggleGroupItem>
@@ -98,7 +98,7 @@ export function DaterRangePicker({
             defaultMonth={selected?.from}
             selected={selected}
             onSelect={onSelect}
-            numberOfMonths={2}
+            numberOfMonths={1}
           />
         </PopoverContent>
       </Popover>

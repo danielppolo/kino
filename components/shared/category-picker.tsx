@@ -34,7 +34,7 @@ const CategoryPicker = ({
         <Button variant="ghost" size="sm">
           {value && categoriesDict[value] ? (
             <>
-              <Category category={categoriesDict[value]} size="small" />
+              <Category category={categoriesDict[value]} size="sm" />
             </>
           ) : (
             "Choose Icon"
@@ -50,7 +50,7 @@ const CategoryPicker = ({
         >
           {categories?.map((category) => (
             <ToggleGroupItem key={category.id} value={category.id}>
-              <Category category={category} size="small" />
+              <Category category={category} size="sm" />
             </ToggleGroupItem>
           ))}
         </ToggleGroup>

@@ -16,7 +16,7 @@ const Subject = ({ subject }: SubjectProps) => {
     <TooltipProvider delayDuration={100}>
       <Tooltip>
         <TooltipTrigger>
-          <Icon name={subject.icon} className="h-5 w-5" />
+          <Icon name={subject.icon} className="h-4 w-4" />
         </TooltipTrigger>
         <TooltipContent>
           <span>{subject.name}</span>

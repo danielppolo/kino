@@ -177,7 +177,7 @@ export default function TransactionList() {
   return (
     <div
       ref={parentRef}
-      style={{ height: window.innerHeight, overflow: "auto" }}
+      style={{ height: `calc(${window.innerHeight} - 12em)`, overflow: "auto" }}
     >
       <Table className="table-fixed">
         <TableBody

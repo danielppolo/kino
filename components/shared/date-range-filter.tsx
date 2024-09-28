@@ -3,7 +3,6 @@
 import { add, sub } from "date-fns";
 
 import { DaterRangePicker } from "../ui/date-range-picker";
-import { PaginationNext, PaginationPrevious } from "../ui/pagination";
 
 import { useFilter } from "@/app/protected/filter-context";
 
@@ -44,7 +43,7 @@ const DateRangeFilter = () => {
 
   return (
     <div className="w-full flex justify-center items-center gap-2 p-2">
-      <PaginationPrevious onClick={handlePreviousPeriod} />
+      {/* <PaginationPrevious onClick={handlePreviousPeriod} /> */}
       <DaterRangePicker
         selected={dateRange}
         onSelect={(range) => {
@@ -54,7 +53,7 @@ const DateRangeFilter = () => {
           });
         }}
       />
-      <PaginationNext onClick={handleNextPeriod} />
+      {/* <PaginationNext onClick={handleNextPeriod} /> */}
     </div>
   );
 };
