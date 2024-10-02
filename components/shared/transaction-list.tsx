@@ -211,7 +211,7 @@ export default function TransactionList() {
     <div
       ref={parentRef}
       // FIXME: 48 is for 12em.
-      style={{ height: window.innerHeight - 48, overflow: "auto" }}
+      style={{ height: window.innerHeight - 48 - 40, overflow: "auto" }}
     >
       <Table className="table-fixed">
         <TableBody
@@ -239,7 +239,7 @@ export default function TransactionList() {
                   <TableCell
                     key={cell.id}
                     className="px-2 py-1 h-10"
-                    style={{ width: cell.column.getSize() }}
+                    style={{ width: cell.column.getSize() ?? "auto" }}
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
