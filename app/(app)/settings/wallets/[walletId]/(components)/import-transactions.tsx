@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Papa from "papaparse";
+import { toast } from "sonner";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,6 @@ const TransactionSchema = z.object({
   amount: z.number().positive(),
   description: z.string().optional(),
   date: z.string().date(),
-  currency: z.string(),
   type: z.enum(TYPES),
 });
 
@@ -67,8 +67,7 @@ const CsvTransactionUploader = ({
         const formattedData = result.data.map((row: any) => ({
           date: row.date,
           amount: row.amount ? Number(row.amount) : undefined,
-          currency: row.currency ?? "USD",
-          type: row.type ?? "expense",
+          type: row.type,
           description: row.description,
           category: row.category,
           label: row.label,
@@ -117,9 +116,7 @@ const CsvTransactionUploader = ({
 
   const handleSubmit = async () => {
     const transactions = csvData.map((row) => ({
-      wallet_id: walletId,
       amount: row.amount,
-      currency: row.currency,
       type: row.type,
       description: row.description,
       category: row.category,
@@ -127,7 +124,12 @@ const CsvTransactionUploader = ({
       date: new Date(row.date).toISOString().split("T")[0], // Format YYYY-MM-DD
     }));
 
-    await importTransactions(transactions);
+    const { error } = await importTransactions(walletId, transactions);
+
+    if (error) {
+      console.log(error);
+      toast.error("Failed to import transactions");
+    }
   };
 
   return (

@@ -10,18 +10,18 @@ import { createClient } from "@/utils/supabase/server";
 export const dynamic = "force-dynamic";
 
 interface PageParams {
-  params: { id: string };
+  params: { walletId: string };
   searchParams: Filters;
 }
 
 export default async function Page({
-  params: { id },
+  params: { walletId },
   searchParams,
 }: PageParams) {
   const supabase = createClient();
   const { data: transactions, error: transactionsError } =
     await listTransactions(supabase, {
-      wallet_id: id,
+      wallet_id: walletId,
       ...searchParams,
     });
   const { data: labels, error: labelsError } = await listLabels(supabase);
