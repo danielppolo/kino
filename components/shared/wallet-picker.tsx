@@ -2,8 +2,6 @@
 
 import React from "react";
 
-import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
-
 import {
   Select,
   SelectContent,
@@ -12,28 +10,28 @@ import {
   SelectValue,
 } from "../ui/select";
 
-import { createClient } from "@/utils/supabase/client";
-import { listWallets } from "@/utils/supabase/queries";
+import { Wallet } from "@/utils/supabase/types";
 
 interface WalletPickerProps {
+  options: Wallet[];
   value?: string;
   onChange: (id: string) => void;
 }
 
-const supabase = createClient();
-
-const WalletPicker: React.FC<WalletPickerProps> = ({ onChange, value }) => {
-  const { data: wallets } = useQuery(listWallets(supabase));
-
+const WalletPicker: React.FC<WalletPickerProps> = ({
+  options,
+  onChange,
+  value,
+}) => {
   return (
     <Select onValueChange={onChange} defaultValue={value ?? undefined}>
       <SelectTrigger>
         <SelectValue placeholder="Select category" />
       </SelectTrigger>
       <SelectContent>
-        {wallets?.map((category) => (
-          <SelectItem key={category.id} value={category.id}>
-            {category.name}
+        {options?.map((wallet) => (
+          <SelectItem key={wallet.id} value={wallet.id}>
+            {wallet.name}
           </SelectItem>
         ))}
       </SelectContent>

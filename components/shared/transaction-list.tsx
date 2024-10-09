@@ -5,11 +5,6 @@ import { Trash } from "lucide-react";
 import { toast } from "sonner";
 
 import {
-  useDeleteMutation,
-  useQuery,
-  useUpdateMutation,
-} from "@supabase-cache-helpers/postgrest-react-query";
-import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
@@ -25,44 +20,32 @@ import { DescriptionInput } from "./description-input";
 import LabelPicker from "./label-picker";
 
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
-import { useFilter } from "@/contexts/filter-context";
-import { createClient } from "@/utils/supabase/client";
 import { Database } from "@/utils/supabase/database.types";
-import { listTransactions } from "@/utils/supabase/queries";
-import { Transaction } from "@/utils/supabase/types";
+import {
+  deleteTransaction,
+  updateTransaction,
+} from "@/utils/supabase/mutations";
+import { Category, Label, Transaction } from "@/utils/supabase/types";
 
-const supabase = createClient();
+interface TransactionListProps {
+  transactions: Transaction[];
+  labels: Label[];
+  categories: Category[];
+}
 
-export default function TransactionList() {
-  const { filters } = useFilter();
-  const query = useQuery(listTransactions(supabase, filters));
-  const data = useMemo(() => query.data ?? [], [query.dataUpdatedAt]);
-  const { mutateAsync: update } = useUpdateMutation(
-    supabase.from("transactions"),
-    ["id"],
-    "*",
-    {
-      onSuccess: () => {
-        toast.success("Transaction updated!");
-      },
-      onError: (error) => {
-        toast.error(error.message);
-      },
-    },
-  );
-  const { mutateAsync: destroy } = useDeleteMutation(
-    supabase.from("transactions"),
-    ["id"],
-    "*",
-    {
-      onSuccess: () => {
-        toast.success("Transaction deleted!");
-      },
-      onError: (error) => {
-        toast.error(error.message);
-      },
-    },
-  );
+export default function TransactionList({
+  transactions,
+  labels,
+  categories,
+}: TransactionListProps) {
+  const onDelete = useCallback(async (id: string) => {
+    const { error } = await deleteTransaction(id);
+
+    if (error) {
+      return toast.error(error.message);
+    }
+    toast.success("Transaction deleted!");
+  }, []);
 
   const onChange = useCallback(
     async (
@@ -80,12 +63,17 @@ export default function TransactionList() {
         return;
       }
 
-      update({
+      const { error } = await updateTransaction({
         ...transaction,
         ...newTransaction,
       });
+
+      if (error) {
+        return toast.error(error.message);
+      }
+      toast.success("Transaction updated!");
     },
-    [update],
+    [],
   );
 
   // Define the columns for the React Table
@@ -97,6 +85,7 @@ export default function TransactionList() {
         size: 20, // Set the column width to a smaller value
         cell: ({ row }) => (
           <LabelPicker
+            options={labels}
             value={row.original.label_id}
             onChange={(id: string) => {
               onChange(row.original, { label_id: id });
@@ -110,6 +99,8 @@ export default function TransactionList() {
         size: 20, // Set the column width to a smaller value
         cell: ({ row }) => (
           <CategoryPicker
+            options={categories}
+            type={row.original.type}
             value={row.original.category_id ?? undefined}
             onChange={(id: string) => {
               onChange(row.original, { category_id: id });
@@ -176,7 +167,7 @@ export default function TransactionList() {
             id={`remove-${row.original.id}`}
             variant="ghost"
             onClick={() => {
-              destroy({ id: row.original.id });
+              onDelete(row.original.id);
             }}
           >
             <Trash className="h-3 w-3" />
@@ -189,7 +180,7 @@ export default function TransactionList() {
 
   // Create the table instance using Tanstack Table
   const table = useReactTable({
-    data,
+    data: transactions,
     columns,
     getCoreRowModel: getCoreRowModel(),
     columnResizeMode: "onEnd", // Can also use "onChange"

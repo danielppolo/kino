@@ -3,8 +3,6 @@
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import { useInsertMutation } from "@supabase-cache-helpers/postgrest-react-query";
-
 import { Input } from "../ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
@@ -18,30 +16,9 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import { createClient } from "@/utils/supabase/client";
+import { COLORS } from "@/utils/constants";
 import { Database } from "@/utils/supabase/database.types";
-
-const COLORS = [
-  "#B8255F",
-  "#DB4035",
-  "#FF8D85",
-  "#FF9933",
-  "#FAD000",
-  "#AFB83B",
-  "#7ECC49",
-  "#299438",
-  "#6ACCBC",
-  "#158FAD",
-  "#14AAF5",
-  "#96C3EB",
-  "#4073FF",
-  "#884DFF",
-  "#AF38EB",
-  "#B8B8B8",
-  "#CCAC93",
-];
-
-const supabase = createClient();
+import { createLabel } from "@/utils/supabase/mutations";
 
 interface LabelFormProps {
   onSuccess: () => void;
@@ -50,29 +27,21 @@ interface LabelFormProps {
 type LabelFormValues = Database["public"]["Tables"]["labels"]["Insert"];
 
 const LabelForm = ({ onSuccess }: LabelFormProps) => {
-  const { mutateAsync: insert } = useInsertMutation(
-    supabase.from("labels"),
-    ["id"],
-    "*",
-    {
-      onSuccess: () => {
-        toast.success("Label added successfully!");
-        onSuccess();
-      },
-      onError: (error) => {
-        toast.error(error.message);
-      },
-    },
-  );
-
   const form = useForm<LabelFormValues>({
     defaultValues: {
       color: COLORS[Math.floor(Math.random() * COLORS.length)],
     },
   });
 
-  const onSubmit = (label: LabelFormValues) => {
-    insert([label]);
+  const onSubmit = async (label: LabelFormValues) => {
+    const { error } = await createLabel(label);
+
+    if (error) {
+      return toast.error(error.message);
+    }
+
+    toast.success("Label added successfully!");
+    onSuccess?.();
   };
 
   return (

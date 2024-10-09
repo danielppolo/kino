@@ -3,8 +3,6 @@
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import { useInsertMutation } from "@supabase-cache-helpers/postgrest-react-query";
-
 import { Input } from "../ui/input";
 
 import { Button } from "@/components/ui/button";
@@ -23,10 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createClient } from "@/utils/supabase/client";
 import { Database } from "@/utils/supabase/database.types";
-
-const supabase = createClient();
+import { createWallet } from "@/utils/supabase/mutations";
 
 interface WalletFormProps {
   onSuccess: () => void;
@@ -35,29 +31,21 @@ interface WalletFormProps {
 type WalletFormValues = Database["public"]["Tables"]["wallets"]["Insert"];
 
 const WalletForm = ({ onSuccess }: WalletFormProps) => {
-  const { mutateAsync: insert } = useInsertMutation(
-    supabase.from("wallets"),
-    ["id"],
-    "*",
-    {
-      onSuccess: () => {
-        toast.success("Wallet added successfully!");
-        onSuccess();
-      },
-      onError: (error) => {
-        toast.error(error.message);
-      },
-    },
-  );
-
   const form = useForm<WalletFormValues>({
     defaultValues: {
       currency: "MXN",
     },
   });
 
-  const onSubmit = (wallet: WalletFormValues) => {
-    insert([wallet]);
+  const onSubmit = async (wallet: WalletFormValues) => {
+    const { error } = await createWallet(wallet);
+
+    if (error) {
+      return toast.error(error.message);
+    }
+
+    toast.success("Wallet added!");
+    onSuccess();
   };
 
   return (

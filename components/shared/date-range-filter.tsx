@@ -1,42 +1,56 @@
 "use client";
 
 import { add, sub } from "date-fns";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { DaterRangePicker } from "../ui/date-range-picker";
 
-import { useFilter } from "@/contexts/filter-context";
+interface DateRange {
+  from: Date | undefined;
+  to: Date | undefined;
+}
 
 const DateRangeFilter = () => {
-  const {
-    filters: { dateRange },
-    setDateRange,
-  } = useFilter();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromParam = searchParams.get("from");
+  const toParam = searchParams.get("to");
+  const from = fromParam ? new Date(fromParam) : undefined;
+  const to = toParam ? new Date(toParam) : undefined;
 
-  const handleDateRangeChange = (newRange: {
-    from: Date | undefined;
-    to: Date | undefined;
-  }) => {
-    setDateRange(newRange);
+  const setDateRange = ({ from, to }: DateRange) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (from) {
+      params.set("from", from.toISOString());
+    } else {
+      params.delete("from");
+    }
+    if (to) {
+      params.set("to", to.toISOString());
+    } else {
+      params.delete("to");
+    }
+    router.push(`/transactions?${params.toString()}`);
   };
 
   const handlePreviousPeriod = () => {
-    if (dateRange.from && dateRange.to) {
-      const diff = dateRange.to.getTime() - dateRange.from.getTime();
+    if (from && to) {
+      const diff = to.getTime() - from.getTime();
       const seconds = diff / 1000;
-      handleDateRangeChange({
-        from: sub(dateRange.from, { seconds }),
-        to: sub(dateRange.to, { seconds }),
+      setDateRange({
+        from: sub(from, { seconds }),
+        to: sub(to, { seconds }),
       });
     }
   };
 
   const handleNextPeriod = () => {
-    if (dateRange.from && dateRange.to) {
-      const diff = dateRange.to.getTime() - dateRange.from.getTime();
+    if (from && to) {
+      const diff = to.getTime() - from.getTime();
       const seconds = diff / 1000;
-      handleDateRangeChange({
-        from: add(dateRange.from, { seconds }),
-        to: add(dateRange.to, { seconds }),
+      setDateRange({
+        from: add(from, { seconds }),
+        to: add(to, { seconds }),
       });
     }
   };
@@ -45,9 +59,12 @@ const DateRangeFilter = () => {
     <div className="flex items-center gap-2">
       {/* <PaginationPrevious onClick={handlePreviousPeriod} /> */}
       <DaterRangePicker
-        selected={dateRange}
+        selected={{
+          from,
+          to,
+        }}
         onSelect={(range) => {
-          handleDateRangeChange({
+          setDateRange({
             from: range?.from || undefined,
             to: range?.to || undefined,
           });

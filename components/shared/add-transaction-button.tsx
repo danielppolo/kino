@@ -7,8 +7,17 @@ import { DrawerDialog } from "../ui/drawer-dialog";
 import TransactionForm from "./transaction-form";
 
 import { Button } from "@/components/ui/button";
+import { Category, Label, Wallet } from "@/utils/supabase/types";
 
-const AddTransactionButton = () => {
+interface AddTransactionButtonProps {
+  wallets: Wallet[];
+  labels: Label[];
+  categories: Category[];
+  type: "income" | "expense" | "transfer";
+  onSuccess: () => void;
+}
+
+const AddTransactionButton = (props: AddTransactionButtonProps) => {
   const [open, setOpen] = useState(false);
 
   <DrawerDialog
@@ -22,7 +31,7 @@ const AddTransactionButton = () => {
       </Button>
     }
   >
-    <TransactionForm onSuccess={() => setOpen(false)} />
+    <TransactionForm {...props} onSuccess={() => setOpen(false)} />
   </DrawerDialog>;
 };
 

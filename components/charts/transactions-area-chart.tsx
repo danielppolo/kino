@@ -5,8 +5,6 @@ import { format } from "date-fns";
 import { TrendingUp } from "lucide-react";
 import { Area, AreaChart, CartesianGrid } from "recharts";
 
-import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
-
 import {
   Card,
   CardContent,
@@ -16,9 +14,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ChartConfig, ChartContainer } from "@/components/ui/chart";
-import { useFilter } from "@/contexts/filter-context";
-import { createClient } from "@/utils/supabase/client";
-import { listLabels, listTransactions } from "@/utils/supabase/queries";
 import { Label, Transaction } from "@/utils/supabase/types";
 
 export const description = "A stacked area chart with expand stacking";
@@ -86,13 +81,15 @@ const getChartConfig = (labels: Label[]) => {
   }, {});
 };
 
-const supabase = createClient();
+interface TransactionsAreaChartProps {
+  transactions: Transaction[];
+  labels: Label[];
+}
 
-export function TransactionsAreaChart() {
-  const { filters } = useFilter();
-  const { data: transactions } = useQuery(listTransactions(supabase, filters));
-  const { data: labels } = useQuery(listLabels(supabase));
-
+export function TransactionsAreaChart({
+  transactions,
+  labels,
+}: TransactionsAreaChartProps) {
   const chartData = useMemo(
     () => groupTransactionsByLabel(transactions ?? [], labels ?? []),
     [transactions, labels],

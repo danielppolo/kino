@@ -2,8 +2,6 @@
 
 import { CircleDotDashed } from "lucide-react";
 
-import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
-
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import Category from "./category";
 
@@ -14,27 +12,25 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import useCategoryDictionary from "@/hooks/useCategoryDictionary";
-import { createClient } from "@/utils/supabase/client";
-import { listCategories } from "@/utils/supabase/queries";
+import { Category as CategoryType } from "@/utils/supabase/types";
 
 interface CategoryPickerProps {
-  type: "income" | "expense";
+  options: CategoryType[];
+  type: "income" | "expense" | "transfer";
   defaultValue?: string;
   value?: string | null;
   onChange: (id: string) => void;
 }
-const supabase = createClient();
 
 const CategoryPicker = ({
+  options,
   value,
   defaultValue,
   type,
   onChange,
 }: CategoryPickerProps) => {
-  const { data } = useQuery(listCategories(supabase));
-  const categoryDict = useCategoryDictionary();
-
-  const categories = data?.filter((category) => category.type === type);
+  const categoryDict = useCategoryDictionary(options);
+  const categories = options?.filter((category) => category.type === type);
 
   return (
     <Popover>

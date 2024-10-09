@@ -2,8 +2,6 @@
 
 import { CircleDashed } from "lucide-react";
 
-import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
-
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import Label from "./label";
 
@@ -14,20 +12,22 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import useLabelDictionary from "@/hooks/useLabelDictionary";
-import { createClient } from "@/utils/supabase/client";
-import { listLabels } from "@/utils/supabase/queries";
+import { Label as LabelType } from "@/utils/supabase/types";
 
 interface LabelPickerProps {
+  options: LabelType[];
   defaultValue?: string;
-  value?: string;
+  value: string | null;
   onChange: (id: string) => void;
 }
 
-const supabase = createClient();
-
-const LabelPicker = ({ onChange, defaultValue, value }: LabelPickerProps) => {
-  const { data: labels } = useQuery(listLabels(supabase));
-  const labelsDict = useLabelDictionary();
+const LabelPicker = ({
+  options,
+  onChange,
+  defaultValue,
+  value,
+}: LabelPickerProps) => {
+  const labelsDict = useLabelDictionary(options);
 
   return (
     <Popover>
@@ -49,7 +49,7 @@ const LabelPicker = ({ onChange, defaultValue, value }: LabelPickerProps) => {
           onValueChange={onChange}
           className="grid grid-cols-8 gap-2 p-2"
         >
-          {labels?.map((label) => (
+          {options?.map((label) => (
             <ToggleGroupItem key={label.id} value={label.id}>
               <Label label={label} size="sm" />
             </ToggleGroupItem>

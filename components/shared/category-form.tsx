@@ -3,8 +3,6 @@
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import { useInsertMutation } from "@supabase-cache-helpers/postgrest-react-query";
-
 import { Icon } from "../ui/icon";
 import { Input } from "../ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
@@ -18,114 +16,9 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import { createClient } from "@/utils/supabase/client";
+import { ICONS } from "@/utils/constants";
 import { Database } from "@/utils/supabase/database.types";
-
-const supabase = createClient();
-
-const ICONS = [
-  "dollar-sign",
-  "credit-card",
-  "banknote",
-  "piggy-bank",
-  "wallet",
-  "cash",
-  "shopping-cart",
-  "cart",
-  "cart-check",
-  "receipt",
-  "tag",
-  "tags",
-  "sale",
-  "chart",
-  "chart-bar",
-  "chart-pie",
-  "bar-chart",
-  "pie-chart",
-  "briefcase",
-  "coin",
-  "gift",
-  "handshake",
-  "savings",
-  "transfer",
-  "money",
-  "bag",
-  "clipboard",
-  "calendar",
-  "clock",
-  "home",
-  "house",
-  "building",
-  "bag-dollar",
-  "check-circle",
-  "x-circle",
-  "alert-circle",
-  "chart-line",
-  "trending-up",
-  "trending-down",
-  "file-text",
-  "edit",
-  "folder",
-  "folder-open",
-  "plus-circle",
-  "minus-circle",
-  "download-cloud",
-  "upload-cloud",
-  "shield",
-  "shield-check",
-  "check-square",
-  "percent",
-  "calculator",
-  "credit-card-check",
-  "credit-card-plus",
-  "credit-card-minus",
-  "credit-card-off",
-  "box",
-  "archive",
-  "box-dollar",
-  "coins",
-  "dollar-square",
-  "clipboard-check",
-  "refresh-cw",
-  "refresh-ccw",
-  "arrow-up-right",
-  "arrow-down-right",
-  "repeat",
-  "send",
-  "edit-2",
-  "key",
-  "lock",
-  "unlock",
-  "lock-open",
-  "safe",
-  "safe-check",
-  "bank",
-  "atm",
-  "briefcase-dollar",
-  "bag-dollar-2",
-  "currency",
-  "globe",
-  "cloud",
-  "umbrella",
-  "shopping-bag",
-  "plane",
-  "car",
-  "bus",
-  "ticket",
-  "shopping-basket",
-  "gift-card",
-  "business",
-  "cash-register",
-  "check",
-  "x-square",
-  "chart-line-down",
-  "arrow-right",
-  "arrow-left",
-  "currency-dollar",
-  "calculator-check",
-  "clipboard-list",
-  "shopping-bag-check",
-];
+import { createCategory } from "@/utils/supabase/mutations";
 
 interface CategoryFormProps {
   type: "income" | "expense";
@@ -135,21 +28,6 @@ interface CategoryFormProps {
 type CategoryFormValues = Database["public"]["Tables"]["categories"]["Insert"];
 
 const CategoryForm = ({ type, onSuccess }: CategoryFormProps) => {
-  const { mutateAsync: insert } = useInsertMutation(
-    supabase.from("categories"),
-    ["id"],
-    "*",
-    {
-      onSuccess: () => {
-        toast.success("Label added successfully!");
-        onSuccess?.();
-      },
-      onError: (error) => {
-        toast.error(error.message);
-      },
-    },
-  );
-
   const form = useForm<CategoryFormValues>({
     defaultValues: {
       type,
@@ -157,8 +35,15 @@ const CategoryForm = ({ type, onSuccess }: CategoryFormProps) => {
     },
   });
 
-  const onSubmit = (label: CategoryFormValues) => {
-    insert([label]);
+  const onSubmit = async (category: CategoryFormValues) => {
+    const { error } = await createCategory(category);
+
+    if (error) {
+      return toast.error(error.message);
+    }
+
+    toast.success("Label added successfully!");
+    onSuccess?.();
   };
 
   return (

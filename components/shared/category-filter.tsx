@@ -1,8 +1,7 @@
 "use client";
 
 import { CircleDotDashed, X } from "lucide-react";
-
-import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import Category from "./category";
@@ -13,23 +12,30 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useFilter } from "@/contexts/filter-context";
 import useCategoryDictionary from "@/hooks/useCategoryDictionary";
-import { createClient } from "@/utils/supabase/client";
-import { listCategories } from "@/utils/supabase/queries";
+import { Category as CategoryType } from "@/utils/supabase/types";
 
-const supabase = createClient();
+interface CategoryFilterProps {
+  options: CategoryType[];
+}
 
-const CategoryFilter = () => {
-  const {
-    filters: { category_id },
-    setCategoryId,
-  } = useFilter();
+const CategoryFilter = ({ options }: CategoryFilterProps) => {
+  const router = useRouter();
+  const categoryDict = useCategoryDictionary(options);
+  const searchParams = useSearchParams();
+  const categoryId = searchParams.get("category_id") ?? undefined;
 
-  const { data: categories } = useQuery(listCategories(supabase));
-  const categoryDict = useCategoryDictionary();
+  const setCategoryId = (id: string | undefined) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (id) {
+      params.set("category_id", id);
+    } else {
+      params.delete("category_id");
+    }
+    router.push(`/transactions?${params.toString()}`);
+  };
 
-  if (category_id && categoryDict[category_id]) {
+  if (categoryId && categoryDict[categoryId]) {
     return (
       <Button
         variant="ghost"
@@ -38,7 +44,7 @@ const CategoryFilter = () => {
         onClick={() => setCategoryId(undefined)}
       >
         <div className="group-hover:hidden flex items-center">
-          <Category category={categoryDict[category_id]} />
+          <Category category={categoryDict[categoryId]} />
         </div>
         <X className="hidden h-3 w-3 group-hover:block" />
       </Button>
@@ -55,11 +61,11 @@ const CategoryFilter = () => {
       <PopoverContent className="w-full">
         <ToggleGroup
           type="single"
-          value={category_id}
+          value={categoryId}
           onValueChange={setCategoryId}
           className="grid grid-cols-8"
         >
-          {categories?.map((category) => (
+          {options?.map((category) => (
             <ToggleGroupItem key={category.id} value={category.id} size="sm">
               <Category category={category} />
             </ToggleGroupItem>

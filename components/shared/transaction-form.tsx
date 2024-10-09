@@ -3,8 +3,6 @@
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import { useInsertMutation } from "@supabase-cache-helpers/postgrest-react-query";
-
 import DaterPicker from "../ui/date-picker";
 import { AmountInput } from "./amount-input";
 import { DescriptionInput } from "./description-input";
@@ -29,12 +27,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createClient } from "@/utils/supabase/client";
 import { Database } from "@/utils/supabase/database.types";
-
-const supabase = createClient();
+import { createTransaction } from "@/utils/supabase/mutations";
+import { Category, Label, Wallet } from "@/utils/supabase/types";
 
 interface TransactionFormProps {
+  wallets: Wallet[];
+  labels: Label[];
+  categories: Category[];
   type: "income" | "expense" | "transfer";
   onSuccess: () => void;
 }
@@ -42,30 +42,27 @@ interface TransactionFormProps {
 type TransactionFormValues =
   Database["public"]["Tables"]["transactions"]["Insert"];
 
-const TransactionForm = ({ type, onSuccess }: TransactionFormProps) => {
-  const { mutateAsync: insert } = useInsertMutation(
-    supabase.from("transactions"),
-    ["id"],
-    "*",
-    {
-      onSuccess: () => {
-        toast.success("Transaction added successfully!");
-        onSuccess();
-      },
-      onError: (error) => {
-        toast.error(error.message);
-      },
-    },
-  );
-
+const TransactionForm = ({
+  wallets,
+  labels,
+  categories,
+  type,
+  onSuccess,
+}: TransactionFormProps) => {
   const form = useForm<TransactionFormValues>({
     defaultValues: {
       type,
     },
   });
 
-  const onSubmit = (transaction: TransactionFormValues) => {
-    insert([transaction]);
+  const onSubmit = async (transaction: TransactionFormValues) => {
+    const { error } = await createTransaction(transaction);
+
+    if (error) {
+      return toast.error(error.message);
+    }
+    toast.success("Transaction added successfully!");
+    onSuccess();
   };
 
   return (
@@ -78,7 +75,7 @@ const TransactionForm = ({ type, onSuccess }: TransactionFormProps) => {
             <FormItem>
               <FormLabel>Wallet</FormLabel>
               <FormControl>
-                <WalletPicker {...field} />
+                <WalletPicker options={wallets} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -92,7 +89,7 @@ const TransactionForm = ({ type, onSuccess }: TransactionFormProps) => {
               <FormItem>
                 <FormLabel>Category</FormLabel>
                 <FormControl>
-                  <CategoryPicker {...field} type={type} />
+                  <CategoryPicker options={categories} {...field} type={type} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -153,7 +150,7 @@ const TransactionForm = ({ type, onSuccess }: TransactionFormProps) => {
               <FormItem>
                 <FormLabel>Label</FormLabel>
                 <FormControl>
-                  <LabelPicker {...field} />
+                  <LabelPicker options={labels} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

@@ -1,48 +1,39 @@
 "use client";
 
-import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
+import Link from "next/link";
+import { useParams, useSearchParams } from "next/navigation";
 
-import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
+import { Button } from "../ui/button";
 import AddWalletButton from "./add-wallet-button";
 import Wallet from "./wallet";
 
-import { useFilter } from "@/contexts/filter-context";
-import { createClient } from "@/utils/supabase/client";
-import { listWallets } from "@/utils/supabase/queries";
-import { Label as LabelType } from "@/utils/supabase/types";
+import { Wallet as WalletType } from "@/utils/supabase/types";
 
 interface WalletFilterProps {
-  options?: LabelType[];
+  options: WalletType[];
 }
 
-const supabase = createClient();
-
-const WalletFilter = (props: WalletFilterProps) => {
-  const { data: wallets } = useQuery(listWallets(supabase));
-  const {
-    filters: { wallet_id },
-    setWalletId,
-  } = useFilter();
-
+const WalletFilter = ({ options }: WalletFilterProps) => {
+  const searchParams = useSearchParams();
+  const { walletId } = useParams<{ walletId?: string }>();
   return (
-    <div className="overflow-x-auto no-scrollbar flex items-center justify-start flex-nowrap h-full">
-      <ToggleGroup
-        type="single"
-        value={wallet_id}
-        onValueChange={setWalletId}
-        className="overflow-x-auto no-scrollbar flex items-center justify-start flex-nowrap h-full"
-      >
-        {wallets?.map((wallet) => (
-          <ToggleGroupItem
+    <div className="overflow-x-auto no-scrollbar flex items-center gap-2 justify-start flex-nowrap h-full">
+      {options?.map((wallet) => (
+        <Link
+          key={wallet.id}
+          href={`/transactions/${wallet.id}?${searchParams.toString()}`}
+          passHref
+        >
+          <Button
             key={wallet.id}
             value={wallet.id}
             size="sm"
-            variant={wallet_id === wallet.id ? "outline" : "default"}
+            variant={walletId === wallet.id ? "outline" : "ghost"}
           >
             <Wallet name={wallet.name} />
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
+          </Button>
+        </Link>
+      ))}
       <AddWalletButton />
     </div>
   );

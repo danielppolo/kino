@@ -3,32 +3,36 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 
-import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
+import Category from "./category";
 
-import Label from "./label";
-
-import LabelForm from "@/components/shared/label-form";
+import CategoryForm from "@/components/shared/category-form";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { createClient } from "@/utils/supabase/client";
-import { listLabels } from "@/utils/supabase/queries";
+import { Category as CategoryType } from "@/utils/supabase/types";
 
-const supabase = createClient();
+interface CategoriesProps {
+  data: CategoryType[];
+  type: "income" | "expense";
+  title: string;
+}
 
-export default function LabelSection() {
+export default function CategorySection({
+  type,
+  title,
+  data,
+}: CategoriesProps) {
   const [open, setOpen] = useState(false);
-  const { data: labels } = useQuery(listLabels(supabase));
 
   return (
     <div>
       <div className="flex space-between w-full">
         <Collapsible open={open}>
           <div className="flex space-between w-full">
-            <h2>Labels</h2>
+            <h2>{title}</h2>
 
             <CollapsibleTrigger
               asChild
@@ -42,7 +46,8 @@ export default function LabelSection() {
             </CollapsibleTrigger>
           </div>
           <CollapsibleContent>
-            <LabelForm
+            <CategoryForm
+              type={type}
               onSuccess={() => {
                 setOpen(false);
               }}
@@ -51,7 +56,11 @@ export default function LabelSection() {
         </Collapsible>
       </div>
 
-      <div>{labels?.map((label) => <Label key={label.id} data={label} />)}</div>
+      <div>
+        {data?.map((category) => (
+          <Category key={category.id} data={category} />
+        ))}
+      </div>
     </div>
   );
 }

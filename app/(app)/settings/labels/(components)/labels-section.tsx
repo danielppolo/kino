@@ -3,39 +3,30 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 
-import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
+import Label from "./label";
 
-import Category from "./category";
-
-import CategoryForm from "@/components/shared/category-form";
+import LabelForm from "@/components/shared/label-form";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { createClient } from "@/utils/supabase/client";
-import { listCategories } from "@/utils/supabase/queries";
+import { Label as LabelType } from "@/utils/supabase/types";
 
-interface CategoriesProps {
-  type: "income" | "expense";
-  title: string;
+interface LabelSectionProps {
+  data: LabelType[];
 }
 
-const supabase = createClient();
-
-export default function CategorySection({ type, title }: CategoriesProps) {
+export default function LabelSection({ data }: LabelSectionProps) {
   const [open, setOpen] = useState(false);
-  const { data } = useQuery(listCategories(supabase));
-
-  const categories = data?.filter((category) => category.type === type);
 
   return (
     <div>
       <div className="flex space-between w-full">
         <Collapsible open={open}>
           <div className="flex space-between w-full">
-            <h2>{title}</h2>
+            <h2>Labels</h2>
 
             <CollapsibleTrigger
               asChild
@@ -49,8 +40,7 @@ export default function CategorySection({ type, title }: CategoriesProps) {
             </CollapsibleTrigger>
           </div>
           <CollapsibleContent>
-            <CategoryForm
-              type={type}
+            <LabelForm
               onSuccess={() => {
                 setOpen(false);
               }}
@@ -59,11 +49,7 @@ export default function CategorySection({ type, title }: CategoriesProps) {
         </Collapsible>
       </div>
 
-      <div>
-        {categories?.map((category) => (
-          <Category key={category.id} data={category} />
-        ))}
-      </div>
+      <div>{data?.map((label) => <Label key={label.id} data={label} />)}</div>
     </div>
   );
 }

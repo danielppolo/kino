@@ -23,29 +23,29 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
       <div className="w-64 p-6 border-r space-y-6 shrink-0">
         {/* Workspace Section */}
         <Menu title="Workspace">
-          <Link href="/app/settings/general">
+          <Link href="/settings/general">
             <MenuItem label="General" active={false} />
           </Link>
-          <Link href="/app/settings/overview">
+          <Link href="/settings/overview">
             <MenuItem label="Overview" active={false} />
           </Link>
-          <Link href="/app/settings/labels">
+          <Link href="/settings/labels">
             <MenuItem label="Labels" active={false} />
           </Link>
-          <Link href="/app/settings/categories">
+          <Link href="/settings/categories">
             <MenuItem label="Categories" active={false} />
           </Link>
         </Menu>
 
         <Menu title="Account">
-          <Link href="/app/settings/profile">
+          <Link href="/settings/profile">
             <MenuItem label="Profile" active={false} />
           </Link>
         </Menu>
 
         <Menu title="Wallets">
           {wallets?.map((wallet) => (
-            <Link key={wallet.id} href={`/app/settings/wallets/${wallet.id}`}>
+            <Link key={wallet.id} href={`/settings/wallets/${wallet.id}`}>
               <MenuItem label={wallet.name} active={false} />
             </Link>
           ))}
