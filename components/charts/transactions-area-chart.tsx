@@ -7,7 +7,6 @@ import { Area, AreaChart, CartesianGrid } from "recharts";
 
 import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
 
-import { useFilter } from "@/app/protected/filter-context";
 import {
   Card,
   CardContent,
@@ -17,20 +16,21 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ChartConfig, ChartContainer } from "@/components/ui/chart";
+import { useFilter } from "@/contexts/filter-context";
 import { createClient } from "@/utils/supabase/client";
-import { listCategories, listTransactions } from "@/utils/supabase/queries";
-import { Category, Transaction } from "@/utils/supabase/types";
+import { listLabels, listTransactions } from "@/utils/supabase/queries";
+import { Label, Transaction } from "@/utils/supabase/types";
 
 export const description = "A stacked area chart with expand stacking";
 
-function groupTransactionsByCategory(
+function groupTransactionsByLabel(
   transactions: Transaction[],
-  categories: Category[],
+  labels: Label[],
 ) {
-  // Initialize categories for each month only once
-  const categoryTemplate = categories.reduce(
-    (acc, category) => {
-      acc[category.id] = 0;
+  // Initialize labels for each month only once
+  const labelTemplate = labels.reduce(
+    (acc, label) => {
+      acc[label.id] = 0;
       return acc;
     },
     {} as Record<string, number>,
@@ -40,19 +40,19 @@ function groupTransactionsByCategory(
   const result: Record<string, any> = {};
 
   transactions.forEach((txn) => {
-    const { category_id, amount_cents, date } = txn;
+    const { label_id, amount_cents, date } = txn;
 
     // Extract the month from the date (ISO string)
     const transactionDate = new Date(date);
     const month = format(transactionDate, "yyyy-MM");
 
-    // Ensure the month exists in the result and clone the category template
+    // Ensure the month exists in the result and clone the label template
     if (!result[month]) {
-      result[month] = { month, ...{ ...categoryTemplate } };
+      result[month] = { month, ...{ ...labelTemplate } };
     }
 
-    // Sum the amount_cents for each category within the same month (in dollars, absolute value)
-    result[month][category_id] += Math.abs(amount_cents / 100);
+    // Sum the amount_cents for each label within the same month (in dollars, absolute value)
+    result[month][label_id] += Math.abs(amount_cents / 100);
   });
 
   // Sorting the results: first by current month closest to the last element
@@ -75,12 +75,12 @@ function groupTransactionsByCategory(
   return sortedResults;
 }
 
-const getChartConfig = (categories: Category[]) => {
-  if (!categories) return {};
-  return categories.reduce((acc, category, index) => {
-    acc[category.id] = {
-      label: category.name,
-      color: category.color,
+const getChartConfig = (labels: Label[]) => {
+  if (!labels) return {};
+  return labels.reduce((acc, label, index) => {
+    acc[label.id] = {
+      label: label.name,
+      color: label.color,
     };
     return acc;
   }, {});
@@ -91,16 +91,16 @@ const supabase = createClient();
 export function TransactionsAreaChart() {
   const { filters } = useFilter();
   const { data: transactions } = useQuery(listTransactions(supabase, filters));
-  const { data: categories } = useQuery(listCategories(supabase));
+  const { data: labels } = useQuery(listLabels(supabase));
 
   const chartData = useMemo(
-    () => groupTransactionsByCategory(transactions ?? [], categories ?? []),
-    [transactions, categories],
+    () => groupTransactionsByLabel(transactions ?? [], labels ?? []),
+    [transactions, labels],
   );
 
   const chartConfig: ChartConfig = useMemo(
-    () => getChartConfig(categories ?? []),
-    [categories],
+    () => getChartConfig(labels ?? []),
+    [labels],
   );
 
   return (
@@ -130,7 +130,7 @@ export function TransactionsAreaChart() {
               axisLine={false}
               tickMargin={8}
               tickFormatter={(value) => format(new Date(value), "MMMM")}
-              type="category"
+              type="label"
             /> */}
             {/* <YAxis
               tickLine={false}
@@ -155,14 +155,14 @@ export function TransactionsAreaChart() {
                 />
               }
             /> */}
-            {categories?.map((category) => (
+            {labels?.map((label) => (
               <Area
-                key={category.id}
-                dataKey={category.id}
+                key={label.id}
+                dataKey={label.id}
                 type="basis"
-                fill={category.color}
+                fill={label.color}
                 fillOpacity={0.1}
-                stroke={category.color}
+                stroke={label.color}
                 stackId="a"
               />
             ))}

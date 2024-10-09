@@ -5,8 +5,8 @@ import { TypedSupabaseClient } from "@/utils/supabase/types";
 interface Params {
   from?: string;
   to?: string;
+  label_id?: string;
   category_id?: string;
-  subject_id?: string;
 }
 
 export const createTransaction = (

@@ -22,10 +22,10 @@ import DaterPicker from "../ui/date-picker";
 import { AmountInput } from "./amount-input";
 import CategoryPicker from "./category-picker";
 import { DescriptionInput } from "./description-input";
-import SubjectPicker from "./subject-picker";
+import LabelPicker from "./label-picker";
 
-import { useFilter } from "@/app/protected/filter-context";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
+import { useFilter } from "@/contexts/filter-context";
 import { createClient } from "@/utils/supabase/client";
 import { Database } from "@/utils/supabase/database.types";
 import { listTransactions } from "@/utils/supabase/queries";
@@ -92,27 +92,27 @@ export default function TransactionList() {
   const columns: ColumnDef<Transaction>[] = useMemo(
     () => [
       {
-        accessorKey: "category_id",
+        accessorKey: "label_id",
         header: "",
         size: 20, // Set the column width to a smaller value
         cell: ({ row }) => (
-          <CategoryPicker
-            value={row.original.category_id}
+          <LabelPicker
+            value={row.original.label_id}
             onChange={(id: string) => {
-              onChange(row.original, { category_id: id });
+              onChange(row.original, { label_id: id });
             }}
           />
         ),
       },
       {
-        accessorKey: "subject_id",
+        accessorKey: "category_id",
         header: "",
         size: 20, // Set the column width to a smaller value
         cell: ({ row }) => (
-          <SubjectPicker
-            value={row.original.subject_id ?? undefined}
+          <CategoryPicker
+            value={row.original.category_id ?? undefined}
             onChange={(id: string) => {
-              onChange(row.original, { subject_id: id });
+              onChange(row.original, { category_id: id });
             }}
           />
         ),

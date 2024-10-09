@@ -1,4 +1,4 @@
-import { Filters } from "@/app/protected/filter-context";
+import { Filters } from "@/contexts/filter-context";
 import { TypedSupabaseClient } from "@/utils/supabase/types";
 
 export const listTransactions = (
@@ -17,14 +17,14 @@ export const listTransactions = (
       .lte("date", params.dateRange.to.toISOString());
   }
 
+  // Filter by label_id if available
+  if (params?.label_id) {
+    query = query.eq("label_id", params.label_id);
+  }
+
   // Filter by category_id if available
   if (params?.category_id) {
     query = query.eq("category_id", params.category_id);
-  }
-
-  // Filter by subject_id if available
-  if (params?.subject_id) {
-    query = query.eq("subject_id", params.subject_id);
   }
 
   // Filter by wallet_id if available
@@ -35,12 +35,12 @@ export const listTransactions = (
   return query;
 };
 
-export const listCategories = (client: TypedSupabaseClient) => {
-  return client.from("categories").select("*");
+export const listLabels = (client: TypedSupabaseClient) => {
+  return client.from("labels").select("*");
 };
 
-export const listSubjects = (client: TypedSupabaseClient) => {
-  return client.from("subjects").select("*");
+export const listCategories = (client: TypedSupabaseClient) => {
+  return client.from("categories").select("*");
 };
 
 export const listWallets = (client: TypedSupabaseClient) => {

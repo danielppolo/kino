@@ -1,10 +1,9 @@
 import React from "react";
 
-import { FilterProvider } from "./filter-context";
-
+import LabelFilter from "@/components/shared/label-filter";
 import CategoryFilter from "@/components/shared/category-filter";
-import SubjectFilter from "@/components/shared/subject-filter";
 import WalletFilter from "@/components/shared/wallet-filter";
+import { FilterProvider } from "@/contexts/filter-context";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -26,9 +25,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             {/* <DateRangeFilter /> */}
 
             <div className="w-[50px]">
-              <CategoryFilter />
+              <LabelFilter />
             </div>
-            <SubjectFilter />
+            <CategoryFilter />
           </div>
           {children}
         </div>

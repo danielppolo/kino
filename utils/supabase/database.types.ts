@@ -36,22 +36,25 @@ export type Database = {
     Tables: {
       categories: {
         Row: {
-          color: string
+          icon: string
           id: string
           name: string
-          user_id: string | null
+          type: string
+          user_id: string
         }
         Insert: {
-          color: string
+          icon: string
           id?: string
           name: string
-          user_id?: string | null
+          type: string
+          user_id?: string
         }
         Update: {
-          color?: string
+          icon?: string
           id?: string
           name?: string
-          user_id?: string | null
+          type?: string
+          user_id?: string
         }
         Relationships: [
           {
@@ -63,37 +66,49 @@ export type Database = {
           },
         ]
       }
-      subjects: {
+      labels: {
         Row: {
-          icon: string
+          color: string
           id: string
           name: string
-          type: string | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
-          icon: string
+          color: string
           id?: string
           name: string
-          type?: string | null
-          user_id?: string | null
+          user_id?: string
         }
         Update: {
-          icon?: string
+          color?: string
           id?: string
           name?: string
-          type?: string | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "subjects_user_id_fkey"
+            foreignKeyName: "labels_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
+      }
+      roles: {
+        Row: {
+          id: number
+          name: string
+        }
+        Insert: {
+          id?: number
+          name: string
+        }
+        Update: {
+          id?: number
+          name?: string
+        }
+        Relationships: []
       }
       transactions: {
         Row: {
@@ -104,11 +119,10 @@ export type Database = {
           date: string
           description: string | null
           id: string
+          label_id: string | null
           labels: string[] | null
           note: string | null
-          related_transaction_id: string | null
-          subject_id: string | null
-          type: string | null
+          type: Database["public"]["Enums"]["transaction_type_enum"]
           wallet_id: string
         }
         Insert: {
@@ -119,11 +133,10 @@ export type Database = {
           date: string
           description?: string | null
           id?: string
+          label_id?: string | null
           labels?: string[] | null
           note?: string | null
-          related_transaction_id?: string | null
-          subject_id?: string | null
-          type?: string | null
+          type: Database["public"]["Enums"]["transaction_type_enum"]
           wallet_id: string
         }
         Update: {
@@ -134,11 +147,10 @@ export type Database = {
           date?: string
           description?: string | null
           id?: string
+          label_id?: string | null
           labels?: string[] | null
           note?: string | null
-          related_transaction_id?: string | null
-          subject_id?: string | null
-          type?: string | null
+          type?: Database["public"]["Enums"]["transaction_type_enum"]
           wallet_id?: string
         }
         Relationships: [
@@ -150,21 +162,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "transactions_related_transaction_id_fkey"
-            columns: ["related_transaction_id"]
+            foreignKeyName: "transactions_label_id_fkey"
+            columns: ["label_id"]
             isOneToOne: false
-            referencedRelation: "transactions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "transactions_subject_id_fkey"
-            columns: ["subject_id"]
-            isOneToOne: false
-            referencedRelation: "subjects"
+            referencedRelation: "labels"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "transactions_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_wallets: {
+        Row: {
+          created_at: string
+          id: number
+          role_id: number
+          user_id: string
+          wallet_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          role_id: number
+          user_id: string
+          wallet_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          role_id?: number
+          user_id?: string
+          wallet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_wallets_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_wallets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_wallets_wallet_id_fkey"
             columns: ["wallet_id"]
             isOneToOne: false
             referencedRelation: "wallets"
@@ -177,24 +228,24 @@ export type Database = {
           currency: string
           id: string
           name: string
-          user_id: string | null
+          owner_id: string
         }
         Insert: {
           currency: string
           id?: string
           name: string
-          user_id?: string | null
+          owner_id?: string
         }
         Update: {
           currency?: string
           id?: string
           name?: string
-          user_id?: string | null
+          owner_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "wallets_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "wallets_owner_id_fkey"
+            columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -209,7 +260,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      transaction_type_enum: "income" | "expense" | "transfer"
     }
     CompositeTypes: {
       [_ in never]: never

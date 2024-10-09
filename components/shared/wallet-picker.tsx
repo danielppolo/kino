@@ -28,12 +28,12 @@ const WalletPicker: React.FC<WalletPickerProps> = ({ onChange, value }) => {
   return (
     <Select onValueChange={onChange} defaultValue={value ?? undefined}>
       <SelectTrigger>
-        <SelectValue placeholder="Select subject" />
+        <SelectValue placeholder="Select category" />
       </SelectTrigger>
       <SelectContent>
-        {wallets?.map((subject) => (
-          <SelectItem key={subject.id} value={subject.id}>
-            {subject.name}
+        {wallets?.map((category) => (
+          <SelectItem key={category.id} value={category.id}>
+            {category.name}
           </SelectItem>
         ))}
       </SelectContent>

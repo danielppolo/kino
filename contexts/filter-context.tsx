@@ -25,8 +25,8 @@ type Range = {
 };
 
 export interface Filters {
+  label_id: string | undefined;
   category_id: string | undefined;
-  subject_id: string | undefined;
   dateRange: Range;
   wallet_id: string | undefined;
 }
@@ -42,9 +42,9 @@ type FilterAction =
 const filterReducer = (state: Filters, action: FilterAction): Filters => {
   switch (action.type) {
     case "SET_CATEGORY_ID":
-      return { ...state, category_id: action.payload };
+      return { ...state, label_id: action.payload };
     case "SET_SUBJECT_ID":
-      return { ...state, subject_id: action.payload };
+      return { ...state, category_id: action.payload };
     case "SET_DATE_RANGE":
       return { ...state, dateRange: action.payload };
     case "SET_WALLET_ID":
@@ -58,8 +58,8 @@ const filterReducer = (state: Filters, action: FilterAction): Filters => {
 const FilterContext = createContext<
   | {
       filters: Filters;
+      setLabelId: (label_id: string | undefined) => void;
       setCategoryId: (category_id: string | undefined) => void;
-      setSubjectId: (subject_id: string | undefined) => void;
       setDateRange: (range: Range) => void;
       setWalletId: (wallet_id: string | undefined) => void;
     }
@@ -72,8 +72,8 @@ export const FilterProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const searchParams = new URLSearchParams(window.location.search);
   const [filters, dispatch] = useReducer(filterReducer, {
+    label_id: searchParams.get("label_id") || undefined,
     category_id: searchParams.get("category_id") || undefined,
-    subject_id: searchParams.get("subject_id") || undefined,
     dateRange: {
       from: searchParams.get("from")
         ? new Date(searchParams.get("from") as string)
@@ -87,11 +87,11 @@ export const FilterProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const setters = useMemo(
     () => ({
-      setCategoryId: (category_id: string | undefined) =>
-        dispatch({ type: "SET_CATEGORY_ID", payload: category_id }),
+      setLabelId: (label_id: string | undefined) =>
+        dispatch({ type: "SET_CATEGORY_ID", payload: label_id }),
 
-      setSubjectId: (subject_id: string | undefined) =>
-        dispatch({ type: "SET_SUBJECT_ID", payload: subject_id }),
+      setCategoryId: (category_id: string | undefined) =>
+        dispatch({ type: "SET_SUBJECT_ID", payload: category_id }),
 
       setDateRange: (range: Range) =>
         dispatch({ type: "SET_DATE_RANGE", payload: range }),
@@ -104,8 +104,8 @@ export const FilterProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Sync filter changes with URL query params
   useEffect(() => {
+    updateUrlParams("label_id", filters.label_id);
     updateUrlParams("category_id", filters.category_id);
-    updateUrlParams("subject_id", filters.subject_id);
     updateUrlParams("from", filters.dateRange.from?.toISOString());
     updateUrlParams("to", filters.dateRange.to?.toISOString());
     updateUrlParams("wallet_id", filters.wallet_id);

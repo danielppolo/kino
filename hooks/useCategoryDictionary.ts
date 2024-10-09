@@ -8,8 +8,8 @@ const useCategoryDictionary = () => {
   const supabase = createClient();
   const { data } = useQuery(listCategories(supabase), {
     select(res) {
-      const data = res.data?.reduce((acc, cat) => {
-        acc[cat.id] = cat;
+      const data = res.data?.reduce((acc, category) => {
+        acc[category.id] = category;
         return acc;
       }, {});
       return { ...res, data };

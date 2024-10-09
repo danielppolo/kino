@@ -4,7 +4,7 @@ import { add, sub } from "date-fns";
 
 import { DaterRangePicker } from "../ui/date-range-picker";
 
-import { useFilter } from "@/app/protected/filter-context";
+import { useFilter } from "@/contexts/filter-context";
 
 const DateRangeFilter = () => {
   const {

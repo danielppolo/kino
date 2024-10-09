@@ -1,8 +1,6 @@
 import { GeistSans } from "geist/font/sans";
 import { ThemeProvider } from "next-themes";
 
-import Providers from "./providers";
-
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -30,12 +28,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Providers>
-            <main className="min-h-screen flex flex-col items-center">
-              {/* <Navbar /> */}
-              {children}
-            </main>
-          </Providers>
+          <main className="min-h-screen flex flex-col items-center">
+            {/* <Navbar /> */}
+            {children}
+          </main>
           <Toaster />
         </ThemeProvider>
       </body>

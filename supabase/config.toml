@@ -91,7 +91,7 @@ enable_confirmations = false
 
 # Uncomment to customize email template
 # [auth.email.template.invite]
-# subject = "You have been invited"
+# category = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
 
 [auth.sms]

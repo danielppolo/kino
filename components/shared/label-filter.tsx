@@ -1,44 +1,47 @@
 "use client";
 
-import { CircleDotDashed, X } from "lucide-react";
+import { CircleDashed, X } from "lucide-react";
 
 import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
 
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
-import Subject from "./subject";
+import Label from "./label";
 
-import { useFilter } from "@/app/protected/filter-context";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import useSubjectDictionary from "@/hooks/useSubjectDictionary";
+import { useFilter } from "@/contexts/filter-context";
+import useLabelDictionary from "@/hooks/useLabelDictionary";
 import { createClient } from "@/utils/supabase/client";
-import { listSubjects } from "@/utils/supabase/queries";
+import { listLabels } from "@/utils/supabase/queries";
+import { Label as LabelType } from "@/utils/supabase/types";
 
+interface LabelFilterProps {
+  options?: LabelType[];
+}
 const supabase = createClient();
 
-const SubjectFilter = () => {
+const LabelFilter = (props: LabelFilterProps) => {
   const {
-    filters: { subject_id },
-    setSubjectId,
+    filters: { label_id },
+    setLabelId,
   } = useFilter();
+  const { data: labels } = useQuery(listLabels(supabase));
+  const labelsDict = useLabelDictionary();
 
-  const { data: subjects } = useQuery(listSubjects(supabase));
-  const subjectDict = useSubjectDictionary();
-
-  if (subject_id && subjectDict[subject_id]) {
+  if (label_id && labelsDict[label_id]) {
     return (
       <Button
         variant="ghost"
         className="peer group"
         size="sm"
-        onClick={() => setSubjectId(undefined)}
+        onClick={() => setLabelId(undefined)}
       >
         <div className="group-hover:hidden flex items-center">
-          <Subject subject={subjectDict[subject_id]} />
+          <Label label={labelsDict[label_id]} size="sm" />
         </div>
         <X className="hidden h-3 w-3 group-hover:block" />
       </Button>
@@ -49,19 +52,19 @@ const SubjectFilter = () => {
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="sm">
-          <CircleDotDashed className="w-3 h-3" />
+          <CircleDashed className="w-3 h-3" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full">
         <ToggleGroup
           type="single"
-          value={subject_id}
-          onValueChange={setSubjectId}
-          className="grid grid-cols-8 gap-2 p-2"
+          value={label_id}
+          onValueChange={setLabelId}
+          className="grid grid-cols-8"
         >
-          {subjects?.map((subject) => (
-            <ToggleGroupItem key={subject.id} value={subject.id}>
-              <Subject subject={subject} />
+          {labels?.map((label) => (
+            <ToggleGroupItem key={label.id} value={label.id} size="sm">
+              <Label label={label} size="sm" />
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
@@ -70,4 +73,4 @@ const SubjectFilter = () => {
   );
 };
 
-export default SubjectFilter;
+export default LabelFilter;

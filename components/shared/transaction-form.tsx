@@ -7,11 +7,11 @@ import { useInsertMutation } from "@supabase-cache-helpers/postgrest-react-query
 
 import DaterPicker from "../ui/date-picker";
 import { AmountInput } from "./amount-input";
-import CategoryPicker from "./category-picker";
 import { DescriptionInput } from "./description-input";
+import LabelPicker from "./label-picker";
 import WalletPicker from "./wallet-picker";
 
-import SubjectPicker from "@/components/shared/subject-picker";
+import CategoryPicker from "@/components/shared/category-picker";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -34,32 +34,38 @@ import { Database } from "@/utils/supabase/database.types";
 
 const supabase = createClient();
 
-const TransactionForm = () => {
+interface TransactionFormProps {
+  type: "income" | "expense" | "transfer";
+  onSuccess: () => void;
+}
+
+type TransactionFormValues =
+  Database["public"]["Tables"]["transactions"]["Insert"];
+
+const TransactionForm = ({ type, onSuccess }: TransactionFormProps) => {
   const { mutateAsync: insert } = useInsertMutation(
     supabase.from("transactions"),
     ["id"],
     "*",
     {
-      onSuccess: () => console.log("Success!"),
+      onSuccess: () => {
+        toast.success("Transaction added successfully!");
+        onSuccess();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
     },
   );
 
-  const form = useForm<Database["public"]["Tables"]["transactions"]["Insert"]>({
+  const form = useForm<TransactionFormValues>({
     defaultValues: {
-      type: "income",
-      wallet_id: "610cc3f6-ecc5-4f57-8911-4d530f294c7b",
+      type,
     },
   });
 
-  const onSubmit = async (
-    newTransaction: Database["public"]["Tables"]["transactions"]["Insert"],
-  ) => {
-    try {
-      await insert([newTransaction]);
-      toast.success("Transaction added successfully!");
-    } catch (error) {
-      toast.error(error.message);
-    }
+  const onSubmit = (transaction: TransactionFormValues) => {
+    insert([transaction]);
   };
 
   return (
@@ -78,19 +84,21 @@ const TransactionForm = () => {
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="subject_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Subject</FormLabel>
-              <FormControl>
-                <SubjectPicker {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {type !== "transfer" && (
+          <FormField
+            control={form.control}
+            name="category_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Category</FormLabel>
+                <FormControl>
+                  <CategoryPicker {...field} type={type} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         <FormField
           control={form.control}
@@ -137,19 +145,21 @@ const TransactionForm = () => {
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="category_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Category</FormLabel>
-              <FormControl>
-                <CategoryPicker {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {type !== "transfer" && (
+          <FormField
+            control={form.control}
+            name="label_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Label</FormLabel>
+                <FormControl>
+                  <LabelPicker {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         <FormField
           control={form.control}

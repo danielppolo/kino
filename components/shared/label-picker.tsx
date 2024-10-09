@@ -1,11 +1,11 @@
 "use client";
 
-import { CircleDotDashed } from "lucide-react";
+import { CircleDashed } from "lucide-react";
 
 import { useQuery } from "@supabase-cache-helpers/postgrest-react-query";
 
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
-import Subject from "./subject";
+import Label from "./label";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -13,35 +13,32 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import useSubjectDictionary from "@/hooks/useSubjectDictionary";
+import useLabelDictionary from "@/hooks/useLabelDictionary";
 import { createClient } from "@/utils/supabase/client";
-import { listSubjects } from "@/utils/supabase/queries";
+import { listLabels } from "@/utils/supabase/queries";
 
-interface SubjectPickerProps {
+interface LabelPickerProps {
   defaultValue?: string;
-  value?: string | null;
+  value?: string;
   onChange: (id: string) => void;
 }
+
 const supabase = createClient();
 
-const SubjectPicker = ({
-  onChange,
-  value,
-  defaultValue,
-}: SubjectPickerProps) => {
-  const { data: subjects } = useQuery(listSubjects(supabase));
-  const subjectDict = useSubjectDictionary();
+const LabelPicker = ({ onChange, defaultValue, value }: LabelPickerProps) => {
+  const { data: labels } = useQuery(listLabels(supabase));
+  const labelsDict = useLabelDictionary();
 
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="sm">
-          {value && subjectDict[value] ? (
+          {value && labelsDict[value] ? (
             <>
-              <Subject subject={subjectDict[value]} />
+              <Label label={labelsDict[value]} size="sm" />
             </>
           ) : (
-            <CircleDotDashed className="w-3 h-3" />
+            <CircleDashed className="w-3 h-3" />
           )}
         </Button>
       </PopoverTrigger>
@@ -52,9 +49,9 @@ const SubjectPicker = ({
           onValueChange={onChange}
           className="grid grid-cols-8 gap-2 p-2"
         >
-          {subjects?.map((subject) => (
-            <ToggleGroupItem key={subject.id} value={subject.id}>
-              <Subject subject={subject} />
+          {labels?.map((label) => (
+            <ToggleGroupItem key={label.id} value={label.id}>
+              <Label label={label} size="sm" />
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
@@ -63,4 +60,4 @@ const SubjectPicker = ({
   );
 };
 
-export default SubjectPicker;
+export default LabelPicker;
