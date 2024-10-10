@@ -1,25 +1,17 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
-import { Trash } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { format } from "date-fns";
 import { toast } from "sonner";
 
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
-import { Button } from "../ui/button";
-import DaterPicker from "../ui/date-picker";
+import AddTransactionButton from "./add-transaction-button";
 import { AmountInput } from "./amount-input";
 import CategoryPicker from "./category-picker";
 import { DescriptionInput } from "./description-input";
 import LabelPicker from "./label-picker";
 
-import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Database } from "@/utils/supabase/database.types";
 import {
   deleteTransaction,
@@ -28,12 +20,14 @@ import {
 import { Category, Label, Transaction } from "@/utils/supabase/types";
 
 interface TransactionListProps {
+  walletId?: string;
   transactions: Transaction[];
   labels: Label[];
   categories: Category[];
 }
 
 export default function TransactionList({
+  walletId,
   transactions,
   labels,
   categories,
@@ -76,170 +70,143 @@ export default function TransactionList({
     [],
   );
 
-  // Define the columns for the React Table
-  const columns: ColumnDef<Transaction>[] = useMemo(
-    () => [
-      {
-        accessorKey: "label_id",
-        header: "",
-        size: 20, // Set the column width to a smaller value
-        cell: ({ row }) => (
-          <LabelPicker
-            options={labels}
-            value={row.original.label_id}
-            onChange={(id: string) => {
-              onChange(row.original, { label_id: id });
-            }}
-          />
-        ),
-      },
-      {
-        accessorKey: "category_id",
-        header: "",
-        size: 20, // Set the column width to a smaller value
-        cell: ({ row }) => (
-          <CategoryPicker
-            options={categories}
-            type={row.original.type}
-            value={row.original.category_id ?? undefined}
-            onChange={(id: string) => {
-              onChange(row.original, { category_id: id });
-            }}
-          />
-        ),
-      },
-      {
-        accessorKey: "amount_cents",
-        header: "Amount",
-        cell: ({ row }) => (
-          <AmountInput
-            id={`amount-${row.original.id}`}
-            variant="ghost"
-            defaultValue={row.original.amount_cents / 100}
-            className={
-              row.original.type === "income"
-                ? "text-emerald-600"
-                : "text-red-500"
-            }
-            onBlur={(event) => {
-              onChange(row.original, {
-                amount_cents: Number(event.target.value) * 100,
-              });
-            }}
-          />
-        ),
-      },
-      {
-        accessorKey: "description",
-        header: "Description",
-        cell: ({ row }) => (
-          <DescriptionInput
-            id={`desc-${row.original.id}`}
-            variant="ghost"
-            defaultValue={row.original.description ?? undefined}
-            onBlur={(event) => {
-              onChange(row.original, { description: event.target.value });
-            }}
-          />
-        ),
-      },
-      {
-        accessorKey: "date",
-        header: "Date",
-        cell: ({ row }) => (
-          <DaterPicker
-            id={`date-${row.original.id}`}
-            variant="ghost"
-            value={row.original.date}
-            onChange={(date?: string) => {
-              onChange(row.original, { date });
-            }}
-          />
-        ),
-      },
-      {
-        accessorKey: "id",
-        header: "Delete",
-        cell: ({ row }) => (
-          <Button
-            className="hidden group-hover:block"
-            size="sm"
-            id={`remove-${row.original.id}`}
-            variant="ghost"
-            onClick={() => {
-              onDelete(row.original.id);
-            }}
-          >
-            <Trash className="h-3 w-3" />
-          </Button>
-        ),
-      },
-    ],
-    [onChange],
-  );
-
-  // Create the table instance using Tanstack Table
-  const table = useReactTable({
-    data: transactions,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    columnResizeMode: "onEnd", // Can also use "onChange"
-    columnResizeDirection: "rtl",
-    enableColumnResizing: true,
-  });
+  // Group transactions by date
+  const groupedTransactions = useMemo(() => {
+    const groups: { [key: string]: Transaction[] } = {};
+    transactions.forEach((transaction) => {
+      const date = transaction.date;
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(transaction);
+    });
+    return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
+  }, [transactions]);
 
   // Virtualization Setup
   const parentRef = useRef<HTMLDivElement>(null);
 
   const rowVirtualizer = useVirtualizer({
-    count: table.getRowModel().rows.length,
+    count: groupedTransactions.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 40,
-    overscan: 20, // Number of extra rows to render outside the viewport for smoother scrolling
+    estimateSize: (index) => 32 + groupedTransactions[index][1].length * 40,
+    overscan: 5,
   });
+
+  // Re-render the virtualized list when transactions change
+  useEffect(() => {
+    rowVirtualizer.measure();
+  }, [transactions, rowVirtualizer]);
 
   return (
     <div
       ref={parentRef}
-      // FIXME: 48 is for 12em.
       style={{ height: window.innerHeight - 48 - 40, overflow: "auto" }}
     >
-      <Table className="table-fixed">
-        <TableBody
-          style={{
-            height: `${rowVirtualizer.getTotalSize()}px`,
-            position: "relative",
-          }}
-        >
-          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-            const row = table.getRowModel().rows[virtualRow.index];
-            return (
-              <TableRow
-                key={row.id}
-                className="group"
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  transform: `translateY(${virtualRow.start}px)`,
-                  height: `${virtualRow.size}px`,
-                }}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell
-                    key={cell.id}
-                    className="px-2 py-1 h-10"
-                    style={{ width: cell.column.getSize() ?? "auto" }}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+      <div
+        style={{
+          height: `${rowVirtualizer.getTotalSize()}px`,
+          width: "100%",
+          position: "relative",
+        }}
+      >
+        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+          const [date, dateTransactions] =
+            groupedTransactions[virtualRow.index];
+          return (
+            <div
+              key={date}
+              className="divide-y"
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: `${virtualRow.size}px`,
+                transform: `translateY(${virtualRow.start}px)`,
+              }}
+            >
+              <div className="bg-muted/50 h-8 flex items-center justify-between px-4 text-xs">
+                <p>{format(new Date(date), "PP")}</p>
+                {walletId && (
+                  <AddTransactionButton
+                    labels={labels}
+                    categories={categories}
+                    type="expense"
+                    walletId={walletId}
+                    date={date}
+                  />
+                )}
+              </div>
+              {dateTransactions.map((transaction) => (
+                <div
+                  key={transaction.id}
+                  className="group flex items-center h-10 px-2"
+                >
+                  <div className="w-12 shrink-0">
+                    <LabelPicker
+                      options={labels}
+                      value={transaction.label_id}
+                      onChange={(id: string) => {
+                        onChange(transaction, { label_id: id });
+                      }}
+                    />
+                  </div>
+                  <div className="w-12 shrink-0">
+                    <CategoryPicker
+                      options={categories}
+                      type={transaction.type}
+                      value={transaction.category_id ?? undefined}
+                      onChange={(id: string) => {
+                        onChange(transaction, { category_id: id });
+                      }}
+                    />
+                  </div>
+                  <div className="grow">
+                    <DescriptionInput
+                      id={`desc-${transaction.id}`}
+                      variant="ghost"
+                      defaultValue={transaction.description ?? undefined}
+                      onBlur={(event) => {
+                        onChange(transaction, {
+                          description: event.target.value,
+                        });
+                      }}
+                    />
+                  </div>
+                  <div className="w-24 shrink-0">
+                    <AmountInput
+                      id={`amount-${transaction.id}`}
+                      variant="ghost"
+                      defaultValue={transaction.amount_cents / 100}
+                      className={
+                        transaction.type === "income"
+                          ? "text-emerald-600"
+                          : "text-red-500"
+                      }
+                      onBlur={(event) => {
+                        onChange(transaction, {
+                          amount_cents: Number(event.target.value) * 100,
+                        });
+                      }}
+                    />
+                  </div>
+                  {/* <div className="w-32 shrink-0 flex justify-end">
+                    <DaterPicker
+                      id={`date-${transaction.id}`}
+                      variant="ghost"
+                      value={transaction.date}
+                      onChange={(date?: string) => {
+                        onChange(transaction, { date });
+                      }}
+                    />
+                  </div> */}
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

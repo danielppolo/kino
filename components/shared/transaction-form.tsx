@@ -7,7 +7,6 @@ import DaterPicker from "../ui/date-picker";
 import { AmountInput } from "./amount-input";
 import { DescriptionInput } from "./description-input";
 import LabelPicker from "./label-picker";
-import WalletPicker from "./wallet-picker";
 
 import CategoryPicker from "@/components/shared/category-picker";
 import { Button } from "@/components/ui/button";
@@ -29,10 +28,11 @@ import {
 } from "@/components/ui/select";
 import { Database } from "@/utils/supabase/database.types";
 import { createTransaction } from "@/utils/supabase/mutations";
-import { Category, Label, Wallet } from "@/utils/supabase/types";
+import { Category, Label } from "@/utils/supabase/types";
 
 interface TransactionFormProps {
-  wallets: Wallet[];
+  walletId: string;
+  date?: string;
   labels: Label[];
   categories: Category[];
   type: "income" | "expense" | "transfer";
@@ -43,7 +43,8 @@ type TransactionFormValues =
   Database["public"]["Tables"]["transactions"]["Insert"];
 
 const TransactionForm = ({
-  wallets,
+  walletId,
+  date,
   labels,
   categories,
   type,
@@ -52,6 +53,8 @@ const TransactionForm = ({
   const form = useForm<TransactionFormValues>({
     defaultValues: {
       type,
+      wallet_id: walletId,
+      date,
     },
   });
 
@@ -68,19 +71,6 @@ const TransactionForm = ({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="wallet_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Wallet</FormLabel>
-              <FormControl>
-                <WalletPicker options={wallets} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
         {type !== "transfer" && (
           <FormField
             control={form.control}

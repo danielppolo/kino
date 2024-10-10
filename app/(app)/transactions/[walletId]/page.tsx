@@ -34,6 +34,7 @@ export default async function Page({
 
   return (
     <TransactionList
+      walletId={walletId}
       transactions={transactions}
       labels={labels}
       categories={categories}
