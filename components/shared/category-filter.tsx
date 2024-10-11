@@ -13,12 +13,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useCategories } from "@/contexts/settings-context";
-import useCategoryDictionary from "@/hooks/useCategoryDictionary";
 
 const CategoryFilter = () => {
   const router = useRouter();
-  const categories = useCategories();
-  const categoryDict = useCategoryDictionary(categories);
+  const [categories, categoriesDict] = useCategories();
   const searchParams = useSearchParams();
   const categoryId = searchParams.get("category_id") ?? undefined;
 
@@ -32,7 +30,7 @@ const CategoryFilter = () => {
     router.push(`/transactions?${params.toString()}`);
   };
 
-  if (categoryId && categoryDict[categoryId]) {
+  if (categoryId && categoriesDict[categoryId]) {
     return (
       <Button
         variant="ghost"
@@ -41,7 +39,7 @@ const CategoryFilter = () => {
         onClick={() => setCategoryId(undefined)}
       >
         <div className="group-hover:hidden flex items-center">
-          <Category category={categoryDict[categoryId]} />
+          <Category category={categoriesDict[categoryId]} />
         </div>
         <X className="hidden h-3 w-3 group-hover:block" />
       </Button>

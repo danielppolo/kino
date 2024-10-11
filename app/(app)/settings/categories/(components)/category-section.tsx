@@ -21,7 +21,7 @@ interface CategoriesProps {
 
 export default function CategorySection({ type, title }: CategoriesProps) {
   const [open, setOpen] = useState(false);
-  const categories = useCategories();
+  const [categories] = useCategories();
 
   const filteredCategories = categories.filter(
     (category) => category.type === type,

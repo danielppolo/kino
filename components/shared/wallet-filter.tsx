@@ -11,7 +11,7 @@ import { useWallets } from "@/contexts/settings-context";
 
 const WalletFilter = () => {
   const searchParams = useSearchParams();
-  const wallets = useWallets();
+  const [wallets] = useWallets();
   const { walletId } = useParams<{ walletId?: string }>();
   return (
     <div className="overflow-x-auto no-scrollbar flex items-center gap-2 justify-start flex-nowrap h-full">

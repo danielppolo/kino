@@ -47,8 +47,8 @@ const TransactionSchema = z.object({
 });
 
 const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
-  const categories = useCategories();
-  const labels = useLabels();
+  const [categories] = useCategories();
+  const [labels] = useLabels();
   const [open, setOpen] = useState(false);
   const [csvData, setCsvData] = useState<any[]>([]);
   const [options, setOptions] = useState<Options>({

@@ -12,7 +12,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useLabels } from "@/contexts/settings-context";
-import useLabelDictionary from "@/hooks/useLabelDictionary";
 
 interface LabelPickerProps {
   defaultValue?: string;
@@ -21,8 +20,7 @@ interface LabelPickerProps {
 }
 
 const LabelPicker = ({ onChange, defaultValue, value }: LabelPickerProps) => {
-  const labels = useLabels();
-  const labelsDict = useLabelDictionary(labels);
+  const [labels, labelsDict] = useLabels();
 
   return (
     <Popover>

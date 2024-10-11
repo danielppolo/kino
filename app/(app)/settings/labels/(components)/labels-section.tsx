@@ -16,7 +16,7 @@ import { useLabels } from "@/contexts/settings-context";
 
 export default function LabelSection() {
   const [open, setOpen] = useState(false);
-  const labels = useLabels();
+  const [labels] = useLabels();
 
   return (
     <div>

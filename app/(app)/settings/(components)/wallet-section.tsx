@@ -6,7 +6,7 @@ import { Menu, MenuItem } from "@/components/ui/menu";
 import { useWallets } from "@/contexts/settings-context";
 
 export default function WalletSection() {
-  const wallets = useWallets();
+  const [wallets] = useWallets();
 
   return (
     <Menu title="Wallets">

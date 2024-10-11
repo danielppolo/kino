@@ -12,7 +12,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useCategories } from "@/contexts/settings-context";
-import useCategoryDictionary from "@/hooks/useCategoryDictionary";
 
 interface CategoryPickerProps {
   type: "income" | "expense" | "transfer";
@@ -27,8 +26,7 @@ const CategoryPicker = ({
   type,
   onChange,
 }: CategoryPickerProps) => {
-  const categories = useCategories();
-  const categoryDict = useCategoryDictionary(categories);
+  const [categories, categoriesDict] = useCategories();
   const filteredCategories = categories?.filter(
     (category) => category.type === type,
   );
@@ -37,9 +35,9 @@ const CategoryPicker = ({
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="sm">
-          {value && categoryDict[value] ? (
+          {value && categoriesDict[value] ? (
             <>
-              <Category category={categoryDict[value]} />
+              <Category category={categoriesDict[value]} />
             </>
           ) : (
             <CircleDotDashed className="w-3 h-3" />

@@ -13,12 +13,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useLabels } from "@/contexts/settings-context";
-import useLabelDictionary from "@/hooks/useLabelDictionary";
 
 const LabelFilter = () => {
   const router = useRouter();
-  const labels = useLabels();
-  const labelsDict = useLabelDictionary(labels);
+  const [labels, labelsDict] = useLabels();
   const searchParams = useSearchParams();
   const labelId = searchParams.get("label_id") ?? undefined;
 

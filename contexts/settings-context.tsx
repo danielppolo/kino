@@ -36,26 +36,56 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   );
 };
 
-export const useCategories = (): Category[] => {
+export const useCategories = (): [Category[], Record<string, Category>] => {
   const context = useContext(SettingsContext);
   if (context === undefined) {
     throw new Error("useCategories must be used within a SettingsProvider");
   }
-  return context.categories;
+
+  const list = context.categories;
+  const dict = context.categories.reduce(
+    (acc, label) => {
+      acc[label.id] = label;
+      return acc;
+    },
+    {} as Record<string, Category>,
+  );
+
+  return [list, dict];
 };
 
-export const useLabels = (): Label[] => {
+export const useLabels = (): [Label[], Record<string, Label>] => {
   const context = useContext(SettingsContext);
   if (context === undefined) {
     throw new Error("useLabels must be used within a SettingsProvider");
   }
-  return context.labels;
+
+  const list = context.labels;
+  const dict = context.labels.reduce(
+    (acc, label) => {
+      acc[label.id] = label;
+      return acc;
+    },
+    {} as Record<string, Label>,
+  );
+
+  return [list, dict];
 };
 
-export const useWallets = (): Wallet[] => {
+export const useWallets = (): [Wallet[], Record<string, Wallet>] => {
   const context = useContext(SettingsContext);
   if (context === undefined) {
     throw new Error("useWallets must be used within a SettingsProvider");
   }
-  return context.wallets;
+
+  const list = context.wallets;
+  const dict = context.wallets.reduce(
+    (acc, wallet) => {
+      acc[wallet.id] = wallet;
+      return acc;
+    },
+    {} as Record<string, Wallet>,
+  );
+
+  return [list, dict];
 };
