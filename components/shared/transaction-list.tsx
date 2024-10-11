@@ -117,7 +117,7 @@ export default function TransactionList({
                 transform: `translateY(${virtualRow.start}px)`,
               }}
             >
-              <DayHeader date={date} walletId={walletId} />
+              <DayHeader date={date} />
               {dateTransactions.map((transaction) => (
                 <TransactionRow
                   key={transaction.id}

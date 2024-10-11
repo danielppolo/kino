@@ -7,14 +7,6 @@ import { createClient } from "./server";
 
 const supabase = createClient();
 
-// Create Functions
-export const createTransaction = async (
-  data: Database["public"]["Tables"]["transactions"]["Insert"],
-) => {
-  revalidatePath("/app/(app)/transactions", "page");
-  return await supabase.from("transactions").upsert(data).select();
-};
-
 export const createWallet = async (
   data: Database["public"]["Tables"]["wallets"]["Insert"],
 ) => {
@@ -42,8 +34,16 @@ export const createLabel = async (
 export const updateTransaction = async (
   data: Database["public"]["Tables"]["transactions"]["Update"],
 ) => {
+  const transaction = data;
+  if (transaction.amount_cents) {
+    transaction.amount_cents =
+      transaction.type === "expense"
+        ? -transaction.amount_cents
+        : transaction.amount_cents;
+  }
+
   revalidatePath("/app/(app)/transactions", "page");
-  return await supabase.from("transactions").upsert(data).select();
+  return await supabase.from("transactions").upsert(transaction).select();
 };
 
 export const updateWallet = async (

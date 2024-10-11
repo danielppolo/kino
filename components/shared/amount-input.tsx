@@ -19,7 +19,7 @@ export function AmountInput({
       <span
         className={cn(
           className,
-          "absolute left-2 top-1/2 transform -translate-y-1/2 opacity-80",
+          "absolute left-2 top-1/2 transform -translate-y-1/2 opacity-80 text-xs",
         )}
       >
         $

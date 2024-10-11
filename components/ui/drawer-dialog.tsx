@@ -60,7 +60,7 @@ export function DrawerDialog({
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerTrigger asChild>{trigger}</DrawerTrigger>
-      <DrawerContent>
+      <DrawerContent className="p-4">
         <DrawerHeader className="text-left">
           <DrawerTitle>{title}</DrawerTitle>
           {description && <DrawerDescription>{description}</DrawerDescription>}

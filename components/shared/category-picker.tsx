@@ -49,7 +49,7 @@ const CategoryPicker = ({
           type="single"
           defaultValue={defaultValue}
           onValueChange={onChange}
-          className="grid grid-cols-8 gap-2 p-2"
+          className="grid grid-cols-8 gap-2"
         >
           {filteredCategories?.map((category) => (
             <ToggleGroupItem key={category.id} value={category.id}>

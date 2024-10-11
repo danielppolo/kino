@@ -1,15 +1,15 @@
 "use client";
 
 import { useForm } from "react-hook-form";
+import { format } from "date-fns";
 import { toast } from "sonner";
 
 import DaterPicker from "../ui/date-picker";
 import { AmountInput } from "./amount-input";
 import { DescriptionInput } from "./description-input";
-import LabelPicker from "./label-picker";
+import WalletPicker from "./wallet-picker";
 
-import { createTransaction } from "@/actions/create-transaction";
-import CategoryPicker from "@/components/shared/category-picker";
+import { createTransferTransaction } from "@/actions/create-transfer";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -23,34 +23,41 @@ import {
 import { useWallets } from "@/contexts/settings-context";
 import { Database } from "@/utils/supabase/database.types";
 
-interface TransactionFormProps {
+interface TransferFormProps {
   walletId: string;
   date?: string;
   type: "income" | "expense" | "transfer";
   onSuccess: () => void;
 }
 
-type TransactionFormValues =
-  Database["public"]["Tables"]["transactions"]["Insert"];
+type TransferFormValues =
+  Database["public"]["Tables"]["transactions"]["Insert"] & {
+    counterpart_wallet_id: string;
+  };
 
-const TransactionForm = ({
+const TransferForm = ({
   walletId,
   date = format(Date.now(), "yyyy-MM-dd"),
   type,
   onSuccess,
-}: TransactionFormProps) => {
+}: TransferFormProps) => {
   const [, walletDict] = useWallets();
-  const form = useForm<TransactionFormValues>({
+  const currency = walletDict[walletId]?.currency;
+  const form = useForm<TransferFormValues>({
     defaultValues: {
       type,
       wallet_id: walletId,
       date,
-      currency: walletDict[walletId]?.currency,
+      currency,
     },
   });
 
-  const onSubmit = async (transaction: TransactionFormValues) => {
-    const { error } = await createTransaction(transaction);
+  const onSubmit = async (data: TransferFormValues) => {
+    const { counterpart_wallet_id, ...transaction } = data;
+    const { error } = await createTransferTransaction(
+      transaction,
+      counterpart_wallet_id,
+    );
 
     if (error) {
       return toast.error(error.message);
@@ -65,6 +72,7 @@ const TransactionForm = ({
         <FormField
           control={form.control}
           name="amount_cents"
+          rules={{ required: "Category is required" }}
           render={({ field }) => (
             <FormItem>
               <FormLabel>Amount</FormLabel>
@@ -93,6 +101,7 @@ const TransactionForm = ({
         <FormField
           control={form.control}
           name="date"
+          rules={{ required: "Category is required" }}
           render={({ field }) => (
             <FormItem className="flex flex-col">
               <FormLabel>Date</FormLabel>
@@ -109,27 +118,17 @@ const TransactionForm = ({
 
         <FormField
           control={form.control}
-          name="category_id"
+          name="counterpart_wallet_id"
           rules={{ required: "Category is required" }}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Category</FormLabel>
+              <FormLabel>Transfer to</FormLabel>
               <FormControl>
-                <CategoryPicker {...field} type={type} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="label_id"
-          rules={{ required: "Label is required" }}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Label</FormLabel>
-              <FormControl>
-                <LabelPicker {...field} />
+                <WalletPicker
+                  currency={currency}
+                  exclude={walletId}
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -142,4 +141,4 @@ const TransactionForm = ({
   );
 };
 
-export default TransactionForm;
+export default TransferForm;

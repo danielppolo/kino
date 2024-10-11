@@ -1,9 +1,9 @@
 import React, { memo } from "react";
 
 import { AmountInput } from "./amount-input";
-import CategoryPicker from "./category-picker";
 import { DescriptionInput } from "./description-input";
-import LabelPicker from "./label-picker";
+import TransactionColor from "./transaction-color";
+import TransactionIcon from "./transaction-icon";
 
 import { Transaction } from "@/utils/supabase/types";
 
@@ -22,21 +22,10 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
   return (
     <div className="group flex items-center h-10 px-2">
       <div className="w-12 shrink-0">
-        <LabelPicker
-          value={transaction.label_id}
-          onChange={(id: string) => {
-            onUpdate(transaction, { label_id: id });
-          }}
-        />
+        <TransactionIcon transaction={transaction} onUpdate={onUpdate} />
       </div>
       <div className="w-12 shrink-0">
-        <CategoryPicker
-          type={transaction.type}
-          value={transaction.category_id ?? undefined}
-          onChange={(id: string) => {
-            onUpdate(transaction, { category_id: id });
-          }}
-        />
+        <TransactionColor transaction={transaction} onUpdate={onUpdate} />
       </div>
       <div className="grow">
         <DescriptionInput
@@ -56,7 +45,7 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
           variant="ghost"
           defaultValue={transaction.amount_cents / 100}
           className={
-            transaction.type === "income" ? "text-emerald-600" : "text-red-500"
+            transaction.amount_cents > 0 ? "text-emerald-600" : "text-red-500"
           }
           onBlur={(event) => {
             onUpdate(transaction, {

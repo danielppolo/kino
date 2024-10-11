@@ -12,16 +12,16 @@ export async function createTransferTransaction(
 ) {
   const supabase = createClient();
   const transferId = uuidv4();
-
   const transactionsToInsert = [
     {
       ...sourceTransaction,
+      amount_cents: -sourceTransaction.amount_cents,
       transfer_id: transferId,
     },
     {
       ...sourceTransaction,
       wallet_id: counterpartWalletId,
-      type: sourceTransaction.type === "income" ? "expense" : "income",
+      amount_cents: sourceTransaction.amount_cents,
       transfer_id: transferId,
     } as const,
   ];

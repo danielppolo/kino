@@ -40,7 +40,7 @@ const LabelPicker = ({ onChange, defaultValue, value }: LabelPickerProps) => {
           type="single"
           defaultValue={defaultValue}
           onValueChange={onChange}
-          className="grid grid-cols-8 gap-2 p-2"
+          className="grid grid-cols-8"
         >
           {labels?.map((label) => (
             <ToggleGroupItem key={label.id} value={label.id}>
