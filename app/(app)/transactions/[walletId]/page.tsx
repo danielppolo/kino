@@ -1,10 +1,5 @@
 import TransactionList from "@/components/shared/transaction-list";
-import {
-  Filters,
-  listCategories,
-  listLabels,
-  listTransactions,
-} from "@/utils/supabase/queries";
+import { Filters, listTransactions } from "@/utils/supabase/queries";
 import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -24,20 +19,9 @@ export default async function Page({
       wallet_id: walletId,
       ...searchParams,
     });
-  const { data: labels, error: labelsError } = await listLabels(supabase);
-  const { data: categories, error: categoriesError } =
-    await listCategories(supabase);
-
-  if (transactionsError || labelsError || categoriesError) {
-    throw transactionsError || labelsError || categoriesError;
+  if (transactionsError) {
+    throw transactionsError;
   }
 
-  return (
-    <TransactionList
-      walletId={walletId}
-      transactions={transactions}
-      labels={labels}
-      categories={categories}
-    />
-  );
+  return <TransactionList walletId={walletId} transactions={transactions} />;
 }

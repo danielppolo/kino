@@ -1,4 +1,4 @@
-import { Icon } from "@/components/ui/icon";
+import { LazyIcon } from "@/components/ui/icon";
 import {
   Tooltip,
   TooltipContent,
@@ -17,7 +17,7 @@ const Category = ({ category, className }: CategoryProps) => {
     <TooltipProvider delayDuration={100}>
       <Tooltip>
         <TooltipTrigger className={className}>
-          <Icon name={category.icon} className="h-4 w-4" />
+          <LazyIcon name={category.icon} className="h-4 w-4" />
         </TooltipTrigger>
         <TooltipContent>
           <span>{category.name}</span>

@@ -12,16 +12,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useLabels } from "@/contexts/settings-context";
 import useLabelDictionary from "@/hooks/useLabelDictionary";
-import { Label as LabelType } from "@/utils/supabase/types";
 
-interface LabelFilterProps {
-  options: LabelType[];
-}
-
-const LabelFilter = ({ options }: LabelFilterProps) => {
+const LabelFilter = () => {
   const router = useRouter();
-  const labelsDict = useLabelDictionary(options);
+  const labels = useLabels();
+  const labelsDict = useLabelDictionary(labels);
   const searchParams = useSearchParams();
   const labelId = searchParams.get("label_id") ?? undefined;
 
@@ -64,7 +61,7 @@ const LabelFilter = ({ options }: LabelFilterProps) => {
           onValueChange={setLabelId}
           className="grid grid-cols-8"
         >
-          {options?.map((label) => (
+          {labels?.map((label) => (
             <ToggleGroupItem key={label.id} value={label.id} size="sm">
               <Label label={label} size="sm" />
             </ToggleGroupItem>

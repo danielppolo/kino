@@ -11,23 +11,18 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useLabels } from "@/contexts/settings-context";
 import useLabelDictionary from "@/hooks/useLabelDictionary";
-import { Label as LabelType } from "@/utils/supabase/types";
 
 interface LabelPickerProps {
-  options: LabelType[];
   defaultValue?: string;
   value: string | null;
   onChange: (id: string) => void;
 }
 
-const LabelPicker = ({
-  options,
-  onChange,
-  defaultValue,
-  value,
-}: LabelPickerProps) => {
-  const labelsDict = useLabelDictionary(options);
+const LabelPicker = ({ onChange, defaultValue, value }: LabelPickerProps) => {
+  const labels = useLabels();
+  const labelsDict = useLabelDictionary(labels);
 
   return (
     <Popover>
@@ -49,7 +44,7 @@ const LabelPicker = ({
           onValueChange={onChange}
           className="grid grid-cols-8 gap-2 p-2"
         >
-          {options?.map((label) => (
+          {labels?.map((label) => (
             <ToggleGroupItem key={label.id} value={label.id}>
               <Label label={label} size="sm" />
             </ToggleGroupItem>

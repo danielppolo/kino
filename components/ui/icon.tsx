@@ -10,7 +10,7 @@ interface IconProps extends LucideProps {
 const loaded: Partial<Record<keyof typeof dynamicIconImports, ElementType>> =
   {};
 
-const Icon = ({ name, ...props }: IconProps) => {
+export const LazyIcon = ({ name, ...props }: IconProps) => {
   loaded[name as keyof typeof dynamicIconImports] ||= dynamic(
     dynamicIconImports[name as keyof typeof dynamicIconImports],
   );
@@ -19,4 +19,6 @@ const Icon = ({ name, ...props }: IconProps) => {
   return LucideIcon ? <LucideIcon {...props} /> : null;
 };
 
-export { Icon };
+export const Icon = ({ name, ...props }: IconProps) => {
+  return <div className={`icon-${name}`}></div>;
+};

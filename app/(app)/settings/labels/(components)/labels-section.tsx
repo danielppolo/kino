@@ -12,14 +12,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Label as LabelType } from "@/utils/supabase/types";
+import { useLabels } from "@/contexts/settings-context";
 
-interface LabelSectionProps {
-  data: LabelType[];
-}
-
-export default function LabelSection({ data }: LabelSectionProps) {
+export default function LabelSection() {
   const [open, setOpen] = useState(false);
+  const labels = useLabels();
 
   return (
     <div>
@@ -49,7 +46,7 @@ export default function LabelSection({ data }: LabelSectionProps) {
         </Collapsible>
       </div>
 
-      <div>{data?.map((label) => <Label key={label.id} data={label} />)}</div>
+      <div>{labels?.map((label) => <Label key={label.id} data={label} />)}</div>
     </div>
   );
 }

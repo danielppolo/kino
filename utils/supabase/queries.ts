@@ -1,3 +1,5 @@
+"use server";
+
 import { TypedSupabaseClient } from "@/utils/supabase/types";
 
 export interface Filters {

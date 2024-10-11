@@ -11,11 +11,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useCategories } from "@/contexts/settings-context";
 import useCategoryDictionary from "@/hooks/useCategoryDictionary";
-import { Category as CategoryType } from "@/utils/supabase/types";
 
 interface CategoryPickerProps {
-  options: CategoryType[];
   type: "income" | "expense" | "transfer";
   defaultValue?: string;
   value?: string | null;
@@ -23,14 +22,16 @@ interface CategoryPickerProps {
 }
 
 const CategoryPicker = ({
-  options,
   value,
   defaultValue,
   type,
   onChange,
 }: CategoryPickerProps) => {
-  const categoryDict = useCategoryDictionary(options);
-  const categories = options?.filter((category) => category.type === type);
+  const categories = useCategories();
+  const categoryDict = useCategoryDictionary(categories);
+  const filteredCategories = categories?.filter(
+    (category) => category.type === type,
+  );
 
   return (
     <Popover>
@@ -52,7 +53,7 @@ const CategoryPicker = ({
           onValueChange={onChange}
           className="grid grid-cols-8 gap-2 p-2"
         >
-          {categories?.map((category) => (
+          {filteredCategories?.map((category) => (
             <ToggleGroupItem key={category.id} value={category.id}>
               <Category category={category} />
             </ToggleGroupItem>

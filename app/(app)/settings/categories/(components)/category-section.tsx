@@ -12,20 +12,20 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Category as CategoryType } from "@/utils/supabase/types";
+import { useCategories } from "@/contexts/settings-context";
 
 interface CategoriesProps {
-  data: CategoryType[];
   type: "income" | "expense";
   title: string;
 }
 
-export default function CategorySection({
-  type,
-  title,
-  data,
-}: CategoriesProps) {
+export default function CategorySection({ type, title }: CategoriesProps) {
   const [open, setOpen] = useState(false);
+  const categories = useCategories();
+
+  const filteredCategories = categories.filter(
+    (category) => category.type === type,
+  );
 
   return (
     <div>
@@ -57,7 +57,7 @@ export default function CategorySection({
       </div>
 
       <div>
-        {data?.map((category) => (
+        {filteredCategories?.map((category) => (
           <Category key={category.id} data={category} />
         ))}
       </div>

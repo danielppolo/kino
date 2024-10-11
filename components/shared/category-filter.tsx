@@ -12,16 +12,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useCategories } from "@/contexts/settings-context";
 import useCategoryDictionary from "@/hooks/useCategoryDictionary";
-import { Category as CategoryType } from "@/utils/supabase/types";
 
-interface CategoryFilterProps {
-  options: CategoryType[];
-}
-
-const CategoryFilter = ({ options }: CategoryFilterProps) => {
+const CategoryFilter = () => {
   const router = useRouter();
-  const categoryDict = useCategoryDictionary(options);
+  const categories = useCategories();
+  const categoryDict = useCategoryDictionary(categories);
   const searchParams = useSearchParams();
   const categoryId = searchParams.get("category_id") ?? undefined;
 
@@ -65,7 +62,7 @@ const CategoryFilter = ({ options }: CategoryFilterProps) => {
           onValueChange={setCategoryId}
           className="grid grid-cols-8"
         >
-          {options?.map((category) => (
+          {categories?.map((category) => (
             <ToggleGroupItem key={category.id} value={category.id} size="sm">
               <Category category={category} />
             </ToggleGroupItem>

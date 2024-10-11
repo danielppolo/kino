@@ -1,22 +1,15 @@
 import React from "react";
 import Link from "next/link"; // Assuming you're using Next.js
 
+import WalletSection from "./(components)/wallet-section";
+
 import { Menu, MenuItem } from "@/components/ui/menu";
-import { listWallets } from "@/utils/supabase/queries";
-import { createClient } from "@/utils/supabase/server";
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 const Layout: React.FC<LayoutProps> = async ({ children }) => {
-  const supabase = createClient();
-  const { data: wallets, error } = await listWallets(supabase);
-
-  if (error) {
-    throw error;
-  }
-
   return (
     <div className="flex w-full min-h-screen">
       {/* Sidebar */}
@@ -43,13 +36,7 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
           </Link>
         </Menu>
 
-        <Menu title="Wallets">
-          {wallets?.map((wallet) => (
-            <Link key={wallet.id} href={`/settings/wallets/${wallet.id}`}>
-              <MenuItem label={wallet.name} active={false} />
-            </Link>
-          ))}
-        </Menu>
+        <WalletSection />
       </div>
 
       {/* Main Content Area */}

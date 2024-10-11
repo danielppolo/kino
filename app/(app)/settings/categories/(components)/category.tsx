@@ -1,4 +1,4 @@
-import { Icon } from "@/components/ui/icon";
+import { LazyIcon } from "@/components/ui/icon";
 
 interface CategoryProps {
   data: {
@@ -11,7 +11,7 @@ interface CategoryProps {
 export default function Category({ data }: CategoryProps) {
   return (
     <div key={data.id}>
-      <Icon name={data.icon} className="h-4 w-4" />
+      <LazyIcon name={data.icon} className="h-4 w-4" />
       <span>{data.name}</span>
     </div>
   );

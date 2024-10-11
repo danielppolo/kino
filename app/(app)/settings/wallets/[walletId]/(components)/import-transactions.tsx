@@ -5,6 +5,7 @@ import Papa from "papaparse";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { importTransactions, Options } from "@/actions/import-transactions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,6 +16,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Table,
   TableBody,
@@ -23,12 +26,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { importTransactions } from "@/utils/supabase/mutations";
-import { Category, Label } from "@/utils/supabase/types";
+import { useCategories, useLabels } from "@/contexts/settings-context";
+import { Category, Label as LabelType } from "@/utils/supabase/types";
 
 interface CsvTransactionUploaderProps {
   categories: Category[];
-  labels: Label[];
+  labels: LabelType[];
   walletId: string;
 }
 
@@ -43,13 +46,15 @@ const TransactionSchema = z.object({
   type: z.enum(TYPES),
 });
 
-const CsvTransactionUploader = ({
-  categories,
-  labels,
-  walletId,
-}: CsvTransactionUploaderProps) => {
+const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
+  const categories = useCategories();
+  const labels = useLabels();
   const [open, setOpen] = useState(false);
   const [csvData, setCsvData] = useState<any[]>([]);
+  const [options, setOptions] = useState<Options>({
+    missingCategory: "new",
+    missingLabel: "new",
+  });
   const [missingCategories, setMissingCategories] = useState<Set<string>>(
     new Set(),
   );
@@ -124,12 +129,13 @@ const CsvTransactionUploader = ({
       date: new Date(row.date).toISOString().split("T")[0], // Format YYYY-MM-DD
     }));
 
-    const { error } = await importTransactions(walletId, transactions);
+    const { error } = await importTransactions(walletId, transactions, options);
 
     if (error) {
-      console.log(error);
-      toast.error("Failed to import transactions");
+      return toast.error("Failed to import transactions");
     }
+    toast.success("Transactions imported successfully");
+    setOpen(false);
   };
 
   return (
@@ -169,22 +175,40 @@ const CsvTransactionUploader = ({
 
         {/* Validation Errors */}
         <div className="mt-4">
-          {errors &&
+          {/* {errors &&
             Array.from(errors).map((error, index) => (
               <div key={index} className="text-red-500 font-bold">
                 {error}
               </div>
-            ))}
+            ))} */}
           {missingCategories.size > 0 && (
-            <div className="text-red-500 font-bold">
-              Missing Categories: {Array.from(missingCategories).join(", ")}
+            <div>
+              <p>Handle missing categories</p>
+              <RadioGroup
+                defaultValue={options.missingCategory}
+                onValueChange={(n) =>
+                  setOptions((v) => ({
+                    ...v,
+                    missingCategory: n as "new" | "other",
+                  }))
+                }
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="new" id="new-category" />
+                  <Label htmlFor="new-category">Create new</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="other" id="other-category" />
+                  <Label htmlFor="other-category">Use `Other`</Label>
+                </div>
+              </RadioGroup>
             </div>
           )}
-          {missingLabels.size > 0 && (
+          {/* {missingLabels.size > 0 && (
             <div className="text-red-500 font-bold">
               Missing Labels: {Array.from(missingLabels).join(", ")}
             </div>
-          )}
+          )} */}
         </div>
 
         <DialogFooter>

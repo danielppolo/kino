@@ -7,11 +7,8 @@ import { DrawerDialog } from "../ui/drawer-dialog";
 import TransactionForm from "./transaction-form";
 
 import { Button } from "@/components/ui/button";
-import { Category, Label } from "@/utils/supabase/types";
 
 interface AddTransactionButtonProps {
-  labels: Label[];
-  categories: Category[];
   type: "income" | "expense" | "transfer";
   walletId: string;
   date?: string;

@@ -28,13 +28,10 @@ import {
 } from "@/components/ui/select";
 import { Database } from "@/utils/supabase/database.types";
 import { createTransaction } from "@/utils/supabase/mutations";
-import { Category, Label } from "@/utils/supabase/types";
 
 interface TransactionFormProps {
   walletId: string;
   date?: string;
-  labels: Label[];
-  categories: Category[];
   type: "income" | "expense" | "transfer";
   onSuccess: () => void;
 }
@@ -45,8 +42,6 @@ type TransactionFormValues =
 const TransactionForm = ({
   walletId,
   date,
-  labels,
-  categories,
   type,
   onSuccess,
 }: TransactionFormProps) => {
@@ -79,7 +74,7 @@ const TransactionForm = ({
               <FormItem>
                 <FormLabel>Category</FormLabel>
                 <FormControl>
-                  <CategoryPicker options={categories} {...field} type={type} />
+                  <CategoryPicker {...field} type={type} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -140,7 +135,7 @@ const TransactionForm = ({
               <FormItem>
                 <FormLabel>Label</FormLabel>
                 <FormControl>
-                  <LabelPicker options={labels} {...field} />
+                  <LabelPicker {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

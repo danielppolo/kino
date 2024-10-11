@@ -1,36 +1,28 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { format } from "date-fns";
 import { toast } from "sonner";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 
-import AddTransactionButton from "./add-transaction-button";
-import { AmountInput } from "./amount-input";
-import CategoryPicker from "./category-picker";
-import { DescriptionInput } from "./description-input";
-import LabelPicker from "./label-picker";
+import DayHeader from "./day-header";
+import TransactionRow from "./transaction-row";
 
 import { Database } from "@/utils/supabase/database.types";
 import {
   deleteTransaction,
   updateTransaction,
 } from "@/utils/supabase/mutations";
-import { Category, Label, Transaction } from "@/utils/supabase/types";
+import { Transaction } from "@/utils/supabase/types";
 
 interface TransactionListProps {
   walletId?: string;
   transactions: Transaction[];
-  labels: Label[];
-  categories: Category[];
 }
 
 export default function TransactionList({
   walletId,
   transactions,
-  labels,
-  categories,
 }: TransactionListProps) {
   const onDelete = useCallback(async (id: string) => {
     const { error } = await deleteTransaction(id);
@@ -106,9 +98,8 @@ export default function TransactionList({
       <div
         style={{
           height: `${rowVirtualizer.getTotalSize()}px`,
-          width: "100%",
-          position: "relative",
         }}
+        className="divide-y relative w-full"
       >
         {rowVirtualizer.getVirtualItems().map((virtualRow) => {
           const [date, dateTransactions] =
@@ -126,82 +117,13 @@ export default function TransactionList({
                 transform: `translateY(${virtualRow.start}px)`,
               }}
             >
-              <div className="bg-muted/50 h-8 flex items-center justify-between px-4 text-xs">
-                <p>{format(new Date(date), "PP")}</p>
-                {walletId && (
-                  <AddTransactionButton
-                    labels={labels}
-                    categories={categories}
-                    type="expense"
-                    walletId={walletId}
-                    date={date}
-                  />
-                )}
-              </div>
+              <DayHeader date={date} walletId={walletId} />
               {dateTransactions.map((transaction) => (
-                <div
+                <TransactionRow
                   key={transaction.id}
-                  className="group flex items-center h-10 px-2"
-                >
-                  <div className="w-12 shrink-0">
-                    <LabelPicker
-                      options={labels}
-                      value={transaction.label_id}
-                      onChange={(id: string) => {
-                        onChange(transaction, { label_id: id });
-                      }}
-                    />
-                  </div>
-                  <div className="w-12 shrink-0">
-                    <CategoryPicker
-                      options={categories}
-                      type={transaction.type}
-                      value={transaction.category_id ?? undefined}
-                      onChange={(id: string) => {
-                        onChange(transaction, { category_id: id });
-                      }}
-                    />
-                  </div>
-                  <div className="grow">
-                    <DescriptionInput
-                      id={`desc-${transaction.id}`}
-                      variant="ghost"
-                      defaultValue={transaction.description ?? undefined}
-                      onBlur={(event) => {
-                        onChange(transaction, {
-                          description: event.target.value,
-                        });
-                      }}
-                    />
-                  </div>
-                  <div className="w-24 shrink-0">
-                    <AmountInput
-                      id={`amount-${transaction.id}`}
-                      variant="ghost"
-                      defaultValue={transaction.amount_cents / 100}
-                      className={
-                        transaction.type === "income"
-                          ? "text-emerald-600"
-                          : "text-red-500"
-                      }
-                      onBlur={(event) => {
-                        onChange(transaction, {
-                          amount_cents: Number(event.target.value) * 100,
-                        });
-                      }}
-                    />
-                  </div>
-                  {/* <div className="w-32 shrink-0 flex justify-end">
-                    <DaterPicker
-                      id={`date-${transaction.id}`}
-                      variant="ghost"
-                      value={transaction.date}
-                      onChange={(date?: string) => {
-                        onChange(transaction, { date });
-                      }}
-                    />
-                  </div> */}
-                </div>
+                  transaction={transaction}
+                  onUpdate={onChange}
+                />
               ))}
             </div>
           );
