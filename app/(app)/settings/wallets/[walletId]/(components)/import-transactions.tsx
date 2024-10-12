@@ -5,6 +5,8 @@ import Papa from "papaparse";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import TransactionListPreview from "./transaction-list-preview";
+
 import { importTransactions, Options } from "@/actions/import-transactions";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,14 +20,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { useCategories, useLabels } from "@/contexts/settings-context";
 import { Category, Label as LabelType } from "@/utils/supabase/types";
 
@@ -96,12 +90,12 @@ const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
       // Validate against Zod schema
       const validationResult = TransactionSchema.safeParse(row);
 
-      // Check for validation errors
-      if (!validationResult.success) {
-        validationResult.error.issues.forEach((issue) => {
-          validationErrorSet.add(`${issue.path.join(".")} ${issue.message}`);
-        });
-      }
+      // // Check for validation errors
+      // if (!validationResult.success) {
+      //   validationResult.error.issues.forEach((issue) => {
+      //     validationErrorSet.add(`${issue.path.join(".")} ${issue.message}`);
+      //   });
+      // }
 
       // Check if Category ID exists
       if (!categoryIds.includes(row["category_id"])) {
@@ -149,29 +143,7 @@ const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
             Amount, Description, and Created At.
           </DialogDescription>
         </DialogHeader>
-        <Table className="w-full h-96 overflow-y-scroll">
-          <TableHeader>
-            <TableRow>
-              {csvData.length > 0 &&
-                Object.keys(csvData[0]).map((header, index) => (
-                  <TableHead key={index} className="truncate p-1">
-                    {header}
-                  </TableHead>
-                ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {csvData?.map((row, rowIndex) => (
-              <TableRow key={rowIndex}>
-                {Object.values(row).map((cell, cellIndex) => (
-                  <TableCell key={cellIndex} className="truncate p-1">
-                    {cell}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <TransactionListPreview transactions={csvData} />
 
         {/* Validation Errors */}
         <div className="mt-4">

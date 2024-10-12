@@ -16,7 +16,7 @@ import { useLabels } from "@/contexts/settings-context";
 
 interface LabelPickerProps {
   defaultValue?: string;
-  value: string | null;
+  value?: string | null;
   onChange: (id: string) => void;
 }
 
