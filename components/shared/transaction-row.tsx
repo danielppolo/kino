@@ -1,10 +1,10 @@
 import React, { memo } from "react";
 
-import { AmountInput } from "./amount-input";
 import { DescriptionInput } from "./description-input";
 import TransactionColor from "./transaction-color";
 import TransactionIcon from "./transaction-icon";
 
+import { cn } from "@/lib/utils";
 import { Transaction } from "@/utils/supabase/types";
 
 interface TransactionRowProps {
@@ -20,7 +20,7 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
   onUpdate,
 }) => {
   return (
-    <div className="group flex items-center h-10 px-2">
+    <div className="group flex items-center h-10 pl-2 pr-4">
       <div className="w-12 shrink-0">
         <TransactionIcon transaction={transaction} onUpdate={onUpdate} />
       </div>
@@ -40,19 +40,19 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
         />
       </div>
       <div className="w-24 shrink-0">
-        <AmountInput
-          id={`amount-${transaction.id}`}
-          variant="ghost"
-          defaultValue={transaction.amount_cents / 100}
-          className={
-            transaction.amount_cents > 0 ? "text-emerald-600" : "text-red-500"
-          }
-          onBlur={(event) => {
-            onUpdate(transaction, {
-              amount_cents: Number(event.target.value) * 100,
-            });
-          }}
-        />
+        <p
+          className={cn(
+            "text-right",
+            transaction.amount_cents > 0 ? "text-emerald-600" : "text-red-500",
+          )}
+        >
+          {new Intl.NumberFormat(undefined, {
+            style: "currency",
+            currency: transaction.currency,
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }).format(transaction.amount_cents / 100)}
+        </p>
       </div>
       {/* <div className="w-32 shrink-0 flex justify-end">
                     <DaterPicker

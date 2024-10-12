@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { CircleDotDashed } from "lucide-react";
 
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
@@ -26,13 +27,19 @@ const CategoryPicker = ({
   type,
   onChange,
 }: CategoryPickerProps) => {
+  const [open, setOpen] = useState(false);
   const [categories, categoriesDict] = useCategories();
   const filteredCategories = categories?.filter(
     (category) => category.type === type,
   );
 
+  const handleChange = (id: string) => {
+    onChange(id);
+    setOpen(false);
+  };
+
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="sm">
           {value && categoriesDict[value] ? (
@@ -48,7 +55,7 @@ const CategoryPicker = ({
         <ToggleGroup
           type="single"
           defaultValue={defaultValue}
-          onValueChange={onChange}
+          onValueChange={handleChange}
           className="grid grid-cols-8 gap-2"
         >
           {filteredCategories?.map((category) => (

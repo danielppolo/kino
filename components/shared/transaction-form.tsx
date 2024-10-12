@@ -1,6 +1,7 @@
 "use client";
 
 import { useForm } from "react-hook-form";
+import { format } from "date-fns";
 import { toast } from "sonner";
 
 import DaterPicker from "../ui/date-picker";
@@ -30,8 +31,12 @@ interface TransactionFormProps {
   onSuccess: () => void;
 }
 
-type TransactionFormValues =
-  Database["public"]["Tables"]["transactions"]["Insert"];
+type TransactionFormValues = Omit<
+  Database["public"]["Tables"]["transactions"]["Insert"],
+  "amount_cents"
+> & {
+  amount: number;
+};
 
 const TransactionForm = ({
   walletId,
@@ -64,7 +69,7 @@ const TransactionForm = ({
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
-          name="amount_cents"
+          name="amount"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Amount</FormLabel>

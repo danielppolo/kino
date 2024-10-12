@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { CircleDashed } from "lucide-react";
 
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
@@ -20,10 +21,16 @@ interface LabelPickerProps {
 }
 
 const LabelPicker = ({ onChange, defaultValue, value }: LabelPickerProps) => {
+  const [open, setOpen] = useState(false);
   const [labels, labelsDict] = useLabels();
 
+  const handleChange = (id: string) => {
+    onChange(id);
+    setOpen(false);
+  };
+
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="sm">
           {value && labelsDict[value] ? (
@@ -39,7 +46,7 @@ const LabelPicker = ({ onChange, defaultValue, value }: LabelPickerProps) => {
         <ToggleGroup
           type="single"
           defaultValue={defaultValue}
-          onValueChange={onChange}
+          onValueChange={handleChange}
           className="grid grid-cols-8"
         >
           {labels?.map((label) => (

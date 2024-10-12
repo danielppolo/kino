@@ -30,10 +30,13 @@ interface TransferFormProps {
   onSuccess: () => void;
 }
 
-type TransferFormValues =
-  Database["public"]["Tables"]["transactions"]["Insert"] & {
-    counterpart_wallet_id: string;
-  };
+type TransferFormValues = Omit<
+  Database["public"]["Tables"]["transactions"]["Insert"],
+  "amount_cents"
+> & {
+  counterpart_wallet_id: string;
+  amount: number;
+};
 
 const TransferForm = ({
   walletId,
@@ -71,8 +74,8 @@ const TransferForm = ({
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
-          name="amount_cents"
-          rules={{ required: "Category is required" }}
+          name="amount"
+          rules={{ required: "Amount is required" }}
           render={({ field }) => (
             <FormItem>
               <FormLabel>Amount</FormLabel>
