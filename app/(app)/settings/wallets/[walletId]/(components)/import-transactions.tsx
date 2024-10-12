@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import Papa from "papaparse";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -8,7 +8,7 @@ import { z } from "zod";
 import TransactionListPreview from "./transaction-list-preview";
 
 import { importTransactions, Options } from "@/actions/import-transactions";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +20,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useCategories, useLabels } from "@/contexts/settings-context";
+import {
+  useCategories,
+  useLabels,
+  useWallets,
+} from "@/contexts/settings-context";
 import { Category, Label as LabelType } from "@/utils/supabase/types";
 
 interface CsvTransactionUploaderProps {
@@ -29,20 +33,20 @@ interface CsvTransactionUploaderProps {
   walletId: string;
 }
 
-const TYPES = ["expense", "income"] as const;
-
 const TransactionSchema = z.object({
   category: z.string(),
   label: z.string(),
   amount: z.number().positive(),
   description: z.string().optional(),
+  type: z.string().optional(),
   date: z.string().date(),
-  type: z.enum(TYPES),
 });
 
 const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
-  const [categories] = useCategories();
-  const [labels] = useLabels();
+  const [, categoriesMap] = useCategories("name");
+  const [, labelsMap] = useLabels("name");
+  const [, walletsMap] = useWallets();
+  const wallet = walletsMap.get(walletId);
   const [open, setOpen] = useState(false);
   const [csvData, setCsvData] = useState<any[]>([]);
   const [options, setOptions] = useState<Options>({
@@ -55,6 +59,39 @@ const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
   const [missingLabels, setMissingLabels] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<Set<string>>(new Set());
 
+  const csvDisplayData = useMemo(() => {
+    const isLabel = (id: string) => labelsMap.has(id);
+    const isCategory = (id: string) => categoriesMap.has(id);
+    return csvData.map((row) => ({
+      date: row.date,
+      type: row.type,
+      amount: row.amount
+        ? new Intl.NumberFormat(undefined, {
+            style: "currency",
+            currency: wallet?.currency,
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }).format(Number(row.amount))
+        : undefined,
+      description: row.description,
+      category:
+        isCategory(row.category) || options.missingCategory === "new"
+          ? row.category
+          : "Other",
+      label:
+        isLabel(row.label) || options.missingLabel === "new"
+          ? row.label
+          : "Other",
+    }));
+  }, [
+    csvData,
+    labelsMap,
+    categoriesMap,
+    wallet?.currency,
+    options.missingCategory,
+    options.missingLabel,
+  ]);
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -63,55 +100,59 @@ const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
       header: true,
       skipEmptyLines: true,
       complete: (result) => {
-        const formattedData = result.data.map((row: any) => ({
+        const rawData = result.data.map((row: any) => ({
           date: row.date,
-          amount: row.amount ? Number(row.amount) : undefined,
           type: row.type,
+          amount: row.amount ? Number(row.amount) : undefined,
           description: row.description,
           category: row.category,
           label: row.label,
         }));
-        console.log(formattedData);
-        setCsvData(formattedData);
-        validateData(formattedData);
+        setCsvData(rawData);
+        validateData(rawData);
         setOpen(true);
       },
     });
   };
 
-  const validateData = (data: any[]) => {
-    const categoryIds = categories.map((category) => category.id);
-    const labelIds = labels.map((label) => label.id);
-    const missingCategoriesSet = new Set<string>();
-    const missingLabelsSet = new Set<string>();
-    const validationErrorSet = new Set<string>();
+  const validateData = useCallback(
+    (data: any[]) => {
+      const missingCategoriesSet = new Set<string>();
+      const missingLabelsSet = new Set<string>();
+      const validationErrorSet = new Set<string>();
 
-    data.forEach((row) => {
-      // Validate against Zod schema
-      const validationResult = TransactionSchema.safeParse(row);
+      const results = data.map((row) => {
+        // Validate against Zod schema
+        const validationResult = TransactionSchema.safeParse(row);
 
-      // // Check for validation errors
-      // if (!validationResult.success) {
-      //   validationResult.error.issues.forEach((issue) => {
-      //     validationErrorSet.add(`${issue.path.join(".")} ${issue.message}`);
-      //   });
-      // }
+        // Check for validation errors
+        if (!validationResult.success) {
+          validationResult.error.issues.forEach((issue) => {
+            validationErrorSet.add(`${issue.path.join(".")} ${issue.message}`);
+          });
+        }
 
-      // Check if Category ID exists
-      if (!categoryIds.includes(row["category_id"])) {
-        missingCategoriesSet.add(row["category_id"]);
-      }
+        // Check if Category ID exists
+        if (!categoriesMap.has(row["category"])) {
+          missingCategoriesSet.add(row["category"]);
+        }
 
-      // Check if Label ID exists
-      if (!labelIds.includes(row["label_id"])) {
-        missingLabelsSet.add(row["label_id"]);
-      }
-    });
+        // Check if Label ID exists
+        if (!labelsMap.has(row["label"])) {
+          missingLabelsSet.add(row["label"]);
+        }
 
-    setMissingCategories(missingCategoriesSet);
-    setMissingLabels(missingLabelsSet);
-    setErrors(validationErrorSet);
-  };
+        return validationResult.success;
+      });
+
+      setMissingCategories(missingCategoriesSet);
+      setMissingLabels(missingLabelsSet);
+      setErrors(validationErrorSet);
+
+      return results;
+    },
+    [categoriesMap, labelsMap],
+  );
 
   const handleSubmit = async () => {
     const transactions = csvData.map((row) => ({
@@ -126,6 +167,7 @@ const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
     const { error } = await importTransactions(walletId, transactions, options);
 
     if (error) {
+      console.error(error);
       return toast.error("Failed to import transactions");
     }
     toast.success("Transactions imported successfully");
@@ -143,16 +185,9 @@ const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
             Amount, Description, and Created At.
           </DialogDescription>
         </DialogHeader>
-        <TransactionListPreview transactions={csvData} />
+        <TransactionListPreview transactions={csvDisplayData} />
 
-        {/* Validation Errors */}
         <div className="mt-4">
-          {/* {errors &&
-            Array.from(errors).map((error, index) => (
-              <div key={index} className="text-red-500 font-bold">
-                {error}
-              </div>
-            ))} */}
           {missingCategories.size > 0 && (
             <div>
               <p>Handle missing categories</p>
@@ -176,15 +211,36 @@ const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
               </RadioGroup>
             </div>
           )}
-          {/* {missingLabels.size > 0 && (
-            <div className="text-red-500 font-bold">
-              Missing Labels: {Array.from(missingLabels).join(", ")}
+
+          {missingLabels.size > 0 && (
+            <div>
+              <p>Handle missing labels</p>
+              <RadioGroup
+                defaultValue={options.missingLabel}
+                onValueChange={(n) =>
+                  setOptions((v) => ({
+                    ...v,
+                    missingLabel: n as "new" | "other",
+                  }))
+                }
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="new" id="new-label" />
+                  <Label htmlFor="new-label">Create new</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="other" id="other-label" />
+                  <Label htmlFor="other-label">Use `Other`</Label>
+                </div>
+              </RadioGroup>
             </div>
-          )} */}
+          )}
         </div>
 
         <DialogFooter>
-          <Button onClick={handleSubmit}>Submit Transactions</Button>
+          <form action={handleSubmit}>
+            <SubmitButton>Submit Transactions</SubmitButton>
+          </form>
         </DialogFooter>
       </DialogContent>
     </Dialog>

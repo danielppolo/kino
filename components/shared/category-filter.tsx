@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { CircleDotDashed, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -16,9 +17,11 @@ import { useCategories } from "@/contexts/settings-context";
 
 const CategoryFilter = () => {
   const router = useRouter();
-  const [categories, categoriesDict] = useCategories();
+  const [open, setOpen] = useState(false);
+  const [categories, categoriesMap] = useCategories();
   const searchParams = useSearchParams();
   const categoryId = searchParams.get("category_id") ?? undefined;
+  const category = categoryId && categoriesMap.get(categoryId);
 
   const setCategoryId = (id: string | undefined) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -28,9 +31,10 @@ const CategoryFilter = () => {
       params.delete("category_id");
     }
     router.push(`/transactions?${params.toString()}`);
+    setOpen(false);
   };
 
-  if (categoryId && categoriesDict[categoryId]) {
+  if (category) {
     return (
       <Button
         variant="ghost"
@@ -39,7 +43,7 @@ const CategoryFilter = () => {
         onClick={() => setCategoryId(undefined)}
       >
         <div className="group-hover:hidden flex items-center">
-          <Category category={categoriesDict[categoryId]} />
+          <Category category={category} />
         </div>
         <X className="hidden h-3 w-3 group-hover:block" />
       </Button>
@@ -47,7 +51,7 @@ const CategoryFilter = () => {
   }
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="sm">
           <CircleDotDashed className="w-3 h-3" />

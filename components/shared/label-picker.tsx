@@ -22,7 +22,8 @@ interface LabelPickerProps {
 
 const LabelPicker = ({ onChange, defaultValue, value }: LabelPickerProps) => {
   const [open, setOpen] = useState(false);
-  const [labels, labelsDict] = useLabels();
+  const [labels, labelsMap] = useLabels();
+  const label = !!value && labelsMap.get(value);
 
   const handleChange = (id: string) => {
     onChange(id);
@@ -33,10 +34,8 @@ const LabelPicker = ({ onChange, defaultValue, value }: LabelPickerProps) => {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="sm">
-          {value && labelsDict[value] ? (
-            <>
-              <Label label={labelsDict[value]} size="sm" />
-            </>
+          {label ? (
+            <Label label={label} size="sm" />
           ) : (
             <CircleDashed className="w-3 h-3" />
           )}

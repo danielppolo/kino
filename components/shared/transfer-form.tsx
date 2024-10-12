@@ -44,8 +44,8 @@ const TransferForm = ({
   type,
   onSuccess,
 }: TransferFormProps) => {
-  const [, walletDict] = useWallets();
-  const currency = walletDict[walletId]?.currency;
+  const [, walletMap] = useWallets();
+  const currency = walletMap.get(walletId)?.currency;
   const form = useForm<TransferFormValues>({
     defaultValues: {
       type,

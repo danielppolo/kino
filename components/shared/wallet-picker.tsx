@@ -26,12 +26,11 @@ interface WalletPickerProps {
 const WalletPicker = forwardRef<HTMLButtonElement, WalletPickerProps>(
   ({ onChange, value, currency, exclude }, ref) => {
     const [open, setOpen] = useState(false);
-    const [wallets, walletDict] = useWallets();
+    const [wallets, walletMap] = useWallets();
     const filteredWallets = wallets.filter((wallet) => {
       if (exclude && wallet.id === exclude) return false;
       return !currency || wallet.currency === currency;
     });
-
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
@@ -41,7 +40,7 @@ const WalletPicker = forwardRef<HTMLButtonElement, WalletPickerProps>(
             aria-expanded={open}
             className="w-[200px] justify-between"
           >
-            {value ? walletDict[value]?.name : "Select wallet..."}
+            {value ? walletMap.get(value)?.name : "Select wallet..."}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>

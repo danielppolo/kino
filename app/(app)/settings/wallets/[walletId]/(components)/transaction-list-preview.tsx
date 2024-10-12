@@ -10,10 +10,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Transaction } from "@/utils/supabase/types";
 
 interface TransactionListPreviewProps {
-  transactions: Transaction[];
+  transactions: any[];
 }
 
 const TransactionListPreview: React.FC<TransactionListPreviewProps> = ({
@@ -29,8 +28,8 @@ const TransactionListPreview: React.FC<TransactionListPreviewProps> = ({
           <TableRow>
             {transactions.length > 0 &&
               Object.keys(transactions[0]).map((header, index) => (
-                <TableHead key={index} className="truncate p-1">
-                  {header}
+                <TableHead key={index} className="truncate p-1 px-2">
+                  {header.charAt(0).toUpperCase() + header.slice(1)}
                 </TableHead>
               ))}
           </TableRow>
@@ -39,8 +38,8 @@ const TransactionListPreview: React.FC<TransactionListPreviewProps> = ({
           {displayedTransactions.map((row, rowIndex) => (
             <TableRow key={rowIndex} className="h-8">
               {Object.values(row).map((cell, cellIndex) => (
-                <TableCell key={cellIndex} className="truncate p-1">
-                  {cell}
+                <TableCell key={cellIndex} className="truncate p-1 px-2">
+                  {`${cell || "-"}`}
                 </TableCell>
               ))}
             </TableRow>

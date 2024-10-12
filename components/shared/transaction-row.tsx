@@ -22,10 +22,10 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
   return (
     <div className="group flex items-center h-10 pl-2 pr-4">
       <div className="w-12 shrink-0">
-        <TransactionIcon transaction={transaction} onUpdate={onUpdate} />
+        <TransactionColor transaction={transaction} onUpdate={onUpdate} />
       </div>
       <div className="w-12 shrink-0">
-        <TransactionColor transaction={transaction} onUpdate={onUpdate} />
+        <TransactionIcon transaction={transaction} onUpdate={onUpdate} />
       </div>
       <div className="grow">
         <DescriptionInput

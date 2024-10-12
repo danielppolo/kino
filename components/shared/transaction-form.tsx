@@ -44,13 +44,13 @@ const TransactionForm = ({
   type,
   onSuccess,
 }: TransactionFormProps) => {
-  const [, walletDict] = useWallets();
+  const [, walletMap] = useWallets();
   const form = useForm<TransactionFormValues>({
     defaultValues: {
       type,
       wallet_id: walletId,
       date,
-      currency: walletDict[walletId]?.currency,
+      currency: walletMap.get(walletId)?.currency,
     },
   });
 

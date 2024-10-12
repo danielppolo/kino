@@ -36,56 +36,45 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   );
 };
 
-export const useCategories = (): [Category[], Record<string, Category>] => {
+export const useCategories = (
+  key: keyof Category = "id",
+): [Category[], Map<string, Category>] => {
   const context = useContext(SettingsContext);
   if (context === undefined) {
     throw new Error("useCategories must be used within a SettingsProvider");
   }
 
   const list = context.categories;
-  const dict = context.categories.reduce(
-    (acc, label) => {
-      acc[label.id] = label;
-      return acc;
-    },
-    {} as Record<string, Category>,
+  const map = new Map(
+    context.categories.map((category) => [category[key], category]),
   );
 
-  return [list, dict];
+  return [list, map];
 };
 
-export const useLabels = (): [Label[], Record<string, Label>] => {
+export const useLabels = (
+  key: keyof Label = "id",
+): [Label[], Map<string, Label>] => {
   const context = useContext(SettingsContext);
   if (context === undefined) {
     throw new Error("useLabels must be used within a SettingsProvider");
   }
 
   const list = context.labels;
-  const dict = context.labels.reduce(
-    (acc, label) => {
-      acc[label.id] = label;
-      return acc;
-    },
-    {} as Record<string, Label>,
-  );
+  const map = new Map(context.labels.map((label) => [label[key], label]));
 
-  return [list, dict];
+  return [list, map];
 };
-
-export const useWallets = (): [Wallet[], Record<string, Wallet>] => {
+export const useWallets = (
+  key: keyof Wallet = "id",
+): [Wallet[], Map<string, Wallet>] => {
   const context = useContext(SettingsContext);
   if (context === undefined) {
     throw new Error("useWallets must be used within a SettingsProvider");
   }
 
   const list = context.wallets;
-  const dict = context.wallets.reduce(
-    (acc, wallet) => {
-      acc[wallet.id] = wallet;
-      return acc;
-    },
-    {} as Record<string, Wallet>,
-  );
+  const map = new Map(context.wallets.map((wallet) => [wallet[key], wallet]));
 
-  return [list, dict];
+  return [list, map];
 };

@@ -9,13 +9,16 @@ interface ImportTransaction {
   category: string;
   label: string;
   description?: string;
-  type: string;
+  type?: string;
 }
 
 export interface Options {
   missingCategory: "new" | "other";
   missingLabel: "new" | "other";
 }
+
+const DEFAULT_CATEGORY = "Other";
+const DEFAULT_LABEL = "Other";
 
 export const importTransactions = async (
   walletId: string,
@@ -32,51 +35,42 @@ export const importTransactions = async (
     .limit(1)
     .single();
 
-  if (walletError) {
+  // Check in the database
+  const { data: categories, error: categoriesError } = await supabase
+    .from("categories")
+    .select("id,name");
+
+  // Check in the database
+  const { data: labels, error: labelsError } = await supabase
+    .from("labels")
+    .select("id,name");
+
+  if (walletError || categoriesError || labelsError) {
     return {
-      error: walletError,
+      error: walletError || categoriesError || labelsError,
     };
   }
 
-  const upsertCategory = async (name: string, type: string) => {
-    // Check in the map first
+  categories.forEach((c) => categoryMap.set(c.name, c.id));
+  labels.forEach((l) => labelMap.set(l.name, l.id));
+
+  const upsertCategory = async (input = DEFAULT_CATEGORY, type: string) => {
+    if (type !== "income" && type !== "expense") return { data: undefined };
+
+    const name = missingCategory === "new" ? input : DEFAULT_CATEGORY;
     if (categoryMap.has(name))
       return { error: null, data: categoryMap.get(name) as string };
 
-    // Check in the database
-    const { data: existingCategory, error: fetchError } = await supabase
-      .from("categories")
-      .select("id")
-      .eq("name", name)
-      .eq("type", type)
-      .maybeSingle();
-
-    if (fetchError) {
-      return {
-        error: fetchError,
-        data: null,
-      };
-    }
-
-    if (existingCategory) {
-      categoryMap.set(name, existingCategory.id);
-      return {
-        error: null,
-        data: existingCategory.id,
-      };
-    }
-
-    // Insert new category
     const { data: newCategory, error: insertError } = await supabase
       .from("categories")
       .insert([
         {
           type,
-          name: missingCategory === "new" ? name : "Other",
+          name,
           icon: ICONS[Math.floor(Math.random() * ICONS.length)],
         },
       ])
-      .select("id")
+      .select("id,name")
       .single();
 
     if (insertError) {
@@ -86,50 +80,30 @@ export const importTransactions = async (
       };
     }
 
-    categoryMap.set(name, newCategory.id);
+    categoryMap.set(newCategory.name, newCategory.id);
     return {
       error: null,
       data: newCategory.id,
     };
   };
 
-  const upsertLabel = async (name: string) => {
-    // Check in the map first
+  const upsertLabel = async (input = DEFAULT_LABEL, type: string) => {
+    if (type !== "income" && type !== "expense") return { data: undefined };
+
+    const name = missingLabel === "new" ? input : DEFAULT_LABEL;
+
     if (labelMap.has(name))
       return { error: null, data: labelMap.get(name) as string };
 
-    // Check in the database
-    const { data: existingLabel, error: fetchError } = await supabase
-      .from("labels")
-      .select("id")
-      .eq("name", name)
-      .maybeSingle();
-
-    if (fetchError) {
-      return {
-        error: fetchError,
-        data: null,
-      };
-    }
-
-    if (existingLabel) {
-      labelMap.set(name, existingLabel.id);
-      return {
-        error: null,
-        data: existingLabel.id,
-      };
-    }
-
-    // Insert new label
     const { data: newLabel, error: insertError } = await supabase
       .from("labels")
       .insert([
         {
-          name: missingLabel === "new" ? name : "Other",
+          name,
           color: COLORS[Math.floor(Math.random() * COLORS.length)],
         },
       ])
-      .select("id")
+      .select("id,name")
       .single();
 
     if (insertError) {
@@ -139,7 +113,7 @@ export const importTransactions = async (
       };
     }
 
-    labelMap.set(name, newLabel.id);
+    labelMap.set(newLabel.name, newLabel.id);
     return {
       error: null,
       data: newLabel.id,
@@ -148,12 +122,19 @@ export const importTransactions = async (
 
   const transactionData = [];
   for (const transaction of transactions) {
+    const type = transaction.type
+      ? transaction.type
+      : transaction.amount > 0
+        ? "income"
+        : "expense";
+
     const { data: category_id, error: categoryError } = await upsertCategory(
-      transaction.category.trim(),
-      transaction.type,
+      transaction?.category?.trim() || undefined,
+      type,
     );
     const { data: label_id, error: labelError } = await upsertLabel(
-      transaction.label.trim(),
+      transaction?.label?.trim() || undefined,
+      type,
     );
 
     if (labelError || categoryError) {
@@ -165,12 +146,12 @@ export const importTransactions = async (
     transactionData.push({
       wallet_id: walletId,
       date: transaction.date,
-      amount_cents: transaction.amount * 100,
+      amount_cents: Math.round(transaction.amount * 100),
       category_id,
       label_id,
       description: transaction.description,
       currency: wallet.currency,
-      type: transaction.type,
+      type,
     });
   }
 

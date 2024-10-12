@@ -28,10 +28,11 @@ const CategoryPicker = ({
   onChange,
 }: CategoryPickerProps) => {
   const [open, setOpen] = useState(false);
-  const [categories, categoriesDict] = useCategories();
+  const [categories, categoriesMap] = useCategories();
   const filteredCategories = categories?.filter(
     (category) => category.type === type,
   );
+  const category = !!value && categoriesMap.get(value);
 
   const handleChange = (id: string) => {
     onChange(id);
@@ -42,10 +43,8 @@ const CategoryPicker = ({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="sm">
-          {value && categoriesDict[value] ? (
-            <>
-              <Category category={categoriesDict[value]} />
-            </>
+          {category ? (
+            <Category category={category} />
           ) : (
             <CircleDotDashed className="w-3 h-3" />
           )}

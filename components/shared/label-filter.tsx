@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { CircleDashed, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -16,9 +17,11 @@ import { useLabels } from "@/contexts/settings-context";
 
 const LabelFilter = () => {
   const router = useRouter();
-  const [labels, labelsDict] = useLabels();
+  const [open, setOpen] = useState(false);
+  const [labels, labelsMap] = useLabels();
   const searchParams = useSearchParams();
   const labelId = searchParams.get("label_id") ?? undefined;
+  const label = !!labelId && labelsMap.get(labelId);
 
   const setLabelId = (id: string | undefined) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -28,8 +31,9 @@ const LabelFilter = () => {
       params.delete("label_id");
     }
     router.push(`/transactions?${params.toString()}`);
+    setOpen(false);
   };
-  if (labelId && labelsDict[labelId]) {
+  if (label) {
     return (
       <Button
         variant="ghost"
@@ -38,7 +42,7 @@ const LabelFilter = () => {
         onClick={() => setLabelId(undefined)}
       >
         <div className="group-hover:hidden flex items-center">
-          <Label label={labelsDict[labelId]} size="sm" />
+          <Label label={label} size="sm" />
         </div>
         <X className="hidden h-3 w-3 group-hover:block" />
       </Button>
@@ -46,7 +50,7 @@ const LabelFilter = () => {
   }
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="sm">
           <CircleDashed className="w-3 h-3" />
