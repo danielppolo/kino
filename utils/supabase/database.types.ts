@@ -228,18 +228,21 @@ export type Database = {
       }
       wallets: {
         Row: {
+          balance_cents: number | null
           currency: string
           id: string
           name: string
           owner_id: string
         }
         Insert: {
+          balance_cents?: number | null
           currency: string
           id?: string
           name: string
           owner_id?: string
         }
         Update: {
+          balance_cents?: number | null
           currency?: string
           id?: string
           name?: string
@@ -260,16 +263,34 @@ export type Database = {
       transaction_list: {
         Row: {
           amount_cents: number | null
-          counterparty_wallet_id: string | null
+          category_id: string | null
           created_at: string | null
           currency: string | null
           date: string | null
           description: string | null
           id: string | null
+          label_id: string | null
+          note: string | null
+          transfer_id: string | null
+          transfer_wallet_id: string | null
           type: Database["public"]["Enums"]["transaction_type_enum"] | null
           wallet_id: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "transactions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "transactions_wallet_id_fkey"
             columns: ["wallet_id"]

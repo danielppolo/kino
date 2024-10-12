@@ -1,6 +1,5 @@
 import React from "react";
 
-import AddTransactionButton from "@/components/shared/add-transaction-button";
 import CategoryFilter from "@/components/shared/category-filter";
 import LabelFilter from "@/components/shared/label-filter";
 import WalletFilter from "@/components/shared/wallet-filter";
@@ -30,12 +29,6 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
             <div className="w-12">
               <CategoryFilter />
             </div>
-          </div>
-
-          <div>
-            <AddTransactionButton type="transfer" />
-            <AddTransactionButton type="expense" />
-            <AddTransactionButton type="income" />
           </div>
         </div>
         {children}

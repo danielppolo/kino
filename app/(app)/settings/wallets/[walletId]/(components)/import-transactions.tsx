@@ -25,11 +25,8 @@ import {
   useLabels,
   useWallets,
 } from "@/contexts/settings-context";
-import { Category, Label as LabelType } from "@/utils/supabase/types";
 
 interface CsvTransactionUploaderProps {
-  categories: Category[];
-  labels: LabelType[];
   walletId: string;
 }
 

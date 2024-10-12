@@ -5,8 +5,9 @@ import { toast } from "sonner";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 
-import DayHeader from "./day-header";
-import TransactionRow from "./transaction-row";
+import AddTransactionButton from "./add-transaction-button";
+import DayHeader, { DayHeaderLoading } from "./day-header";
+import TransactionRow, { TransactionRowLoading } from "./transaction-row";
 
 import { Database } from "@/utils/supabase/database.types";
 import {
@@ -16,12 +17,10 @@ import {
 import { Transaction } from "@/utils/supabase/types";
 
 interface TransactionListProps {
-  walletId?: string;
   transactions: Transaction[];
 }
 
 export default function TransactionList({
-  walletId,
   transactions,
 }: TransactionListProps) {
   const onDelete = useCallback(async (id: string) => {
@@ -91,44 +90,65 @@ export default function TransactionList({
   }, [transactions, rowVirtualizer]);
 
   return (
-    <div
-      ref={parentRef}
-      style={{ height: window.innerHeight - 48 - 40, overflow: "auto" }}
-    >
+    <div className="relative">
       <div
-        style={{
-          height: `${rowVirtualizer.getTotalSize()}px`,
-        }}
-        className="divide-y relative w-full"
+        ref={parentRef}
+        style={{ height: "calc(100vh - 88px)", overflow: "auto" }}
       >
-        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-          const [date, dateTransactions] =
-            groupedTransactions[virtualRow.index];
-          return (
-            <div
-              key={date}
-              className="divide-y"
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: `${virtualRow.size}px`,
-                transform: `translateY(${virtualRow.start}px)`,
-              }}
-            >
-              <DayHeader date={date} />
-              {dateTransactions.map((transaction) => (
-                <TransactionRow
-                  key={transaction.id}
-                  transaction={transaction}
-                  onUpdate={onChange}
-                />
-              ))}
-            </div>
-          );
-        })}
+        <div
+          style={{
+            height: `${rowVirtualizer.getTotalSize()}px`,
+          }}
+          className="divide-y relative w-full"
+        >
+          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+            const [date, dateTransactions] =
+              groupedTransactions[virtualRow.index];
+            return (
+              <div
+                key={date}
+                className="divide-y"
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: `${virtualRow.size}px`,
+                  transform: `translateY(${virtualRow.start}px)`,
+                }}
+              >
+                <DayHeader date={date} />
+                {dateTransactions.map((transaction) => (
+                  <TransactionRow
+                    key={transaction.id}
+                    transaction={transaction}
+                    onUpdate={onChange}
+                  />
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div className="absolute bottom-0 right-0">
+        <AddTransactionButton type="transfer" />
+        <AddTransactionButton type="expense" />
+        <AddTransactionButton type="income" />
       </div>
     </div>
   );
 }
+
+export const TransactionListLoading = () => {
+  return (
+    <div
+      style={{ height: "calc(100vh - 88px)", overflow: "auto" }}
+      className="divide-y relative w-full overflow-hidden"
+    >
+      <DayHeaderLoading />
+      {Array.from({ length: 20 }).map((_, index) => (
+        <TransactionRowLoading key={index} />
+      ))}
+    </div>
+  );
+};

@@ -5,6 +5,7 @@ import TransactionDescription from "./transaction-description";
 import TransactionIcon from "./transaction-icon";
 
 import { cn } from "@/lib/utils";
+import { formatCents } from "@/utils/format-cents";
 import { Transaction } from "@/utils/supabase/types";
 
 interface TransactionRowProps {
@@ -37,12 +38,7 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
             transaction.amount_cents > 0 ? "text-emerald-600" : "text-red-500",
           )}
         >
-          {new Intl.NumberFormat(undefined, {
-            style: "currency",
-            currency: transaction.currency,
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          }).format(transaction.amount_cents / 100)}
+          {formatCents(transaction.amount_cents)}
         </p>
       </div>
       {/* <div className="w-32 shrink-0 flex justify-end">
@@ -55,6 +51,25 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
                       }}
                     />
                   </div> */}
+    </div>
+  );
+};
+
+export const TransactionRowLoading = () => {
+  return (
+    <div className="group flex items-center h-10 pl-2 pr-4 text-sm animate-pulse">
+      <div className="w-12 shrink-0 p-2">
+        <div className="h-4 w-full rounded-md bg-muted" />
+      </div>
+      <div className="w-12 shrink-0 p-2">
+        <div className="h-4 w-full rounded-md bg-muted" />
+      </div>
+      <div className="grow p-2">
+        <div className="h-4 w-1/2 rounded-md bg-muted" />
+      </div>
+      <div className="w-24 shrink-0 p-2">
+        <div className="h-4 w-full rounded-md bg-muted" />
+      </div>
     </div>
   );
 };

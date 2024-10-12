@@ -1,7 +1,9 @@
 import React from "react";
 
+import { TransactionListLoading } from "@/components/shared/transaction-list";
+
 const Loading: React.FC = () => {
-  return <div>Loading...</div>;
+  return <TransactionListLoading />;
 };
 
 export default Loading;
