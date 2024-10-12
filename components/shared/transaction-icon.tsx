@@ -1,5 +1,5 @@
 import React from "react";
-import { ArrowDownFromLine, ArrowUpFromLine } from "lucide-react";
+import { ArrowRightLeft } from "lucide-react";
 
 import { Button } from "../ui/button";
 import CategoryPicker from "./category-picker";
@@ -18,11 +18,7 @@ const TransactionIcon: React.FC<TransactionIconProps> = ({
   if (transaction.type === "transfer") {
     return (
       <Button variant="ghost" size="sm">
-        {transaction.amount_cents > 0 ? (
-          <ArrowDownFromLine className="size-4" />
-        ) : (
-          <ArrowUpFromLine className="size-4" />
-        )}
+        <ArrowRightLeft className="size-4" />
       </Button>
     );
   }

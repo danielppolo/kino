@@ -3,9 +3,9 @@
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
+import { SubmitButton } from "../submit-button";
 import { Input } from "../ui/input";
 
-import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -91,7 +91,7 @@ const WalletForm = ({ onSuccess }: WalletFormProps) => {
           )}
         />
 
-        <Button type="submit">Add wallet</Button>
+        <SubmitButton>Add wallet</SubmitButton>
       </form>
     </Form>
   );

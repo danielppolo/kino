@@ -15,8 +15,8 @@ export const listTransactions = (
   params?: Filters,
 ) => {
   let query = client
-    .from("transactions")
-    .select("*", { count: "exact" })
+    .from("transaction_list")
+    .select("*")
     .order("date", { ascending: false });
 
   // Date range filtering

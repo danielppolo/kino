@@ -1,1 +1,0 @@
-ALTER TABLE public.transactions ADD COLUMN transfer_id UUID NULL;

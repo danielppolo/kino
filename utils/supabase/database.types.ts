@@ -113,7 +113,7 @@ export type Database = {
       transactions: {
         Row: {
           amount_cents: number
-          category_id: string
+          category_id: string | null
           created_at: string | null
           currency: string
           date: string
@@ -122,12 +122,13 @@ export type Database = {
           label_id: string | null
           labels: string[] | null
           note: string | null
+          transfer_id: string | null
           type: Database["public"]["Enums"]["transaction_type_enum"]
           wallet_id: string
         }
         Insert: {
           amount_cents: number
-          category_id: string
+          category_id?: string | null
           created_at?: string | null
           currency: string
           date: string
@@ -136,12 +137,13 @@ export type Database = {
           label_id?: string | null
           labels?: string[] | null
           note?: string | null
+          transfer_id?: string | null
           type: Database["public"]["Enums"]["transaction_type_enum"]
           wallet_id: string
         }
         Update: {
           amount_cents?: number
-          category_id?: string
+          category_id?: string | null
           created_at?: string | null
           currency?: string
           date?: string
@@ -150,6 +152,7 @@ export type Database = {
           label_id?: string | null
           labels?: string[] | null
           note?: string | null
+          transfer_id?: string | null
           type?: Database["public"]["Enums"]["transaction_type_enum"]
           wallet_id?: string
         }
@@ -254,7 +257,28 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      transaction_list: {
+        Row: {
+          amount_cents: number | null
+          counterparty_wallet_id: string | null
+          created_at: string | null
+          currency: string | null
+          date: string | null
+          description: string | null
+          id: string | null
+          type: Database["public"]["Enums"]["transaction_type_enum"] | null
+          wallet_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       [_ in never]: never

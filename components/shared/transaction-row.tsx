@@ -1,7 +1,7 @@
 import React, { memo } from "react";
 
-import { DescriptionInput } from "./description-input";
 import TransactionColor from "./transaction-color";
+import TransactionDescription from "./transaction-description";
 import TransactionIcon from "./transaction-icon";
 
 import { cn } from "@/lib/utils";
@@ -20,7 +20,7 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
   onUpdate,
 }) => {
   return (
-    <div className="group flex items-center h-10 pl-2 pr-4">
+    <div className="group flex items-center h-10 pl-2 pr-4 text-sm">
       <div className="w-12 shrink-0">
         <TransactionColor transaction={transaction} onUpdate={onUpdate} />
       </div>
@@ -28,16 +28,7 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
         <TransactionIcon transaction={transaction} onUpdate={onUpdate} />
       </div>
       <div className="grow">
-        <DescriptionInput
-          id={`desc-${transaction.id}`}
-          variant="ghost"
-          defaultValue={transaction.description ?? undefined}
-          onBlur={(event) => {
-            onUpdate(transaction, {
-              description: event.target.value,
-            });
-          }}
-        />
+        <TransactionDescription transaction={transaction} />
       </div>
       <div className="w-24 shrink-0">
         <p
