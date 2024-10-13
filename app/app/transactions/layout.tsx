@@ -1,5 +1,7 @@
 import React from "react";
 
+import WalletCurrency from "./(components)/wallet-currency";
+
 import CategoryFilter from "@/components/shared/category-filter";
 import LabelFilter from "@/components/shared/label-filter";
 import WalletFilter from "@/components/shared/wallet-filter";
@@ -19,7 +21,7 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
         <div className="h-12 px-2">
           <WalletFilter />
         </div>
-        <div className="h-10 px-2 flex items-center justify-between">
+        <div className="h-10 pl-2 pr-4 flex items-center justify-between">
           {/* <DateRangeFilter /> */}
 
           <div className="flex items-center">
@@ -29,6 +31,10 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
             <div className="w-12">
               <CategoryFilter />
             </div>
+          </div>
+
+          <div>
+            <WalletCurrency />
           </div>
         </div>
         {children}

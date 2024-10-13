@@ -5,8 +5,8 @@ import { TypedSupabaseClient } from "@/utils/supabase/types";
 export interface Filters {
   label_id?: string | undefined;
   category_id?: string | undefined;
-  to: string | undefined;
-  from: string | undefined;
+  to?: string | undefined;
+  from?: string | undefined;
   wallet_id?: string | undefined;
 }
 
