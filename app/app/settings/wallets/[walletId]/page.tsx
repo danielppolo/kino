@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -13,6 +14,7 @@ import { formatCents } from "@/utils/format-cents";
 export default function Page({ params }: { params: { walletId: string } }) {
   const [, walletsMap] = useWallets();
   const wallet = walletsMap.get(params.walletId);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const handleExport = async () => {
     const { error, data } = await exportTransactions({
@@ -37,6 +39,7 @@ export default function Page({ params }: { params: { walletId: string } }) {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    formRef.current?.reset();
   };
 
   return (
@@ -51,7 +54,7 @@ export default function Page({ params }: { params: { walletId: string } }) {
         <li>Balance: {formatCents(wallet?.balance_cents ?? 0)}</li>
       </ul>
       <h2>Export</h2>
-      <form action={handleExport}>
+      <form action={handleExport} ref={formRef}>
         <SubmitButton>Export</SubmitButton>
       </form>
       <h2>Import</h2>

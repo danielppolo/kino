@@ -135,9 +135,10 @@ export const importTransactions = async (
     .from("labels")
     .select("id,name");
 
-  const { data: allTransactions, error: transactionsError } = await supabase
+  const { data: orphanTransactions, error: transactionsError } = await supabase
     .from("transactions")
-    .select("id,amount_cents,date");
+    .select("id,amount_cents,date")
+    .is("transfer_id", null);
 
   if (walletError || categoriesError || labelsError || transactionsError) {
     return {
@@ -147,7 +148,7 @@ export const importTransactions = async (
 
   categories.forEach((c) => categoryMap.set(c.name, c.id));
   labels.forEach((l) => labelMap.set(l.name, l.id));
-  allTransactions.forEach((t) =>
+  orphanTransactions.forEach((t) =>
     transactionMap.set(`${t.date}-${Math.abs(t.amount_cents)}`, t.id),
   );
 
