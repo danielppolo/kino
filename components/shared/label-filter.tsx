@@ -30,7 +30,7 @@ const LabelFilter = () => {
     } else {
       params.delete("label_id");
     }
-    router.push(`/transactions?${params.toString()}`);
+    router.push(`/app/transactions?${params.toString()}`);
     setOpen(false);
   };
   if (label) {

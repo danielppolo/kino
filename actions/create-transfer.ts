@@ -44,7 +44,7 @@ export async function createTransferTransaction(
 
   const [sourceData, destData] = data;
 
-  revalidatePath("/transactions");
+  revalidatePath("/app/transactions");
 
   return {
     data: { sourceTransaction: sourceData, destinationTransaction: destData },

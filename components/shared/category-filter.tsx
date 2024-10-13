@@ -30,7 +30,7 @@ const CategoryFilter = () => {
     } else {
       params.delete("category_id");
     }
-    router.push(`/transactions?${params.toString()}`);
+    router.push(`/app/transactions?${params.toString()}`);
     setOpen(false);
   };
 

@@ -21,6 +21,6 @@ export const createTransaction = async ({
     ...transaction,
     amount_cents: transaction.type === "expense" ? -amount * 100 : amount * 100,
   };
-  revalidatePath("/app/(app)/transactions", "page");
+  revalidatePath("/app/transactions", "page");
   return await supabase.from("transactions").upsert(data).select();
 };

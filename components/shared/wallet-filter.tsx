@@ -18,7 +18,7 @@ const WalletFilter = () => {
       {wallets?.map((wallet) => (
         <Link
           key={wallet.id}
-          href={`/transactions/${wallet.id}?${searchParams.toString()}`}
+          href={`/app/transactions/${wallet.id}?${searchParams.toString()}`}
           passHref
         >
           <Button

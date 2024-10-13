@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
 
@@ -19,7 +21,7 @@ const TransactionDescription: React.FC<TransactionDescriptionProps> = ({
   if (transaction.type === "transfer" && counterPartyWallet) {
     const isIncoming = transaction.amount_cents > 0;
     return (
-      <Link href={`/transactions/${transaction.transfer_wallet_id}`}>
+      <Link href={`/app/transactions/${transaction.transfer_wallet_id}`}>
         <p>{`${isIncoming ? "From" : "To"} ${counterPartyWallet.name}`}</p>
       </Link>
     );

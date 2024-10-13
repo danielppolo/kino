@@ -16,22 +16,22 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
       <div className="w-64 p-6 border-r space-y-6 shrink-0">
         {/* Workspace Section */}
         <Menu title="Workspace">
-          <Link href="/settings/general">
+          <Link href="/app/settings/general">
             <MenuItem label="General" active={false} />
           </Link>
-          <Link href="/settings/overview">
+          <Link href="/app/settings/overview">
             <MenuItem label="Overview" active={false} />
           </Link>
-          <Link href="/settings/labels">
+          <Link href="/app/settings/labels">
             <MenuItem label="Labels" active={false} />
           </Link>
-          <Link href="/settings/categories">
+          <Link href="/app/settings/categories">
             <MenuItem label="Categories" active={false} />
           </Link>
         </Menu>
 
         <Menu title="Account">
-          <Link href="/settings/profile">
+          <Link href="/app/settings/profile">
             <MenuItem label="Profile" active={false} />
           </Link>
         </Menu>

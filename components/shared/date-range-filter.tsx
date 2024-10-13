@@ -30,7 +30,7 @@ const DateRangeFilter = () => {
     } else {
       params.delete("to");
     }
-    router.push(`/transactions?${params.toString()}`);
+    router.push(`/app/transactions?${params.toString()}`);
   };
 
   const handlePreviousPeriod = () => {

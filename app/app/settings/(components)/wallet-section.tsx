@@ -11,7 +11,7 @@ export default function WalletSection() {
   return (
     <Menu title="Wallets">
       {wallets?.map((wallet) => (
-        <Link key={wallet.id} href={`/settings/wallets/${wallet.id}`}>
+        <Link key={wallet.id} href={`/app/settings/wallets/${wallet.id}`}>
           <MenuItem label={wallet.name} active={false} />
         </Link>
       ))}
