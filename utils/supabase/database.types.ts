@@ -40,21 +40,21 @@ export type Database = {
           id: string
           name: string
           type: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           icon: string
           id?: string
           name: string
           type: string
-          user_id?: string
+          user_id?: string | null
         }
         Update: {
           icon?: string
           id?: string
           name?: string
           type?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {

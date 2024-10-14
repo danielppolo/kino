@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import Papa from "papaparse";
 import { toast } from "sonner";
 import { z } from "zod";
 
 import TransactionListPreview from "./transaction-list-preview";
 
-import { importTransactions, Options } from "@/actions/import-transactions";
+import { importTransactions } from "@/actions/import-transactions";
 import { SubmitButton } from "@/components/submit-button";
 import {
   Dialog,
@@ -18,13 +18,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  useCategories,
-  useLabels,
-  useWallets,
-} from "@/contexts/settings-context";
+import { useCategories, useLabels } from "@/contexts/settings-context";
+import { formatCents } from "@/utils/format-cents";
 
 interface CsvTransactionUploaderProps {
   walletId: string;
@@ -39,36 +34,39 @@ const TransactionSchema = z.object({
   date: z.string().date(),
 });
 
+interface Row {
+  date: string;
+  type?: string;
+  amount?: number;
+  description?: string;
+  category?: string;
+  label?: string;
+}
+
+interface Transfer extends Row {
+  uuid: string;
+}
+
 const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [, categoriesMap] = useCategories("name");
   const [, labelsMap] = useLabels("name");
-  const [, walletsMap] = useWallets();
-  const wallet = walletsMap.get(walletId);
   const [open, setOpen] = useState(false);
-  const [csvData, setCsvData] = useState<any[]>([]);
-  const [options, setOptions] = useState<Options>({
+  const [step, setStep] = useState(1);
+  const [csvData, setCsvData] = useState<Row[]>([]);
+  const [options, setOptions] = useState({
     missingCategory: "new",
     missingLabel: "new",
-  });
-  const [missingCategories, setMissingCategories] = useState<Set<string>>(
-    new Set(),
-  );
-  const [missingLabels, setMissingLabels] = useState<Set<string>>(new Set());
-  const [errors, setErrors] = useState<Set<string>>(new Set());
+  } as const);
 
   const csvDisplayData = useMemo(() => {
-    const isLabel = (id: string) => labelsMap.has(id);
-    const isCategory = (id: string) => categoriesMap.has(id);
-    return csvData.map((row) => ({
+    const isLabel = (id?: string) => id && labelsMap.has(id);
+    const isCategory = (id?: string) => id && categoriesMap.has(id);
+    return csvData.map((row: Row) => ({
       date: row.date,
       type: row.type,
       amount: row.amount
-        ? new Intl.NumberFormat(undefined, {
-            style: "currency",
-            currency: wallet?.currency,
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          }).format(Number(row.amount))
+        ? formatCents(Math.round(Number(row.amount) * 100))
         : undefined,
       description: row.description,
       category:
@@ -84,7 +82,6 @@ const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
     csvData,
     labelsMap,
     categoriesMap,
-    wallet?.currency,
     options.missingCategory,
     options.missingLabel,
   ]);
@@ -93,11 +90,11 @@ const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    Papa.parse(file, {
+    Papa.parse<Row>(file, {
       header: true,
       skipEmptyLines: true,
       complete: (result) => {
-        const rawData = result.data.map((row: any) => ({
+        const rawData = result.data.map((row) => ({
           date: row.date,
           type: row.type,
           amount: row.amount ? Number(row.amount) : undefined,
@@ -106,50 +103,10 @@ const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
           label: row.label,
         }));
         setCsvData(rawData);
-        validateData(rawData);
         setOpen(true);
       },
     });
   };
-
-  const validateData = useCallback(
-    (data: any[]) => {
-      const missingCategoriesSet = new Set<string>();
-      const missingLabelsSet = new Set<string>();
-      const validationErrorSet = new Set<string>();
-
-      const results = data.map((row) => {
-        // Validate against Zod schema
-        const validationResult = TransactionSchema.safeParse(row);
-
-        // Check for validation errors
-        if (!validationResult.success) {
-          validationResult.error.issues.forEach((issue) => {
-            validationErrorSet.add(`${issue.path.join(".")} ${issue.message}`);
-          });
-        }
-
-        // Check if Category ID exists
-        if (!categoriesMap.has(row["category"])) {
-          missingCategoriesSet.add(row["category"]);
-        }
-
-        // Check if Label ID exists
-        if (!labelsMap.has(row["label"])) {
-          missingLabelsSet.add(row["label"]);
-        }
-
-        return validationResult.success;
-      });
-
-      setMissingCategories(missingCategoriesSet);
-      setMissingLabels(missingLabelsSet);
-      setErrors(validationErrorSet);
-
-      return results;
-    },
-    [categoriesMap, labelsMap],
-  );
 
   const handleSubmit = async () => {
     const transactions = csvData.map((row) => ({
@@ -161,7 +118,11 @@ const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
       date: new Date(row.date).toISOString().split("T")[0], // Format YYYY-MM-DD
     }));
 
-    const { error } = await importTransactions(walletId, transactions, options);
+    const { error } = await importTransactions({
+      walletId,
+      transactions,
+      options,
+    });
 
     if (error) {
       console.error(error);
@@ -171,9 +132,23 @@ const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
     setOpen(false);
   };
 
+  const handleClose = () => {
+    setOpen(false);
+    setCsvData([]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <Input type="file" accept=".csv" onChange={handleFileUpload} />
+    <Dialog open={open} onOpenChange={handleClose}>
+      <Input
+        ref={fileInputRef}
+        className="h-10 w-48"
+        type="file"
+        accept=".csv"
+        onChange={handleFileUpload}
+      />
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Upload CSV Transactions</DialogTitle>
@@ -183,57 +158,6 @@ const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
           </DialogDescription>
         </DialogHeader>
         <TransactionListPreview transactions={csvDisplayData} />
-
-        <div className="mt-4">
-          {missingCategories.size > 0 && (
-            <div>
-              <p>Handle missing categories</p>
-              <RadioGroup
-                defaultValue={options.missingCategory}
-                onValueChange={(n) =>
-                  setOptions((v) => ({
-                    ...v,
-                    missingCategory: n as "new" | "other",
-                  }))
-                }
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="new" id="new-category" />
-                  <Label htmlFor="new-category">Create new</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="other" id="other-category" />
-                  <Label htmlFor="other-category">Use `Other`</Label>
-                </div>
-              </RadioGroup>
-            </div>
-          )}
-
-          {missingLabels.size > 0 && (
-            <div>
-              <p>Handle missing labels</p>
-              <RadioGroup
-                defaultValue={options.missingLabel}
-                onValueChange={(n) =>
-                  setOptions((v) => ({
-                    ...v,
-                    missingLabel: n as "new" | "other",
-                  }))
-                }
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="new" id="new-label" />
-                  <Label htmlFor="new-label">Create new</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="other" id="other-label" />
-                  <Label htmlFor="other-label">Use `Other`</Label>
-                </div>
-              </RadioGroup>
-            </div>
-          )}
-        </div>
-
         <DialogFooter>
           <form action={handleSubmit}>
             <SubmitButton>Submit Transactions</SubmitButton>
@@ -245,3 +169,55 @@ const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
 };
 
 export default CsvTransactionUploader;
+
+{
+  /* <div className="mt-4">
+{missingCategories.size > 0 && (
+  <div>
+    <p>Handle missing categories</p>
+    <RadioGroup
+      defaultValue={options.missingCategory}
+      onValueChange={(n) =>
+        setOptions((v) => ({
+          ...v,
+          missingCategory: n as "new" | "other",
+        }))
+      }
+    >
+      <div className="flex items-center space-x-2">
+        <RadioGroupItem value="new" id="new-category" />
+        <Label htmlFor="new-category">Create new</Label>
+      </div>
+      <div className="flex items-center space-x-2">
+        <RadioGroupItem value="other" id="other-category" />
+        <Label htmlFor="other-category">Use `Other`</Label>
+      </div>
+    </RadioGroup>
+  </div>
+)}
+
+{missingLabels.size > 0 && (
+  <div>
+    <p>Handle missing labels</p>
+    <RadioGroup
+      defaultValue={options.missingLabel}
+      onValueChange={(n) =>
+        setOptions((v) => ({
+          ...v,
+          missingLabel: n as "new" | "other",
+        }))
+      }
+    >
+      <div className="flex items-center space-x-2">
+        <RadioGroupItem value="new" id="new-label" />
+        <Label htmlFor="new-label">Create new</Label>
+      </div>
+      <div className="flex items-center space-x-2">
+        <RadioGroupItem value="other" id="other-label" />
+        <Label htmlFor="other-label">Use `Other`</Label>
+      </div>
+    </RadioGroup>
+  </div>
+)}
+</div> */
+}

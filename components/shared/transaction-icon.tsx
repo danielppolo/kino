@@ -3,6 +3,7 @@ import { ArrowRightLeft } from "lucide-react";
 
 import { Button } from "../ui/button";
 import CategoryPicker from "./category-picker";
+import LinkTransferButton from "./link-transfer-button";
 
 import { Transaction } from "@/utils/supabase/types";
 
@@ -16,11 +17,13 @@ const TransactionIcon: React.FC<TransactionIconProps> = ({
   onUpdate,
 }) => {
   if (transaction.type === "transfer") {
-    return (
-      <Button variant="ghost" size="sm">
-        <ArrowRightLeft className="size-4" />
-      </Button>
-    );
+    if (transaction.transfer_id)
+      return (
+        <Button variant="ghost" size="sm" disabled>
+          <ArrowRightLeft className="size-4" />
+        </Button>
+      );
+    return <LinkTransferButton transaction={transaction} />;
   }
 
   return (

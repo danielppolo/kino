@@ -14,6 +14,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useCategories } from "@/contexts/settings-context";
+import { TRANSFER_CATEGORIES } from "@/utils/constants";
 
 const CategoryFilter = () => {
   const router = useRouter();
@@ -64,7 +65,7 @@ const CategoryFilter = () => {
           onValueChange={setCategoryId}
           className="grid grid-cols-8"
         >
-          {categories?.map((category) => (
+          {categories?.concat(TRANSFER_CATEGORIES).map((category) => (
             <ToggleGroupItem key={category.id} value={category.id} size="sm">
               <Category category={category} />
             </ToggleGroupItem>

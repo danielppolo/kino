@@ -74,4 +74,8 @@ export const TransactionRowLoading = () => {
   );
 };
 
-export default memo(TransactionRow);
+export default memo(
+  TransactionRow,
+  (prevProps, nextProps) =>
+    prevProps.transaction.id === nextProps.transaction.id,
+);

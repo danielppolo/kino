@@ -1,3 +1,27 @@
+export const TRANSFER_CATEGORIES = [
+  {
+    name: "Transfer in",
+    icon: "arrow-up-from-line",
+    id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_IN_ID!,
+    type: "transfer",
+    user_id: null,
+  },
+  {
+    name: "Transfer out",
+    icon: "arrow-down-from-line",
+    id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_OUT_ID!,
+    type: "transfer",
+    user_id: null,
+  },
+  {
+    name: "Between wallets",
+    icon: "arrow-right-left",
+    id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID!,
+    type: "transfer",
+    user_id: null,
+  },
+];
+
 export const ICONS = [
   "activity",
   "airplay",

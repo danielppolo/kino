@@ -2,6 +2,7 @@
 
 import React, { createContext, ReactNode, useContext } from "react";
 
+import { TRANSFER_CATEGORIES } from "@/utils/constants";
 import { Category, Label, Wallet } from "@/utils/supabase/types";
 
 interface SettingsContextType {
@@ -46,7 +47,9 @@ export const useCategories = (
 
   const list = context.categories;
   const map = new Map(
-    context.categories.map((category) => [category[key], category]),
+    context.categories
+      .concat(TRANSFER_CATEGORIES)
+      .map((category) => [category[key], category]),
   );
 
   return [list, map];

@@ -24,12 +24,14 @@ export async function createTransferTransaction(
       ...sourceTransaction,
       amount_cents: -amount * 100,
       transfer_id: transferId,
+      category_id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID,
     },
     {
       ...sourceTransaction,
       wallet_id: counterpartWalletId,
       amount_cents: amount * 100,
       transfer_id: transferId,
+      category_id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID,
     } as const,
   ];
 
@@ -39,7 +41,7 @@ export async function createTransferTransaction(
     .select();
 
   if (error) {
-    return { error, data: null };
+    return { error: error.message };
   }
 
   const [sourceData, destData] = data;

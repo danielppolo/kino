@@ -111,11 +111,15 @@ const getCategory = async ({
   };
 };
 
-export const importTransactions = async (
-  walletId: string,
-  transactions: ImportTransaction[],
-  { missingCategory, missingLabel }: Options,
-) => {
+export const importTransactions = async ({
+  walletId,
+  transactions,
+  options = { missingCategory: "new", missingLabel: "new" },
+}: {
+  walletId: string;
+  transactions: ImportTransaction[];
+  options: Options;
+}) => {
   const supabase = createClient();
   const categoryMap = new Map<string, string>();
   const labelMap = new Map<string, string>();
@@ -149,7 +153,7 @@ export const importTransactions = async (
   categories.forEach((c) => categoryMap.set(c.name, c.id));
   labels.forEach((l) => labelMap.set(l.name, l.id));
   orphanTransactions.forEach((t) =>
-    transactionMap.set(`${t.date}-${Math.abs(t.amount_cents)}`, t.id),
+    transactionMap.set(`${t.date}-${t.amount_cents}`, t.id),
   );
 
   const transactionData = [];
@@ -167,14 +171,14 @@ export const importTransactions = async (
       input: transaction?.category?.trim() || undefined,
       type,
       map: categoryMap,
-      missingCategory,
+      missingCategory: options.missingCategory,
       supabase,
     });
     const { data: label_id, error: labelError } = await getLabel({
       input: transaction?.label?.trim() || undefined,
       type,
       map: labelMap,
-      missingLabel,
+      missingLabel: options.missingLabel,
       supabase,
     });
 
@@ -185,37 +189,55 @@ export const importTransactions = async (
     }
 
     let transfer_id;
+    let transferAttributes = {};
     const description = transaction.description;
     const amount_cents = Math.round(transaction.amount * 100);
     const counterPartTransactionId = transactionMap.get(
-      `${date}-${Math.abs(amount_cents)}`,
+      `${date}-${amount_cents * -1}`,
     );
+    const isIncome = amount_cents > 0;
     if (counterPartTransactionId) {
       transfer_id = randomUUID();
+      transferAttributes = {
+        transfer_id,
+        category_id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID,
+      };
       await supabase
         .from("transactions")
-        .update({ transfer_id })
+        .update({
+          transfer_id,
+          category_id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID,
+        })
         .eq("id", counterPartTransactionId);
     }
+
+    const computedCategoryId =
+      type === "transfer"
+        ? isIncome
+          ? process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_OUT_ID
+          : process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_IN_ID
+        : category_id;
 
     transactionData.push({
       wallet_id: walletId,
       date,
       amount_cents,
-      category_id,
+      category_id: computedCategoryId,
       label_id,
       description,
       currency: wallet.currency,
       type,
-      transfer_id,
+      ...transferAttributes,
     });
   }
 
-  const { error } = await supabase
+  const { error, data } = await supabase
     .from("transactions")
     .upsert(transactionData)
     .select();
 
-  console.log(error);
-  return { error };
+  if (error) {
+    return { error: error.message };
+  }
+  return { data };
 };

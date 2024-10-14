@@ -3,6 +3,9 @@
 import { useForm } from "react-hook-form";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { z } from "zod";
+
+import { zodResolver } from "@hookform/resolvers/zod";
 
 import DaterPicker from "../ui/date-picker";
 import { AmountInput } from "./amount-input";
@@ -22,8 +25,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useWallets } from "@/contexts/settings-context";
-import { Database } from "@/utils/supabase/database.types";
-
 interface TransactionFormProps {
   walletId: string;
   date?: string;
@@ -31,12 +32,18 @@ interface TransactionFormProps {
   onSuccess: () => void;
 }
 
-type TransactionFormValues = Omit<
-  Database["public"]["Tables"]["transactions"]["Insert"],
-  "amount_cents"
-> & {
-  amount: number;
-};
+const formSchema = z.object({
+  amount: z.string().transform((val) => Number(val)),
+  type: z.enum(["expense", "income", "transfer"]),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  description: z.string().optional(),
+  category_id: z.string().uuid(),
+  label_id: z.string().uuid(),
+  wallet_id: z.string().uuid(),
+  currency: z.string(),
+});
+
+type TransactionFormValues = z.infer<typeof formSchema>;
 
 const TransactionForm = ({
   walletId,
@@ -45,12 +52,17 @@ const TransactionForm = ({
   onSuccess,
 }: TransactionFormProps) => {
   const [, walletMap] = useWallets();
+
   const form = useForm<TransactionFormValues>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       type,
       wallet_id: walletId,
       date,
       currency: walletMap.get(walletId)?.currency,
+      description: undefined,
+      category_id: undefined,
+      label_id: undefined,
     },
   });
 
@@ -58,8 +70,9 @@ const TransactionForm = ({
     const { error } = await createTransaction(transaction);
 
     if (error) {
-      return toast.error(error.message);
+      return toast.error(error);
     }
+
     toast.success("Transaction added successfully!");
     onSuccess();
   };

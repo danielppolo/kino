@@ -39,7 +39,7 @@ const CategoryForm = ({ type, onSuccess }: CategoryFormProps) => {
     const { error } = await createCategory(category);
 
     if (error) {
-      return toast.error(error.message);
+      return toast.error(error);
     }
 
     toast.success("Label added successfully!");

@@ -1,26 +1,49 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
-import { Database } from "@/utils/supabase/database.types";
 import { createClient } from "@/utils/supabase/server";
 
-type Transaction = Omit<
-  Database["public"]["Tables"]["transactions"]["Insert"],
-  "amount_cents"
-> & {
-  amount: number;
-};
+const TransactionSchema = z.object({
+  amount: z.number().positive(),
+  type: z.enum(["expense", "income", "transfer"]),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  description: z.string().optional(),
+  category_id: z.string().uuid(),
+  label_id: z.string().uuid(),
+  wallet_id: z.string().uuid(),
+  currency: z.string(),
+});
 
-export const createTransaction = async ({
-  amount,
-  ...transaction
-}: Transaction) => {
+type Transaction = z.infer<typeof TransactionSchema>;
+
+export const createTransaction = async (transaction: Transaction) => {
+  const validatedData = TransactionSchema.safeParse(transaction);
+
+  if (!validatedData.success) {
+    return { error: validatedData.error.issues[0].message };
+  }
   const supabase = createClient();
-  const data = {
-    ...transaction,
-    amount_cents: transaction.type === "expense" ? -amount * 100 : amount * 100,
-  };
+
+  const { amount, type, ...rest } = validatedData.data;
+
   revalidatePath("/app/transactions", "page");
-  return await supabase.from("transactions").upsert(data).select();
+  const { error, data } = await supabase
+    .from("transactions")
+    .upsert({
+      ...rest,
+      type,
+      amount_cents:
+        type === "expense"
+          ? -Math.round(amount) * 100
+          : Math.round(amount) * 100,
+    })
+    .select();
+
+  if (error) {
+    console.log(error.message);
+    return { error: error.message };
+  }
+  return { data };
 };
