@@ -1,7 +1,5 @@
 import React from "react";
 
-import WalletCurrency from "./(components)/wallet-currency";
-
 import CategoryFilter from "@/components/shared/category-filter";
 import LabelFilter from "@/components/shared/label-filter";
 import WalletFilter from "@/components/shared/wallet-filter";
@@ -31,10 +29,6 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
             <div className="w-12">
               <CategoryFilter />
             </div>
-          </div>
-
-          <div>
-            <WalletCurrency />
           </div>
         </div>
         {children}

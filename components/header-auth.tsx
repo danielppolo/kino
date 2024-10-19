@@ -1,5 +1,7 @@
+import { LogOut, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 
+import { ThemeSwitcher } from "./theme-switcher";
 import { Button } from "./ui/button";
 
 import { signOutAction } from "@/app/actions";
@@ -10,10 +12,16 @@ export default async function AuthButton() {
     data: { user },
   } = await createClient().auth.getUser();
   return user ? (
-    <div className="flex items-center gap-4">
+    <div className="flex items-center">
+      <ThemeSwitcher />
+      <Link href="/app/settings">
+        <Button type="submit" variant="ghost" size="sm">
+          <SlidersHorizontal className="size-4" />
+        </Button>
+      </Link>
       <form action={signOutAction}>
-        <Button type="submit" variant={"outline"}>
-          Sign out
+        <Button type="submit" variant="ghost" size="sm">
+          <LogOut className="size-4" />
         </Button>
       </form>
     </div>

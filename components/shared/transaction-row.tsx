@@ -1,11 +1,10 @@
 import React, { memo } from "react";
 
+import TransactionAmount from "./transaction-amount";
 import TransactionColor from "./transaction-color";
 import TransactionDescription from "./transaction-description";
 import TransactionIcon from "./transaction-icon";
 
-import { cn } from "@/lib/utils";
-import { formatCents } from "@/utils/format-cents";
 import { Transaction } from "@/utils/supabase/types";
 
 interface TransactionRowProps {
@@ -31,15 +30,12 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
       <div className="grow">
         <TransactionDescription transaction={transaction} />
       </div>
-      <div className="w-24 shrink-0">
-        <p
-          className={cn(
-            "text-right",
-            transaction.amount_cents > 0 ? "text-emerald-600" : "text-red-500",
-          )}
-        >
-          {formatCents(transaction.amount_cents)}
-        </p>
+      <div className="w-auto shrink-0">
+        <TransactionAmount
+          className="text-right"
+          amount={transaction.amount_cents}
+          currency={transaction.currency}
+        />
       </div>
       {/* <div className="w-32 shrink-0 flex justify-end">
                     <DaterPicker

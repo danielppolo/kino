@@ -3,7 +3,6 @@
 import React, { useMemo, useRef, useState } from "react";
 import Papa from "papaparse";
 import { toast } from "sonner";
-import { z } from "zod";
 
 import TransactionListPreview from "./transaction-list-preview";
 
@@ -25,15 +24,6 @@ interface CsvTransactionUploaderProps {
   walletId: string;
 }
 
-const TransactionSchema = z.object({
-  category: z.string(),
-  label: z.string(),
-  amount: z.number().positive(),
-  description: z.string().optional(),
-  type: z.string().optional(),
-  date: z.string().date(),
-});
-
 interface Row {
   date: string;
   type?: string;
@@ -41,10 +31,7 @@ interface Row {
   description?: string;
   category?: string;
   label?: string;
-}
-
-interface Transfer extends Row {
-  uuid: string;
+  tags?: string;
 }
 
 const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
@@ -52,7 +39,6 @@ const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
   const [, categoriesMap] = useCategories("name");
   const [, labelsMap] = useLabels("name");
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState(1);
   const [csvData, setCsvData] = useState<Row[]>([]);
   const [options, setOptions] = useState({
     missingCategory: "new",
@@ -77,6 +63,7 @@ const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
         isLabel(row.label) || options.missingLabel === "new"
           ? row.label
           : "Other",
+      tags: row.tags?.split(",").map((tag) => tag.trim()),
     }));
   }, [
     csvData,
@@ -101,6 +88,7 @@ const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
           description: row.description,
           category: row.category,
           label: row.label,
+          tags: row.tags,
         }));
         setCsvData(rawData);
         setOpen(true);

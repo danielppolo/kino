@@ -15,9 +15,12 @@ import TransactionForm from "./transaction-form";
 import TransferForm from "./transfer-form";
 
 import { Button } from "@/components/ui/button";
+import { Transaction } from "@/utils/supabase/types";
 
 interface AddTransactionButtonProps {
   type: "income" | "expense" | "transfer";
+  onSuccess?: () => void;
+  onOptimisticSuccess?: (placeholderTransaction: Transaction) => void;
 }
 
 const AddTransactionButton = (props: AddTransactionButtonProps) => {
@@ -64,6 +67,7 @@ const AddTransactionButton = (props: AddTransactionButtonProps) => {
           {...props}
           walletId={walletId}
           onSuccess={() => setOpen(false)}
+          onOptimisticSuccess={props.onOptimisticSuccess}
         />
       )}
     </DrawerDialog>

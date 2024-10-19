@@ -1,5 +1,6 @@
 "use client";
 
+import { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -7,6 +8,7 @@ import { z } from "zod";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 
+import { SubmitButton } from "../submit-button";
 import DaterPicker from "../ui/date-picker";
 import { AmountInput } from "./amount-input";
 import { DescriptionInput } from "./description-input";
@@ -14,7 +16,6 @@ import LabelPicker from "./label-picker";
 
 import { createTransaction } from "@/actions/create-transaction";
 import CategoryPicker from "@/components/shared/category-picker";
-import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -25,11 +26,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useWallets } from "@/contexts/settings-context";
+import { Transaction } from "@/utils/supabase/types";
 interface TransactionFormProps {
   walletId: string;
   date?: string;
   type: "income" | "expense" | "transfer";
-  onSuccess: () => void;
+  onOptimisticSuccess?: (placeholderTransaction: Transaction) => void;
+  onSuccess?: () => void;
 }
 
 const formSchema = z.object({
@@ -50,8 +53,10 @@ const TransactionForm = ({
   date = format(Date.now(), "yyyy-MM-dd"),
   type,
   onSuccess,
+  onOptimisticSuccess,
 }: TransactionFormProps) => {
   const [, walletMap] = useWallets();
+  const [isPending, startTransition] = useTransition();
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(formSchema),
@@ -66,20 +71,36 @@ const TransactionForm = ({
     },
   });
 
-  const onSubmit = async (transaction: TransactionFormValues) => {
-    const { error } = await createTransaction(transaction);
+  const onSubmit = async () => {
+    startTransition(async () => {
+      const transaction = form.getValues();
 
-    if (error) {
-      return toast.error(error);
-    }
+      onOptimisticSuccess?.({
+        ...transaction,
+        id: "placeholder",
+        amount_cents: Math.round(transaction.amount * 100),
+        created_at: new Date().toISOString(),
+        description: transaction.description ?? "",
+        labels: [],
+        note: "",
+        transfer_id: null,
+      });
 
-    toast.success("Transaction added successfully!");
-    onSuccess();
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      const { error } = await createTransaction(transaction);
+
+      if (error) {
+        return toast.error(error);
+      }
+
+      toast.success("Transaction added successfully!");
+      onSuccess?.();
+    });
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form action={onSubmit} className="space-y-4">
         <FormField
           control={form.control}
           name="amount"
@@ -154,7 +175,7 @@ const TransactionForm = ({
           )}
         />
 
-        <Button type="submit">Add Transaction</Button>
+        <SubmitButton>Add Transaction</SubmitButton>
       </form>
     </Form>
   );

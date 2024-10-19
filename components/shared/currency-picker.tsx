@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CommandList } from "cmdk";
 import { Check, ChevronsUpDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -18,12 +19,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-const currencies = [
-  { value: "usd", label: "USD" },
-  { value: "eur", label: "EUR" },
-  { value: "gbp", label: "GBP" },
-  // Add more currencies as needed
-];
+const currencies = ["MXN", "USD", "EUR", "GBP"];
 
 interface CurrencyPickerProps {
   value?: string;
@@ -34,7 +30,7 @@ const CurrencyPicker = ({ value, onChange }: CurrencyPickerProps) => {
   const [open, setOpen] = useState(false);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -42,9 +38,7 @@ const CurrencyPicker = ({ value, onChange }: CurrencyPickerProps) => {
           aria-expanded={open}
           className="w-[200px] justify-between"
         >
-          {value
-            ? currencies.find((currency) => currency.value === value)?.label
-            : "Select currency..."}
+          {value || "Select currency..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -52,25 +46,27 @@ const CurrencyPicker = ({ value, onChange }: CurrencyPickerProps) => {
         <Command>
           <CommandInput placeholder="Search currency..." />
           <CommandEmpty>No currency found.</CommandEmpty>
-          <CommandGroup>
-            {currencies.map((currency) => (
-              <CommandItem
-                key={currency.value}
-                onSelect={() => {
-                  onChange(currency.value === value ? "" : currency.value);
-                  setOpen(false);
-                }}
-              >
-                <Check
-                  className={cn(
-                    "mr-2 h-4 w-4",
-                    value === currency.value ? "opacity-100" : "opacity-0",
-                  )}
-                />
-                {currency.label}
-              </CommandItem>
-            ))}
-          </CommandGroup>
+          <CommandList>
+            <CommandGroup>
+              {currencies.map((currency) => (
+                <CommandItem
+                  key={currency}
+                  onSelect={() => {
+                    onChange(currency);
+                    setOpen(false);
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === currency ? "opacity-100" : "opacity-0",
+                    )}
+                  />
+                  {currency}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
         </Command>
       </PopoverContent>
     </Popover>

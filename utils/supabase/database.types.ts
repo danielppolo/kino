@@ -120,8 +120,8 @@ export type Database = {
           description: string | null
           id: string
           label_id: string | null
-          labels: string[] | null
           note: string | null
+          tags: string[] | null
           transfer_id: string | null
           type: Database["public"]["Enums"]["transaction_type_enum"]
           wallet_id: string
@@ -135,8 +135,8 @@ export type Database = {
           description?: string | null
           id?: string
           label_id?: string | null
-          labels?: string[] | null
           note?: string | null
+          tags?: string[] | null
           transfer_id?: string | null
           type: Database["public"]["Enums"]["transaction_type_enum"]
           wallet_id: string
@@ -150,8 +150,8 @@ export type Database = {
           description?: string | null
           id?: string
           label_id?: string | null
-          labels?: string[] | null
           note?: string | null
+          tags?: string[] | null
           transfer_id?: string | null
           type?: Database["public"]["Enums"]["transaction_type_enum"]
           wallet_id?: string

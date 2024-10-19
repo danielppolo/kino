@@ -11,7 +11,6 @@ const ThemeSwitcher = () => {
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
 
-  // useEffect only runs on the client, so now we can safely show the UI
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -20,9 +19,6 @@ const ThemeSwitcher = () => {
     return null;
   }
 
-  const ICON_SIZE = 20;
-
-  // Function to cycle between light, dark, and system themes
   const cycleTheme = () => {
     const nextTheme =
       theme === "light" ? "dark" : theme === "dark" ? "system" : "light";
@@ -31,17 +27,13 @@ const ThemeSwitcher = () => {
   };
 
   return (
-    <Button variant="ghost" onClick={cycleTheme}>
+    <Button variant="ghost" onClick={cycleTheme} size="sm">
       {theme === "light" ? (
-        <Sun key="light" size={ICON_SIZE} className={"text-muted-foreground"} />
+        <Sun key="light" className="size-4" />
       ) : theme === "dark" ? (
-        <Moon key="dark" size={ICON_SIZE} className={"text-muted-foreground"} />
+        <Moon key="dark" className="size-4" />
       ) : (
-        <Laptop
-          key="system"
-          size={ICON_SIZE}
-          className={"text-muted-foreground"}
-        />
+        <Laptop key="system" className="size-4" />
       )}
     </Button>
   );

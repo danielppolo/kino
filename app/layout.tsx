@@ -2,6 +2,7 @@ import { GeistSans } from "geist/font/sans";
 import { ThemeProvider } from "next-themes";
 
 import "./globals.css";
+import Navbar from "@/components/shared/navbar";
 import { Toaster } from "@/components/ui/sonner";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -29,7 +30,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <main className="min-h-screen flex flex-col items-center">
-            {/* <Navbar /> */}
+            <Navbar />
             {children}
           </main>
           <Toaster />

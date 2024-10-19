@@ -12,7 +12,7 @@ const WalletCurrency: React.FC = () => {
 
   if (!wallet) return null;
 
-  return <p className="text-muted-foreground">{wallet.currency}</p>;
+  return <span className="text-muted-foreground">{wallet.currency}</span>;
 };
 
 export default WalletCurrency;

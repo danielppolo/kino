@@ -5,7 +5,7 @@ create table
     description text null,
     label_id uuid null,
     category_id uuid not null,
-    labels text[] null,
+    tags text[] null,
     amount_cents integer not null,
     wallet_id uuid not null,
     date date not null,

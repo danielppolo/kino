@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useOptimistic, useRef } from "react";
 import { toast } from "sonner";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -23,6 +23,11 @@ interface TransactionListProps {
 export default function TransactionList({
   transactions,
 }: TransactionListProps) {
+  const [optimisticTransactions, addOptimisticTransaction] = useOptimistic<
+    Transaction[],
+    Transaction
+  >(transactions, (state, newTransaction) => [newTransaction, ...state]);
+
   const onDelete = useCallback(async (id: string) => {
     const { error } = await deleteTransaction(id);
 
@@ -64,7 +69,7 @@ export default function TransactionList({
   // Group transactions by date
   const groupedTransactions = useMemo(() => {
     const groups: { [key: string]: Transaction[] } = {};
-    transactions.forEach((transaction) => {
+    optimisticTransactions.forEach((transaction) => {
       const date = transaction.date;
       if (!groups[date]) {
         groups[date] = [];
@@ -72,7 +77,7 @@ export default function TransactionList({
       groups[date].push(transaction);
     });
     return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
-  }, [transactions]);
+  }, [optimisticTransactions]);
 
   // Virtualization Setup
   const parentRef = useRef<HTMLDivElement>(null);
@@ -87,13 +92,13 @@ export default function TransactionList({
   // Re-render the virtualized list when transactions change
   useEffect(() => {
     rowVirtualizer.measure();
-  }, [transactions, rowVirtualizer]);
+  }, [optimisticTransactions, rowVirtualizer]);
 
   return (
     <div className="relative">
       <div
         ref={parentRef}
-        style={{ height: "calc(100vh - 88px)", overflow: "auto" }}
+        style={{ height: "calc(100vh - 44px- 44px - 44px)", overflow: "auto" }}
       >
         <div
           style={{
@@ -130,10 +135,19 @@ export default function TransactionList({
           })}
         </div>
       </div>
-      <div className="absolute bottom-0 right-0">
-        <AddTransactionButton type="transfer" />
-        <AddTransactionButton type="expense" />
-        <AddTransactionButton type="income" />
+      <div className="fixed top-0 left-0 z-50 bg-[red]">
+        <AddTransactionButton
+          type="transfer"
+          onOptimisticSuccess={addOptimisticTransaction}
+        />
+        <AddTransactionButton
+          type="expense"
+          onOptimisticSuccess={addOptimisticTransaction}
+        />
+        <AddTransactionButton
+          type="income"
+          onOptimisticSuccess={addOptimisticTransaction}
+        />
       </div>
     </div>
   );
@@ -142,7 +156,7 @@ export default function TransactionList({
 export const TransactionListLoading = () => {
   return (
     <div
-      style={{ height: "calc(100vh - 88px)", overflow: "auto" }}
+      style={{ height: "calc(100vh - 44px- 44px - 44px)", overflow: "auto" }}
       className="divide-y relative w-full overflow-hidden"
     >
       <DayHeaderLoading />

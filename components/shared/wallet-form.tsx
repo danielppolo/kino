@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { SubmitButton } from "../submit-button";
 import { Input } from "../ui/input";
+import CurrencyPicker from "./currency-picker";
 
 import {
   Form,
@@ -14,13 +15,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Database } from "@/utils/supabase/database.types";
 import { createWallet } from "@/utils/supabase/mutations";
 
@@ -72,19 +66,7 @@ const WalletForm = ({ onSuccess }: WalletFormProps) => {
             <FormItem>
               <FormLabel>Currency</FormLabel>
               <FormControl>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select currency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="USD">USD</SelectItem>
-                    <SelectItem value="EUR">EUR</SelectItem>
-                    <SelectItem value="GBP">GBP</SelectItem>
-                  </SelectContent>
-                </Select>
+                <CurrencyPicker onChange={field.onChange} value={field.value} />
               </FormControl>
               <FormMessage />
             </FormItem>
