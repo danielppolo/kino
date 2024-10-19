@@ -3,7 +3,7 @@
 import { add, sub } from "date-fns";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { DaterRangePicker } from "../ui/date-range-picker";
+import { DaterRangePicker } from "../../../../../components/ui/date-range-picker";
 
 interface DateRange {
   from: Date | undefined;

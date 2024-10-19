@@ -1,50 +1,47 @@
 "use client";
 
 import { useState } from "react";
-import { CircleDotDashed, X } from "lucide-react";
+import { CircleDashed, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
-import Category from "./category";
-
+import Label from "@/components/shared/label";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useCategories } from "@/contexts/settings-context";
-import { TRANSFER_CATEGORIES } from "@/utils/constants";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useLabels } from "@/contexts/settings-context";
 
-const CategoryFilter = () => {
+const LabelFilter = () => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [categories, categoriesMap] = useCategories();
+  const [labels, labelsMap] = useLabels();
   const searchParams = useSearchParams();
-  const categoryId = searchParams.get("category_id") ?? undefined;
-  const category = categoryId && categoriesMap.get(categoryId);
+  const labelId = searchParams.get("label_id") ?? undefined;
+  const label = !!labelId && labelsMap.get(labelId);
 
-  const setCategoryId = (id: string | undefined) => {
+  const setLabelId = (id: string | undefined) => {
     const params = new URLSearchParams(searchParams.toString());
     if (id) {
-      params.set("category_id", id);
+      params.set("label_id", id);
     } else {
-      params.delete("category_id");
+      params.delete("label_id");
     }
     router.push(`/app/transactions?${params.toString()}`);
     setOpen(false);
   };
-
-  if (category) {
+  if (label) {
     return (
       <Button
         variant="ghost"
         className="peer group"
         size="sm"
-        onClick={() => setCategoryId(undefined)}
+        onClick={() => setLabelId(undefined)}
       >
         <div className="group-hover:hidden flex items-center">
-          <Category category={category} />
+          <Label label={label} size="sm" />
         </div>
         <X className="hidden h-3 w-3 group-hover:block" />
       </Button>
@@ -55,19 +52,19 @@ const CategoryFilter = () => {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="sm">
-          <CircleDotDashed className="w-3 h-3" />
+          <CircleDashed className="w-3 h-3" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full">
         <ToggleGroup
           type="single"
-          value={categoryId}
-          onValueChange={setCategoryId}
+          value={labelId}
+          onValueChange={setLabelId}
           className="grid grid-cols-8"
         >
-          {categories?.concat(TRANSFER_CATEGORIES).map((category) => (
-            <ToggleGroupItem key={category.id} value={category.id} size="sm">
-              <Category category={category} />
+          {labels?.map((label) => (
+            <ToggleGroupItem key={label.id} value={label.id} size="sm">
+              <Label label={label} size="sm" />
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
@@ -76,4 +73,4 @@ const CategoryFilter = () => {
   );
 };
 
-export default CategoryFilter;
+export default LabelFilter;
