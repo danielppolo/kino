@@ -126,3 +126,59 @@ create policy "labels_update_policy"
 create policy "labels_delete_policy"
     on labels
     for delete using ( (select auth.uid()) = user_id );
+
+
+create policy "user_wallets_select" 
+  on user_wallets
+  for select
+  to authenticated
+  using (
+    exists (
+      select 1 from user_wallets as uw
+      join wallets on uw.wallet_id = wallets.id
+      where uw.user_id = auth.uid()
+      and uw.wallet_id = user_wallets.wallet_id
+    )
+  ); 
+
+create policy "user_wallets_insert" 
+  on user_wallets
+  for insert 
+  to authenticated
+  with check (auth.uid() = user_wallets.user_id);
+
+
+  create policy "user_wallets_update" 
+  on user_wallets
+  for update 
+  to authenticated
+  using (
+    exists (
+      select 1 from user_wallets as uw
+      where uw.user_id = auth.uid()
+      and uw.wallet_id = user_wallets.wallet_id
+      and uw.role = 'editor'
+    )
+  )
+  with check (
+    exists (
+      select 1 from user_wallets as uw
+      where uw.user_id = auth.uid()
+      and uw.wallet_id = user_wallets.wallet_id
+      and uw.role = 'editor'
+    )
+  );
+
+
+  create policy "user_wallets_delete" 
+  on user_wallets
+  for delete 
+  to authenticated
+  using (
+    exists (
+      select 1 from user_wallets as uw
+      where uw.user_id = auth.uid()
+      and uw.wallet_id = user_wallets.wallet_id
+      and uw.role = 'editor'
+    )
+  );

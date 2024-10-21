@@ -7,33 +7,19 @@ import { createClient } from "./server";
 
 const supabase = createClient();
 
-export const createWallet = async (
-  walletName: string,
-  walletCurrency: string,
-) => {
+export const createWallet = async ({
+  name,
+  currency,
+}: {
+  name: string;
+  currency: string;
+}) => {
   revalidatePath("/app/transactions", "layout");
 
-  // Get the current authenticated user
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError) return { error: userError.message, data: null };
-
-  // Get the 'editor' role ID
-  const { data: editorRole, error: editorRoleError } = await supabase
-    .from("roles")
-    .select("id")
-    .eq("name", "editor")
-    .single();
-  if (editorRoleError) return { error: editorRoleError.message, data: null };
-
-  // Call the stored procedure to insert both wallet and user_wallet in a transaction
-  const { data, error } = await supabase
-    .rpc("insert_wallet_and_user_wallet", {
-      wallet_name: walletName,
-      wallet_currency: walletCurrency,
-      user_id: userData.user.id,
-      editor_role_id: editorRole.id,
-    })
-    .single();
+  const { data, error } = await supabase.rpc("insert_wallet_and_user_wallet", {
+    wallet_currency: currency,
+    wallet_name: name,
+  });
 
   if (error) return { error: error.message, data: null };
 

@@ -273,7 +273,6 @@ export type Database = {
         Args: {
           wallet_name: string
           wallet_currency: string
-          user_id: string
         }
         Returns: {
           wallet_id: string
