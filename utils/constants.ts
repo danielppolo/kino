@@ -1,3 +1,8 @@
+export const DEFAULT_DATE_RANGE = {
+  startDate: new Date(new Date().setDate(1)),
+  endDate: new Date(),
+};
+
 export const TRANSFER_CATEGORIES = [
   {
     name: "Transfer in",

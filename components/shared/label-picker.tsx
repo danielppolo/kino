@@ -3,15 +3,11 @@
 import { useState } from "react";
 import { CircleDashed } from "lucide-react";
 
+import { DrawerPopover } from "../ui/drawer-popover";
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import Label from "./label";
 
 import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { useLabels } from "@/contexts/settings-context";
 
 interface LabelPickerProps {
@@ -31,8 +27,10 @@ const LabelPicker = ({ onChange, defaultValue, value }: LabelPickerProps) => {
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <DrawerPopover
+      open={open}
+      onOpenChange={setOpen}
+      trigger={
         <Button variant="ghost" size="sm">
           {label ? (
             <Label label={label} size="sm" />
@@ -40,22 +38,21 @@ const LabelPicker = ({ onChange, defaultValue, value }: LabelPickerProps) => {
             <CircleDashed className="w-3 h-3" />
           )}
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-full">
-        <ToggleGroup
-          type="single"
-          defaultValue={defaultValue}
-          onValueChange={handleChange}
-          className="grid grid-cols-8"
-        >
-          {labels?.map((label) => (
-            <ToggleGroupItem key={label.id} value={label.id}>
-              <Label label={label} size="sm" />
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-      </PopoverContent>
-    </Popover>
+      }
+    >
+      <ToggleGroup
+        type="single"
+        defaultValue={defaultValue}
+        onValueChange={handleChange}
+        className="grid grid-cols-8"
+      >
+        {labels?.map((label) => (
+          <ToggleGroupItem key={label.id} value={label.id}>
+            <Label label={label} size="sm" />
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+    </DrawerPopover>
   );
 };
 

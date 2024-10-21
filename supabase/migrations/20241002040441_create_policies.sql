@@ -14,8 +14,6 @@ using (
     where user_wallets.user_id = auth.uid()
     and user_wallets.wallet_id = wallets.id
   )
-  -- OR the user is the owner of the wallet (user_id in wallets table matches auth.uid())
-  or wallets.owner_id = auth.uid()
 );
 
 create policy "wallet_insert" 
@@ -32,8 +30,6 @@ for update to authenticated using (
     and user_wallets.wallet_id = wallets.id
     and user_wallets.role_id = (select id from roles where name = 'editor')
   )
-   -- OR the user is the owner of the wallet (user_id in wallets table matches auth.uid())
-  or wallets.owner_id = auth.uid()
 ) with check (true);
 
 create policy "wallet_delete" on wallets
@@ -44,8 +40,6 @@ for delete to authenticated using (
     and user_wallets.wallet_id = wallets.id
     and user_wallets.role_id = (select id from roles where name = 'editor')
   )
-   -- OR the user is the owner of the wallet (user_id in wallets table matches auth.uid())
-  or wallets.owner_id = auth.uid()
 );
 
 
@@ -59,12 +53,6 @@ using (
     where user_wallets.user_id = auth.uid()
     and transactions.wallet_id = wallets.id
   )
-  -- OR the user is the owner of the wallet (user_id in wallets table matches auth.uid())
-  or exists (
-    select 1 from wallets
-    where wallets.id = transactions.wallet_id
-    and wallets.owner_id = auth.uid()
-  )
 );
 
 create policy "transaction_insert" on transactions
@@ -75,12 +63,6 @@ for insert to authenticated with check (
     where user_wallets.user_id = auth.uid()
     and transactions.wallet_id = wallets.id
     and user_wallets.role_id = (select id from roles where name = 'editor')
-  )
-  -- OR the user is the owner of the wallet (user_id in wallets table matches auth.uid())
-  or exists (
-    select 1 from wallets
-    where wallets.id = transactions.wallet_id
-    and wallets.owner_id = auth.uid()
   )
 );
 
@@ -93,12 +75,6 @@ for update to authenticated using (
     and transactions.wallet_id = wallets.id
     and user_wallets.role_id = (select id from roles where name = 'editor')
   )
-  -- OR the user is the owner of the wallet (user_id in wallets table matches auth.uid())
-  or exists (
-    select 1 from wallets
-    where wallets.id = transactions.wallet_id
-    and wallets.owner_id = auth.uid()
-  )
 ) with check (true);
 
 create policy "transaction_delete" on transactions
@@ -109,12 +85,6 @@ for delete using (
     where user_wallets.user_id = auth.uid()
     and transactions.wallet_id = wallets.id
     and user_wallets.role_id = (select id from roles where name = 'editor')
-  )
-  -- OR the user is the owner of the wallet (user_id in wallets table matches auth.uid())
-  or exists (
-    select 1 from wallets
-    where wallets.id = transactions.wallet_id
-    and wallets.owner_id = auth.uid()
   )
 );
 

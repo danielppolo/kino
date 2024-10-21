@@ -20,17 +20,17 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
   onUpdate,
 }) => {
   return (
-    <div className="group flex items-center h-10 pl-2 pr-4 text-sm">
-      <div className="w-12 shrink-0">
+    <div className="group flex items-center h-10 pl-2 pr-4 text-sm gap-2">
+      <div className="shrink-0">
         <TransactionColor transaction={transaction} onUpdate={onUpdate} />
       </div>
-      <div className="w-12 shrink-0">
+      <div className="shrink-0">
         <TransactionIcon transaction={transaction} onUpdate={onUpdate} />
       </div>
-      <div className="grow">
+      <div className="grow shrink truncate">
         <TransactionDescription transaction={transaction} />
       </div>
-      <div className="w-auto shrink-0">
+      <div className="shrink-0">
         <TransactionAmount
           className="text-right"
           amount={transaction.amount_cents}

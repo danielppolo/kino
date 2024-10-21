@@ -1,13 +1,13 @@
 import { LogOut, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 
-import { ThemeSwitcher } from "./theme-switcher";
-import { Button } from "./ui/button";
+import { ThemeSwitcher } from "../../../../components/theme-switcher";
+import { Button } from "../../../../components/ui/button";
 
 import { signOutAction } from "@/app/actions";
 import { createClient } from "@/utils/supabase/server";
 
-export default async function AuthButton() {
+export default async function Navigation() {
   const {
     data: { user },
   } = await createClient().auth.getUser();
@@ -25,14 +25,5 @@ export default async function AuthButton() {
         </Button>
       </form>
     </div>
-  ) : (
-    <div className="flex gap-2">
-      <Button asChild size="sm" variant={"outline"}>
-        <Link href="/sign-in">Sign in</Link>
-      </Button>
-      <Button asChild size="sm" variant={"default"}>
-        <Link href="/sign-up">Sign up</Link>
-      </Button>
-    </div>
-  );
+  ) : null;
 }

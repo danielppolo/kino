@@ -1,23 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { CircleDashed, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import Label from "@/components/shared/label";
+import LabelPicker from "@/components/shared/label-picker";
 import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useLabels } from "@/contexts/settings-context";
 
 const LabelFilter = () => {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [labels, labelsMap] = useLabels();
+  const [, labelsMap] = useLabels();
   const searchParams = useSearchParams();
   const labelId = searchParams.get("label_id") ?? undefined;
   const label = !!labelId && labelsMap.get(labelId);
@@ -30,8 +23,8 @@ const LabelFilter = () => {
       params.delete("label_id");
     }
     router.push(`/app/transactions?${params.toString()}`);
-    setOpen(false);
   };
+
   if (label) {
     return (
       <Button
@@ -49,27 +42,7 @@ const LabelFilter = () => {
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm">
-          <CircleDashed className="w-3 h-3" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-full">
-        <ToggleGroup
-          type="single"
-          value={labelId}
-          onValueChange={setLabelId}
-          className="grid grid-cols-8"
-        >
-          {labels?.map((label) => (
-            <ToggleGroupItem key={label.id} value={label.id} size="sm">
-              <Label label={label} size="sm" />
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-      </PopoverContent>
-    </Popover>
+    <LabelPicker onChange={setLabelId} defaultValue={labelId} value={labelId} />
   );
 };
 

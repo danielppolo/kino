@@ -1,28 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { CircleDotDashed, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "../../../../../components/ui/toggle-group";
-import Category from "../../../../../components/shared/category";
-
+import Category from "@/components/shared/category";
+import CategoryPicker from "@/components/shared/category-picker";
 import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { useCategories } from "@/contexts/settings-context";
-import { TRANSFER_CATEGORIES } from "@/utils/constants";
 
 const CategoryFilter = () => {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [categories, categoriesMap] = useCategories();
+  const [, categoriesMap] = useCategories();
   const searchParams = useSearchParams();
   const categoryId = searchParams.get("category_id") ?? undefined;
   const category = categoryId && categoriesMap.get(categoryId);
@@ -35,7 +23,6 @@ const CategoryFilter = () => {
       params.delete("category_id");
     }
     router.push(`/app/transactions?${params.toString()}`);
-    setOpen(false);
   };
 
   if (category) {
@@ -54,29 +41,7 @@ const CategoryFilter = () => {
     );
   }
 
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm">
-          <CircleDotDashed className="w-3 h-3" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-full">
-        <ToggleGroup
-          type="single"
-          value={categoryId}
-          onValueChange={setCategoryId}
-          className="grid grid-cols-8"
-        >
-          {categories?.concat(TRANSFER_CATEGORIES).map((category) => (
-            <ToggleGroupItem key={category.id} value={category.id} size="sm">
-              <Category category={category} />
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-      </PopoverContent>
-    </Popover>
-  );
+  return <CategoryPicker onChange={setCategoryId} value={categoryId} />;
 };
 
 export default CategoryFilter;

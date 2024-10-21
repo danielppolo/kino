@@ -98,7 +98,7 @@ export default function TransactionList({
     <div className="relative">
       <div
         ref={parentRef}
-        style={{ height: "calc(100vh - 44px- 44px - 44px)", overflow: "auto" }}
+        style={{ height: "calc(100vh - 44px - 44px)", overflow: "auto" }}
       >
         <div
           style={{
@@ -156,7 +156,7 @@ export default function TransactionList({
 export const TransactionListLoading = () => {
   return (
     <div
-      style={{ height: "calc(100vh - 44px- 44px - 44px)", overflow: "auto" }}
+      style={{ height: "calc(100vh - 44px - 44px)", overflow: "auto" }}
       className="divide-y relative w-full overflow-hidden"
     >
       <DayHeaderLoading />

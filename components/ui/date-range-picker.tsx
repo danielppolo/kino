@@ -1,18 +1,14 @@
 "use client";
 
-import * as React from "react";
+import { useState } from "react";
 import { DateRange } from "react-day-picker";
 import { format, sub } from "date-fns";
 
+import { DrawerPopover } from "../ui/drawer-popover";
 import { ToggleGroup, ToggleGroupItem } from "./toggle-group";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 export function DaterRangePicker({
@@ -22,7 +18,10 @@ export function DaterRangePicker({
   selected?: DateRange;
   onSelect: (range?: DateRange) => void;
 }) {
+  const [open, setOpen] = useState(false);
   const handlePresetChange = (value: "week" | "month" | "year" | "all") => {
+    setOpen(false);
+
     if (value === "week") {
       return onSelect({
         from: sub(new Date(), { days: 7 }),
@@ -48,8 +47,12 @@ export function DaterRangePicker({
   };
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
+    <DrawerPopover
+      open={open}
+      onOpenChange={setOpen}
+      title="Add Label"
+      description="Create a new label to start tracking your"
+      trigger={
         <Button
           id="date"
           variant="ghost"
@@ -72,32 +75,28 @@ export function DaterRangePicker({
             <span>Pick a date</span>
           )}
         </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-auto flex p-0"
-        align="start"
-        //  className="flex w-auto flex-col space-y-2 p-2"
+      }
+    >
+      <ToggleGroup
+        type="single"
+        // defaultValue="month"
+        onValueChange={handlePresetChange}
+        className="flex flex-col justify-center gap-2 m-2"
       >
-        <ToggleGroup
-          type="single"
-          // defaultValue="month"
-          onValueChange={handlePresetChange}
-          className="flex flex-col justify-center gap-2 m-2"
-        >
-          <ToggleGroupItem value="week">This week</ToggleGroupItem>
-          <ToggleGroupItem value="month">This month</ToggleGroupItem>
-          <ToggleGroupItem value="year">This year</ToggleGroupItem>
-          <ToggleGroupItem value="all">All time</ToggleGroupItem>
-        </ToggleGroup>
-        <Calendar
-          initialFocus
-          mode="range"
-          defaultMonth={selected?.from}
-          selected={selected}
-          onSelect={onSelect}
-          numberOfMonths={1}
-        />
-      </PopoverContent>
-    </Popover>
+        <ToggleGroupItem value="week">This week</ToggleGroupItem>
+        <ToggleGroupItem value="month">This month</ToggleGroupItem>
+        <ToggleGroupItem value="year">This year</ToggleGroupItem>
+        <ToggleGroupItem value="all">All time</ToggleGroupItem>
+      </ToggleGroup>
+      <Calendar
+        initialFocus
+        mode="range"
+        defaultMonth={selected?.from}
+        selected={selected}
+        onSelect={onSelect}
+        numberOfMonths={1}
+        className="w-full"
+      />
+    </DrawerPopover>
   );
 }

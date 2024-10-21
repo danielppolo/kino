@@ -232,31 +232,20 @@ export type Database = {
           currency: string
           id: string
           name: string
-          owner_id: string
         }
         Insert: {
           balance_cents?: number | null
           currency: string
           id?: string
           name: string
-          owner_id?: string
         }
         Update: {
           balance_cents?: number | null
           currency?: string
           id?: string
           name?: string
-          owner_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "wallets_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {

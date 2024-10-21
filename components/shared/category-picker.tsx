@@ -3,19 +3,15 @@
 import { useState } from "react";
 import { CircleDotDashed } from "lucide-react";
 
+import { DrawerPopover } from "../ui/drawer-popover";
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import Category from "./category";
 
 import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { useCategories } from "@/contexts/settings-context";
 
 interface CategoryPickerProps {
-  type: "income" | "expense" | "transfer";
+  type?: "income" | "expense" | "transfer";
   defaultValue?: string;
   value?: string | null;
   onChange: (id: string) => void;
@@ -29,9 +25,9 @@ const CategoryPicker = ({
 }: CategoryPickerProps) => {
   const [open, setOpen] = useState(false);
   const [categories, categoriesMap] = useCategories();
-  const filteredCategories = categories?.filter(
-    (category) => category.type === type,
-  );
+  const filteredCategories = type
+    ? categories?.filter((category) => category.type === type)
+    : categories;
   const category = !!value && categoriesMap.get(value);
 
   const handleChange = (id: string) => {
@@ -40,8 +36,10 @@ const CategoryPicker = ({
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <DrawerPopover
+      open={open}
+      onOpenChange={setOpen}
+      trigger={
         <Button variant="ghost" size="sm">
           {category ? (
             <Category category={category} />
@@ -49,22 +47,21 @@ const CategoryPicker = ({
             <CircleDotDashed className="w-3 h-3" />
           )}
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-full">
-        <ToggleGroup
-          type="single"
-          defaultValue={defaultValue}
-          onValueChange={handleChange}
-          className="grid grid-cols-8 gap-2"
-        >
-          {filteredCategories?.map((category) => (
-            <ToggleGroupItem key={category.id} value={category.id}>
-              <Category category={category} />
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-      </PopoverContent>
-    </Popover>
+      }
+    >
+      <ToggleGroup
+        type="single"
+        defaultValue={defaultValue}
+        onValueChange={handleChange}
+        className="grid grid-cols-8 gap-2"
+      >
+        {filteredCategories?.map((category) => (
+          <ToggleGroupItem key={category.id} value={category.id}>
+            <Category category={category} />
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+    </DrawerPopover>
   );
 };
 

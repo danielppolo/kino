@@ -22,8 +22,8 @@ interface MenuItemProps {
 export const MenuItem: React.FC<MenuItemProps> = ({ label, active }) => {
   return (
     <div
-      className={`p-1 py-1.5 text-sm rounded-sm cursor-pointer hover:bg-muted/40 ${
-        active ? "bg-gray-800" : ""
+      className={`p-1 py-1.5 text-sm rounded-sm cursor-pointer hover:bg-muted/20 ${
+        active ? "bg-muted/40" : ""
       }`}
     >
       <p>{label}</p>

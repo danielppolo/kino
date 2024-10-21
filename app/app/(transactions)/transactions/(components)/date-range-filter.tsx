@@ -3,7 +3,8 @@
 import { add, sub } from "date-fns";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { DaterRangePicker } from "../../../../../components/ui/date-range-picker";
+import { DaterRangePicker } from "@/components/ui/date-range-picker";
+import { PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 
 interface DateRange {
   from: Date | undefined;
@@ -56,8 +57,8 @@ const DateRangeFilter = () => {
   };
 
   return (
-    <div className="flex items-center gap-2">
-      {/* <PaginationPrevious onClick={handlePreviousPeriod} /> */}
+    <div className="flex h-full items-center justify-between gap-2 w-full">
+      <PaginationPrevious onClick={handlePreviousPeriod} />
       <DaterRangePicker
         selected={{
           from,
@@ -70,7 +71,7 @@ const DateRangeFilter = () => {
           });
         }}
       />
-      {/* <PaginationNext onClick={handleNextPeriod} /> */}
+      <PaginationNext onClick={handleNextPeriod} />
     </div>
   );
 };
