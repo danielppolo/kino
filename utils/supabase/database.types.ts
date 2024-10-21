@@ -95,21 +95,6 @@ export type Database = {
           },
         ]
       }
-      roles: {
-        Row: {
-          id: number
-          name: string
-        }
-        Insert: {
-          id?: number
-          name: string
-        }
-        Update: {
-          id?: number
-          name?: string
-        }
-        Relationships: []
-      }
       transactions: {
         Row: {
           amount_cents: number
@@ -184,32 +169,25 @@ export type Database = {
         Row: {
           created_at: string
           id: number
-          role_id: number
+          role: string
           user_id: string
           wallet_id: string
         }
         Insert: {
           created_at?: string
           id?: number
-          role_id: number
+          role: string
           user_id: string
           wallet_id: string
         }
         Update: {
           created_at?: string
           id?: number
-          role_id?: number
+          role?: string
           user_id?: string
           wallet_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "user_wallets_role_id_fkey"
-            columns: ["role_id"]
-            isOneToOne: false
-            referencedRelation: "roles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "user_wallets_user_id_fkey"
             columns: ["user_id"]
@@ -291,7 +269,16 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      insert_wallet_and_user_wallet: {
+        Args: {
+          wallet_name: string
+          wallet_currency: string
+          user_id: string
+        }
+        Returns: {
+          wallet_id: string
+        }[]
+      }
     }
     Enums: {
       transaction_type_enum: "income" | "expense" | "transfer"

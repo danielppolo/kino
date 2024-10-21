@@ -3,7 +3,6 @@ alter table wallets enable row level security;
 alter table user_wallets enable row level security;
 alter table categories enable row level security;
 alter table labels enable row level security;
-alter table roles enable row level security;
 
 create policy "wallet_select" on wallets
 for select to authenticated
@@ -28,7 +27,7 @@ for update to authenticated using (
     select 1 from user_wallets
     where user_wallets.user_id = auth.uid()
     and user_wallets.wallet_id = wallets.id
-    and user_wallets.role_id = (select id from roles where name = 'editor')
+    and user_wallets.role = 'editor'
   )
 ) with check (true);
 
@@ -38,7 +37,7 @@ for delete to authenticated using (
     select 1 from user_wallets
     where user_wallets.user_id = auth.uid()
     and user_wallets.wallet_id = wallets.id
-    and user_wallets.role_id = (select id from roles where name = 'editor')
+    and user_wallets.role = 'editor'
   )
 );
 
@@ -62,7 +61,7 @@ for insert to authenticated with check (
     join user_wallets on wallets.id = user_wallets.wallet_id
     where user_wallets.user_id = auth.uid()
     and transactions.wallet_id = wallets.id
-    and user_wallets.role_id = (select id from roles where name = 'editor')
+    and user_wallets.role = 'editor'
   )
 );
 
@@ -73,7 +72,7 @@ for update to authenticated using (
     join user_wallets on wallets.id = user_wallets.wallet_id
     where user_wallets.user_id = auth.uid()
     and transactions.wallet_id = wallets.id
-    and user_wallets.role_id = (select id from roles where name = 'editor')
+    and user_wallets.role = 'editor'
   )
 ) with check (true);
 
@@ -84,7 +83,7 @@ for delete using (
     join user_wallets on wallets.id = user_wallets.wallet_id
     where user_wallets.user_id = auth.uid()
     and transactions.wallet_id = wallets.id
-    and user_wallets.role_id = (select id from roles where name = 'editor')
+    and user_wallets.role = 'editor'
   )
 );
 

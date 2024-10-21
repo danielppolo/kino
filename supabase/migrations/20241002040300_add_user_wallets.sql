@@ -4,9 +4,8 @@ create table
     created_at timestamp with time zone not null default now(),
     user_id uuid not null,
     wallet_id uuid not null,
-    role_id integer not null,
+    role text not null check (role in ('viewer', 'editor')),
     constraint user_wallets_pkey primary key (id),
     constraint user_wallets_user_id_fkey foreign key (user_id) references auth.users (id) on delete cascade,
-    constraint user_wallets_wallet_id_fkey foreign key (wallet_id) references wallets (id) on delete cascade,
-    constraint user_wallets_role_id_fkey foreign key (role_id) references roles (id)
+    constraint user_wallets_wallet_id_fkey foreign key (wallet_id) references wallets (id) on delete cascade
   ) tablespace pg_default;

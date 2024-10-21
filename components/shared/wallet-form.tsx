@@ -32,10 +32,11 @@ const WalletForm = ({ onSuccess }: WalletFormProps) => {
   });
 
   const onSubmit = async (wallet: WalletFormValues) => {
-    const { error } = await createWallet(wallet);
+    const { error, data } = await createWallet(wallet);
 
     if (error) {
-      return toast.error(error.message);
+      console.log(error);
+      return toast.error(error);
     }
 
     toast.success("Wallet added!");
