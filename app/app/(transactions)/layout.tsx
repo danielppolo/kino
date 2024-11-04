@@ -1,7 +1,5 @@
 import React from "react";
 
-import Navbar from "./(components)/navbar";
-
 interface LayoutProps {
   children: React.ReactNode;
 }
@@ -23,7 +21,6 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
           <CategoryFilter />
         </div> */}
         {children}
-        <Navbar />
       </div>
     </div>
   );

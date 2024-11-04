@@ -1,18 +1,16 @@
-import { Text } from "./typography";
-
 export interface ListItemProps {
-  label: string;
   active: boolean;
+  children: React.ReactNode;
 }
 
-export const ListItem: React.FC<ListItemProps> = ({ label, active }) => {
+export const ListItem: React.FC<ListItemProps> = ({ children, active }) => {
   return (
     <div
-      className={`p-1 py-1.5 rounded-sm cursor-pointer hover:bg-muted/20 ${
+      className={`flex h-12 cursor-pointer items-center rounded-md p-1 py-1.5 hover:bg-muted/20 ${
         active ? "bg-muted/40" : ""
       }`}
     >
-      <Text>{label}</Text>
+      {children}
     </div>
   );
 };

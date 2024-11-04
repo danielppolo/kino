@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
-import AddWalletButton from "@/components/shared/add-wallet-button";
-import { Menu, MenuItem } from "@/components/ui/menu";
+import { ListItem } from "@/components/ui/list-item";
+import { Text } from "@/components/ui/typography";
 import { useWallets } from "@/contexts/settings-context";
 
 export default function WalletSection() {
@@ -12,13 +12,15 @@ export default function WalletSection() {
   const { walletId } = useParams<{ walletId: string }>();
 
   return (
-    <Menu title="Wallets">
+    <div>
       {wallets?.map((wallet) => (
         <Link key={wallet.id} href={`/app/settings/wallets/${wallet.id}`}>
-          <MenuItem label={wallet.name} active={walletId === wallet.id} />
+          <ListItem active={walletId === wallet.id}>
+            <Text>{wallet.name}</Text>
+          </ListItem>
         </Link>
       ))}
-      <AddWalletButton />
-    </Menu>
+      {/* <AddWalletButton /> */}
+    </div>
   );
 }

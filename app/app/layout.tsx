@@ -1,5 +1,7 @@
 import React from "react";
 
+import Navbar from "./(components)/navbar";
+
 import { SettingsProvider } from "@/contexts/settings-context";
 import {
   listCategories,
@@ -32,6 +34,7 @@ export default async function Layout({ children }: LayoutProps) {
       labels={labels.data || []}
     >
       {children}
+      <Navbar />
     </SettingsProvider>
   );
 }

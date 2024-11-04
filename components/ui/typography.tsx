@@ -9,7 +9,7 @@ export function Title({
     <h1
       {...props}
       className={cn(
-        `scroll-m-20 text-3xl font-medium tracking-tight text-foreground`,
+        `scroll-m-20 text-2xl font-medium tracking-tight text-foreground`,
         className,
       )}
     >
