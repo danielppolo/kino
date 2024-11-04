@@ -1,22 +1,24 @@
 import React, { memo } from "react";
 import { format, parse } from "date-fns";
 
+import { Text } from "../ui/typography";
+
 interface DayHeaderProps {
   date: string;
 }
 
 const DayHeader: React.FC<DayHeaderProps> = ({ date }) => {
   return (
-    <div className="bg-muted/40 h-8 flex items-center justify-between px-4 text-xs">
-      <p>{format(parse(date, "yyyy-MM-dd", new Date()), "PP")}</p>
+    <div className="flex h-8 items-center justify-between px-4">
+      <Text>{format(parse(date, "yyyy-MM-dd", new Date()), "PP")}</Text>
     </div>
   );
 };
 
 export const DayHeaderLoading: React.FC = () => {
   return (
-    <div className="bg-muted/40 h-8 flex items-center justify-between px-4 text-xs">
-      <div className="h-4 w-24 rounded-md bg-muted animate-pulse" />
+    <div className="flex h-8 items-center justify-between bg-muted/40 px-4">
+      <div className="h-4 w-24 animate-pulse rounded-md bg-muted" />
     </div>
   );
 };

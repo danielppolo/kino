@@ -24,7 +24,7 @@ export const createTransaction = async (transaction: Transaction) => {
   if (!validatedData.success) {
     return { error: validatedData.error.issues[0].message };
   }
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { amount, type, ...rest } = validatedData.data;
 

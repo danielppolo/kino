@@ -9,7 +9,7 @@ export const linkTransfers = async (
   originTransactionId: string,
   targetTransactionId: string,
 ) => {
-  const supabase = createClient();
+  const supabase = await createClient();
   const transferId = uuidv4();
 
   revalidatePath("/app/transactions", "page");

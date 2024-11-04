@@ -13,7 +13,8 @@ export default async function Page({
   params: { walletId },
   searchParams,
 }: PageParams) {
-  const supabase = createClient();
+  await searchParams;
+  const supabase = await createClient();
   const { data: transactions, error: transactionsError } =
     await listTransactions(supabase, {
       wallet_id: walletId,

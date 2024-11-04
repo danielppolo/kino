@@ -10,7 +10,7 @@ export interface Filters {
   wallet_id?: string | undefined;
 }
 
-export const listTransactions = (
+export const listTransactions = async (
   client: TypedSupabaseClient,
   params?: Filters,
 ) => {
@@ -42,14 +42,14 @@ export const listTransactions = (
   return query;
 };
 
-export const listLabels = (client: TypedSupabaseClient) => {
+export const listLabels = async (client: TypedSupabaseClient) => {
   return client.from("labels").select("*");
 };
 
-export const listCategories = (client: TypedSupabaseClient) => {
+export const listCategories = async (client: TypedSupabaseClient) => {
   return client.from("categories").select("*");
 };
 
-export const listWallets = (client: TypedSupabaseClient) => {
+export const listWallets = async (client: TypedSupabaseClient) => {
   return client.from("wallets").select("*");
 };

@@ -3,6 +3,8 @@
 import React from "react";
 import Link from "next/link";
 
+import { Text } from "../ui/typography";
+
 import { useWallets } from "@/contexts/settings-context";
 import { Transaction } from "@/utils/supabase/types";
 
@@ -22,12 +24,12 @@ const TransactionDescription: React.FC<TransactionDescriptionProps> = ({
     const isIncoming = transaction.amount_cents > 0;
     return (
       <Link href={`/app/transactions/${transaction.transfer_wallet_id}`}>
-        <p>{`${isIncoming ? "From" : "To"} ${counterPartyWallet.name}`}</p>
+        <Text>{`${isIncoming ? "From" : "To"} ${counterPartyWallet.name}`}</Text>
       </Link>
     );
   }
 
-  return <p>{transaction.description}</p>;
+  return <Text>{transaction.description}</Text>;
 };
 
 export default TransactionDescription;

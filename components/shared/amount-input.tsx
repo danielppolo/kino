@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import { Text } from "../ui/typography";
+
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -16,14 +18,17 @@ export function AmountInput({
 }) {
   return (
     <div className="relative">
-      <span
+      <Text
+        as="span"
+        small
+        muted
         className={cn(
           className,
-          "absolute left-2 top-1/2 transform -translate-y-1/2 opacity-80 text-xs",
+          "absolute left-2 top-1/2 -translate-y-1/2 transform",
         )}
       >
         $
-      </span>
+      </Text>
       <Input
         type="number"
         min={0}

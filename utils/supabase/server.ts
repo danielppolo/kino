@@ -4,8 +4,8 @@ import { createServerClient } from "@supabase/ssr";
 
 import { Database } from "./database.types";
 
-export const createClient = () => {
-  const cookieStore = cookies();
+export const createClient = async () => {
+  const cookieStore = await cookies();
 
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

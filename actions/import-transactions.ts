@@ -121,7 +121,7 @@ export const importTransactions = async ({
   transactions: ImportTransaction[];
   options: Options;
 }) => {
-  const supabase = createClient();
+  const supabase = await createClient();
   const categoryMap = new Map<string, string>();
   const labelMap = new Map<string, string>();
   const transactionMap = new Map<string, string>();

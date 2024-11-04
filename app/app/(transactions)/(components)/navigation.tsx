@@ -8,9 +8,10 @@ import { signOutAction } from "@/app/actions";
 import { createClient } from "@/utils/supabase/server";
 
 export default async function Navigation() {
+  const supabase = await createClient();
   const {
     data: { user },
-  } = await createClient().auth.getUser();
+  } = await supabase.auth.getUser();
   return user ? (
     <div className="flex items-center">
       <ThemeSwitcher />

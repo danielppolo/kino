@@ -17,7 +17,7 @@ export async function createTransferTransaction(
   { amount, ...sourceTransaction }: SourceTransaction,
   counterpartWalletId: string,
 ) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const transferId = uuidv4();
   const transactionsToInsert = [
     {

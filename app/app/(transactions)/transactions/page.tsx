@@ -12,10 +12,10 @@ interface PageParams {
 export const revalidate = 60;
 
 export default async function Page({ searchParams }: PageParams) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: transactions, error: transactionsError } =
     await listTransactions(supabase, {
-      ...searchParams,
+      ...(await searchParams),
     });
 
   if (transactionsError) {

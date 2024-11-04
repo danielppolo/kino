@@ -1,11 +1,6 @@
 import React from "react";
 
-import Navigation from "./(components)/navigation";
-import DateRangeFilter from "./transactions/(components)/date-range-filter";
-
-import CategoryFilter from "@/app/app/(transactions)/transactions/(components)/category-filter";
-import LabelFilter from "@/app/app/(transactions)/transactions/(components)/label-filter";
-import WalletFilter from "@/app/app/(transactions)/transactions/(components)/wallet-filter";
+import Navbar from "./(components)/navbar";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -13,21 +8,22 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = async ({ children }) => {
   return (
-    <div className="flex divide-x w-full">
-      <div className="w-48 shrink-0 p-4 hidden md:block">
+    <div className="flex w-full divide-x">
+      {/* <div className="w-48 shrink-0 p-4 hidden md:block">
         <Navigation />
-        {/* <TransactionsAreaChart /> */}
+        <TransactionsAreaChart />
         <WalletFilter />
-      </div>
+      </div> */}
       <div className="grow divide-y">
-        <div className="h-10 px-2">
+        {/* <div className="h-10 px-2">
           <DateRangeFilter />
         </div>
-        <div className="h-10 px-2 flex items-center gap-2">
+        <div className="flex h-10 items-center gap-2 px-2">
           <LabelFilter />
           <CategoryFilter />
-        </div>
+        </div> */}
         {children}
+        <Navbar />
       </div>
     </div>
   );

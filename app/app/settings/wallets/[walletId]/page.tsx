@@ -8,6 +8,7 @@ import CsvTransactionUploader from "./(components)/import-transactions";
 
 import { exportTransactions } from "@/actions/export-transactions";
 import { SubmitButton } from "@/components/submit-button";
+import { Title } from "@/components/ui/typography";
 import { useWallets } from "@/contexts/settings-context";
 import { formatCents } from "@/utils/format-cents";
 
@@ -44,7 +45,7 @@ export default function Page({ params }: { params: { walletId: string } }) {
 
   return (
     <div>
-      <h1>Wallet</h1>
+      <Title>Wallet</Title>
       <h2>Labels</h2>
       <h2>Members</h2>
       <h2>Configuration</h2>

@@ -3,6 +3,7 @@
 import React from "react";
 import { useParams } from "next/navigation";
 
+import { Text } from "@/components/ui/typography";
 import { useWallets } from "@/contexts/settings-context";
 
 const WalletCurrency: React.FC = () => {
@@ -12,7 +13,11 @@ const WalletCurrency: React.FC = () => {
 
   if (!wallet) return null;
 
-  return <span className="text-muted-foreground">{wallet.currency}</span>;
+  return (
+    <Text muted as="span">
+      {wallet.currency}
+    </Text>
+  );
 };
 
 export default WalletCurrency;

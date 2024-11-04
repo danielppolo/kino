@@ -1,3 +1,7 @@
+create policy "user_wallets_select" on user_wallets
+for select to authenticated
+using (true);
+
 create policy "user_wallets_insert" 
 on user_wallets
 for insert 

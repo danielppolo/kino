@@ -2,6 +2,8 @@
 
 import React, { useState } from "react";
 
+import { Text } from "../ui/typography";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface StatsProps {
@@ -30,13 +32,13 @@ const Stats: React.FC<StatsProps> = (props) => {
 
   return (
     <div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Total Amount</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{stats.total.toFixed(2)}</p>
+            <Text>{stats.total.toFixed(2)}</Text>
           </CardContent>
         </Card>
         <Card>
@@ -46,23 +48,19 @@ const Stats: React.FC<StatsProps> = (props) => {
           <CardContent>
             <div className="flex justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Money In</p>
-                <p className="text-xl font-bold text-green-600">
-                  {stats.in.toFixed(2)}
-                </p>
+                <Text>Money In</Text>
+                <Text className="text-green-600">{stats.in.toFixed(2)}</Text>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Money Out</p>
-                <p className="text-xl font-bold text-red-600">
-                  {stats.out.toFixed(2)}
-                </p>
+                <Text>Money Out</Text>
+                <Text destructive>{stats.out.toFixed(2)}</Text>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Monthly Expenses</CardTitle>

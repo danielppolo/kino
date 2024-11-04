@@ -20,14 +20,14 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
   onUpdate,
 }) => {
   return (
-    <div className="group flex items-center h-10 pl-2 pr-4 text-sm gap-2">
+    <div className="group flex h-10 items-center gap-2 pl-2 pr-4">
       <div className="shrink-0">
         <TransactionColor transaction={transaction} onUpdate={onUpdate} />
       </div>
       <div className="shrink-0">
         <TransactionIcon transaction={transaction} onUpdate={onUpdate} />
       </div>
-      <div className="grow shrink truncate">
+      <div className="shrink grow truncate">
         <TransactionDescription transaction={transaction} />
       </div>
       <div className="shrink-0">
@@ -53,7 +53,7 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
 
 export const TransactionRowLoading = () => {
   return (
-    <div className="group flex items-center h-10 pl-2 pr-4 text-sm animate-pulse">
+    <div className="group flex h-10 animate-pulse items-center pl-2 pr-4 text-sm">
       <div className="w-12 shrink-0 p-2">
         <div className="h-4 w-full rounded-md bg-muted" />
       </div>

@@ -1,5 +1,8 @@
 import React, { ReactNode } from "react";
 
+import { ListItem, ListItemProps } from "./list-item";
+import { Subheadline } from "./typography";
+
 interface MenuProps {
   children: ReactNode;
   title: string;
@@ -7,26 +10,13 @@ interface MenuProps {
 
 export const Menu: React.FC<MenuProps> = ({ children, title }) => {
   return (
-    <div className="">
-      <p className="text-sm text-muted-foreground">{title}</p>
-      <div className="">{children}</div>
+    <div>
+      <Subheadline>{title}</Subheadline>
+      <div>{children}</div>
     </div>
   );
 };
 
-interface MenuItemProps {
-  label: string;
-  active: boolean;
-}
-
-export const MenuItem: React.FC<MenuItemProps> = ({ label, active }) => {
-  return (
-    <div
-      className={`p-1 py-1.5 text-sm rounded-sm cursor-pointer hover:bg-muted/20 ${
-        active ? "bg-muted/40" : ""
-      }`}
-    >
-      <p>{label}</p>
-    </div>
-  );
-};
+export const MenuItem: React.FC<ListItemProps> = (props) => (
+  <ListItem {...props} />
+);

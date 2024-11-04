@@ -13,7 +13,7 @@ interface LayoutProps {
 }
 
 export default async function Layout({ children }: LayoutProps) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const [categories, wallets, labels] = await Promise.all([
     listCategories(supabase),

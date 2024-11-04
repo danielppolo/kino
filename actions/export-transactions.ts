@@ -6,7 +6,7 @@ import { Filters, listTransactions } from "@/utils/supabase/queries";
 import { createClient } from "@/utils/supabase/server";
 
 export async function exportTransactions(filters: Filters) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: transactions, error } = await listTransactions(
     supabase,
     filters,
