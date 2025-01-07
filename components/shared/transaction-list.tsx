@@ -20,6 +20,9 @@ interface TransactionListProps {
   transactions: Transaction[];
 }
 
+const dayHeaderHeight = 32;
+const transactionRowHeight = 48;
+
 export default function TransactionList({
   transactions,
 }: TransactionListProps) {
@@ -85,7 +88,9 @@ export default function TransactionList({
   const rowVirtualizer = useVirtualizer({
     count: groupedTransactions.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: (index) => 32 + groupedTransactions[index][1].length * 40,
+    estimateSize: (index) =>
+      dayHeaderHeight +
+      groupedTransactions[index][1].length * transactionRowHeight,
     overscan: 5,
   });
 
@@ -104,7 +109,7 @@ export default function TransactionList({
           style={{
             height: `${rowVirtualizer.getTotalSize()}px`,
           }}
-          className="divide-y relative w-full"
+          className="relative w-full divide-y"
         >
           {rowVirtualizer.getVirtualItems().map((virtualRow) => {
             const [date, dateTransactions] =
@@ -135,7 +140,7 @@ export default function TransactionList({
           })}
         </div>
       </div>
-      <div className="fixed top-0 left-0 z-50 bg-[red]">
+      <div className="fixed left-0 top-0 z-50 bg-[red]">
         <AddTransactionButton
           type="transfer"
           onOptimisticSuccess={addOptimisticTransaction}
@@ -157,7 +162,7 @@ export const TransactionListLoading = () => {
   return (
     <div
       style={{ height: "calc(100vh - 44px - 44px)", overflow: "auto" }}
-      className="divide-y relative w-full overflow-hidden"
+      className="relative w-full divide-y overflow-hidden"
     >
       <DayHeaderLoading />
       {Array.from({ length: 20 }).map((_, index) => (

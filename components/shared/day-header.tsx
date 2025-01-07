@@ -3,13 +3,20 @@ import { format, parse } from "date-fns";
 
 import { Text } from "../ui/typography";
 
+import { DAY_HEADER_HEIGHT } from "@/utils/constants";
+
 interface DayHeaderProps {
   date: string;
 }
 
 const DayHeader: React.FC<DayHeaderProps> = ({ date }) => {
   return (
-    <div className="flex h-8 items-center justify-between px-4">
+    <div
+      className="flex items-center justify-between px-4"
+      style={{
+        height: DAY_HEADER_HEIGHT,
+      }}
+    >
       <Text>{format(parse(date, "yyyy-MM-dd", new Date()), "PP")}</Text>
     </div>
   );

@@ -4,10 +4,16 @@ import { Home, Plus, Settings, Wallet } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { NAVBAR_HEIGHT } from "@/utils/constants";
 
 export default function Navbar() {
   return (
-    <div className="fixed bottom-0 left-0 right-0 h-16 border-t bg-background md:hidden">
+    <div
+      className="fixed bottom-0 left-0 right-0 border-t bg-background md:hidden"
+      style={{
+        height: NAVBAR_HEIGHT,
+      }}
+    >
       <nav className="flex h-full items-center justify-around px-4">
         <Link href="/app">
           <Button variant="ghost" size="icon">

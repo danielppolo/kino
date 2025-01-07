@@ -1,5 +1,6 @@
 import React, { memo } from "react";
 
+import { ListItem } from "../ui/list-item";
 import TransactionAmount from "./transaction-amount";
 import TransactionColor from "./transaction-color";
 import TransactionDescription from "./transaction-description";
@@ -20,7 +21,7 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
   onUpdate,
 }) => {
   return (
-    <div className="group flex h-10 items-center gap-2 pl-2 pr-4">
+    <ListItem className="group gap-2 pl-2 pr-4">
       <div className="shrink-0">
         <TransactionColor transaction={transaction} onUpdate={onUpdate} />
       </div>
@@ -47,13 +48,13 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
                       }}
                     />
                   </div> */}
-    </div>
+    </ListItem>
   );
 };
 
 export const TransactionRowLoading = () => {
   return (
-    <div className="group flex h-10 animate-pulse items-center pl-2 pr-4 text-sm">
+    <div className="group flex h-12 animate-pulse items-center pl-2 pr-4 text-sm">
       <div className="w-12 shrink-0 p-2">
         <div className="h-4 w-full rounded-md bg-muted" />
       </div>

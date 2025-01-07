@@ -41,7 +41,7 @@ const LinkTransferButton: React.FC<LinkTransferButtonProps> = ({
 
       const targetWallet = walletMap.get(selectedWallet);
       const transactionWallet = walletMap.get(transaction.wallet_id);
-      const supabase = await createClient();
+      const supabase = createClient();
       const query = supabase
         .from("transactions")
         .select("*")
