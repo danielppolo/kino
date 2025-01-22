@@ -7,7 +7,7 @@ import { ListItem } from "@/components/ui/list-item";
 import { Text } from "@/components/ui/typography";
 import { useWallets } from "@/contexts/settings-context";
 
-export default function WalletSection() {
+export default function WalletList() {
   const [wallets] = useWallets();
   const { walletId } = useParams<{ walletId: string }>();
 

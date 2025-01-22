@@ -27,7 +27,7 @@ export function Subtitle({
     <h2
       {...props}
       className={cn(
-        "scroll-m-20 border-b pb-2 text-2xl font-semibold tracking-tight text-foreground first:mt-0",
+        "scroll-m-20 pb-2 text-base leading-7 tracking-tight text-muted-foreground first:mt-0 md:text-sm",
         className,
       )}
     >
@@ -36,41 +36,41 @@ export function Subtitle({
   );
 }
 
-export function Headline({
-  children,
-  className,
-  ...props
-}: React.ComponentProps<"h3">) {
-  return (
-    <h3
-      {...props}
-      className={cn(
-        "scroll-m-20 text-xl font-semibold tracking-tight text-foreground",
-        className,
-      )}
-    >
-      {children}
-    </h3>
-  );
-}
+// export function Headline({
+//   children,
+//   className,
+//   ...props
+// }: React.ComponentProps<"h3">) {
+//   return (
+//     <h3
+//       {...props}
+//       className={cn(
+//         "scroll-m-20 text-xl font-semibold tracking-tight text-foreground",
+//         className,
+//       )}
+//     >
+//       {children}
+//     </h3>
+//   );
+// }
 
-export function Subheadline({
-  children,
-  className,
-  ...props
-}: React.ComponentProps<"h4">) {
-  return (
-    <h4
-      {...props}
-      className={cn(
-        "scroll-m-20 text-lg font-medium tracking-tight text-muted-foreground",
-        className,
-      )}
-    >
-      {children}
-    </h4>
-  );
-}
+// export function Subheadline({
+//   children,
+//   className,
+//   ...props
+// }: React.ComponentProps<"h4">) {
+//   return (
+//     <h4
+//       {...props}
+//       className={cn(
+//         "scroll-m-20 text-lg font-medium tracking-tight text-muted-foreground",
+//         className,
+//       )}
+//     >
+//       {children}
+//     </h4>
+//   );
+// }
 
 export function Text({
   children,

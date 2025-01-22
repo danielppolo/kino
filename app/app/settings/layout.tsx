@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link"; // Assuming you're using Next.js
 
-import WalletSection from "./(components)/wallet-section";
+import WalletSection from "./(components)/wallet-list";
 
 import { Menu, MenuItem } from "@/components/ui/menu";
 
@@ -11,9 +11,9 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = async ({ children }) => {
   return (
-    <div className="flex w-full min-h-screen">
+    <div className="flex min-h-screen w-full">
       {/* Sidebar */}
-      <div className="w-64 p-6 border-r space-y-6 shrink-0">
+      <div className="w-64 shrink-0 space-y-6 border-r p-6">
         {/* Workspace Section */}
         <Menu title="Workspace">
           <Link href="/app/settings/general">

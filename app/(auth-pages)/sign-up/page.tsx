@@ -9,11 +9,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text, Title } from "@/components/ui/typography";
 
-export default function Signup({ searchParams }: { searchParams: Message }) {
-  if ("message" in searchParams) {
+export default async function Signup({
+  searchParams,
+}: {
+  searchParams: Promise<Message>;
+}) {
+  const message = await searchParams;
+  if ("message" in message) {
     return (
       <div className="flex h-screen w-full flex-1 items-center justify-center gap-2 p-4 sm:max-w-md">
-        <FormMessage message={searchParams} />
+        <FormMessage message={message} />
       </div>
     );
   }
@@ -42,7 +47,7 @@ export default function Signup({ searchParams }: { searchParams: Message }) {
           <SubmitButton formAction={signUpAction} pendingText="Signing up...">
             Sign up
           </SubmitButton>
-          <FormMessage message={searchParams} />
+          <FormMessage message={message} />
         </div>
       </form>
       <SmtpMessage />

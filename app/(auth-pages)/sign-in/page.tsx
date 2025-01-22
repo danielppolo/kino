@@ -7,7 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text, Title } from "@/components/ui/typography";
 
-export default function Login({ searchParams }: { searchParams: Message }) {
+export default async function Login({
+  searchParams,
+}: {
+  searchParams: Promise<Message>;
+}) {
+  const message = await searchParams;
   return (
     <form className="flex min-w-64 flex-1 flex-col">
       <Title>Sign in</Title>
@@ -35,7 +40,7 @@ export default function Login({ searchParams }: { searchParams: Message }) {
         <SubmitButton pendingText="Signing In..." formAction={signInAction}>
           Sign in
         </SubmitButton>
-        <FormMessage message={searchParams} />
+        <FormMessage message={message} />
       </div>
     </form>
   );

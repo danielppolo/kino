@@ -6,19 +6,19 @@ export const dynamic = "force-dynamic";
 
 interface PageParams {
   params: { walletId: string };
-  searchParams: Filters;
+  searchParams: Promise<Filters>;
 }
 
 export default async function Page({
   params: { walletId },
   searchParams,
 }: PageParams) {
-  await searchParams;
+  const filters = await searchParams;
   const supabase = await createClient();
   const { data: transactions, error: transactionsError } =
     await listTransactions(supabase, {
       wallet_id: walletId,
-      ...searchParams,
+      ...filters,
     });
   if (transactionsError) {
     throw transactionsError;

@@ -1,7 +1,7 @@
 import React, { ReactNode } from "react";
 
 import { ListItem, ListItemProps } from "./list-item";
-import { Subheadline } from "./typography";
+import { Subtitle } from "./typography";
 
 interface MenuProps {
   children: ReactNode;
@@ -11,7 +11,7 @@ interface MenuProps {
 export const Menu: React.FC<MenuProps> = ({ children, title }) => {
   return (
     <div>
-      <Subheadline>{title}</Subheadline>
+      <Subtitle>{title}</Subtitle>
       <div>{children}</div>
     </div>
   );

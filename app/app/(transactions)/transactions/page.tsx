@@ -5,17 +5,18 @@ import { createClient } from "@/utils/supabase/server";
 export const dynamic = "force-dynamic";
 
 interface PageParams {
-  searchParams: Filters;
+  searchParams: Promise<Filters>;
 }
 
 // Time in seconds
 export const revalidate = 60;
 
 export default async function Page({ searchParams }: PageParams) {
+  const filters = await searchParams;
   const supabase = await createClient();
   const { data: transactions, error: transactionsError } =
     await listTransactions(supabase, {
-      ...(await searchParams),
+      ...filters,
     });
 
   if (transactionsError) {

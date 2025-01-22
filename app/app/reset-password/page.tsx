@@ -8,10 +8,11 @@ import { Text, Title } from "@/components/ui/typography";
 export default async function ResetPassword({
   searchParams,
 }: {
-  searchParams: Message;
+  searchParams: Promise<Message>;
 }) {
+  const message = await searchParams;
   return (
-    <form className="flex flex-col w-full max-w-md p-4 gap-2 [&>input]:mb-4">
+    <form className="flex w-full max-w-md flex-col gap-2 p-4 [&>input]:mb-4">
       <Title>Reset password</Title>
       <Text>Please enter your new password below.</Text>
       <Label htmlFor="password">New password</Label>
@@ -31,7 +32,7 @@ export default async function ResetPassword({
       <SubmitButton formAction={resetPasswordAction}>
         Reset password
       </SubmitButton>
-      <FormMessage message={searchParams} />
+      <FormMessage message={message} />
     </form>
   );
 }
