@@ -1,10 +1,9 @@
 import React, { memo } from "react";
 
 import { ListItem } from "../ui/list-item";
+import CategoryLabel from "./category-label";
 import TransactionAmount from "./transaction-amount";
-import TransactionColor from "./transaction-color";
 import TransactionDescription from "./transaction-description";
-import TransactionIcon from "./transaction-icon";
 
 import { Transaction } from "@/utils/supabase/types";
 
@@ -21,13 +20,14 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
   onUpdate,
 }) => {
   return (
-    <ListItem className="group gap-2 pl-2 pr-4">
-      <div className="shrink-0">
+    <ListItem className="group gap-4">
+      {/* <div className="shrink-0">
         <TransactionColor transaction={transaction} onUpdate={onUpdate} />
       </div>
       <div className="shrink-0">
         <TransactionIcon transaction={transaction} onUpdate={onUpdate} />
-      </div>
+      </div> */}
+      <CategoryLabel transaction={transaction} />
       <div className="shrink grow truncate">
         <TransactionDescription transaction={transaction} />
       </div>
@@ -54,18 +54,18 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
 
 export const TransactionRowLoading = () => {
   return (
-    <div className="group flex h-12 animate-pulse items-center pl-2 pr-4 text-sm">
+    <div className="group flex h-15 animate-pulse items-center text-sm">
       <div className="w-12 shrink-0 p-2">
-        <div className="h-4 w-full rounded-md bg-muted" />
+        <div className="bg-muted h-4 w-full rounded-md" />
       </div>
       <div className="w-12 shrink-0 p-2">
-        <div className="h-4 w-full rounded-md bg-muted" />
+        <div className="bg-muted h-4 w-full rounded-md" />
       </div>
       <div className="grow p-2">
-        <div className="h-4 w-1/2 rounded-md bg-muted" />
+        <div className="bg-muted h-4 w-1/2 rounded-md" />
       </div>
       <div className="w-24 shrink-0 p-2">
-        <div className="h-4 w-full rounded-md bg-muted" />
+        <div className="bg-muted h-4 w-full rounded-md" />
       </div>
     </div>
   );

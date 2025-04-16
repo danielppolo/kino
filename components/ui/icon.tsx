@@ -3,6 +3,8 @@ import { LucideProps } from "lucide-react";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import dynamic from "next/dynamic";
 
+import { cn } from "@/lib/utils";
+
 interface IconProps extends LucideProps {
   name: string;
 }
@@ -19,6 +21,6 @@ export const LazyIcon = ({ name, ...props }: IconProps) => {
   return LucideIcon ? <LucideIcon {...props} /> : null;
 };
 
-export const Icon = ({ name, ...props }: IconProps) => {
-  return <div className={`icon-${name}`}></div>;
+export const Icon = ({ name, className }: IconProps) => {
+  return <div className={cn(`icon-${name}`, className)}></div>;
 };

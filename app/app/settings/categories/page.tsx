@@ -1,7 +1,5 @@
 import CategorySection from "./(components)/category-section";
 
-import "lucide-static/font/lucide.css";
-
 export default async function Page() {
   return (
     <div className="w-full">

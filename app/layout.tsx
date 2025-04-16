@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import { ThemeProvider } from "next-themes";
 
 import "./globals.css";
+import "lucide-static/font/lucide.css";
 import { Toaster } from "@/components/ui/sonner";
 
 const workSans = localFont({

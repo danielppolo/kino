@@ -1,23 +1,19 @@
 import { formatCents } from "@/utils/format-cents";
+import { Wallet as WalletType } from "@/utils/supabase/types";
 
-interface WalletProps {
-  name: string;
-  color: string;
-  currency: string;
-  amount: number;
-}
-
-const Wallet = ({ name, color, currency, amount }: WalletProps) => {
+const Wallet = ({ name, color, currency, balance_cents }: WalletType) => {
   return (
     <div
-      className="flex h-28 flex-col justify-end rounded-lg p-4 text-white"
+      className="flex h-28 flex-col justify-end rounded-2xl p-4 text-white"
       style={{
-        backgroundColor: color,
+        backgroundColor: color ?? "#6366F1",
       }}
     >
-      <div className="mt-2">
-        <span className="font-xl font-medium">{name}</span>
-        <p className="text font-light">{formatCents(amount, currency)}</p>
+      <div className="flex flex-col gap-2">
+        <p className="font-xl leading-1 font-medium">{name}</p>
+        <p className="text font-light text-white/80">
+          {formatCents(balance_cents ?? 0, currency)}
+        </p>
         {/* <p className="text-sm font-light opacity-80">{currency}</p> */}
       </div>
     </div>

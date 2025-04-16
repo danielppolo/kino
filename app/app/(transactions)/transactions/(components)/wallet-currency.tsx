@@ -14,7 +14,7 @@ const WalletCurrency: React.FC = () => {
   if (!wallet) return null;
 
   return (
-    <Text muted as="span">
+    <Text muted as="span" className="mb-2">
       {wallet.currency}
     </Text>
   );

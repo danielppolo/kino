@@ -29,7 +29,12 @@ const TransactionDescription: React.FC<TransactionDescriptionProps> = ({
     );
   }
 
-  return <Text>{transaction.description}</Text>;
+  return (
+    <div>
+      <Text>{transaction.description}</Text>
+      <Text>{transaction.note}</Text>
+    </div>
+  );
 };
 
 export default TransactionDescription;

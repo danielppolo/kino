@@ -9,6 +9,7 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = async ({ children }) => {
+  return children;
   return (
     <div className="flex w-full divide-x">
       {/* <div className="w-48 shrink-0 p-4 hidden md:block">
@@ -16,7 +17,7 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
         <TransactionsAreaChart />
         <WalletFilter />
       </div> */}
-      <div className="hidden grow divide-y md:block">
+      <div className="grow divide-y">
         <div className="h-10 px-2">
           <DateRangeFilter />
         </div>

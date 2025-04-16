@@ -9,7 +9,7 @@ export function Title({
     <h1
       {...props}
       className={cn(
-        `scroll-m-20 text-2xl font-medium tracking-tight text-foreground`,
+        `text-foreground scroll-m-20 text-2xl font-medium tracking-tight`,
         className,
       )}
     >
@@ -27,7 +27,7 @@ export function Subtitle({
     <h2
       {...props}
       className={cn(
-        "scroll-m-20 pb-2 text-base leading-7 tracking-tight text-muted-foreground first:mt-0 md:text-sm",
+        "text-muted-foreground scroll-m-20 pb-2 text-base leading-7 tracking-tight first:mt-0 md:text-sm",
         className,
       )}
     >
@@ -93,8 +93,8 @@ export function Text({
     <Component
       {...props}
       className={cn(
-        "text-base leading-7 text-foreground md:text-sm",
-        small && "text-sm md:text-xs",
+        "text-foreground text-lg leading-7 md:text-sm",
+        small && "text-base md:text-sm",
         muted && "text-muted-foreground",
         destructive && "text-destructive-foreground",
         className,

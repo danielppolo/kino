@@ -9,10 +9,8 @@ interface PageParams {
   searchParams: Promise<Filters>;
 }
 
-export default async function Page({
-  params: { walletId },
-  searchParams,
-}: PageParams) {
+export default async function Page({ params, searchParams }: PageParams) {
+  const { walletId } = await params;
   const filters = await searchParams;
   const supabase = await createClient();
   const { data: transactions, error: transactionsError } =
@@ -24,5 +22,5 @@ export default async function Page({
     throw transactionsError;
   }
 
-  return <TransactionList walletId={walletId} transactions={transactions} />;
+  return <TransactionList transactions={transactions} />;
 }

@@ -12,20 +12,22 @@ interface DayHeaderProps {
 const DayHeader: React.FC<DayHeaderProps> = ({ date }) => {
   return (
     <div
-      className="flex items-center justify-between px-4"
+      className="flex items-center justify-between"
       style={{
         height: DAY_HEADER_HEIGHT,
       }}
     >
-      <Text>{format(parse(date, "yyyy-MM-dd", new Date()), "PP")}</Text>
+      <Text muted small>
+        {format(parse(date, "yyyy-MM-dd", new Date()), "PP")}
+      </Text>
     </div>
   );
 };
 
 export const DayHeaderLoading: React.FC = () => {
   return (
-    <div className="flex h-8 items-center justify-between bg-muted/40 px-4">
-      <div className="h-4 w-24 animate-pulse rounded-md bg-muted" />
+    <div className="bg-muted/40 flex h-8 items-center justify-between">
+      <div className="bg-muted h-4 w-24 animate-pulse rounded-md" />
     </div>
   );
 };

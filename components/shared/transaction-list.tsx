@@ -21,7 +21,7 @@ interface TransactionListProps {
 }
 
 const dayHeaderHeight = 32;
-const transactionRowHeight = 48;
+const transactionRowHeight = 60;
 
 export default function TransactionList({
   transactions,
@@ -103,13 +103,13 @@ export default function TransactionList({
     <div className="relative">
       <div
         ref={parentRef}
-        style={{ height: "calc(100vh - 44px - 44px)", overflow: "auto" }}
+        style={{ height: "calc(100vh - 56px - 16px)", overflow: "auto" }}
       >
         <div
           style={{
             height: `${rowVirtualizer.getTotalSize()}px`,
           }}
-          className="relative w-full divide-y"
+          className="relative w-full"
         >
           {rowVirtualizer.getVirtualItems().map((virtualRow) => {
             const [date, dateTransactions] =
@@ -117,7 +117,7 @@ export default function TransactionList({
             return (
               <div
                 key={date}
-                className="divide-y"
+                // className="divide-y"
                 style={{
                   position: "absolute",
                   top: 0,
@@ -140,7 +140,7 @@ export default function TransactionList({
           })}
         </div>
       </div>
-      <div className="fixed left-0 top-0 z-50 bg-[red]">
+      <div className="fixed top-0 left-0 z-50 bg-[red]">
         <AddTransactionButton
           type="transfer"
           onOptimisticSuccess={addOptimisticTransaction}

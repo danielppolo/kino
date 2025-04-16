@@ -56,15 +56,7 @@ export type Database = {
           type?: string
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "categories_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       labels: {
         Row: {
@@ -85,15 +77,7 @@ export type Database = {
           name?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "labels_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       transactions: {
         Row: {
@@ -168,33 +152,26 @@ export type Database = {
       user_wallets: {
         Row: {
           created_at: string
-          id: number
+          id: string
           role: string
           user_id: string
           wallet_id: string
         }
         Insert: {
           created_at?: string
-          id?: number
+          id?: string
           role: string
           user_id: string
           wallet_id: string
         }
         Update: {
           created_at?: string
-          id?: number
+          id?: string
           role?: string
           user_id?: string
           wallet_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "user_wallets_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "user_wallets_wallet_id_fkey"
             columns: ["wallet_id"]
@@ -207,21 +184,27 @@ export type Database = {
       wallets: {
         Row: {
           balance_cents: number | null
+          color: string | null
           currency: string
           id: string
           name: string
+          position: number | null
         }
         Insert: {
           balance_cents?: number | null
+          color?: string | null
           currency: string
           id?: string
           name: string
+          position?: number | null
         }
         Update: {
           balance_cents?: number | null
+          color?: string | null
           currency?: string
           id?: string
           name?: string
+          position?: number | null
         }
         Relationships: []
       }
@@ -683,5 +666,20 @@ export type Enums<
   ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
     ? PublicSchema["Enums"][PublicEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof PublicSchema["CompositeTypes"]
+    | { schema: keyof Database },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
+    ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 

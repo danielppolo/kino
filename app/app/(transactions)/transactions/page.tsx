@@ -9,7 +9,7 @@ interface PageParams {
 }
 
 // Time in seconds
-export const revalidate = 60;
+// export const revalidate = 60;
 
 export default async function Page({ searchParams }: PageParams) {
   const filters = await searchParams;

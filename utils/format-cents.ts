@@ -4,5 +4,6 @@ export function formatCents(cents: number, currency: string = "USD"): string {
     currency: currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
+    currencyDisplay: "symbol",
   }).format(cents / 100);
 }
