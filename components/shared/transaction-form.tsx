@@ -80,24 +80,21 @@ const TransactionForm = ({
     },
   });
 
-  const onSubmit = async () => {
+  const onSubmit = async (values: TransactionFormValues) => {
     startTransition(() => {
       (async () => {
-        const transaction = form.getValues();
-
-        onOptimisticSuccess?.({
-          ...transaction,
-          id: "placeholder",
-          amount_cents: Math.round(transaction.amount * 100),
-          created_at: new Date().toISOString(),
-          description: transaction.description ?? "",
-          note: "",
-          transfer_id: null,
-          tags: null,
-        });
-
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-        const { error } = await createTransaction(transaction);
+        // onOptimisticSuccess?.({
+        //   ...values,
+        //   id: "placeholder",
+        //   amount_cents: Math.round(values.amount * 100),
+        //   created_at: new Date().toISOString(),
+        //   description: values.description ?? "",
+        //   note: "",
+        //   transfer_id: null,
+        //   tags: null,
+        // });
+        console.log(values);
+        const { error } = await createTransaction(values);
 
         if (error) {
           toast.error(error);
@@ -107,7 +104,7 @@ const TransactionForm = ({
         toast.success("Transaction added successfully!");
         if (addAnother) {
           // Reset all fields except date
-          const prevDate = form.getValues("date");
+          const prevDate = values.date;
           form.reset({
             type,
             wallet_id: walletId,
@@ -126,7 +123,7 @@ const TransactionForm = ({
 
   return (
     <Form {...form}>
-      <form action={onSubmit} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="amount"

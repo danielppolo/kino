@@ -20,7 +20,7 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
   onUpdate,
 }) => {
   return (
-    <ListItem className="group gap-4">
+    <ListItem className="group gap-4" id={transaction.id}>
       {/* <div className="shrink-0">
         <TransactionColor transaction={transaction} onUpdate={onUpdate} />
       </div>
