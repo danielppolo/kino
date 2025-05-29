@@ -19,7 +19,7 @@ const TransactionAmount: React.FC<TransactionAmountProps> = ({
     <Text
       as="span"
       destructive={amount < 0}
-      className={amount > 0 ? "text-emerald-600" : undefined}
+      className={amount > 0 ? "text-emerald-600" : "undefined"}
     >
       {formatCents(amount)}
     </Text>

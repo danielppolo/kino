@@ -11,7 +11,7 @@ export const ListItem: React.FC<ListItemProps> = ({
 }) => {
   return (
     <div
-      className={`hover:bg-muted/20 flex h-15 cursor-pointer items-center rounded-md ${
+      className={`hover:bg-muted/20 flex h-10 cursor-pointer items-center rounded-md ${
         active ? "bg-muted/80" : ""
       } ${className}`}
     >

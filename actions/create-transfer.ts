@@ -14,21 +14,26 @@ type SourceTransaction = Omit<
 };
 
 export async function createTransferTransaction(
-  { amount, ...sourceTransaction }: SourceTransaction,
-  counterpartWalletId: string,
+  {
+    amount,
+    ...sourceTransaction
+  }: Omit<SourceTransaction, "wallet_id"> & { wallet_id?: string },
+  senderWalletId: string,
+  receiverWalletId: string,
 ) {
   const supabase = await createClient();
   const transferId = uuidv4();
   const transactionsToInsert = [
     {
       ...sourceTransaction,
+      wallet_id: senderWalletId,
       amount_cents: -amount * 100,
       transfer_id: transferId,
       category_id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID,
     },
     {
       ...sourceTransaction,
-      wallet_id: counterpartWalletId,
+      wallet_id: receiverWalletId,
       amount_cents: amount * 100,
       transfer_id: transferId,
       category_id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID,

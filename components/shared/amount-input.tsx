@@ -24,16 +24,16 @@ export function AmountInput({
         muted
         className={cn(
           className,
-          "absolute left-2 top-1/2 -translate-y-1/2 transform",
+          "absolute top-1/2 left-2 -translate-y-1/2 transform",
         )}
       >
         $
       </Text>
       <Input
         type="number"
-        min={0}
-        placeholder="Enter amount"
-        defaultValue={Math.abs(defaultValue || 0)}
+        step="any"
+        placeholder="Enter amount (use negative for expenses)"
+        defaultValue={defaultValue ?? ""}
         className={cn(className, "pl-[18px]", {
           "border-none": variant === "ghost",
         })}

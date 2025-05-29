@@ -17,26 +17,25 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
         {/* Workspace Section */}
         <Menu title="Workspace">
           <Link href="/app/settings/general">
-            <MenuItem label="General" active={false} />
+            <MenuItem active={false}>General</MenuItem>
           </Link>
           <Link href="/app/settings/overview">
-            <MenuItem label="Overview" active={false} />
+            <MenuItem active={false}>Overview</MenuItem>
           </Link>
           <Link href="/app/settings/labels">
-            <MenuItem label="Labels" active={false} />
+            <MenuItem active={false}>Labels</MenuItem>
           </Link>
           <Link href="/app/settings/categories">
-            <MenuItem label="Categories" active={false} />
+            <MenuItem active={false}>Categories</MenuItem>
           </Link>
-        </Menu>
-
-        <Menu title="Account">
           <Link href="/app/settings/profile">
-            <MenuItem label="Profile" active={false} />
+            <MenuItem active={false}>Profile</MenuItem>
           </Link>
         </Menu>
 
-        <WalletSection />
+        <Menu title="Wallets">
+          <WalletSection />
+        </Menu>
       </div>
 
       {/* Main Content Area */}

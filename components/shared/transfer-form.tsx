@@ -32,9 +32,10 @@ interface TransferFormProps {
 
 type TransferFormValues = Omit<
   Database["public"]["Tables"]["transactions"]["Insert"],
-  "amount_cents"
+  "amount_cents" | "wallet_id"
 > & {
-  counterpart_wallet_id: string;
+  sender_wallet_id: string;
+  receiver_wallet_id: string;
   amount: number;
 };
 
@@ -49,21 +50,22 @@ const TransferForm = ({
   const form = useForm<TransferFormValues>({
     defaultValues: {
       type,
-      wallet_id: walletId,
+      sender_wallet_id: walletId,
       date,
       currency,
     },
   });
 
   const onSubmit = async (data: TransferFormValues) => {
-    const { counterpart_wallet_id, ...transaction } = data;
+    const { sender_wallet_id, receiver_wallet_id, ...transaction } = data;
     const { error } = await createTransferTransaction(
-      transaction,
-      counterpart_wallet_id,
+      { ...transaction },
+      sender_wallet_id,
+      receiver_wallet_id,
     );
 
     if (error) {
-      return toast.error(error.message);
+      return toast.error(error);
     }
     toast.success("Transaction added successfully!");
     onSuccess();
@@ -119,24 +121,45 @@ const TransferForm = ({
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="counterpart_wallet_id"
-          rules={{ required: "Category is required" }}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Transfer to</FormLabel>
-              <FormControl>
-                <WalletPicker
-                  currency={currency}
-                  exclude={walletId}
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="flex gap-4">
+          <FormField
+            control={form.control}
+            name="sender_wallet_id"
+            rules={{ required: "Sender wallet is required" }}
+            render={({ field }) => (
+              <FormItem className="flex-1">
+                <FormLabel>Sender Wallet</FormLabel>
+                <FormControl>
+                  <WalletPicker
+                    currency={currency}
+                    exclude={form.watch("receiver_wallet_id")}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="receiver_wallet_id"
+            rules={{ required: "Receiver wallet is required" }}
+            render={({ field }) => (
+              <FormItem className="flex-1">
+                <FormLabel>Receiver Wallet</FormLabel>
+                <FormControl>
+                  <WalletPicker
+                    currency={currency}
+                    exclude={form.watch("sender_wallet_id")}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <Button type="submit">Add Transaction</Button>
       </form>

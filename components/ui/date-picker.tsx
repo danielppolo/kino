@@ -39,10 +39,10 @@ function DaterPicker({
           className={cn("text-left font-normal", "text-muted-foreground")}
         >
           {date ? format(date, "PP") : <span>Pick a date</span>}
-          {variant === "outline" && <CalendarIcon className="w-4 h-4 ml-2" />}
+          {variant === "outline" && <CalendarIcon className="ml-2 h-4 w-4" />}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-80 p-0" align="start">
         <Calendar
           mode="single"
           selected={date}

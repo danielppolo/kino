@@ -3,16 +3,20 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 
-import Category from "./category";
-
 import CategoryForm from "@/components/shared/category-form";
 import { Button } from "@/components/ui/button";
+import { LazyIcon } from "@/components/ui/icon";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Subtitle } from "@/components/ui/typography";
 import { useCategories } from "@/contexts/settings-context";
+import { Category } from "@/utils/supabase/types";
 
 interface CategoriesProps {
   type: "income" | "expense";
@@ -20,47 +24,77 @@ interface CategoriesProps {
 }
 
 export default function CategorySection({ type, title }: CategoriesProps) {
-  const [open, setOpen] = useState(false);
   const [categories] = useCategories();
-
-  const filteredCategories = categories.filter(
-    (category) => category.type === type,
+  const [open, setOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
+    null,
   );
+
+  const filteredCategories = categories
+    .filter((category) => category.type === type)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const handleAdd = () => {
+    setSelectedCategory(null);
+    setOpen(true);
+  };
+
+  const handleEdit = (category: Category) => {
+    setSelectedCategory(category);
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+    setSelectedCategory(null);
+  };
 
   return (
     <div>
-      <div className="flex space-between w-full">
-        <Collapsible open={open}>
-          <div className="flex space-between w-full">
-            <h2>{title}</h2>
-
-            <CollapsibleTrigger
-              asChild
-              onClick={() => {
-                setOpen(!open);
-              }}
-            >
-              <Button size="sm" variant="ghost">
-                <Plus className="size-4" />
-              </Button>
-            </CollapsibleTrigger>
-          </div>
-          <CollapsibleContent>
-            <CategoryForm
-              type={type}
-              onSuccess={() => {
-                setOpen(false);
-              }}
-            />
-          </CollapsibleContent>
-        </Collapsible>
+      <div className="flex items-center justify-between gap-2">
+        <Subtitle>{title}</Subtitle>
+        <Button size="sm" variant="outline" onClick={handleAdd}>
+          <Plus className="size-4" />
+        </Button>
       </div>
 
       <div>
-        {filteredCategories?.map((category) => (
-          <Category key={category.id} data={category} />
-        ))}
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12">Icon</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Keywords</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredCategories?.map((category) => (
+              <TableRow
+                key={category.id}
+                className="cursor-pointer"
+                onClick={() => handleEdit(category)}
+              >
+                <TableCell>
+                  <LazyIcon name={category.icon} className="h-4 w-4" />
+                </TableCell>
+                <TableCell>{category.name}</TableCell>
+                <TableCell>
+                  {Array.isArray(category.keywords)
+                    ? category.keywords.join(", ")
+                    : ""}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
+      <CategoryForm
+        type={type}
+        category={selectedCategory ?? undefined}
+        open={open}
+        onOpenChange={handleClose}
+        onSuccess={handleClose}
+      />
     </div>
   );
 }

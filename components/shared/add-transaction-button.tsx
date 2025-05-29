@@ -25,7 +25,31 @@ interface AddTransactionButtonProps {
 
 const AddTransactionButton = (props: AddTransactionButtonProps) => {
   const [open, setOpen] = useState(false);
+  const [formType, setFormType] = useState<"transaction" | "transfer">(
+    props.type === "transfer" ? "transfer" : "transaction",
+  );
   const { walletId } = useParams<{ walletId: string }>();
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return; // Don't trigger if typing in an input
+      }
+      if (e.key === "c" || e.key === "C") {
+        setFormType("transaction");
+        setOpen(true);
+      } else if (e.key === "t" || e.key === "T") {
+        setFormType("transfer");
+        setOpen(true);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   if (!walletId) return null;
 
@@ -44,7 +68,7 @@ const AddTransactionButton = (props: AddTransactionButtonProps) => {
       trigger={
         <TooltipProvider delayDuration={100}>
           <Tooltip>
-            <TooltipTrigger>
+            <TooltipTrigger asChild>
               <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
                 {icon[props.type]}
               </Button>
@@ -56,7 +80,7 @@ const AddTransactionButton = (props: AddTransactionButtonProps) => {
         </TooltipProvider>
       }
     >
-      {props.type === "transfer" ? (
+      {formType === "transfer" ? (
         <TransferForm
           {...props}
           walletId={walletId}

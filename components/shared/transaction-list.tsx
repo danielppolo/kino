@@ -140,17 +140,9 @@ export default function TransactionList({
           })}
         </div>
       </div>
-      <div className="fixed top-0 left-0 z-50 bg-[red]">
-        <AddTransactionButton
-          type="transfer"
-          onOptimisticSuccess={addOptimisticTransaction}
-        />
+      <div className="fixed right-4 bottom-4 z-50">
         <AddTransactionButton
           type="expense"
-          onOptimisticSuccess={addOptimisticTransaction}
-        />
-        <AddTransactionButton
-          type="income"
           onOptimisticSuccess={addOptimisticTransaction}
         />
       </div>

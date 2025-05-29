@@ -27,7 +27,9 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
       <div className="shrink-0">
         <TransactionIcon transaction={transaction} onUpdate={onUpdate} />
       </div> */}
-      <CategoryLabel transaction={transaction} />
+      <div className="shrink-0">
+        <CategoryLabel transaction={transaction} />
+      </div>
       <div className="shrink grow truncate">
         <TransactionDescription transaction={transaction} />
       </div>

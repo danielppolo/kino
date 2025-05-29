@@ -38,6 +38,7 @@ export type Database = {
         Row: {
           icon: string
           id: string
+          keywords: string[] | null
           name: string
           type: string
           user_id: string | null
@@ -45,6 +46,7 @@ export type Database = {
         Insert: {
           icon: string
           id?: string
+          keywords?: string[] | null
           name: string
           type: string
           user_id?: string | null
@@ -52,6 +54,7 @@ export type Database = {
         Update: {
           icon?: string
           id?: string
+          keywords?: string[] | null
           name?: string
           type?: string
           user_id?: string | null

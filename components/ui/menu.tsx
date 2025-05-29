@@ -1,7 +1,7 @@
 import React, { ReactNode } from "react";
 
 import { ListItem, ListItemProps } from "./list-item";
-import { Subtitle } from "./typography";
+import { Subtitle, Text } from "./typography";
 
 interface MenuProps {
   children: ReactNode;
@@ -17,6 +17,8 @@ export const Menu: React.FC<MenuProps> = ({ children, title }) => {
   );
 };
 
-export const MenuItem: React.FC<ListItemProps> = (props) => (
-  <ListItem {...props} />
+export const MenuItem: React.FC<ListItemProps> = ({ children, ...props }) => (
+  <ListItem {...props}>
+    <Text>{children}</Text>
+  </ListItem>
 );

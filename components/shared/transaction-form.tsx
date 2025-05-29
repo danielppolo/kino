@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -12,10 +13,10 @@ import { SubmitButton } from "../submit-button";
 import DaterPicker from "../ui/date-picker";
 import { AmountInput } from "./amount-input";
 import { DescriptionInput } from "./description-input";
-import LabelPicker from "./label-picker";
+import LabelCombobox from "./label-combobox";
 
 import { createTransaction } from "@/actions/create-transaction";
-import CategoryPicker from "@/components/shared/category-picker";
+import CategoryCombobox from "@/components/shared/category-combobox";
 import {
   Form,
   FormControl,
@@ -25,8 +26,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Switch } from "@/components/ui/switch";
 import { useWallets } from "@/contexts/settings-context";
 import { Transaction } from "@/utils/supabase/types";
+
 interface TransactionFormProps {
   walletId: string;
   date?: string;
@@ -36,7 +39,12 @@ interface TransactionFormProps {
 }
 
 const formSchema = z.object({
-  amount: z.string().transform((val) => Number(val)),
+  amount: z
+    .string()
+    .refine((val) => /^-?\d*(\.\d+)?$/.test(val), {
+      message: "Amount must be a valid number",
+    })
+    .transform((val) => Number(val)),
   type: z.enum(["expense", "income", "transfer"]),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   description: z.string().optional(),
@@ -56,7 +64,8 @@ const TransactionForm = ({
   onOptimisticSuccess,
 }: TransactionFormProps) => {
   const [, walletMap] = useWallets();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
+  const [addAnother, setAddAnother] = useState(false);
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(formSchema),
@@ -72,29 +81,46 @@ const TransactionForm = ({
   });
 
   const onSubmit = async () => {
-    startTransition(async () => {
-      const transaction = form.getValues();
+    startTransition(() => {
+      (async () => {
+        const transaction = form.getValues();
 
-      onOptimisticSuccess?.({
-        ...transaction,
-        id: "placeholder",
-        amount_cents: Math.round(transaction.amount * 100),
-        created_at: new Date().toISOString(),
-        description: transaction.description ?? "",
-        labels: [],
-        note: "",
-        transfer_id: null,
-      });
+        onOptimisticSuccess?.({
+          ...transaction,
+          id: "placeholder",
+          amount_cents: Math.round(transaction.amount * 100),
+          created_at: new Date().toISOString(),
+          description: transaction.description ?? "",
+          note: "",
+          transfer_id: null,
+          tags: null,
+        });
 
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      const { error } = await createTransaction(transaction);
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        const { error } = await createTransaction(transaction);
 
-      if (error) {
-        return toast.error(error);
-      }
+        if (error) {
+          toast.error(error);
+          return;
+        }
 
-      toast.success("Transaction added successfully!");
-      onSuccess?.();
+        toast.success("Transaction added successfully!");
+        if (addAnother) {
+          // Reset all fields except date
+          const prevDate = form.getValues("date");
+          form.reset({
+            type,
+            wallet_id: walletId,
+            date: prevDate,
+            currency: walletMap.get(walletId)?.currency,
+            description: undefined,
+            category_id: undefined,
+            label_id: undefined,
+          });
+        } else {
+          onSuccess?.();
+        }
+      })();
     });
   };
 
@@ -154,7 +180,7 @@ const TransactionForm = ({
             <FormItem>
               <FormLabel>Category</FormLabel>
               <FormControl>
-                <CategoryPicker {...field} type={type} />
+                <CategoryCombobox {...field} type={type} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -168,14 +194,24 @@ const TransactionForm = ({
             <FormItem>
               <FormLabel>Label</FormLabel>
               <FormControl>
-                <LabelPicker {...field} />
+                <LabelCombobox {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <SubmitButton>Add Transaction</SubmitButton>
+        <div className="flex items-center gap-2">
+          <Switch
+            id="add-another"
+            checked={addAnother}
+            onCheckedChange={setAddAnother}
+          />
+          <label htmlFor="add-another" className="text-sm">
+            Add another
+          </label>
+        </div>
+        <SubmitButton className="w-full">Add Transaction</SubmitButton>
       </form>
     </Form>
   );

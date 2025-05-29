@@ -27,7 +27,7 @@ export function Subtitle({
     <h2
       {...props}
       className={cn(
-        "text-muted-foreground scroll-m-20 pb-2 text-base leading-7 tracking-tight first:mt-0 md:text-sm",
+        "text-muted-foreground scroll-m-20 text-base leading-7 tracking-tight first:mt-0 md:text-sm",
         className,
       )}
     >
