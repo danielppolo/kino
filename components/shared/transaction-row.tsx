@@ -1,7 +1,6 @@
 import React, { memo } from "react";
 
 import { ListItem } from "../ui/list-item";
-import CategoryLabel from "./category-label";
 import TransactionAmount from "./transaction-amount";
 import TransactionDescription from "./transaction-description";
 
@@ -20,16 +19,16 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
   onUpdate,
 }) => {
   return (
-    <ListItem className="group gap-4" id={transaction.id}>
+    <ListItem className="group gap-4 px-4" id={transaction.id}>
       {/* <div className="shrink-0">
         <TransactionColor transaction={transaction} onUpdate={onUpdate} />
       </div>
       <div className="shrink-0">
         <TransactionIcon transaction={transaction} onUpdate={onUpdate} />
       </div> */}
-      <div className="shrink-0">
+      {/* <div className="shrink-0">
         <CategoryLabel transaction={transaction} />
-      </div>
+      </div> */}
       <div className="shrink grow truncate">
         <TransactionDescription transaction={transaction} />
       </div>

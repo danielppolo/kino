@@ -13,6 +13,7 @@ const loaded: Partial<Record<keyof typeof dynamicIconImports, ElementType>> =
   {};
 
 export const LazyIcon = ({ name, ...props }: IconProps) => {
+  return null;
   loaded[name as keyof typeof dynamicIconImports] ||= dynamic(
     dynamicIconImports[name as keyof typeof dynamicIconImports],
   );

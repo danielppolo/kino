@@ -21,7 +21,7 @@ interface TransactionListProps {
 }
 
 const dayHeaderHeight = 32;
-const transactionRowHeight = 60;
+const transactionRowHeight = 40;
 
 export default function TransactionList({
   transactions,
