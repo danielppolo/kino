@@ -1,7 +1,6 @@
 import React from "react";
 
-import Navbar from "./(components)/navbar";
-
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { SettingsProvider } from "@/contexts/settings-context";
 import {
   listCategories,
@@ -28,13 +27,14 @@ export default async function Layout({ children }: LayoutProps) {
   if (labels.error) throw labels.error;
 
   return (
-    <SettingsProvider
-      categories={categories.data || []}
-      wallets={wallets.data || []}
-      labels={labels.data || []}
-    >
-      {children}
-      <Navbar />
-    </SettingsProvider>
+    <SidebarProvider>
+      <SettingsProvider
+        categories={categories.data || []}
+        wallets={wallets.data || []}
+        labels={labels.data || []}
+      >
+        {children}
+      </SettingsProvider>
+    </SidebarProvider>
   );
 }

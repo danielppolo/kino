@@ -101,10 +101,7 @@ export default function TransactionList({
 
   return (
     <div className="relative">
-      <div
-        ref={parentRef}
-        style={{ height: "calc(100vh - 56px - 16px)", overflow: "auto" }}
-      >
+      <div ref={parentRef} style={{ height: "100vh", overflow: "auto" }}>
         <div
           style={{
             height: `${rowVirtualizer.getTotalSize()}px`,

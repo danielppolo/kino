@@ -11,7 +11,9 @@ import { formatCents } from "@/utils/format-cents";
 
 export default function WalletsPage() {
   const [wallets] = useWallets();
-  const sortedWallets = wallets.sort((a, b) => a.name.localeCompare(b.name));
+  const sortedWallets = wallets
+    .filter((w) => w.visible)
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   // Group wallets by currency
   const walletsByCurrency = sortedWallets.reduce(
