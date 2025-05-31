@@ -7,6 +7,7 @@ import { useCategories } from "@/contexts/settings-context";
 import { Category as CategoryType } from "@/utils/supabase/types";
 
 interface CategoryComboboxProps {
+  size?: "sm" | "default" | "lg";
   type?: "income" | "expense" | "transfer";
   value: string | null;
   onChange: (id: string) => void;
@@ -15,6 +16,7 @@ interface CategoryComboboxProps {
 }
 
 const CategoryCombobox = ({
+  size = "default",
   type,
   value,
   onChange,
@@ -45,6 +47,7 @@ const CategoryCombobox = ({
 
   return (
     <Combobox
+      size={size}
       options={options}
       value={value ?? ""}
       onChange={onChange}

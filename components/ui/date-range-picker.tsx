@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { DateRange } from "react-day-picker";
 import { format, sub } from "date-fns";
+import { CalendarIcon } from "lucide-react";
 
 import { DrawerPopover } from "../ui/drawer-popover";
 import { ToggleGroup, ToggleGroupItem } from "./toggle-group";
@@ -11,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 
-export function DaterRangePicker({
+export function DateRangePicker({
   selected,
   onSelect,
 }: Omit<React.HTMLAttributes<HTMLDivElement>, "onSelect"> & {
@@ -55,13 +56,14 @@ export function DaterRangePicker({
       trigger={
         <Button
           id="date"
-          variant="ghost"
+          variant="outline"
           size="sm"
           className={cn(
-            "justify-start text-left font-normal",
+            "justify-start gap-2 text-left font-normal",
             !selected && "text-muted-foreground",
           )}
         >
+          <CalendarIcon className="size-4" />
           {selected?.from ? (
             selected.to ? (
               <>
@@ -72,7 +74,7 @@ export function DaterRangePicker({
               format(selected.from, "LLL dd, y")
             )
           ) : (
-            <span>Pick a date</span>
+            <span>Timeframe</span>
           )}
         </Button>
       }
@@ -81,7 +83,7 @@ export function DaterRangePicker({
         type="single"
         // defaultValue="month"
         onValueChange={handlePresetChange}
-        className="flex flex-col justify-center gap-2 m-2"
+        className="m-2 flex flex-col justify-center gap-2"
       >
         <ToggleGroupItem value="week">This week</ToggleGroupItem>
         <ToggleGroupItem value="month">This month</ToggleGroupItem>

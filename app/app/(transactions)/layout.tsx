@@ -14,7 +14,14 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
   return (
     <>
       <TransactionsSidebar />
-      <main className="flex-1">{children}</main>
+      <main className="flex-1">
+        <div className="flex h-11 items-center gap-2 px-4">
+          <DateRangeFilter />
+          <LabelFilter />
+          <CategoryFilter />
+        </div>
+        {children}
+      </main>
     </>
   );
   return (
@@ -28,10 +35,7 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
         <div className="h-10 px-2">
           <DateRangeFilter />
         </div>
-        <div className="flex h-10 items-center gap-2 px-2">
-          <LabelFilter />
-          <CategoryFilter />
-        </div>
+        <div className="flex h-10 items-center gap-2 px-2"></div>
         {children}
       </div>
     </div>

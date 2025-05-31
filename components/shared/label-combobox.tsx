@@ -7,6 +7,7 @@ import { useLabels } from "@/contexts/settings-context";
 import { Label as LabelType } from "@/utils/supabase/types";
 
 interface LabelComboboxProps {
+  size?: "sm" | "default" | "lg";
   value: string | null;
   onChange: (id: string) => void;
   placeholder?: string;
@@ -14,6 +15,7 @@ interface LabelComboboxProps {
 }
 
 const LabelCombobox = ({
+  size = "default",
   value,
   onChange,
   placeholder = "Select label...",
@@ -35,6 +37,7 @@ const LabelCombobox = ({
 
   return (
     <Combobox
+      size={size}
       options={options}
       value={value ?? ""}
       onChange={onChange}

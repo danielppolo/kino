@@ -12,7 +12,7 @@ interface DayHeaderProps {
 const DayHeader: React.FC<DayHeaderProps> = ({ date }) => {
   return (
     <div
-      className="bg-muted/40 flex items-center justify-between px-4"
+      className="bg-muted/40 border-muted flex items-center justify-between border-t px-4"
       style={{
         height: DAY_HEADER_HEIGHT,
       }}

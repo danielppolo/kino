@@ -26,6 +26,7 @@ export interface ComboboxOption {
 }
 
 interface ComboboxProps {
+  size?: "sm" | "default" | "lg";
   options: ComboboxOption[];
   value: string;
   onChange: (value: string) => void;
@@ -37,6 +38,7 @@ interface ComboboxProps {
 }
 
 export function Combobox({
+  size = "default",
   options,
   value,
   onChange,
@@ -54,6 +56,7 @@ export function Combobox({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
+          size={size}
           role="combobox"
           aria-expanded={open}
           className={cn("w-[200px] justify-between", className)}

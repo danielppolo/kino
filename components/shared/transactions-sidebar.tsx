@@ -38,9 +38,7 @@ export function TransactionsSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="flex h-12 items-center px-2">
-          <h1 className="font-display text-base">cuatrocientosdos</h1>
-        </div>
+        <h1 className="font-display px-2 text-base">cuatrocientosdos</h1>
       </SidebarHeader>
       <SidebarContent>
         {Object.entries(walletsByCurrency).map(
