@@ -39,7 +39,7 @@ export function TransactionsSidebar() {
     <Sidebar>
       <SidebarHeader>
         <div className="flex h-12 items-center px-2">
-          <h1 className="text-base">cuatrocientosdos</h1>
+          <h1 className="font-display text-base">cuatrocientosdos</h1>
         </div>
       </SidebarHeader>
       <SidebarContent>

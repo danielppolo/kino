@@ -1,4 +1,3 @@
-import { GeistSans } from "geist/font/sans";
 import localFont from "next/font/local";
 import { ThemeProvider } from "next-themes";
 
@@ -6,55 +5,38 @@ import "./globals.css";
 import "lucide-static/font/lucide.css";
 import { Toaster } from "@/components/ui/sonner";
 
-const workSans = localFont({
+const display = localFont({
+  src: "./fonts/OpticianSans/Optician-Sans.otf",
+  variable: "--font-display",
+  weight: "400",
+  style: "normal",
+});
+
+const untitledSans = localFont({
   src: [
     {
-      path: "./fonts/WorkSans-Thin.woff",
-      weight: "100",
-      style: "normal",
-    },
-    {
-      path: "./fonts/WorkSans-ExtraLight.woff",
-      weight: "200",
-      style: "normal",
-    },
-    {
-      path: "./fonts/WorkSans-Light.woff",
+      path: "./fonts/untitled-sans/UntitledSansWeb-Light.woff2",
       weight: "300",
       style: "normal",
     },
     {
-      path: "./fonts/WorkSans-Regular.woff",
+      path: "./fonts/untitled-sans/UntitledSansWeb-LightItalic.woff2",
+      weight: "300",
+      style: "italic",
+    },
+    {
+      path: "./fonts/untitled-sans/UntitledSansWeb-Regular.woff2",
       weight: "400",
       style: "normal",
     },
     {
-      path: "./fonts/WorkSans-Medium.woff",
-      weight: "500",
-      style: "normal",
-    },
-    {
-      path: "./fonts/WorkSans-SemiBold.woff",
-      weight: "600",
-      style: "normal",
-    },
-    {
-      path: "./fonts/WorkSans-Bold.woff",
-      weight: "700",
-      style: "normal",
-    },
-    {
-      path: "./fonts/WorkSans-ExtraBold.woff",
-      weight: "800",
-      style: "normal",
-    },
-    {
-      path: "./fonts/WorkSans-Black.woff",
-      weight: "900",
-      style: "normal",
+      path: "./fonts/untitled-sans/UntitledSansWeb-RegularItalic.woff2",
+      weight: "400",
+      style: "italic",
     },
   ],
-  variable: "--font-work-sans",
+  variable: "--font-sans",
+  display: "swap",
 });
 
 const defaultUrl = process.env.VERCEL_URL
@@ -75,7 +57,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${GeistSans.className} ${workSans.variable}`}
+      className={`${display.variable} ${untitledSans.variable}`}
       suppressHydrationWarning
     >
       <body className="bg-background">
