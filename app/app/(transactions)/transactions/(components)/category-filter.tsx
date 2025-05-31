@@ -26,6 +26,7 @@ const CategoryFilter = () => {
   return (
     <CategoryCombobox
       size="sm"
+      variant={categoryId ? "secondary" : "ghost"}
       value={categoryId ?? null}
       onChange={handleCategoryChange}
       placeholder="Category"

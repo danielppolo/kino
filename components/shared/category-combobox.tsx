@@ -8,6 +8,7 @@ import { Category as CategoryType } from "@/utils/supabase/types";
 
 interface CategoryComboboxProps {
   size?: "sm" | "default" | "lg";
+  variant?: "ghost" | "outline" | "default" | "secondary" | "destructive";
   type?: "income" | "expense" | "transfer";
   value: string | null;
   onChange: (id: string) => void;
@@ -17,6 +18,7 @@ interface CategoryComboboxProps {
 
 const CategoryCombobox = ({
   size = "default",
+  variant = "outline",
   type,
   value,
   onChange,
@@ -47,6 +49,7 @@ const CategoryCombobox = ({
 
   return (
     <Combobox
+      variant={variant}
       size={size}
       options={options}
       value={value ?? ""}

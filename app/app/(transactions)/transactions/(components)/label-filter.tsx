@@ -26,6 +26,7 @@ const LabelFilter = () => {
   return (
     <LabelCombobox
       size="sm"
+      variant={labelId ? "secondary" : "ghost"}
       value={labelId ?? null}
       onChange={handleLabelChange}
       placeholder="Label"

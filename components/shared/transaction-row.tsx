@@ -56,7 +56,7 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
 
 export const TransactionRowLoading = () => {
   return (
-    <div className="group flex h-15 animate-pulse items-center text-sm">
+    <div className="group flex h-10 animate-pulse items-center text-sm">
       <div className="w-12 shrink-0 p-2">
         <div className="bg-muted h-4 w-full rounded-md" />
       </div>

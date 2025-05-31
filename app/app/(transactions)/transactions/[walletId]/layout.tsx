@@ -5,7 +5,7 @@ interface LayoutProps {
   params: Promise<{ walletId: string }>;
 }
 
-const Layout: React.FC<LayoutProps> = async ({ children, params }) => {
+const Layout: React.FC<LayoutProps> = ({ children }) => {
   return children;
 };
 

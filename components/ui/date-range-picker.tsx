@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { DateRange } from "react-day-picker";
 import { format, sub } from "date-fns";
-import { CalendarIcon } from "lucide-react";
 
 import { DrawerPopover } from "../ui/drawer-popover";
 import { ToggleGroup, ToggleGroupItem } from "./toggle-group";
@@ -13,10 +12,12 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 
 export function DateRangePicker({
+  variant = "outline",
   selected,
   onSelect,
 }: Omit<React.HTMLAttributes<HTMLDivElement>, "onSelect"> & {
   selected?: DateRange;
+  variant?: "ghost" | "outline" | "default" | "secondary" | "destructive";
   onSelect: (range?: DateRange) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -56,14 +57,13 @@ export function DateRangePicker({
       trigger={
         <Button
           id="date"
-          variant="outline"
+          variant={variant}
           size="sm"
           className={cn(
             "justify-start gap-2 text-left font-normal",
             !selected && "text-muted-foreground",
           )}
         >
-          <CalendarIcon className="size-4" />
           {selected?.from ? (
             selected.to ? (
               <>

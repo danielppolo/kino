@@ -58,6 +58,7 @@ const DateRangeFilter = () => {
 
   return (
     <DateRangePicker
+      variant={from || to ? "secondary" : "ghost"}
       selected={{
         from,
         to,

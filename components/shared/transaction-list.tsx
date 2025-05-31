@@ -5,7 +5,6 @@ import { toast } from "sonner";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 
-import AddTransactionButton from "./add-transaction-button";
 import DayHeader, { DayHeaderLoading } from "./day-header";
 import TransactionRow, { TransactionRowLoading } from "./transaction-row";
 
@@ -139,12 +138,6 @@ export default function TransactionList({
             );
           })}
         </div>
-      </div>
-      <div className="fixed right-4 bottom-4 z-50">
-        <AddTransactionButton
-          type="expense"
-          onOptimisticSuccess={addOptimisticTransaction}
-        />
       </div>
     </div>
   );
