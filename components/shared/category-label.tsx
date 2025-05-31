@@ -1,6 +1,7 @@
 import React from "react";
 import { ArrowRightLeft } from "lucide-react";
 
+import { Badge } from "../ui/badge";
 import { Icon } from "../ui/icon";
 
 import { useCategories, useLabels } from "@/contexts/settings-context";
@@ -39,6 +40,13 @@ const CategoryLabel: React.FC<CategoryLabelProps> = ({ transaction }) => {
     !!transaction.category_id && categoriesMap.get(transaction.category_id);
   const [, labelsMap] = useLabels();
   const label = !!transaction.label_id && labelsMap.get(transaction.label_id);
+
+  return (
+    <Badge variant="outline">
+      <span className="text-xs">{category?.name}</span>
+    </Badge>
+  );
+
   if (transaction.type === "transfer") {
     return (
       <Circle color="gray">

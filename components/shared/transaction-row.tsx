@@ -1,6 +1,7 @@
 import React, { memo } from "react";
 
 import { ListItem } from "../ui/list-item";
+import CategoryLabel from "./category-label";
 import TransactionAmount from "./transaction-amount";
 import TransactionDescription from "./transaction-description";
 
@@ -26,11 +27,11 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
       <div className="shrink-0">
         <TransactionIcon transaction={transaction} onUpdate={onUpdate} />
       </div> */}
-      {/* <div className="shrink-0">
-        <CategoryLabel transaction={transaction} />
-      </div> */}
       <div className="shrink grow truncate">
         <TransactionDescription transaction={transaction} />
+      </div>
+      <div className="shrink-0">
+        <CategoryLabel transaction={transaction} />
       </div>
       <div className="shrink-0">
         <TransactionAmount
