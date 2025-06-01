@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import { Text } from "../ui/typography";
 
-import { useWallets } from "@/contexts/settings-context";
+import { useCategories, useWallets } from "@/contexts/settings-context";
 import { Transaction } from "@/utils/supabase/types";
 
 interface TransactionDescriptionProps {
@@ -16,6 +16,10 @@ const TransactionDescription: React.FC<TransactionDescriptionProps> = ({
   transaction,
 }) => {
   const [, walletsMap] = useWallets();
+  const [, categoriesMap] = useCategories();
+  const category =
+    !!transaction.category_id && categoriesMap.get(transaction.category_id);
+
   const counterPartyWallet =
     !!transaction.transfer_wallet_id &&
     walletsMap.get(transaction.transfer_wallet_id);
@@ -30,9 +34,9 @@ const TransactionDescription: React.FC<TransactionDescriptionProps> = ({
   }
 
   return (
-    <div>
-      <Text>{transaction.description}</Text>
-      <Text>{transaction.note}</Text>
+    <div className="flex gap-1">
+      <Text>{category?.name}</Text>
+      <Text className="text-muted-foreground">{transaction.description}</Text>
     </div>
   );
 };

@@ -1,10 +1,7 @@
 import React from "react";
 
-import CategoryFilter from "./transactions/(components)/category-filter";
-import DateRangeFilter from "./transactions/(components)/date-range-filter";
-import LabelFilter from "./transactions/(components)/label-filter";
-
-import AddTransactionButton from "@/components/shared/add-transaction-button";
+import { AddTransactionDropdown } from "@/components/shared/add-transaction-dropdown";
+import { FiltersDropdown } from "@/components/shared/filters-dropdown";
 import { TransactionsSidebar } from "@/components/shared/transactions-sidebar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
@@ -20,23 +17,10 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
         <div className="flex h-11 items-center justify-between gap-2 px-4">
           <div className="flex items-center gap-2">
             <SidebarTrigger />
-            <DateRangeFilter />
-            <LabelFilter />
-            <CategoryFilter />
+            <FiltersDropdown />
           </div>
           <div className="flex items-center gap-2">
-            <AddTransactionButton
-              type="transfer"
-              // onOptimisticSuccess={addOptimisticTransaction}
-            />
-            <AddTransactionButton
-              type="income"
-              // onOptimisticSuccess={addOptimisticTransaction}
-            />
-            <AddTransactionButton
-              type="expense"
-              // onOptimisticSuccess={addOptimisticTransaction}
-            />
+            <AddTransactionDropdown />
           </div>
         </div>
         {children}

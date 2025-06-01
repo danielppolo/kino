@@ -5,22 +5,14 @@ import { ArrowLeftRight, Minus, Plus } from "lucide-react";
 import { useParams } from "next/navigation";
 
 import { DrawerDialog } from "../ui/drawer-dialog";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "../ui/tooltip";
 import TransactionForm from "./transaction-form";
 import TransferForm from "./transfer-form";
 
 import { Button } from "@/components/ui/button";
-import { Transaction } from "@/utils/supabase/types";
 
 interface AddTransactionButtonProps {
   type: "income" | "expense" | "transfer";
   onSuccess?: () => void;
-  onOptimisticSuccess?: (placeholderTransaction: Transaction) => void;
 }
 
 const AddTransactionButton = (props: AddTransactionButtonProps) => {
@@ -66,18 +58,10 @@ const AddTransactionButton = (props: AddTransactionButtonProps) => {
       title="Add Transaction"
       description="Add a new transaction to your account."
       trigger={
-        <TooltipProvider delayDuration={100}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
-                {icon[props.type]}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <span>{props.type}</span>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
+          {icon[props.type]}
+          Expense
+        </Button>
       }
     >
       {formType === "transfer" ? (
@@ -91,7 +75,6 @@ const AddTransactionButton = (props: AddTransactionButtonProps) => {
           {...props}
           walletId={walletId}
           onSuccess={() => setOpen(false)}
-          onOptimisticSuccess={props.onOptimisticSuccess}
         />
       )}
     </DrawerDialog>

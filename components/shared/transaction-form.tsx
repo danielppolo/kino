@@ -28,13 +28,11 @@ import {
 } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { useWallets } from "@/contexts/settings-context";
-import { Transaction } from "@/utils/supabase/types";
 
 interface TransactionFormProps {
   walletId: string;
   date?: string;
   type: "income" | "expense" | "transfer";
-  onOptimisticSuccess?: (placeholderTransaction: Transaction) => void;
   onSuccess?: () => void;
 }
 
@@ -61,7 +59,6 @@ const TransactionForm = ({
   date = format(Date.now(), "yyyy-MM-dd"),
   type,
   onSuccess,
-  onOptimisticSuccess,
 }: TransactionFormProps) => {
   const [, walletMap] = useWallets();
   const [, startTransition] = useTransition();
@@ -83,17 +80,6 @@ const TransactionForm = ({
   const onSubmit = async (values: TransactionFormValues) => {
     startTransition(() => {
       (async () => {
-        // onOptimisticSuccess?.({
-        //   ...values,
-        //   id: "placeholder",
-        //   amount_cents: Math.round(values.amount * 100),
-        //   created_at: new Date().toISOString(),
-        //   description: values.description ?? "",
-        //   note: "",
-        //   transfer_id: null,
-        //   tags: null,
-        // });
-        console.log(values);
         const { error } = await createTransaction(values);
 
         if (error) {
