@@ -96,6 +96,7 @@ export async function GET(request: Request) {
       );
 
     if (upsertError) {
+      console.log(upsertError);
       return NextResponse.json(
         { error: "Failed to update cache" },
         { status: 500 },

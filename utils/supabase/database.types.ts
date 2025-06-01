@@ -61,6 +61,33 @@ export type Database = {
         }
         Relationships: []
       }
+      currency_conversions: {
+        Row: {
+          created_at: string
+          id: string
+          rate: number
+          source_currency: string
+          target_currency: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          rate: number
+          source_currency: string
+          target_currency: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          rate?: number
+          source_currency?: string
+          target_currency?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       labels: {
         Row: {
           color: string
@@ -152,6 +179,30 @@ export type Database = {
           },
         ]
       }
+      user_preferences: {
+        Row: {
+          base_currency: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          base_currency?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          base_currency?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_wallets: {
         Row: {
           created_at: string
@@ -192,6 +243,7 @@ export type Database = {
           id: string
           name: string
           position: number | null
+          visible: boolean
         }
         Insert: {
           balance_cents?: number | null
@@ -200,6 +252,7 @@ export type Database = {
           id?: string
           name: string
           position?: number | null
+          visible?: boolean
         }
         Update: {
           balance_cents?: number | null
@@ -208,6 +261,7 @@ export type Database = {
           id?: string
           name?: string
           position?: number | null
+          visible?: boolean
         }
         Relationships: []
       }

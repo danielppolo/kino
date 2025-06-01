@@ -13,12 +13,8 @@ CREATE TABLE IF NOT EXISTS currency_conversions (
 CREATE INDEX IF NOT EXISTS idx_currency_conversions_pair 
 ON currency_conversions (source_currency, target_currency);
 
--- Add RLS policies
+-- Enable RLS
 ALTER TABLE currency_conversions ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Enable read access for all users" ON currency_conversions
-    FOR SELECT
-    USING (true);
 
 -- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()

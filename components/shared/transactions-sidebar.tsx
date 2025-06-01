@@ -16,14 +16,25 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { useWallets } from "@/contexts/settings-context";
+import { useCurrency, useWallets } from "@/contexts/settings-context";
 import { formatCents } from "@/utils/format-cents";
 
 export function TransactionsSidebar() {
   const [wallets] = useWallets();
+  const { conversionRates, baseCurrency } = useCurrency();
   const sortedWallets = wallets
     .filter((w) => w.visible)
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  // Calculate total balance in base currency
+  const totalBalance = sortedWallets.reduce((total, wallet) => {
+    const balance = wallet.balance_cents ?? 0;
+    if (wallet.currency === baseCurrency) {
+      return total + balance;
+    }
+    const rate = conversionRates[wallet.currency]?.rate ?? 1;
+    return total + Math.round(balance * rate);
+  }, 0);
 
   // Group wallets by currency
   const walletsByCurrency = sortedWallets.reduce(
@@ -38,7 +49,12 @@ export function TransactionsSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <h1 className="font-display px-2 text-sm">cuatrocientosdos</h1>
+        <div>
+          <h1 className="font-display m-0 px-2 text-sm">cuatrocientosdos</h1>
+          <div className="text-muted-foreground px-2 text-xs">
+            {formatCents(totalBalance, baseCurrency)}
+          </div>
+        </div>
       </SidebarHeader>
       <SidebarContent>
         {Object.entries(walletsByCurrency).map(

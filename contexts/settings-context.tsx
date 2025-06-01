@@ -5,10 +5,18 @@ import React, { createContext, ReactNode, useContext } from "react";
 import { TRANSFER_CATEGORIES } from "@/utils/constants";
 import { Category, Label, Wallet } from "@/utils/supabase/types";
 
+export interface CurrencyConversion {
+  rate: number;
+  lastUpdated: string;
+  source: "cache" | "api" | "direct";
+}
+
 interface SettingsContextType {
   categories: Category[];
   labels: Label[];
   wallets: Wallet[];
+  conversionRates: Record<string, CurrencyConversion>;
+  baseCurrency: string;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(
@@ -20,6 +28,8 @@ interface SettingsProviderProps {
   categories: Category[];
   labels: Label[];
   wallets: Wallet[];
+  conversionRates: Record<string, CurrencyConversion>;
+  baseCurrency: string;
 }
 
 export const SettingsProvider: React.FC<SettingsProviderProps> = ({
@@ -27,8 +37,10 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   categories,
   labels,
   wallets,
+  conversionRates,
+  baseCurrency,
 }) => {
-  const value = { categories, labels, wallets };
+  const value = { categories, labels, wallets, conversionRates, baseCurrency };
 
   return (
     <SettingsContext.Provider value={value}>
@@ -49,7 +61,7 @@ export const useCategories = (
   const map = new Map(
     context.categories
       .concat(TRANSFER_CATEGORIES)
-      .map((category) => [category[key], category]),
+      .map((category) => [String(category[key]), category]),
   );
 
   return [list, map];
@@ -64,10 +76,13 @@ export const useLabels = (
   }
 
   const list = context.labels;
-  const map = new Map(context.labels.map((label) => [label[key], label]));
+  const map = new Map(
+    context.labels.map((label) => [String(label[key]), label]),
+  );
 
   return [list, map];
 };
+
 export const useWallets = (
   key: keyof Wallet = "id",
 ): [Wallet[], Map<string, Wallet>] => {
@@ -77,7 +92,21 @@ export const useWallets = (
   }
 
   const list = context.wallets;
-  const map = new Map(context.wallets.map((wallet) => [wallet[key], wallet]));
+  const map = new Map(
+    context.wallets.map((wallet) => [String(wallet[key]), wallet]),
+  );
 
   return [list, map];
+};
+
+export const useCurrency = () => {
+  const context = useContext(SettingsContext);
+  if (context === undefined) {
+    throw new Error("useCurrency must be used within a SettingsProvider");
+  }
+
+  return {
+    conversionRates: context.conversionRates,
+    baseCurrency: context.baseCurrency,
+  };
 };
