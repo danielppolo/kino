@@ -1,26 +1,31 @@
 import React, { memo } from "react";
 
-import { ListItem } from "../ui/list-item";
 import TagBadges from "./tag-badges";
 import TransactionAmount from "./transaction-amount";
 import TransactionDescription from "./transaction-description";
 
+import { Database } from "@/utils/supabase/database.types";
 import { Transaction } from "@/utils/supabase/types";
 
 interface TransactionRowProps {
   transaction: Transaction;
   onUpdate: (
     transaction: Transaction,
-    updatedFields: Partial<Transaction>,
+    newTransaction: Database["public"]["Tables"]["transactions"]["Update"],
   ) => void;
+  onClick?: () => void;
 }
 
-export const TransactionRow: React.FC<TransactionRowProps> = ({
+export function TransactionRow({
   transaction,
   onUpdate,
-}) => {
+  onClick,
+}: TransactionRowProps) {
   return (
-    <ListItem className="group gap-4 px-4" id={transaction.id}>
+    <div
+      className="hover:bg-accent/50 flex h-10 cursor-pointer items-center gap-2 px-4"
+      onClick={onClick}
+    >
       {/* <div className="shrink-0">
         <TransactionColor transaction={transaction} onUpdate={onUpdate} />
       </div>
@@ -50,28 +55,19 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
                       }}
                     />
                   </div> */}
-    </ListItem>
-  );
-};
-
-export const TransactionRowLoading = () => {
-  return (
-    <div className="group flex h-10 animate-pulse items-center text-sm">
-      <div className="w-12 shrink-0 p-2">
-        <div className="bg-muted h-4 w-full rounded-md" />
-      </div>
-      <div className="w-12 shrink-0 p-2">
-        <div className="bg-muted h-4 w-full rounded-md" />
-      </div>
-      <div className="grow p-2">
-        <div className="bg-muted h-4 w-1/2 rounded-md" />
-      </div>
-      <div className="w-24 shrink-0 p-2">
-        <div className="bg-muted h-4 w-full rounded-md" />
-      </div>
     </div>
   );
-};
+}
+
+export function TransactionRowLoading() {
+  return (
+    <div className="flex h-10 items-center gap-2 px-4">
+      <div className="bg-muted h-4 w-4 animate-pulse rounded-full" />
+      <div className="bg-muted h-4 w-24 animate-pulse rounded" />
+      <div className="bg-muted h-4 w-32 animate-pulse rounded" />
+    </div>
+  );
+}
 
 export default memo(
   TransactionRow,

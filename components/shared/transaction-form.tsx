@@ -28,12 +28,14 @@ import {
 } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { useWallets } from "@/contexts/settings-context";
+import { Transaction } from "@/utils/supabase/types";
 
 interface TransactionFormProps {
   walletId: string;
   date?: string;
   type: "income" | "expense" | "transfer";
   onSuccess?: () => void;
+  initialData?: Transaction;
 }
 
 const formSchema = z.object({
@@ -59,6 +61,7 @@ const TransactionForm = ({
   date = format(Date.now(), "yyyy-MM-dd"),
   type,
   onSuccess,
+  initialData,
 }: TransactionFormProps) => {
   const [, walletMap] = useWallets();
   const [, startTransition] = useTransition();
@@ -67,13 +70,14 @@ const TransactionForm = ({
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      type,
-      wallet_id: walletId,
-      date,
-      currency: walletMap.get(walletId)?.currency,
-      description: undefined,
-      category_id: undefined,
-      label_id: undefined,
+      type: initialData?.type ?? type,
+      wallet_id: initialData?.wallet_id ?? walletId,
+      date: initialData?.date ?? date,
+      currency: initialData?.currency ?? walletMap.get(walletId)?.currency,
+      description: initialData?.description ?? undefined,
+      category_id: initialData?.category_id ?? undefined,
+      label_id: initialData?.label_id ?? undefined,
+      amount: initialData ? String(initialData.amount_cents / 100) : undefined,
     },
   });
 
@@ -184,17 +188,19 @@ const TransactionForm = ({
           )}
         />
 
-        <div className="flex items-center gap-2">
-          <Switch
-            id="add-another"
-            checked={addAnother}
-            onCheckedChange={setAddAnother}
-          />
-          <label htmlFor="add-another" className="text-sm">
-            Add another
-          </label>
+        <div className="flex items-center justify-end gap-4">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="add-another"
+              checked={addAnother}
+              onCheckedChange={setAddAnother}
+            />
+            <label htmlFor="add-another" className="text-sm">
+              Create more
+            </label>
+          </div>
+          <SubmitButton size="sm">Create transaction</SubmitButton>
         </div>
-        <SubmitButton className="w-full">Add Transaction</SubmitButton>
       </form>
     </Form>
   );

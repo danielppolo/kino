@@ -22,12 +22,14 @@ import {
 } from "@/components/ui/form";
 import { useWallets } from "@/contexts/settings-context";
 import { Database } from "@/utils/supabase/database.types";
+import { Transaction } from "@/utils/supabase/types";
 
 interface TransferFormProps {
   walletId: string;
   date?: string;
   type: "income" | "expense" | "transfer";
   onSuccess: () => void;
+  initialData?: Transaction;
 }
 
 type TransferFormValues = Omit<
@@ -44,15 +46,19 @@ const TransferForm = ({
   date = format(Date.now(), "yyyy-MM-dd"),
   type,
   onSuccess,
+  initialData,
 }: TransferFormProps) => {
   const [, walletMap] = useWallets();
   const currency = walletMap.get(walletId)?.currency;
   const form = useForm<TransferFormValues>({
     defaultValues: {
-      type,
-      sender_wallet_id: walletId,
-      date,
-      currency,
+      type: initialData?.type ?? type,
+      sender_wallet_id: initialData?.wallet_id ?? walletId,
+      receiver_wallet_id: initialData?.transfer_wallet_id ?? "",
+      date: initialData?.date ?? date,
+      currency: initialData?.currency ?? currency,
+      description: initialData?.description ?? undefined,
+      amount: initialData ? initialData.amount_cents / 100 : undefined,
     },
   });
 

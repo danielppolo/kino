@@ -1,18 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useOptimistic, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 import DayHeader, { DayHeaderLoading } from "./day-header";
+import TransactionForm from "./transaction-form";
 import TransactionRow, { TransactionRowLoading } from "./transaction-row";
+import TransferForm from "./transfer-form";
 
+import { DrawerDialog } from "@/components/ui/drawer-dialog";
 import { Database } from "@/utils/supabase/database.types";
-import {
-  deleteTransaction,
-  updateTransaction,
-} from "@/utils/supabase/mutations";
+import { updateTransaction } from "@/utils/supabase/mutations";
 import { Transaction } from "@/utils/supabase/types";
 
 interface TransactionListProps {
@@ -25,19 +25,9 @@ const transactionRowHeight = 40;
 export default function TransactionList({
   transactions,
 }: TransactionListProps) {
-  const [optimisticTransactions, addOptimisticTransaction] = useOptimistic<
-    Transaction[],
-    Transaction
-  >(transactions, (state, newTransaction) => [newTransaction, ...state]);
-
-  const onDelete = useCallback(async (id: string) => {
-    const { error } = await deleteTransaction(id);
-
-    if (error) {
-      return toast.error(error.message);
-    }
-    toast.success("Transaction deleted!");
-  }, []);
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<Transaction | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const onChange = useCallback(
     async (
@@ -68,10 +58,20 @@ export default function TransactionList({
     [],
   );
 
+  const handleTransactionClick = useCallback((transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setIsDrawerOpen(true);
+  }, []);
+
+  const handleDrawerClose = useCallback(() => {
+    setIsDrawerOpen(false);
+    setSelectedTransaction(null);
+  }, []);
+
   // Group transactions by date
   const groupedTransactions = useMemo(() => {
     const groups: { [key: string]: Transaction[] } = {};
-    optimisticTransactions.forEach((transaction) => {
+    transactions.forEach((transaction) => {
       const date = transaction.date;
       if (!groups[date]) {
         groups[date] = [];
@@ -79,7 +79,7 @@ export default function TransactionList({
       groups[date].push(transaction);
     });
     return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
-  }, [optimisticTransactions]);
+  }, [transactions]);
 
   // Virtualization Setup
   const parentRef = useRef<HTMLDivElement>(null);
@@ -96,7 +96,7 @@ export default function TransactionList({
   // Re-render the virtualized list when transactions change
   useEffect(() => {
     rowVirtualizer.measure();
-  }, [optimisticTransactions, rowVirtualizer]);
+  }, [transactions, rowVirtualizer]);
 
   return (
     <div className="relative">
@@ -116,7 +116,6 @@ export default function TransactionList({
             return (
               <div
                 key={date}
-                // className="divide-y"
                 style={{
                   position: "absolute",
                   top: 0,
@@ -132,6 +131,7 @@ export default function TransactionList({
                     key={transaction.id}
                     transaction={transaction}
                     onUpdate={onChange}
+                    onClick={() => handleTransactionClick(transaction)}
                   />
                 ))}
               </div>
@@ -139,6 +139,31 @@ export default function TransactionList({
           })}
         </div>
       </div>
+
+      {selectedTransaction && (
+        <DrawerDialog
+          open={isDrawerOpen}
+          onOpenChange={setIsDrawerOpen}
+          title="Edit Transaction"
+          description="Edit the transaction details."
+        >
+          {selectedTransaction.type === "transfer" ? (
+            <TransferForm
+              type="transfer"
+              walletId={selectedTransaction.wallet_id}
+              onSuccess={handleDrawerClose}
+              initialData={selectedTransaction}
+            />
+          ) : (
+            <TransactionForm
+              type={selectedTransaction.type}
+              walletId={selectedTransaction.wallet_id}
+              onSuccess={handleDrawerClose}
+              initialData={selectedTransaction}
+            />
+          )}
+        </DrawerDialog>
+      )}
     </div>
   );
 }
