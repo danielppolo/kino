@@ -32,9 +32,9 @@ export function AmountInput({
       <Input
         type="number"
         step="any"
-        placeholder="Enter amount (use negative for expenses)"
+        placeholder="0"
         defaultValue={defaultValue ?? ""}
-        className={cn(className, "pl-[18px]", {
+        className={cn(className, "pl-[20px]", {
           "border-none": variant === "ghost",
         })}
         {...props}

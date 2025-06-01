@@ -8,7 +8,6 @@ import TransactionForm from "./transaction-form";
 import TransferForm from "./transfer-form";
 
 import { Button } from "@/components/ui/button";
-import { DrawerDialog } from "@/components/ui/drawer-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,26 +65,21 @@ export function AddTransactionDropdown() {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <DrawerDialog
-        open={open}
-        onOpenChange={setOpen}
-        title="Add Transaction"
-        description="Add a new transaction to your account."
-      >
-        {formType === "transfer" ? (
-          <TransferForm
-            type="transfer"
-            walletId={walletId}
-            onSuccess={() => setOpen(false)}
-          />
-        ) : (
-          <TransactionForm
-            type={transactionType}
-            walletId={walletId}
-            onSuccess={() => setOpen(false)}
-          />
-        )}
-      </DrawerDialog>
+      {formType === "transfer" ? (
+        <TransferForm
+          type="transfer"
+          walletId={walletId}
+          onSuccess={() => setOpen(false)}
+        />
+      ) : (
+        <TransactionForm
+          open={open}
+          onOpenChange={setOpen}
+          type={transactionType}
+          walletId={walletId}
+          onSuccess={() => setOpen(false)}
+        />
+      )}
     </>
   );
 }

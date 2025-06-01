@@ -18,7 +18,7 @@ export function DescriptionInput({
     <Input
       type="text"
       defaultValue={defaultValue}
-      placeholder="Enter description"
+      placeholder="Description"
       className={cn(
         clsx({
           "border-none": variant === "ghost",

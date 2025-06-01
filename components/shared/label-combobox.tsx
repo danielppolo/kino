@@ -25,11 +25,13 @@ const LabelCombobox = ({
 }: LabelComboboxProps) => {
   const [labels] = useLabels();
 
-  const options: ComboboxOption[] = labels.map((label) => ({
-    value: label.id,
-    label: label.name,
-    keywords: [label.name.toLowerCase(), label.color ?? ""],
-  }));
+  const options: ComboboxOption[] = labels
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((label) => ({
+      value: label.id,
+      label: label.name,
+      keywords: [label.name.toLowerCase(), label.color ?? ""],
+    }));
 
   const labelMap = React.useMemo(() => {
     const map = new Map<string, LabelType>();

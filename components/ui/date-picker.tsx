@@ -35,7 +35,6 @@ function DaterPicker({
       <PopoverTrigger asChild>
         <Button
           variant={variant}
-          size="sm"
           className={cn("text-left font-normal", "text-muted-foreground")}
         >
           {date ? format(date, "PP") : <span>Pick a date</span>}

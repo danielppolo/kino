@@ -1,15 +1,9 @@
 "use client";
 
-import { useTransition } from "react";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
 import { format } from "date-fns";
-import { toast } from "sonner";
-import { z } from "zod";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-
-import { SubmitButton } from "../submit-button";
+import CreatableMultiSelect from "../ui/creatable-multi-select";
 import DaterPicker from "../ui/date-picker";
 import { AmountInput } from "./amount-input";
 import { DescriptionInput } from "./description-input";
@@ -17,17 +11,15 @@ import LabelCombobox from "./label-combobox";
 
 import { createTransaction } from "@/actions/create-transaction";
 import CategoryCombobox from "@/components/shared/category-combobox";
+import { EntityForm } from "@/components/shared/entity-form";
 import {
-  Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Switch } from "@/components/ui/switch";
 import { useWallets } from "@/contexts/settings-context";
+import { deleteTransaction } from "@/utils/supabase/mutations";
 import { Transaction } from "@/utils/supabase/types";
 
 interface TransactionFormProps {
@@ -36,25 +28,21 @@ interface TransactionFormProps {
   type: "income" | "expense" | "transfer";
   onSuccess?: () => void;
   initialData?: Transaction;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-const formSchema = z.object({
-  amount: z
-    .string()
-    .refine((val) => /^-?\d*(\.\d+)?$/.test(val), {
-      message: "Amount must be a valid number",
-    })
-    .transform((val) => Number(val)),
-  type: z.enum(["expense", "income", "transfer"]),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  description: z.string().optional(),
-  category_id: z.string().uuid(),
-  label_id: z.string().uuid(),
-  wallet_id: z.string().uuid(),
-  currency: z.string(),
-});
-
-type TransactionFormValues = z.infer<typeof formSchema>;
+type TransactionFormValues = {
+  amount: number;
+  type: "income" | "expense" | "transfer";
+  date: string;
+  description?: string;
+  category_id: string;
+  label_id: string;
+  wallet_id: string;
+  currency: string;
+  tags?: string[];
+};
 
 const TransactionForm = ({
   walletId,
@@ -62,78 +50,107 @@ const TransactionForm = ({
   type,
   onSuccess,
   initialData,
+  open,
+  onOpenChange,
 }: TransactionFormProps) => {
   const [, walletMap] = useWallets();
-  const [, startTransition] = useTransition();
   const [addAnother, setAddAnother] = useState(false);
 
-  const form = useForm<TransactionFormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      type: initialData?.type ?? type,
-      wallet_id: initialData?.wallet_id ?? walletId,
-      date: initialData?.date ?? date,
-      currency: initialData?.currency ?? walletMap.get(walletId)?.currency,
-      description: initialData?.description ?? undefined,
-      category_id: initialData?.category_id ?? undefined,
-      label_id: initialData?.label_id ?? undefined,
-      amount: initialData ? String(initialData.amount_cents / 100) : undefined,
-    },
-  });
-
-  const onSubmit = async (values: TransactionFormValues) => {
-    startTransition(() => {
-      (async () => {
-        const { error } = await createTransaction(values);
-
-        if (error) {
-          toast.error(error);
-          return;
-        }
-
-        toast.success("Transaction added successfully!");
-        if (addAnother) {
-          // Reset all fields except date
-          const prevDate = values.date;
-          form.reset({
-            type,
-            wallet_id: walletId,
-            date: prevDate,
-            currency: walletMap.get(walletId)?.currency,
-            description: undefined,
-            category_id: undefined,
-            label_id: undefined,
-          });
-        } else {
-          onSuccess?.();
-        }
-      })();
-    });
+  const defaultValues: TransactionFormValues = {
+    type: type,
+    wallet_id: walletId,
+    date: date,
+    currency: walletMap.get(walletId)?.currency ?? "USD",
+    description: "",
+    category_id: "",
+    label_id: "",
+    amount: initialData ? Math.abs(initialData.amount_cents) / 100 : 0,
+    tags: initialData?.tags ?? [],
   };
 
+  const handleSubmit = async (values: TransactionFormValues) => {
+    const { error } = await createTransaction(values);
+    if (error) {
+      return { error };
+    }
+
+    if (addAnother) {
+      // Reset all fields except date
+      const prevDate = values.date;
+      return {
+        error: undefined,
+        resetValues: {
+          ...defaultValues,
+          date: prevDate,
+        },
+      };
+    }
+
+    return { error: undefined };
+  };
+
+  const handleDelete = async () => {
+    if (!initialData?.id) return { error: "No transaction ID provided" };
+    const { error } = await deleteTransaction(initialData.id);
+    return { error: error?.message };
+  };
+
+  const convertToFormValues = (
+    transaction: Transaction,
+  ): TransactionFormValues => ({
+    amount: Math.abs(transaction.amount_cents) / 100,
+    type: transaction.type,
+    date: transaction.date,
+    description: transaction.description ?? undefined,
+    category_id: transaction.category_id ?? "",
+    label_id: transaction.label_id ?? "",
+    wallet_id: transaction.wallet_id,
+    currency: transaction.currency,
+    tags: transaction.tags ?? undefined,
+  });
+
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+    <EntityForm
+      title="Transaction"
+      entity={initialData ? convertToFormValues(initialData) : undefined}
+      open={open}
+      onOpenChange={onOpenChange}
+      onSuccess={onSuccess}
+      defaultValues={defaultValues}
+      onSubmit={handleSubmit}
+      onDelete={handleDelete}
+      addAnother={addAnother}
+      setAddAnother={setAddAnother}
+    >
+      <FormField
+        name="amount"
+        render={({ field }) => (
+          <FormItem>
+            <FormControl>
+              <AmountInput {...field} autoFocus />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <div className="grid grid-cols-2 gap-4">
         <FormField
-          control={form.control}
-          name="amount"
+          name="category_id"
+          rules={{ required: "Category is required" }}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Amount</FormLabel>
               <FormControl>
-                <AmountInput {...field} />
+                <CategoryCombobox {...field} type={type} className="w-full" />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-
         <FormField
-          control={form.control}
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Description</FormLabel>
               <FormControl>
                 <DescriptionInput {...field} />
               </FormControl>
@@ -141,68 +158,47 @@ const TransactionForm = ({
             </FormItem>
           )}
         />
-
+      </div>
+      <div className="grid grid-cols-2 gap-4">
         <FormField
-          control={form.control}
           name="date"
           render={({ field }) => (
             <FormItem className="flex flex-col">
-              <FormLabel>Date</FormLabel>
               <FormControl>
                 <DaterPicker {...field} />
               </FormControl>
-              <FormDescription>
-                This date is required for the transaction.
-              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
 
         <FormField
-          control={form.control}
-          name="category_id"
-          rules={{ required: "Category is required" }}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Category</FormLabel>
-              <FormControl>
-                <CategoryCombobox {...field} type={type} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
           name="label_id"
           rules={{ required: "Label is required" }}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Label</FormLabel>
               <FormControl>
-                <LabelCombobox {...field} />
+                <LabelCombobox {...field} className="w-full" />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+      </div>
 
-        <div className="flex items-center justify-end gap-4">
-          <div className="flex items-center gap-2">
-            <Switch
-              id="add-another"
-              checked={addAnother}
-              onCheckedChange={setAddAnother}
-            />
-            <label htmlFor="add-another" className="text-sm">
-              Create more
-            </label>
-          </div>
-          <SubmitButton size="sm">Create transaction</SubmitButton>
-        </div>
-      </form>
-    </Form>
+      <FormField
+        name="tags"
+        rules={{ required: "Label is required" }}
+        render={({ field }) => (
+          <FormItem>
+            <FormControl>
+              <CreatableMultiSelect {...field} className="w-full" />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </EntityForm>
   );
 };
 

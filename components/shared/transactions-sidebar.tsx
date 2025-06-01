@@ -69,7 +69,7 @@ export function TransactionsSidebar() {
               <SidebarGroup key={currency}>
                 <SidebarGroupLabel className="flex items-center justify-between">
                   <span>{currency}</span>
-                  <span>{formatCents(total, currency)}</span>
+                  {/* <span>{formatCents(total, currency)}</span> */}
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>

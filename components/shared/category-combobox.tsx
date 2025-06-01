@@ -30,8 +30,13 @@ const CategoryCombobox = ({
     ? categories.filter((category) => category.type === type)
     : categories;
 
+  // Sort categories alphabetically by name
+  const sortedCategories = [...filteredCategories].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+
   // Map categories to ComboboxOption
-  const options: ComboboxOption[] = filteredCategories.map((category) => ({
+  const options: ComboboxOption[] = sortedCategories.map((category) => ({
     value: category.id,
     label: category.name,
     keywords:
@@ -43,9 +48,9 @@ const CategoryCombobox = ({
   // For rendering, map id to category
   const categoryMap = React.useMemo(() => {
     const map = new Map<string, CategoryType>();
-    filteredCategories.forEach((cat) => map.set(cat.id, cat));
+    sortedCategories.forEach((cat) => map.set(cat.id, cat));
     return map;
-  }, [filteredCategories]);
+  }, [sortedCategories]);
 
   return (
     <Combobox

@@ -10,7 +10,6 @@ import TransactionForm from "./transaction-form";
 import TransactionRow, { TransactionRowLoading } from "./transaction-row";
 import TransferForm from "./transfer-form";
 
-import { DrawerDialog } from "@/components/ui/drawer-dialog";
 import { Database } from "@/utils/supabase/database.types";
 import { updateTransaction } from "@/utils/supabase/mutations";
 import { Transaction } from "@/utils/supabase/types";
@@ -139,31 +138,25 @@ export default function TransactionList({
           })}
         </div>
       </div>
-
-      {selectedTransaction && (
-        <DrawerDialog
+      {selectedTransaction?.type === "transfer" && (
+        <TransferForm
+          type="transfer"
+          walletId={selectedTransaction.wallet_id}
+          onSuccess={handleDrawerClose}
+          initialData={selectedTransaction}
+        />
+      )}
+      {selectedTransaction && selectedTransaction?.type !== "transfer" && (
+        <TransactionForm
           open={isDrawerOpen}
           onOpenChange={setIsDrawerOpen}
-          title="Edit Transaction"
-          description="Edit the transaction details."
-        >
-          {selectedTransaction.type === "transfer" ? (
-            <TransferForm
-              type="transfer"
-              walletId={selectedTransaction.wallet_id}
-              onSuccess={handleDrawerClose}
-              initialData={selectedTransaction}
-            />
-          ) : (
-            <TransactionForm
-              type={selectedTransaction.type}
-              walletId={selectedTransaction.wallet_id}
-              onSuccess={handleDrawerClose}
-              initialData={selectedTransaction}
-            />
-          )}
-        </DrawerDialog>
+          type={selectedTransaction.type}
+          walletId={selectedTransaction.wallet_id}
+          onSuccess={handleDrawerClose}
+          initialData={selectedTransaction}
+        />
       )}
+      )
     </div>
   );
 }
