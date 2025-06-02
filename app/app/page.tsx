@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 function HomePage() {
-  redirect("/app/wallets");
+  redirect("/app/transactions");
 }
 
 export default HomePage;
