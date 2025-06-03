@@ -3,17 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-import { NavUser } from "./nav-user";
-import { SidebarHeaderMenu } from "./sidebar-header-menu";
+import { SidebarWrapper } from "./sidebar-wrapper";
 
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -53,41 +48,33 @@ export function TransactionsSidebar() {
   }, []);
 
   return (
-    <Sidebar variant="inset">
-      <SidebarHeader>
-        <SidebarHeaderMenu />
-      </SidebarHeader>
-      <SidebarContent>
-        {Object.entries(walletsByCurrency).map(
-          ([currency, currencyWallets]) => (
-            <SidebarGroup key={currency}>
-              <SidebarGroupLabel className="flex items-center justify-between">
-                <span>{currency}</span>
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {currencyWallets.map((wallet) => (
-                    <SidebarMenuItem key={wallet.id}>
-                      <SidebarMenuButton asChild>
-                        <Link href={`/app/transactions/${wallet.id}`}>
-                          <span className="flex-1">{wallet.name}</span>
-                          <span className="text-muted-foreground text-xs">
-                            {formatCents(
-                              wallet.balance_cents ?? 0,
-                              wallet.currency,
-                            )}
-                          </span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          ),
-        )}
-      </SidebarContent>
-      <SidebarFooter>{user && <NavUser user={user} />}</SidebarFooter>
-    </Sidebar>
+    <SidebarWrapper user={user}>
+      {Object.entries(walletsByCurrency).map(([currency, currencyWallets]) => (
+        <SidebarGroup key={currency}>
+          <SidebarGroupLabel className="flex items-center justify-between">
+            <span>{currency}</span>
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {currencyWallets.map((wallet) => (
+                <SidebarMenuItem key={wallet.id}>
+                  <SidebarMenuButton asChild>
+                    <Link href={`/app/transactions/${wallet.id}`}>
+                      <span className="flex-1">{wallet.name}</span>
+                      <span className="text-muted-foreground text-xs">
+                        {formatCents(
+                          wallet.balance_cents ?? 0,
+                          wallet.currency,
+                        )}
+                      </span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      ))}
+    </SidebarWrapper>
   );
 }
