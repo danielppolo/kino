@@ -33,6 +33,7 @@ interface TransactionFormProps {
 }
 
 type TransactionFormValues = {
+  id?: string;
   amount: number;
   type: "income" | "expense" | "transfer";
   date: string;
@@ -69,7 +70,7 @@ const TransactionForm = ({
   };
 
   const handleSubmit = async (values: TransactionFormValues) => {
-    const { error } = await createTransaction(values);
+    const { error } = await createTransaction(values, walletId);
     if (error) {
       return { error };
     }
@@ -98,6 +99,7 @@ const TransactionForm = ({
   const convertToFormValues = (
     transaction: Transaction,
   ): TransactionFormValues => ({
+    id: transaction.id,
     amount: Math.abs(transaction.amount_cents) / 100,
     type: transaction.type,
     date: transaction.date,
@@ -188,7 +190,6 @@ const TransactionForm = ({
 
       <FormField
         name="tags"
-        rules={{ required: "Label is required" }}
         render={({ field }) => (
           <FormItem>
             <FormControl>

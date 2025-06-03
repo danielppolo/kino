@@ -6,6 +6,7 @@ import { z } from "zod";
 import { createClient } from "@/utils/supabase/server";
 
 const TransactionSchema = z.object({
+  id: z.string().uuid().optional(),
   amount: z.number().positive(),
   type: z.enum(["expense", "income", "transfer"]),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -14,11 +15,15 @@ const TransactionSchema = z.object({
   label_id: z.string().uuid(),
   wallet_id: z.string().uuid(),
   currency: z.string(),
+  tags: z.array(z.string()).optional(),
 });
 
 type Transaction = z.infer<typeof TransactionSchema>;
 
-export const createTransaction = async (transaction: Transaction) => {
+export const createTransaction = async (
+  transaction: Transaction,
+  walletId: string,
+) => {
   const validatedData = TransactionSchema.safeParse(transaction);
 
   if (!validatedData.success) {
@@ -26,12 +31,12 @@ export const createTransaction = async (transaction: Transaction) => {
   }
   const supabase = await createClient();
 
-  const { amount, type, ...rest } = validatedData.data;
+  const { amount, type, id, ...rest } = validatedData.data;
 
-  revalidatePath("/app/transactions", "page");
   const { error, data } = await supabase
     .from("transactions")
     .upsert({
+      id,
       ...rest,
       type,
       amount_cents:
@@ -45,5 +50,7 @@ export const createTransaction = async (transaction: Transaction) => {
     console.log(error.message);
     return { error: error.message };
   }
+
+  revalidatePath(`/app/transactions/${walletId}`, "page");
   return { data };
 };

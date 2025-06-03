@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 
@@ -10,8 +9,6 @@ import TransactionForm from "./transaction-form";
 import TransactionRow, { TransactionRowLoading } from "./transaction-row";
 import TransferForm from "./transfer-form";
 
-import { Database } from "@/utils/supabase/database.types";
-import { updateTransaction } from "@/utils/supabase/mutations";
 import { Transaction } from "@/utils/supabase/types";
 
 interface TransactionListProps {
@@ -27,35 +24,6 @@ export default function TransactionList({
   const [selectedTransaction, setSelectedTransaction] =
     useState<Transaction | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-
-  const onChange = useCallback(
-    async (
-      transaction: Transaction,
-      newTransaction: Database["public"]["Tables"]["transactions"]["Update"],
-    ) => {
-      const updatedFields = Object.keys(
-        newTransaction,
-      ) as (keyof Transaction)[];
-      const hasChanges = updatedFields.some(
-        (field) => newTransaction[field] !== transaction[field],
-      );
-
-      if (!hasChanges) {
-        return;
-      }
-
-      const { error } = await updateTransaction({
-        ...transaction,
-        ...newTransaction,
-      });
-
-      if (error) {
-        return toast.error(error.message);
-      }
-      toast.success("Transaction updated!");
-    },
-    [],
-  );
 
   const handleTransactionClick = useCallback((transaction: Transaction) => {
     setSelectedTransaction(transaction);
@@ -129,7 +97,6 @@ export default function TransactionList({
                   <TransactionRow
                     key={transaction.id}
                     transaction={transaction}
-                    onUpdate={onChange}
                     onClick={() => handleTransactionClick(transaction)}
                   />
                 ))}
