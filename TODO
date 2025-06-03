@@ -1,3 +1,2 @@
 - [ ] Import tags from CSV
-- [ ] Track historic balances for charts
-- [ ] Client side pagination and infinite scroll using react-query
+- [ ] Track historic balances for charts. Income, outcome, cashflow

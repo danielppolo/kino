@@ -1,3 +1,5 @@
+import { SupabaseClient } from "@supabase/supabase-js";
+
 import { TypedSupabaseClient } from "@/utils/supabase/types";
 
 export interface Filters {
@@ -86,3 +88,35 @@ export const getWalletMonthlyBalances = async (
 
   return query;
 };
+
+export async function getMonthlyStats(
+  supabase: SupabaseClient,
+  {
+    walletId,
+    from,
+    to,
+  }: {
+    walletId?: string;
+    from?: string;
+    to?: string;
+  } = {},
+) {
+  let query = supabase
+    .from("monthly_stats")
+    .select("*")
+    .order("month", { ascending: true });
+
+  if (walletId) {
+    query = query.eq("wallet_id", walletId);
+  }
+
+  if (from) {
+    query = query.gte("month", from);
+  }
+
+  if (to) {
+    query = query.lte("month", to);
+  }
+
+  return query;
+}
