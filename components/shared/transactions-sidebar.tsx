@@ -1,12 +1,15 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
+import { NavUser } from "./nav-user";
 import { SidebarHeaderMenu } from "./sidebar-header-menu";
 
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -17,9 +20,37 @@ import {
 } from "@/components/ui/sidebar";
 import { useTotalBalance } from "@/hooks/use-total-balance";
 import { formatCents } from "@/utils/format-cents";
+import { createClient } from "@/utils/supabase/client";
 
 export function TransactionsSidebar() {
   const { walletsByCurrency } = useTotalBalance();
+  const [user, setUser] = useState<{
+    name: string;
+    email: string;
+    avatar: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const supabase = createClient();
+      const {
+        data: { user: supabaseUser },
+      } = await supabase.auth.getUser();
+
+      if (supabaseUser) {
+        setUser({
+          name:
+            supabaseUser.user_metadata?.full_name ||
+            supabaseUser.email?.split("@")[0] ||
+            "User",
+          email: supabaseUser.email || "",
+          avatar: supabaseUser.user_metadata?.avatar_url || "",
+        });
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   return (
     <Sidebar variant="inset">
@@ -56,6 +87,7 @@ export function TransactionsSidebar() {
           ),
         )}
       </SidebarContent>
+      <SidebarFooter>{user && <NavUser user={user} />}</SidebarFooter>
     </Sidebar>
   );
 }
