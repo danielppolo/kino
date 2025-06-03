@@ -1,7 +1,7 @@
 "use client";
 
 import { add, sub } from "date-fns";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { PaginationNext } from "@/components/ui/pagination";
@@ -14,6 +14,7 @@ interface DateRange {
 const DateRangeFilter = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const fromParam = searchParams.get("from");
   const toParam = searchParams.get("to");
   const from = fromParam ? new Date(fromParam) : undefined;
@@ -31,7 +32,7 @@ const DateRangeFilter = () => {
     } else {
       params.delete("to");
     }
-    router.push(`/app/transactions?${params.toString()}`);
+    router.push(`${pathname}?${params.toString()}`);
   };
 
   const handlePreviousPeriod = () => {
