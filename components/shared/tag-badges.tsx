@@ -9,7 +9,6 @@ interface TagBadgesProps {
 }
 
 const TagBadges: React.FC<TagBadgesProps> = ({ transaction }) => {
-  console.log(transaction);
   return (
     <div className="flex gap-1">
       {transaction.tags?.map((tag) => (

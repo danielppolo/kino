@@ -75,7 +75,6 @@ export async function fetchConversion(
     );
 
   if (upsertError) {
-    console.log(upsertError);
     throw new Error("Failed to update cache");
   }
 

@@ -1,5 +1,7 @@
 import React from "react";
 
+import ChartToggle from "./(components)/chart-toggle";
+
 import { AddTransactionDropdown } from "@/components/shared/add-transaction-dropdown";
 import { FiltersDropdown } from "@/components/shared/filters-dropdown";
 import { TransactionsSidebar } from "@/components/shared/transactions-sidebar";
@@ -19,6 +21,7 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
             <div className="flex items-center gap-2">
               <SidebarTrigger />
               <FiltersDropdown />
+              <ChartToggle />
             </div>
             <div className="flex items-center gap-2">
               <AddTransactionDropdown />

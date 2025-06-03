@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { SidebarWrapper } from "./sidebar-wrapper";
 
@@ -18,6 +19,7 @@ import { formatCents } from "@/utils/format-cents";
 import { createClient } from "@/utils/supabase/client";
 
 export function TransactionsSidebar() {
+  const pathname = usePathname();
   const { walletsByCurrency } = useTotalBalance();
   const [user, setUser] = useState<{
     name: string;
@@ -58,7 +60,10 @@ export function TransactionsSidebar() {
             <SidebarMenu>
               {currencyWallets.map((wallet) => (
                 <SidebarMenuItem key={wallet.id}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname.includes(wallet.id)}
+                  >
                     <Link href={`/app/transactions/${wallet.id}`}>
                       <span className="flex-1">{wallet.name}</span>
                       <span className="text-muted-foreground text-xs">

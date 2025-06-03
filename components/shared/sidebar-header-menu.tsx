@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { PiggyBank } from "lucide-react";
 import Link from "next/link";
 
 import {
@@ -25,9 +24,6 @@ export function SidebarHeaderMenu() {
         >
           <Link href="/app/transactions">
             <>
-              <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                <PiggyBank className="size-4" />
-              </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="font-display truncate">cuatrocientosdos</span>
                 <span className="truncate text-xs">

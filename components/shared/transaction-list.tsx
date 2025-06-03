@@ -123,7 +123,6 @@ export default function TransactionList({
           initialData={selectedTransaction}
         />
       )}
-      )
     </div>
   );
 }
