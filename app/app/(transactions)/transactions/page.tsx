@@ -1,4 +1,5 @@
 import TransactionList from "@/components/shared/transaction-list";
+import { PAGE_SIZE } from "@/utils/constants";
 import { Filters, listTransactions } from "@/utils/supabase/queries";
 import { createClient } from "@/utils/supabase/server";
 
@@ -14,14 +15,21 @@ interface PageParams {
 export default async function Page({ searchParams }: PageParams) {
   const filters = await searchParams;
   const supabase = await createClient();
-  const { data: transactions, error: transactionsError } =
+  const { data: initialTransactions, error: transactionsError } =
     await listTransactions(supabase, {
       ...filters,
+      page: 0,
+      pageSize: PAGE_SIZE,
     });
 
   if (transactionsError) {
     throw transactionsError;
   }
 
-  return <TransactionList transactions={transactions} />;
+  return (
+    <TransactionList
+      initialTransactions={initialTransactions || []}
+      filters={filters}
+    />
+  );
 }
