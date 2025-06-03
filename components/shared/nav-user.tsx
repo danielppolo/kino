@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronsUpDown, LogOut } from "lucide-react";
+import { ChevronsUpDown, LogOut, Settings } from "lucide-react";
+import Link from "next/link";
 
 import { signOutAction } from "@/app/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -67,13 +68,17 @@ export function NavUser({
                 </div>
               </div>
             </DropdownMenuLabel>
+            <DropdownMenuItem className="gap-2 p-2" asChild>
+              <Link href="/app/settings">
+                <Settings className="size-4" />
+                Settings
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem>
               <form action={signOutAction} className="w-full">
                 <button className="flex w-full items-center gap-2 bg-transparent">
                   <LogOut className="size-4" />
-                  <span className="text-muted-foreground font-medium">
-                    Logout
-                  </span>
+                  Logout
                 </button>
               </form>
             </DropdownMenuItem>
