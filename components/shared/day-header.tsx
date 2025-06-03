@@ -26,7 +26,7 @@ const DayHeader: React.FC<DayHeaderProps> = ({ date }) => {
 
 export const DayHeaderLoading: React.FC = () => {
   return (
-    <div className="bg-muted/40 flex h-8 items-center justify-between">
+    <div className="bg-muted/40 flex h-8 items-center justify-between px-4">
       <div className="bg-muted h-4 w-24 animate-pulse rounded-md" />
     </div>
   );

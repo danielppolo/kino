@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { ChevronsUpDown, LogOut, PiggyBank } from "lucide-react";
+import { ChevronsUpDown, PiggyBank, Settings } from "lucide-react";
+import Link from "next/link";
 
-import { signOutAction } from "@/app/actions";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,15 +50,11 @@ export function SidebarHeaderMenu() {
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
           >
-            <DropdownMenuItem className="gap-2 p-2">
-              <form action={signOutAction} className="w-full">
-                <button className="flex w-full items-center gap-2 bg-transparent">
-                  <LogOut className="size-4" />
-                  <span className="text-muted-foreground font-medium">
-                    Logout
-                  </span>
-                </button>
-              </form>
+            <DropdownMenuItem className="gap-2 p-2" asChild>
+              <Link href="/app/settings">
+                <Settings className="size-4" />
+                Settings
+              </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
