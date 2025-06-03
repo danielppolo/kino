@@ -16,11 +16,6 @@ interface SidebarWrapperProps {
   className?: string;
   showHeader?: boolean;
   showFooter?: boolean;
-  user?: {
-    name: string;
-    email: string;
-    avatar: string;
-  } | null;
 }
 
 export function SidebarWrapper({
@@ -28,7 +23,6 @@ export function SidebarWrapper({
   className,
   showHeader = true,
   showFooter = true,
-  user,
 }: SidebarWrapperProps) {
   return (
     <Sidebar variant="inset" className={className}>
@@ -38,9 +32,9 @@ export function SidebarWrapper({
         </SidebarHeader>
       )}
       <SidebarContent>{children}</SidebarContent>
-      {showFooter && user && (
+      {showFooter && (
         <SidebarFooter>
-          <NavUser user={user} />
+          <NavUser />
         </SidebarFooter>
       )}
     </Sidebar>
