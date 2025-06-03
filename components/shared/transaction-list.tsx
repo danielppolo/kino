@@ -86,6 +86,7 @@ export default function TransactionList({
     });
 
   const handleTransactionClick = useCallback((transaction: Transaction) => {
+    console.log(transaction);
     setSelectedTransaction(transaction);
     setIsDrawerOpen(true);
   }, []);
@@ -204,6 +205,8 @@ export default function TransactionList({
       )}
       {selectedTransaction?.type === "transfer" && (
         <TransferForm
+          open={isDrawerOpen}
+          onOpenChange={setIsDrawerOpen}
           type="transfer"
           walletId={selectedTransaction.wallet_id}
           onSuccess={handleDrawerClose}

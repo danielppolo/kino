@@ -110,3 +110,51 @@ export const deleteLabel = async (id: string) => {
   revalidatePath("/app/settings/labels", "page");
   return await supabase.from("labels").delete().eq("id", id);
 };
+
+export const deleteTransfer = async (transferId: string) => {
+  const supabase = await createClient();
+  revalidatePath("/app/(transactions)", "layout");
+  return await supabase
+    .from("transactions")
+    .delete()
+    .eq("transfer_id", transferId);
+};
+
+export const updateTransfer = async (
+  transferId: string,
+  data: { description?: string; amount_cents: number },
+) => {
+  const supabase = await createClient();
+  revalidatePath("/app/(transactions)", "layout");
+
+  // First, get the transactions to determine their categories
+  const { data: transactions, error: fetchError } = await supabase
+    .from("transactions")
+    .select("id, category_id")
+    .eq("transfer_id", transferId);
+
+  if (fetchError) return { error: fetchError.message };
+  if (!transactions || transactions.length !== 2) {
+    return { error: "Invalid transfer: expected exactly 2 transactions" };
+  }
+
+  // Update each transaction with the correct amount sign based on category
+  const updates = transactions.map((transaction) => {
+    const isOutgoing =
+      transaction.category_id ===
+      process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_OUT_ID;
+    return supabase
+      .from("transactions")
+      .update({
+        description: data.description,
+        amount_cents: isOutgoing ? -data.amount_cents : data.amount_cents,
+      })
+      .eq("id", transaction.id);
+  });
+
+  // Execute all updates
+  const results = await Promise.all(updates);
+  const error = results.find((result) => result.error)?.error;
+
+  return { error: error?.message };
+};
