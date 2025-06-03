@@ -1,6 +1,8 @@
 import localFont from "next/font/local";
 import { ThemeProvider } from "next-themes";
 
+import Providers from "./app/providers";
+
 import "./globals.css";
 import "lucide-static/font/lucide.css";
 import { Toaster } from "@/components/ui/sonner";
@@ -67,8 +69,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <main className="flex min-h-screen flex-col">{children}</main>
-          <Toaster />
+          <Providers>
+            <main className="flex min-h-screen flex-col">{children}</main>
+            <Toaster />
+          </Providers>
         </ThemeProvider>
       </body>
     </html>

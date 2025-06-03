@@ -1,6 +1,4 @@
-"use server";
-
-import { TransactionList, TypedSupabaseClient } from "@/utils/supabase/types";
+import { TypedSupabaseClient } from "@/utils/supabase/types";
 
 export interface Filters {
   label_id?: string | undefined;
@@ -12,7 +10,7 @@ export interface Filters {
 
 export const listTransactions = async (
   client: TypedSupabaseClient,
-  params?: Filters,
+  params?: Filters & { page?: number; pageSize?: number },
 ) => {
   let query = client
     .from("transaction_list")
@@ -39,27 +37,15 @@ export const listTransactions = async (
     query = query.eq("wallet_id", params.wallet_id);
   }
 
-  // Get all records using pagination
-  const PAGE_SIZE = 1000;
-  let allData: TransactionList[] = [];
-  let hasMore = true;
-  let page = 0;
+  const page = params?.page || 0;
+  const pageSize = params?.pageSize || 50;
 
-  while (hasMore) {
-    const { data, error } = await query.range(
-      page * PAGE_SIZE,
-      (page + 1) * PAGE_SIZE - 1,
-    );
+  const { data, error, count } = await query.range(
+    page * pageSize,
+    (page + 1) * pageSize - 1,
+  );
 
-    if (error) throw error;
-    if (!data) break;
-
-    allData = [...allData, ...data];
-    hasMore = data.length === PAGE_SIZE;
-    page++;
-  }
-
-  return { data: allData, error: null };
+  return { data, error, count };
 };
 
 export const listLabels = async (client: TypedSupabaseClient) => {

@@ -2,6 +2,7 @@ export const TRANSACTION_ROW_HEIGHT = 48;
 export const DAY_HEADER_HEIGHT = 32;
 export const NAVBAR_HEIGHT = 72;
 export const FILTERS_HEIGHT = 44;
+export const PAGE_SIZE = 50;
 
 export const DEFAULT_DATE_RANGE = {
   startDate: new Date(new Date().setDate(1)),

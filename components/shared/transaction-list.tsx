@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 import DayHeader, { DayHeaderLoading } from "./day-header";
@@ -9,21 +10,80 @@ import TransactionForm from "./transaction-form";
 import TransactionRow, { TransactionRowLoading } from "./transaction-row";
 import TransferForm from "./transfer-form";
 
+import { PAGE_SIZE } from "@/utils/constants";
+import { createClient } from "@/utils/supabase/client";
+import { listTransactions } from "@/utils/supabase/queries";
 import { Transaction } from "@/utils/supabase/types";
 
 interface TransactionListProps {
-  transactions: Transaction[];
+  initialTransactions: Transaction[];
+  filters?: {
+    label_id?: string;
+    category_id?: string;
+    to?: string;
+    from?: string;
+    wallet_id?: string;
+  };
+}
+
+interface TransactionPage {
+  data: Transaction[];
+  error: null;
+  count: number;
+}
+
+interface InfiniteTransactionData {
+  pages: TransactionPage[];
+  pageParams: number[];
 }
 
 const dayHeaderHeight = 32;
 const transactionRowHeight = 40;
 
 export default function TransactionList({
-  transactions,
+  initialTransactions,
+  filters,
 }: TransactionListProps) {
   const [selectedTransaction, setSelectedTransaction] =
     useState<Transaction | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
+    useInfiniteQuery<TransactionPage, Error, InfiniteTransactionData>({
+      queryKey: ["transactions", filters],
+      queryFn: async ({ pageParam = 0 }) => {
+        const supabase = createClient();
+        const result = await listTransactions(supabase, {
+          ...filters,
+          page: pageParam as number,
+          pageSize: PAGE_SIZE,
+        });
+        if (result.error) {
+          throw result.error;
+        }
+        return {
+          data: result.data || [],
+          error: null,
+          count: result.count || 0,
+        };
+      },
+      initialData: {
+        pages: [
+          {
+            data: initialTransactions,
+            error: null,
+            count: initialTransactions.length,
+          },
+        ],
+        pageParams: [0],
+      },
+      initialPageParam: 0,
+      getNextPageParam: (lastPage, allPages) => {
+        if (!lastPage.data || lastPage.data.length < PAGE_SIZE)
+          return undefined;
+        return allPages.length;
+      },
+    });
 
   const handleTransactionClick = useCallback((transaction: Transaction) => {
     setSelectedTransaction(transaction);
@@ -38,15 +98,23 @@ export default function TransactionList({
   // Group transactions by date
   const groupedTransactions = useMemo(() => {
     const groups: { [key: string]: Transaction[] } = {};
-    transactions.forEach((transaction) => {
-      const date = transaction.date;
-      if (!groups[date]) {
-        groups[date] = [];
-      }
-      groups[date].push(transaction);
+    const seenIds = new Set<string>();
+
+    data?.pages.forEach((page: TransactionPage) => {
+      page.data.forEach((transaction: Transaction) => {
+        // Skip if we've already seen this transaction
+        if (seenIds.has(transaction.id)) return;
+        seenIds.add(transaction.id);
+
+        const date = transaction.date;
+        if (!groups[date]) {
+          groups[date] = [];
+        }
+        groups[date].push(transaction);
+      });
     });
     return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
-  }, [transactions]);
+  }, [data?.pages]);
 
   // Virtualization Setup
   const parentRef = useRef<HTMLDivElement>(null);
@@ -60,10 +128,34 @@ export default function TransactionList({
     overscan: 5,
   });
 
+  // Handle infinite scroll
+  useEffect(() => {
+    const [lastItem] = [...rowVirtualizer.getVirtualItems()].reverse();
+    if (!lastItem) return;
+
+    if (
+      lastItem.index >= groupedTransactions.length - 1 &&
+      hasNextPage &&
+      !isFetchingNextPage
+    ) {
+      fetchNextPage();
+    }
+  }, [
+    hasNextPage,
+    fetchNextPage,
+    groupedTransactions.length,
+    isFetchingNextPage,
+    rowVirtualizer.getVirtualItems(),
+  ]);
+
   // Re-render the virtualized list when transactions change
   useEffect(() => {
     rowVirtualizer.measure();
-  }, [transactions, rowVirtualizer]);
+  }, [data?.pages, rowVirtualizer]);
+
+  if (status === "error") {
+    return <div>Error loading transactions</div>;
+  }
 
   return (
     <div className="relative">
@@ -105,6 +197,11 @@ export default function TransactionList({
           })}
         </div>
       </div>
+      {isFetchingNextPage && (
+        <div className="flex justify-center p-4">
+          <TransactionRowLoading />
+        </div>
+      )}
       {selectedTransaction?.type === "transfer" && (
         <TransferForm
           type="transfer"
