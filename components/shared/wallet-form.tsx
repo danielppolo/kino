@@ -35,7 +35,6 @@ const WalletForm = ({ onSuccess }: WalletFormProps) => {
     const { error, data } = await createWallet(wallet);
 
     if (error) {
-      console.log(error);
       return toast.error(error);
     }
 

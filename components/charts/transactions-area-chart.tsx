@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { format } from "date-fns";
 import { TrendingUp } from "lucide-react";
-import { Area, AreaChart, CartesianGrid } from "recharts";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import {
   Card,
@@ -13,13 +13,24 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ChartConfig, ChartContainer } from "@/components/ui/chart";
-import { Label, Transaction } from "@/utils/supabase/types";
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import { useLabels } from "@/contexts/settings-context";
+import { Label, TransactionList } from "@/utils/supabase/types";
 
 export const description = "A stacked area chart with expand stacking";
 
+interface MonthlyData {
+  month: string;
+  [key: string]: string | number;
+}
+
 function groupTransactionsByLabel(
-  transactions: Transaction[],
+  transactions: TransactionList[],
   labels: Label[],
 ) {
   // Initialize labels for each month only once
@@ -32,23 +43,26 @@ function groupTransactionsByLabel(
   );
 
   // Use an object to store the results
-  const result: Record<string, any> = {};
+  const result: Record<string, MonthlyData> = {};
 
-  transactions.forEach((txn) => {
-    const { label_id, amount_cents, date } = txn;
+  transactions
+    .filter((txn) => txn.date && txn.amount_cents && txn.label_id) // Filter out null values
+    .forEach((txn) => {
+      const { label_id, amount_cents, date } = txn;
 
-    // Extract the month from the date (ISO string)
-    const transactionDate = new Date(date);
-    const month = format(transactionDate, "yyyy-MM");
+      // Extract the month from the date (ISO string)
+      const transactionDate = new Date(date!);
+      const month = format(transactionDate, "yyyy-MM");
 
-    // Ensure the month exists in the result and clone the label template
-    if (!result[month]) {
-      result[month] = { month, ...{ ...labelTemplate } };
-    }
+      // Ensure the month exists in the result and clone the label template
+      if (!result[month]) {
+        result[month] = { month, ...labelTemplate };
+      }
 
-    // Sum the amount_cents for each label within the same month (in dollars, absolute value)
-    result[month][label_id] += Math.abs(amount_cents / 100);
-  });
+      // Sum the amount_cents for each label within the same month (in dollars, absolute value)
+      const currentAmount = result[month][label_id!] as number;
+      result[month][label_id!] = currentAmount + Math.abs(amount_cents! / 100);
+    });
 
   // Sorting the results: first by current month closest to the last element
   const sortedResults = Object.values(result).sort((a, b) => {
@@ -72,24 +86,26 @@ function groupTransactionsByLabel(
 
 const getChartConfig = (labels: Label[]) => {
   if (!labels) return {};
-  return labels.reduce((acc, label, index) => {
-    acc[label.id] = {
-      label: label.name,
-      color: label.color,
-    };
-    return acc;
-  }, {});
+  return labels.reduce(
+    (acc, label) => {
+      acc[label.id] = {
+        label: label.name,
+        color: label.color,
+      };
+      return acc;
+    },
+    {} as Record<string, { label: string; color: string }>,
+  );
 };
 
 interface TransactionsAreaChartProps {
-  transactions: Transaction[];
-  labels: Label[];
+  transactions: TransactionList[];
 }
 
 export function TransactionsAreaChart({
   transactions,
-  labels,
 }: TransactionsAreaChartProps) {
+  const [labels] = useLabels();
   const chartData = useMemo(
     () => groupTransactionsByLabel(transactions ?? [], labels ?? []),
     [transactions, labels],
@@ -121,37 +137,40 @@ export function TransactionsAreaChart({
             stackOffset="expand"
           >
             <CartesianGrid vertical={false} />
-            {/* <XAxis
+            <XAxis
               dataKey="month"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
               tickFormatter={(value) => format(new Date(value), "MMMM")}
-              type="label"
-            /> */}
-            {/* <YAxis
+            />
+            <YAxis
               tickLine={false}
               axisLine={false}
               tickMargin={8}
               tickFormatter={(value) =>
                 new Intl.NumberFormat("en-US", {
-                  style: "currency",
-                  currency: "USD",
+                  style: "percent",
                   minimumFractionDigits: 0,
                   maximumFractionDigits: 0,
                 }).format(value)
               }
-            /> */}
-            {/* <ChartTooltip
+            />
+            <ChartTooltip
               cursor={false}
-              labelFormatter={(value) => value.split("-")[1]}
+              labelFormatter={(value) => format(new Date(value), "MMMM yyyy")}
               content={
                 <ChartTooltipContent
                   indicator="line"
-                  // formatter={(value) => `$${value}`}
+                  formatter={(value) =>
+                    new Intl.NumberFormat("en-US", {
+                      style: "percent",
+                      minimumFractionDigits: 1,
+                    }).format(value as number)
+                  }
                 />
               }
-            /> */}
+            />
             {labels?.map((label) => (
               <Area
                 key={label.id}
@@ -169,10 +188,10 @@ export function TransactionsAreaChart({
       <CardFooter>
         <div className="flex w-full items-start gap-2 text-sm">
           <div className="grid gap-2">
-            <div className="flex items-center gap-2 font-medium leading-none">
+            <div className="flex items-center gap-2 leading-none font-medium">
               Trending up by 5.2% this month <TrendingUp className="h-4 w-4" />
             </div>
-            <div className="flex items-center gap-2 leading-none text-muted-foreground">
+            <div className="text-muted-foreground flex items-center gap-2 leading-none">
               January - June 2024
             </div>
           </div>

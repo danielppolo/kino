@@ -97,7 +97,6 @@ const getCategory = async ({
     ])
     .select("id,name")
     .single();
-  console.log(insertError);
   if (insertError) {
     return {
       error: insertError,
@@ -215,8 +214,8 @@ export const importTransactions = async ({
     const computedCategoryId =
       type === "transfer"
         ? isIncome
-          ? process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_OUT_ID
-          : process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_IN_ID
+          ? process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_IN_ID
+          : process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_OUT_ID
         : category_id;
 
     transactionData.push({
@@ -238,7 +237,6 @@ export const importTransactions = async ({
     .upsert(transactionData)
     .select();
 
-  console.log(error);
   if (error) {
     return { error: error.message };
   }
