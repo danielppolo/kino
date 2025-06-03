@@ -23,7 +23,7 @@ export function SidebarHeaderMenu() {
           size="lg"
           className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
         >
-          <Link href="/app">
+          <Link href="/app/transactions">
             <>
               <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                 <PiggyBank className="size-4" />
