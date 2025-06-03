@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { ChevronsUpDown, LogOut, Settings } from "lucide-react";
 import Link from "next/link";
 
@@ -18,18 +19,42 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { createClient } from "@/utils/supabase/client";
 
-export function NavUser({
-  user,
-}: {
-  user: {
+export function NavUser() {
+  const { isMobile } = useSidebar();
+  const [user, setUser] = useState<{
     name: string;
     email: string;
     avatar: string;
-  };
-}) {
-  const { isMobile } = useSidebar();
+  } | null>(null);
 
+  useEffect(() => {
+    const fetchUser = async () => {
+      const supabase = createClient();
+      const {
+        data: { user: supabaseUser },
+      } = await supabase.auth.getUser();
+
+      if (supabaseUser) {
+        console.log(supabaseUser);
+        setUser({
+          name:
+            supabaseUser.user_metadata?.display_name ||
+            supabaseUser.email?.split("@")[0] ||
+            "User",
+          email: supabaseUser.email || "",
+          avatar: supabaseUser.user_metadata?.avatar_url || "",
+        });
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  if (!user) return null;
+
+  console.log(user);
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -41,7 +66,9 @@ export function NavUser({
             >
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">D</AvatarFallback>
+                <AvatarFallback className="rounded-lg">
+                  {user.name.charAt(0)}
+                </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
@@ -60,7 +87,9 @@ export function NavUser({
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                  <AvatarFallback className="rounded-lg">
+                    {user.name.charAt(0)}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.name}</span>
