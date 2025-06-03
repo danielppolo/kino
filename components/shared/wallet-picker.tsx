@@ -38,7 +38,7 @@ const WalletPicker = forwardRef<HTMLButtonElement, WalletPickerProps>(
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-[200px] justify-between"
+            className="w-full justify-between"
           >
             {value ? walletMap.get(value)?.name : "Select wallet..."}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />

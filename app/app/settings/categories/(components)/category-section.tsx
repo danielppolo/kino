@@ -5,7 +5,6 @@ import { Plus } from "lucide-react";
 
 import CategoryForm from "@/components/shared/category-form";
 import { Button } from "@/components/ui/button";
-import { LazyIcon } from "@/components/ui/icon";
 import {
   Table,
   TableBody,
@@ -62,7 +61,6 @@ export default function CategorySection({ type, title }: CategoriesProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-12">Icon</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Keywords</TableHead>
             </TableRow>
@@ -74,9 +72,6 @@ export default function CategorySection({ type, title }: CategoriesProps) {
                 className="cursor-pointer"
                 onClick={() => handleEdit(category)}
               >
-                <TableCell>
-                  <LazyIcon name={category.icon} className="h-4 w-4" />
-                </TableCell>
                 <TableCell>{category.name}</TableCell>
                 <TableCell>
                   {Array.isArray(category.keywords)

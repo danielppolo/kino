@@ -67,6 +67,8 @@ export function AddTransactionDropdown() {
 
       {formType === "transfer" ? (
         <TransferForm
+          open={open}
+          onOpenChange={setOpen}
           type="transfer"
           walletId={walletId}
           onSuccess={() => setOpen(false)}

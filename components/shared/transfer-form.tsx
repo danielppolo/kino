@@ -1,8 +1,7 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useState } from "react";
 import { format } from "date-fns";
-import { toast } from "sonner";
 
 import DaterPicker from "../ui/date-picker";
 import { AmountInput } from "./amount-input";
@@ -10,11 +9,9 @@ import { DescriptionInput } from "./description-input";
 import WalletPicker from "./wallet-picker";
 
 import { createTransferTransaction } from "@/actions/create-transfer";
-import { Button } from "@/components/ui/button";
+import { EntityForm } from "@/components/shared/entity-form";
 import {
-  Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -22,14 +19,17 @@ import {
 } from "@/components/ui/form";
 import { useWallets } from "@/contexts/settings-context";
 import { Database } from "@/utils/supabase/database.types";
+import { deleteTransfer, updateTransfer } from "@/utils/supabase/mutations";
 import { Transaction } from "@/utils/supabase/types";
 
 interface TransferFormProps {
   walletId: string;
   date?: string;
   type: "income" | "expense" | "transfer";
-  onSuccess: () => void;
+  onSuccess?: () => void;
   initialData?: Transaction;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 type TransferFormValues = Omit<
@@ -47,22 +47,36 @@ const TransferForm = ({
   type,
   onSuccess,
   initialData,
+  open,
+  onOpenChange,
 }: TransferFormProps) => {
   const [, walletMap] = useWallets();
+  const [addAnother, setAddAnother] = useState(false);
   const currency = walletMap.get(walletId)?.currency;
-  const form = useForm<TransferFormValues>({
-    defaultValues: {
-      type: initialData?.type ?? type,
-      sender_wallet_id: initialData?.wallet_id ?? walletId,
-      receiver_wallet_id: initialData?.transfer_wallet_id ?? "",
-      date: initialData?.date ?? date,
-      currency: initialData?.currency ?? currency,
-      description: initialData?.description ?? undefined,
-      amount: initialData ? initialData.amount_cents / 100 : undefined,
-    },
-  });
+  const isEdit = !!initialData;
 
-  const onSubmit = async (data: TransferFormValues) => {
+  const defaultValues: TransferFormValues = {
+    type: initialData?.type ?? type,
+    sender_wallet_id: initialData?.wallet_id ?? walletId,
+    receiver_wallet_id: initialData?.transfer_wallet_id ?? "",
+    date: initialData?.date ?? date,
+    currency: initialData?.currency ?? currency,
+    description: initialData?.description ?? undefined,
+    amount: initialData ? initialData.amount_cents / 100 : 0,
+  };
+
+  const handleSubmit = async (data: TransferFormValues) => {
+    if (isEdit) {
+      if (!initialData?.transfer_id)
+        return { error: "No transfer ID provided" };
+      const { error } = await updateTransfer(initialData.transfer_id, {
+        description: data.description,
+        amount_cents: data.amount * 100,
+      });
+      if (error) return { error: error.message };
+      return { error: undefined };
+    }
+
     const { sender_wallet_id, receiver_wallet_id, ...transaction } = data;
     const { error } = await createTransferTransaction(
       { ...transaction },
@@ -71,105 +85,138 @@ const TransferForm = ({
     );
 
     if (error) {
-      return toast.error(error);
+      return { error };
     }
-    toast.success("Transaction added successfully!");
-    onSuccess();
+
+    if (addAnother) {
+      // Reset all fields except date
+      const prevDate = data.date;
+      return {
+        error: undefined,
+        resetValues: {
+          ...defaultValues,
+          date: prevDate,
+        },
+      };
+    }
+
+    return { error: undefined };
+  };
+
+  const convertToFormValues = (
+    transaction: Transaction,
+  ): TransferFormValues => ({
+    type: transaction.type,
+    sender_wallet_id: transaction.wallet_id,
+    receiver_wallet_id: transaction.transfer_wallet_id ?? "",
+    date: transaction.date,
+    currency: transaction.currency,
+    description: transaction.description ?? undefined,
+    amount: transaction.amount_cents / 100,
+  });
+
+  const handleDelete = async () => {
+    if (!initialData?.transfer_id) return { error: "No transfer ID provided" };
+    const { error } = await deleteTransfer(initialData.transfer_id);
+    return { error: error?.message };
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="amount"
-          rules={{ required: "Amount is required" }}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Amount</FormLabel>
-              <FormControl>
-                <AmountInput {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+    <EntityForm
+      title="Transfer"
+      entity={initialData ? convertToFormValues(initialData) : undefined}
+      open={open}
+      onOpenChange={onOpenChange}
+      onSuccess={onSuccess}
+      defaultValues={defaultValues}
+      onSubmit={handleSubmit}
+      addAnother={addAnother}
+      setAddAnother={setAddAnother}
+      onDelete={handleDelete}
+    >
+      <FormField
+        name="amount"
+        rules={{ required: "Amount is required" }}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Amount</FormLabel>
+            <FormControl>
+              <AmountInput {...field} autoFocus />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
 
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <DescriptionInput {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+      <FormField
+        name="description"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Description</FormLabel>
+            <FormControl>
+              <DescriptionInput {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
 
-        <FormField
-          control={form.control}
-          name="date"
-          rules={{ required: "Category is required" }}
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>Date</FormLabel>
-              <FormControl>
-                <DaterPicker {...field} />
-              </FormControl>
-              <FormDescription>
-                This date is required for the transaction.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="flex gap-4">
+      {!isEdit && (
+        <>
           <FormField
-            control={form.control}
-            name="sender_wallet_id"
-            rules={{ required: "Sender wallet is required" }}
+            name="date"
+            rules={{ required: "Date is required" }}
             render={({ field }) => (
-              <FormItem className="flex-1">
-                <FormLabel>Sender Wallet</FormLabel>
+              <FormItem className="flex flex-col">
+                <FormLabel>Date</FormLabel>
                 <FormControl>
-                  <WalletPicker
-                    currency={currency}
-                    exclude={form.watch("receiver_wallet_id")}
-                    {...field}
-                  />
+                  <DaterPicker {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="receiver_wallet_id"
-            rules={{ required: "Receiver wallet is required" }}
-            render={({ field }) => (
-              <FormItem className="flex-1">
-                <FormLabel>Receiver Wallet</FormLabel>
-                <FormControl>
-                  <WalletPicker
-                    currency={currency}
-                    exclude={form.watch("sender_wallet_id")}
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+          <div className="flex gap-4">
+            <FormField
+              name="sender_wallet_id"
+              rules={{ required: "Sender wallet is required" }}
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel>Sender Wallet</FormLabel>
+                  <FormControl>
+                    <WalletPicker
+                      currency={currency}
+                      exclude={field.value}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <Button type="submit">Add Transaction</Button>
-      </form>
-    </Form>
+            <FormField
+              name="receiver_wallet_id"
+              rules={{ required: "Receiver wallet is required" }}
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel>Receiver Wallet</FormLabel>
+                  <FormControl>
+                    <WalletPicker
+                      currency={currency}
+                      exclude={field.value}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </>
+      )}
+    </EntityForm>
   );
 };
 

@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
 
 import { Text } from "../ui/typography";
 
@@ -27,9 +26,10 @@ const TransactionDescription: React.FC<TransactionDescriptionProps> = ({
   if (transaction.type === "transfer" && counterPartyWallet) {
     const isIncoming = transaction.amount_cents > 0;
     return (
-      <Link href={`/app/transactions/${transaction.transfer_wallet_id}`}>
+      <div className="flex gap-1">
         <Text>{`${isIncoming ? "From" : "To"} ${counterPartyWallet.name}`}</Text>
-      </Link>
+        <Text className="text-muted-foreground">{transaction.description}</Text>
+      </div>
     );
   }
 
