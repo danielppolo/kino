@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { format } from "date-fns";
 import { TrendingUp } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import {
   Card,
@@ -33,18 +33,48 @@ interface CashflowAreaChartProps {
   monthlyStats: MonthlyStats[];
 }
 
+// Utility function to aggregate stats by month
+function aggregateMonthlyStats(stats: MonthlyStats[]) {
+  const map = new Map<
+    string,
+    { income_cents: number; outcome_cents: number; net_cents: number }
+  >();
+  for (const stat of stats) {
+    if (!map.has(stat.month)) {
+      map.set(stat.month, { income_cents: 0, outcome_cents: 0, net_cents: 0 });
+    }
+    const agg = map.get(stat.month)!;
+    agg.income_cents += stat.income_cents;
+    agg.outcome_cents += stat.outcome_cents;
+    agg.net_cents += stat.net_cents;
+  }
+  return Array.from(map.entries()).map(([month, values]) => ({
+    month,
+    ...values,
+  }));
+}
+
 export function CashflowAreaChart({ monthlyStats }: CashflowAreaChartProps) {
   const { baseCurrency } = useCurrency();
-  const chartData = useMemo(
-    () =>
-      monthlyStats.map((stat) => ({
-        month: stat.month,
-        income: stat.income_cents / 100,
-        outcome: stat.outcome_cents / 100,
-        net: stat.net_cents / 100,
-      })),
+
+  // Aggregate by month
+  const aggregatedStats = useMemo(
+    () => aggregateMonthlyStats(monthlyStats),
     [monthlyStats],
   );
+
+  const chartData = useMemo(
+    () =>
+      aggregatedStats.map((stat) => ({
+        month: stat.month,
+        income: stat.income_cents / 100,
+        outcome: -stat.outcome_cents / 100,
+        net: stat.net_cents / 100,
+      })),
+    [aggregatedStats],
+  );
+
+  console.log(chartData);
 
   const chartConfig: ChartConfig = {
     income: {
@@ -54,6 +84,10 @@ export function CashflowAreaChart({ monthlyStats }: CashflowAreaChartProps) {
     outcome: {
       label: "Outcome",
       color: "#ef4444", // Red color for expenses
+    },
+    net: {
+      label: "Cashflow",
+      color: "#000", // Blue color for net
     },
   };
 
@@ -77,7 +111,7 @@ export function CashflowAreaChart({ monthlyStats }: CashflowAreaChartProps) {
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
-          <BarChart
+          <AreaChart
             data={chartData}
             margin={{
               left: 12,
@@ -111,7 +145,6 @@ export function CashflowAreaChart({ monthlyStats }: CashflowAreaChartProps) {
               labelFormatter={(value) => format(new Date(value), "MMMM yyyy")}
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
-
                 return (
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
                     <div className="grid gap-2">
@@ -123,8 +156,10 @@ export function CashflowAreaChart({ monthlyStats }: CashflowAreaChartProps) {
                       <div className="grid gap-1">
                         {payload
                           .filter((item) => !!item.value)
-                          .sort(
-                            (a, b) => (b.value as number) - (a.value as number),
+                          .sort((a, b) =>
+                            String(b.payload.label).localeCompare(
+                              String(a.payload.label),
+                            ),
                           )
                           .map((item) => (
                             <div
@@ -159,24 +194,35 @@ export function CashflowAreaChart({ monthlyStats }: CashflowAreaChartProps) {
                 );
               }}
             />
-            <Bar
+            <Area
+              type="monotone"
               dataKey="income"
-              stackId="cashflow"
               fill="#22c55e"
-              fillOpacity={0.5}
               stroke="#22c55e"
-              radius={2}
+              fillOpacity={0.1}
+              dot={false}
+              name="Income"
             />
-            <Bar
+            <Area
+              type="monotone"
               dataKey="outcome"
-              stackId="cashflow"
               fill="#ef4444"
-              fillOpacity={0.5}
               stroke="#ef4444"
-              radius={2}
+              fillOpacity={0.1}
+              dot={false}
+              name="Outcome"
+            />
+            <Area
+              type="monotone"
+              dataKey="net"
+              fill="#000"
+              stroke="#000"
+              fillOpacity={0.5}
+              dot={false}
+              name="Cashflow"
             />
             <ChartLegend content={<ChartLegendContent />} />
-          </BarChart>
+          </AreaChart>
         </ChartContainer>
       </CardContent>
       <CardFooter>

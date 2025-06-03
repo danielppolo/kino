@@ -7,7 +7,7 @@ import { createClient } from "@/utils/supabase/server";
 
 const TransactionSchema = z.object({
   id: z.string().uuid().optional(),
-  amount: z.number().positive(),
+  amount: z.coerce.number().positive(),
   type: z.enum(["expense", "income", "transfer"]),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   description: z.string().optional(),
@@ -51,6 +51,6 @@ export const createTransaction = async (
     return { error: error.message };
   }
 
-  revalidatePath(`/app/transactions/${walletId}`, "page");
+  revalidatePath("/app/(transactions)", "layout");
   return { data };
 };

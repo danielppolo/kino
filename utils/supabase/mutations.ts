@@ -89,7 +89,7 @@ export const updateLabel = async (
 // Delete Functions
 export const deleteTransaction = async (id: string) => {
   const supabase = await createClient();
-  revalidatePath("/app/transactions", "page");
+  revalidatePath("/app/(transactions)", "layout");
   return await supabase.from("transactions").delete().eq("id", id);
 };
 
