@@ -201,33 +201,40 @@ export function AccumulatedAreaChart({
                         </span>
                       </div>
                       <div className="grid gap-1">
-                        {payload.map((item) => {
-                          const wallet = walletMap.get(item.dataKey as string);
-                          if (!wallet) return null;
-                          return (
-                            <div
-                              key={wallet.id}
-                              className="flex items-center justify-between gap-2"
-                            >
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className="h-2 w-2 rounded-full"
-                                  style={{ backgroundColor: item.color }}
-                                />
+                        {payload
+                          .filter((item) => !!item.value)
+                          .sort(
+                            (a, b) => (b.value as number) - (a.value as number),
+                          )
+                          .map((item) => {
+                            const wallet = walletMap.get(
+                              item.dataKey as string,
+                            );
+                            if (!wallet) return null;
+                            return (
+                              <div
+                                key={wallet.id}
+                                className="flex items-center justify-between gap-2"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <div
+                                    className="h-2 w-2 rounded-full"
+                                    style={{ backgroundColor: item.color }}
+                                  />
+                                  <span className="text-muted-foreground text-sm">
+                                    {wallet.name}
+                                  </span>
+                                </div>
                                 <span className="text-muted-foreground text-sm">
-                                  {wallet.name}
+                                  {new Intl.NumberFormat("en-US", {
+                                    style: "currency",
+                                    currency: baseCurrency,
+                                    minimumFractionDigits: 2,
+                                  }).format(item.value as number)}
                                 </span>
                               </div>
-                              <span className="text-muted-foreground text-sm">
-                                {new Intl.NumberFormat("en-US", {
-                                  style: "currency",
-                                  currency: baseCurrency,
-                                  minimumFractionDigits: 2,
-                                }).format(item.value as number)}
-                              </span>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
                       </div>
                     </div>
                   </div>

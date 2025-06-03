@@ -79,6 +79,15 @@ export function DateRangePicker({
         </Button>
       }
     >
+      <Calendar
+        initialFocus
+        mode="range"
+        defaultMonth={selected?.from}
+        selected={selected}
+        onSelect={onSelect}
+        numberOfMonths={1}
+        className="w-full"
+      />
       <ToggleGroup
         type="single"
         // defaultValue="month"
@@ -90,15 +99,6 @@ export function DateRangePicker({
         <ToggleGroupItem value="year">This year</ToggleGroupItem>
         <ToggleGroupItem value="all">All time</ToggleGroupItem>
       </ToggleGroup>
-      <Calendar
-        initialFocus
-        mode="range"
-        defaultMonth={selected?.from}
-        selected={selected}
-        onSelect={onSelect}
-        numberOfMonths={1}
-        className="w-full"
-      />
     </DrawerPopover>
   );
 }

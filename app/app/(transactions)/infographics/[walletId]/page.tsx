@@ -1,15 +1,13 @@
 import React from "react";
 
 import { AccumulatedAreaChart } from "@/components/charts/accumulated-area-chart";
-import { IncomeAreaChart } from "@/components/charts/income-area-chart";
-import { TransactionsAreaChart } from "@/components/charts/transactions-area-chart";
+import { CashflowAreaChart } from "@/components/charts/cashflow-area-chart";
 import {
   Filters,
+  getMonthlyStats,
   getWalletMonthlyBalances,
-  listTransactions,
 } from "@/utils/supabase/queries";
 import { createClient } from "@/utils/supabase/server";
-import { TransactionList } from "@/utils/supabase/types";
 
 interface PageParams {
   params: { walletId: string };
@@ -24,12 +22,13 @@ async function InfographicsPage({ params, searchParams }: PageParams) {
   const supabase = await createClient();
 
   const [
-    { data: transactions, error: transactionsError },
+    { data: monthlyStats, error: monthlyStatsError },
     { data: monthlyBalances, error: monthlyBalancesError },
   ] = await Promise.all([
-    listTransactions(supabase, {
-      wallet_id: walletId,
-      ...filters,
+    getMonthlyStats(supabase, {
+      walletId,
+      from: filters.from,
+      to: filters.to,
     }),
     getWalletMonthlyBalances(supabase, {
       walletId,
@@ -38,8 +37,8 @@ async function InfographicsPage({ params, searchParams }: PageParams) {
     }),
   ]);
 
-  if (transactionsError) {
-    throw transactionsError;
+  if (monthlyStatsError) {
+    throw monthlyStatsError;
   }
 
   if (monthlyBalancesError) {
@@ -51,8 +50,9 @@ async function InfographicsPage({ params, searchParams }: PageParams) {
       <div className="md:col-span-2 lg:col-span-3">
         <AccumulatedAreaChart monthlyBalances={monthlyBalances ?? []} />
       </div>
-      <TransactionsAreaChart transactions={transactions as TransactionList[]} />
-      <IncomeAreaChart transactions={transactions as TransactionList[]} />
+      <div className="md:col-span-2 lg:col-span-3">
+        <CashflowAreaChart monthlyStats={monthlyStats ?? []} />
+      </div>
     </div>
   );
 }
