@@ -1,9 +1,6 @@
-"use server";
-
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/utils/supabase/client";
 
 const TransactionSchema = z.object({
   id: z.string().uuid().optional(),
@@ -20,14 +17,11 @@ const TransactionSchema = z.object({
 
 type Transaction = z.infer<typeof TransactionSchema>;
 
-export const createTransaction = async (
-  transaction: Transaction,
-  walletId: string,
-) => {
+export const createTransaction = async (transaction: Transaction) => {
   const validatedData = TransactionSchema.safeParse(transaction);
 
   if (!validatedData.success) {
-    return { error: validatedData.error.issues[0].message };
+    throw new Error(validatedData.error.issues[0].message);
   }
   const supabase = await createClient();
 
@@ -47,10 +41,8 @@ export const createTransaction = async (
     .select();
 
   if (error) {
-    console.log(error.message);
-    return { error: error.message };
+    throw new Error(error.message);
   }
 
-  revalidatePath("/app/(transactions)", "layout");
   return { data };
 };

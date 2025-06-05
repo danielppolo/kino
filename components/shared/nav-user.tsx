@@ -37,7 +37,6 @@ export function NavUser() {
       } = await supabase.auth.getUser();
 
       if (supabaseUser) {
-        console.log(supabaseUser);
         setUser({
           name:
             supabaseUser.user_metadata?.display_name ||
@@ -54,7 +53,6 @@ export function NavUser() {
 
   if (!user) return null;
 
-  console.log(user);
   return (
     <SidebarMenu>
       <SidebarMenuItem>

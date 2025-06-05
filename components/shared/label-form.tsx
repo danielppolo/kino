@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Input } from "../ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
@@ -44,33 +45,50 @@ const LabelForm = ({
       : { color: COLORS[Math.floor(Math.random() * COLORS.length)] },
   });
 
-  useEffect(() => {
-    if (open) {
-      if (label) {
-        form.reset({ ...label });
-      } else {
-        form.reset({
-          color: COLORS[Math.floor(Math.random() * COLORS.length)],
-        });
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [label, open]);
+  const queryClient = useQueryClient();
 
-  const onSubmit = async (values: LabelFormValues) => {
-    let error;
+  const createMutation = useMutation({
+    mutationFn: async (values: LabelFormValues) => {
+      return await createLabel(values);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["labels"] });
+      toast.success("Label added successfully!");
+      onSuccess?.();
+    },
+    onError(error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to add label");
+      }
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (values: LabelFormValues) => {
+      return await updateLabel({ ...values, id: label!.id });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["labels"] });
+      toast.success("Label updated successfully!");
+      onSuccess?.();
+    },
+    onError(error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to update label");
+      }
+    },
+  });
+
+  const onSubmit = (values: LabelFormValues) => {
     if (isEdit) {
-      ({ error } = await updateLabel({ ...values, id: label!.id }));
+      updateMutation.mutate(values);
     } else {
-      ({ error } = await createLabel(values));
+      createMutation.mutate(values);
     }
-    if (error) {
-      return toast.error(error.message);
-    }
-    toast.success(
-      isEdit ? "Label updated successfully!" : "Label added successfully!",
-    );
-    onSuccess?.();
   };
 
   return (

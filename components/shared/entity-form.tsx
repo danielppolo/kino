@@ -23,6 +23,7 @@ interface EntityFormProps<T extends FieldValues> {
   onSubmit: (values: T) => Promise<{ error?: string }>;
   onDelete?: (entity: T) => Promise<{ error?: string }>;
   children: React.ReactNode;
+  isLoading?: boolean;
 }
 
 export function EntityForm<T extends FieldValues>({
@@ -37,10 +38,11 @@ export function EntityForm<T extends FieldValues>({
   onSubmit,
   onDelete,
   children,
+  isLoading,
 }: EntityFormProps<T>) {
   const isEdit = !!entity;
   const form = useForm<T>({
-    defaultValues: entity || defaultValues,
+    defaultValues: (entity || defaultValues) as T,
   });
 
   useEffect(() => {
@@ -101,11 +103,12 @@ export function EntityForm<T extends FieldValues>({
                 variant="outline"
                 size="sm"
                 onClick={handleDelete}
+                disabled={isLoading}
               >
                 <Trash className="size-4" />
               </Button>
             )}
-            <Button type="submit" size="sm">
+            <Button type="submit" size="sm" disabled={isLoading}>
               {isEdit ? "Update" : "Create"}
             </Button>
           </div>

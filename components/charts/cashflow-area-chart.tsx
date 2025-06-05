@@ -74,8 +74,6 @@ export function CashflowAreaChart({ monthlyStats }: CashflowAreaChartProps) {
     [aggregatedStats],
   );
 
-  console.log(chartData);
-
   const chartConfig: ChartConfig = {
     income: {
       label: "Income",

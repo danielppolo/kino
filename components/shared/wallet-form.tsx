@@ -3,6 +3,8 @@
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
 import { SubmitButton } from "../submit-button";
 import { Input } from "../ui/input";
 import CurrencyPicker from "./currency-picker";
@@ -31,15 +33,28 @@ const WalletForm = ({ onSuccess }: WalletFormProps) => {
     },
   });
 
-  const onSubmit = async (wallet: WalletFormValues) => {
-    const { error, data } = await createWallet(wallet);
+  const queryClient = useQueryClient();
 
-    if (error) {
-      return toast.error(error);
-    }
+  const mutation = useMutation({
+    mutationFn: async (wallet: WalletFormValues) => {
+      return await createWallet(wallet);
+    },
+    onSuccess: () => {
+      toast.success("Wallet added!");
+      queryClient.invalidateQueries();
+      onSuccess();
+    },
+    onError(error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.error("Failed to add wallet");
+    },
+  });
 
-    toast.success("Wallet added!");
-    onSuccess();
+  const onSubmit = (wallet: WalletFormValues) => {
+    mutation.mutate(wallet);
   };
 
   return (

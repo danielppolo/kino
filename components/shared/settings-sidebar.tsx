@@ -40,12 +40,12 @@ const SettingsSidebar: React.FC = () => {
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
-                <Link href="/app/settings/labels">Labels</Link>
+                <Link href="/app/settings/categories">Categories</Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
-                <Link href="/app/settings/categories">Categories</Link>
+                <Link href="/app/settings/labels">Labels</Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>

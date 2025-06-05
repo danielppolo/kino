@@ -1,9 +1,5 @@
-"use server";
-
-import { revalidatePath } from "next/cache";
-
+import { createClient } from "./client";
 import { Database } from "./database.types";
-import { createClient } from "./server";
 
 export const createWallet = async ({
   name,
@@ -12,7 +8,6 @@ export const createWallet = async ({
   name: string;
   currency: string;
 }) => {
-  revalidatePath("/app/transactions", "layout");
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("insert_wallet_and_user_wallet", {
@@ -20,104 +15,144 @@ export const createWallet = async ({
     wallet_name: name,
   });
 
-  if (error) return { error: error.message, data: null };
+  if (error) throw new Error(error.message);
 
-  return { data, error: null };
+  return data;
 };
 
 export const createCategory = async (
   data: Database["public"]["Tables"]["categories"]["Insert"],
 ) => {
-  revalidatePath("/app/transactions", "layout");
-  revalidatePath("/app/settings/categories", "page");
   const supabase = await createClient();
 
-  return await supabase.from("categories").upsert(data).select();
+  const { data: result, error } = await supabase
+    .from("categories")
+    .upsert(data)
+    .select();
+  if (error) throw new Error(error.message);
+  return result;
 };
 
 export const createLabel = async (
   data: Database["public"]["Tables"]["labels"]["Insert"],
 ) => {
-  revalidatePath("/app/transactions", "layout");
-  revalidatePath("/app/settings/labels", "page");
   const supabase = await createClient();
 
-  return await supabase.from("labels").upsert(data).select();
-};
-
-// Update Functions
-export const updateTransaction = async (
-  data: Database["public"]["Tables"]["transactions"]["Update"],
-) => {
-  const supabase = await createClient();
-  const transaction = data;
-  if (transaction.amount_cents) {
-    transaction.amount_cents =
-      transaction.type === "expense"
-        ? -transaction.amount_cents
-        : transaction.amount_cents;
-  }
-
-  revalidatePath("/app/transactions", "page");
-  return await supabase.from("transactions").upsert(transaction).select();
+  const { data: result, error } = await supabase
+    .from("labels")
+    .upsert(data)
+    .select();
+  if (error) throw new Error(error.message);
+  return result;
 };
 
 export const updateWallet = async (
   data: Database["public"]["Tables"]["wallets"]["Update"],
 ) => {
   const supabase = await createClient();
-  revalidatePath("/app/transactions", "layout");
-  return await supabase.from("wallets").upsert(data).select();
+
+  // Ensure required fields are present
+  if (!data.currency || !data.name) {
+    throw new Error("Currency and name are required fields for wallet updates");
+  }
+
+  const wallet = {
+    ...data,
+    currency: data.currency,
+    name: data.name,
+  } satisfies Database["public"]["Tables"]["wallets"]["Update"];
+
+  const { data: result, error } = await supabase
+    .from("wallets")
+    .upsert(wallet)
+    .select();
+  if (error) throw new Error(error.message);
+  return result;
 };
 
 export const updateCategory = async (
   data: Database["public"]["Tables"]["categories"]["Update"],
 ) => {
   const supabase = await createClient();
-  revalidatePath("/app/settings/categories", "page");
-  return await supabase.from("categories").upsert(data).select();
+
+  // Ensure required fields are present
+  if (!data.icon || !data.name || !data.type) {
+    throw new Error(
+      "Icon, name, and type are required fields for category updates",
+    );
+  }
+
+  const category = {
+    ...data,
+    icon: data.icon,
+    name: data.name,
+    type: data.type,
+  } satisfies Database["public"]["Tables"]["categories"]["Update"];
+
+  const { data: result, error } = await supabase
+    .from("categories")
+    .upsert(category)
+    .select();
+  if (error) throw new Error(error.message);
+  return result;
 };
 
 export const updateLabel = async (
   data: Database["public"]["Tables"]["labels"]["Update"],
 ) => {
   const supabase = await createClient();
-  revalidatePath("/app/settings/labels", "page");
-  return await supabase.from("labels").upsert(data).select();
+
+  // Ensure required fields are present
+  if (!data.color || !data.name) {
+    throw new Error("Color and name are required fields for label updates");
+  }
+
+  const label = {
+    ...data,
+    color: data.color,
+    name: data.name,
+  } satisfies Database["public"]["Tables"]["labels"]["Update"];
+
+  const { data: result, error } = await supabase
+    .from("labels")
+    .upsert(label)
+    .select();
+  if (error) throw new Error(error.message);
+  return result;
 };
 
 // Delete Functions
 export const deleteTransaction = async (id: string) => {
   const supabase = await createClient();
-  revalidatePath("/app/(transactions)", "layout");
-  return await supabase.from("transactions").delete().eq("id", id);
+  const { error } = await supabase.from("transactions").delete().eq("id", id);
+  if (error) throw new Error(error.message);
 };
 
 export const deleteWallet = async (id: string) => {
   const supabase = await createClient();
-  revalidatePath("/app/transactions", "layout");
-  return await supabase.from("wallets").delete().eq("id", id);
+  const { error } = await supabase.from("wallets").delete().eq("id", id);
+  if (error) throw new Error(error.message);
 };
 
 export const deleteCategory = async (id: string) => {
   const supabase = await createClient();
-  revalidatePath("/app/settings/categories", "page");
-  return await supabase.from("categories").delete().eq("id", id);
+  const { error } = await supabase.from("categories").delete().eq("id", id);
+  if (error) throw new Error(error.message);
 };
 
 export const deleteLabel = async (id: string) => {
   const supabase = await createClient();
-  revalidatePath("/app/settings/labels", "page");
-  return await supabase.from("labels").delete().eq("id", id);
+  const { error } = await supabase.from("labels").delete().eq("id", id);
+  if (error) throw new Error(error.message);
 };
 
 export const deleteTransfer = async (transferId: string) => {
   const supabase = await createClient();
-  revalidatePath("/app/(transactions)", "layout");
-  return await supabase
+  const { error } = await supabase
     .from("transactions")
     .delete()
     .eq("transfer_id", transferId);
+  if (error) throw new Error(error.message);
 };
 
 export const updateTransfer = async (
@@ -125,7 +160,6 @@ export const updateTransfer = async (
   data: { description?: string; amount_cents: number },
 ) => {
   const supabase = await createClient();
-  revalidatePath("/app/(transactions)", "layout");
 
   // First, get the transactions to determine their categories
   const { data: transactions, error: fetchError } = await supabase
@@ -133,9 +167,9 @@ export const updateTransfer = async (
     .select("id, category_id")
     .eq("transfer_id", transferId);
 
-  if (fetchError) return { error: fetchError.message };
+  if (fetchError) throw new Error(fetchError.message);
   if (!transactions || transactions.length !== 2) {
-    return { error: "Invalid transfer: expected exactly 2 transactions" };
+    throw new Error("Invalid transfer: expected exactly 2 transactions");
   }
 
   // Update each transaction with the correct amount sign based on category
@@ -156,5 +190,5 @@ export const updateTransfer = async (
   const results = await Promise.all(updates);
   const error = results.find((result) => result.error)?.error;
 
-  return { error: error?.message };
+  if (error) throw new Error(error.message);
 };

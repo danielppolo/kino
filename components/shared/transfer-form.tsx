@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { format } from "date-fns";
 
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
 import DaterPicker from "../ui/date-picker";
 import { AmountInput } from "./amount-input";
 import { DescriptionInput } from "./description-input";
@@ -52,13 +54,55 @@ const TransferForm = ({
 }: TransferFormProps) => {
   const [, walletMap] = useWallets();
   const [addAnother, setAddAnother] = useState(false);
-  const currency = walletMap.get(walletId)?.currency;
+  const currency = walletMap.get(walletId)?.currency ?? "USD";
   const isEdit = !!initialData;
+  const queryClient = useQueryClient();
+
+  const createMutation = useMutation({
+    mutationFn: async (values: TransferFormValues) => {
+      const { sender_wallet_id, receiver_wallet_id, ...transaction } = values;
+      const { error } = await createTransferTransaction(
+        { ...transaction },
+        sender_wallet_id,
+        receiver_wallet_id,
+      );
+      if (error) throw new Error(error);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+      onSuccess?.();
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (values: TransferFormValues) => {
+      if (!initialData?.transfer_id) throw new Error("No transfer ID provided");
+      await updateTransfer(initialData.transfer_id, {
+        description: values.description ?? undefined,
+        amount_cents: values.amount * 100,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+      onSuccess?.();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!initialData?.transfer_id) throw new Error("No transfer ID provided");
+      await deleteTransfer(initialData.transfer_id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+      onSuccess?.();
+    },
+  });
 
   const defaultValues: TransferFormValues = {
     type: initialData?.type ?? type,
     sender_wallet_id: initialData?.wallet_id ?? walletId,
-    receiver_wallet_id: initialData?.transfer_wallet_id ?? "",
+    receiver_wallet_id: initialData?.transfer_id ?? "",
     date: initialData?.date ?? date,
     currency: initialData?.currency ?? currency,
     description: initialData?.description ?? undefined,
@@ -67,40 +111,37 @@ const TransferForm = ({
 
   const handleSubmit = async (data: TransferFormValues) => {
     if (isEdit) {
-      if (!initialData?.transfer_id)
-        return { error: "No transfer ID provided" };
-      const { error } = await updateTransfer(initialData.transfer_id, {
-        description: data.description,
-        amount_cents: data.amount * 100,
-      });
-      if (error) return { error: error.message };
+      try {
+        await updateMutation.mutateAsync(data);
+        return { error: undefined };
+      } catch (error) {
+        return {
+          error: error instanceof Error ? error.message : "Unknown error",
+        };
+      }
+    }
+
+    try {
+      await createMutation.mutateAsync(data);
+
+      if (addAnother) {
+        // Reset all fields except date
+        const prevDate = data.date;
+        return {
+          error: undefined,
+          resetValues: {
+            ...defaultValues,
+            date: prevDate,
+          },
+        };
+      }
+
       return { error: undefined };
-    }
-
-    const { sender_wallet_id, receiver_wallet_id, ...transaction } = data;
-    const { error } = await createTransferTransaction(
-      { ...transaction },
-      sender_wallet_id,
-      receiver_wallet_id,
-    );
-
-    if (error) {
-      return { error };
-    }
-
-    if (addAnother) {
-      // Reset all fields except date
-      const prevDate = data.date;
+    } catch (error) {
       return {
-        error: undefined,
-        resetValues: {
-          ...defaultValues,
-          date: prevDate,
-        },
+        error: error instanceof Error ? error.message : "Unknown error",
       };
     }
-
-    return { error: undefined };
   };
 
   const convertToFormValues = (
@@ -108,7 +149,7 @@ const TransferForm = ({
   ): TransferFormValues => ({
     type: transaction.type,
     sender_wallet_id: transaction.wallet_id,
-    receiver_wallet_id: transaction.transfer_wallet_id ?? "",
+    receiver_wallet_id: transaction.transfer_id ?? "",
     date: transaction.date,
     currency: transaction.currency,
     description: transaction.description ?? undefined,
@@ -116,9 +157,14 @@ const TransferForm = ({
   });
 
   const handleDelete = async () => {
-    if (!initialData?.transfer_id) return { error: "No transfer ID provided" };
-    const { error } = await deleteTransfer(initialData.transfer_id);
-    return { error: error?.message };
+    try {
+      await deleteMutation.mutateAsync();
+      return { error: undefined };
+    } catch (error) {
+      return {
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
   };
 
   return (
@@ -133,6 +179,11 @@ const TransferForm = ({
       addAnother={addAnother}
       setAddAnother={setAddAnother}
       onDelete={handleDelete}
+      isLoading={
+        createMutation.isPending ||
+        updateMutation.isPending ||
+        deleteMutation.isPending
+      }
     >
       <FormField
         name="amount"

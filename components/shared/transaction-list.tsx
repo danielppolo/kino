@@ -86,7 +86,6 @@ export default function TransactionList({
     });
 
   const handleTransactionClick = useCallback((transaction: Transaction) => {
-    console.log(transaction);
     setSelectedTransaction(transaction);
     setIsDrawerOpen(true);
   }, []);
