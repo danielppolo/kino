@@ -1,3 +1,4 @@
 - [ ] Import tags from CSV
 - [ ] Track historic balances for charts. Income, outcome, cashflow
 - Remove shortcut listeners when form is open during edit
+- [ ] Fix update balance when deleting a transaction

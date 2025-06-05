@@ -4,12 +4,10 @@ require 'time'
 # Load configuration from options CSV
 def load_options_config
   options = []
-  CSV.foreach('./data/options.csv', headers: true) do |row|
+  CSV.foreach('./data/config/options.csv', headers: true) do |row|
     options << {
-      source: row['source'],
-      type: row['type'],
-      rename: row['rename'],
-      fallback_category: row['fallback_category']
+      origin: row['Origin'],
+      target: row['Target']
     }
   end
   options
@@ -20,14 +18,10 @@ def find_category(labels, category_name, options)
   category = nil
 
   labels.each do |label|
-    match = options.find { |opt| opt[:source] == label }
+    match = options.find { |opt| opt[:origin] == label }
 
     if match
-      if match[:type] == 'category'
-        category = match[:rename].nil? || match[:rename].empty? ? match[:source] : match[:rename]
-      elsif match[:type] == 'label'
-        category ||= match[:fallback_category]
-      end
+      category = match[:target]
     end
   end
 
@@ -53,6 +47,8 @@ def transform_transactions(file_path, options)
   transformed_data = []
 
   CSV.foreach(file_path, headers: true) do |row|
+    tags_in_note = row['Note']&.scan(/#\w+/)&.map { |tag| tag[1..] } || []
+
     # Parse and transform the columns according to the rules
     date = convert_to_cst(row['Date'])
     wallet = row['Wallet']
@@ -61,9 +57,8 @@ def transform_transactions(file_path, options)
     amount = row['Amount']
     currency = row['Currency']
     description = row['Note']
-    tags = row['Labels']
+    tags = (tags_in_note + (row['Labels']&.split(',')&.map(&:strip) || [])).uniq.map { |tag| tag.gsub(/(?<!^)(?=[A-Z])/, ' ').downcase }.join(',')
     labels = row['Labels']&.split(',')&.map(&:strip) || []
-
     # Find the correct category based on labels and configuration
     category = find_category(labels, category_name, options)
 
@@ -84,15 +79,27 @@ def transform_transactions(file_path, options)
   transformed_data
 end
 
-# Export the transformed data to CSV
+# Export the transformed data to CSV, splitting into multiple files if needed
 def export_to_csv(transformed_data, output_file_path)
-  CSV.open(output_file_path, 'wb') do |csv|
-    csv << %w[date wallet type category amount currency description label tags] # Header row
+  # Split data into chunks of 1000 rows
+  chunks = transformed_data.each_slice(250).to_a
+  
+  chunks.each_with_index do |chunk, index|
+    # Generate the output filename with index if there are multiple chunks
+    current_output_path = chunks.length > 1 ? 
+      output_file_path.gsub('.csv', "_#{index + 1}.csv") : 
+      output_file_path
 
-    transformed_data.each do |row|
-      csv << [row[:date], row[:wallet], row[:type], row[:category], row[:amount], row[:currency], row[:description],
-              row[:label], row[:tags]]
+    CSV.open(current_output_path, 'wb') do |csv|
+      csv << %w[date wallet type category amount currency description label tags] # Header row
+
+      chunk.each do |row|
+        csv << [row[:date], row[:wallet], row[:type], row[:category], row[:amount], row[:currency], row[:description],
+                row[:label], row[:tags]]
+      end
     end
+    
+    puts "Exported chunk #{index + 1} of #{chunks.length} to: #{current_output_path}"
   end
 end
 
@@ -113,10 +120,8 @@ def process_directory(input_dir, output_dir, options)
       # Prepare the output path
       output_file_path = File.join(output_dir, filename)
 
-      # Export the transformed data
+      # Export the transformed data (will be split if needed)
       export_to_csv(transformed_data, output_file_path)
-
-      puts "Exported transformed file: #{output_file_path}"
     end
   end
 end

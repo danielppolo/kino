@@ -47,7 +47,7 @@ export default function Page() {
 
   return (
     <div>
-      <Title>Wallet</Title>
+      <Title>{wallet?.name}</Title>
       <Subtitle>Currency</Subtitle>
       <p>{wallet?.currency}</p>
       <Subtitle>Balance</Subtitle>

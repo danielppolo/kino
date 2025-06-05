@@ -1,262 +1,92 @@
-"use client";
+import { useEffect, useState } from "react";
 
-import { useState } from "react";
-import { format } from "date-fns";
+import ExpenseIncomeForm from "./expense-income-form";
+import TransferForm from "./transfer-form";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-
-import CreatableMultiSelect from "../ui/creatable-multi-select";
-import DaterPicker from "../ui/date-picker";
-import { AmountInput } from "./amount-input";
-import { DescriptionInput } from "./description-input";
-import LabelCombobox from "./label-combobox";
-
-import { createTransaction } from "@/actions/create-transaction";
-import CategoryCombobox from "@/components/shared/category-combobox";
-import { EntityForm } from "@/components/shared/entity-form";
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormMessage,
-} from "@/components/ui/form";
-import { useWallets } from "@/contexts/settings-context";
-import useFilters from "@/hooks/use-filters";
-import { deleteTransaction } from "@/utils/supabase/mutations";
 import { Transaction } from "@/utils/supabase/types";
 
-interface TransactionPage {
-  data: Transaction[];
-  error: null;
-  count: number;
-}
-
-interface InfiniteTransactionData {
-  pages: TransactionPage[];
-  pageParams: number[];
-}
-
-interface TransactionFormProps {
-  walletId: string;
-  date?: string;
-  type: "income" | "expense" | "transfer";
-  onSuccess?: () => void;
-  initialData?: Transaction;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-}
-
-type TransactionFormValues = {
-  id?: string;
-  amount: number;
-  type: "income" | "expense" | "transfer";
-  date: string;
-  description?: string;
-  category_id: string;
-  label_id: string;
-  wallet_id: string;
-  currency: string;
-  tags?: string[];
-};
-
-const TransactionForm = ({
-  walletId,
-  date = format(Date.now(), "yyyy-MM-dd"),
+function TransactionForm({
   type,
-  onSuccess,
-  initialData,
   open,
-  onOpenChange,
-}: TransactionFormProps) => {
-  const [, walletMap] = useWallets();
-  const filters = useFilters();
-  const [addAnother, setAddAnother] = useState(false);
-  const queryClient = useQueryClient();
+  initialData,
+  walletId,
+  enableListeners,
+  setOpen,
+  onSuccess,
+}: {
+  type?: "transfer" | "income" | "expense";
+  open: boolean;
+  initialData?: Transaction;
+  walletId?: string;
+  enableListeners?: boolean;
+  setOpen: (open: boolean) => void;
+  onSuccess?: () => void;
+}) {
+  const [keyboardType, setKeyboardType] = useState<
+    "transfer" | "income" | "expense" | undefined
+  >(type);
 
-  const { mutate, isPending } = useMutation<
-    { data: Transaction[] },
-    Error,
-    TransactionFormValues
-  >({
-    mutationFn: createTransaction,
-    onSuccess: (response) => {
-      queryClient.invalidateQueries({
-        queryKey: ["transactions", filters],
-      });
-    },
-  });
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (!enableListeners) return;
+      if (e.key) {
+        switch (e.key.toLowerCase()) {
+          case "t":
+            e.preventDefault();
+            setOpen?.(true);
+            setKeyboardType("transfer");
+            break;
+          case "e":
+            e.preventDefault();
+            setOpen?.(true);
+            setKeyboardType("expense");
+            break;
+          case "i":
+            e.preventDefault();
+            setOpen?.(true);
+            setKeyboardType("income");
+            break;
+        }
+      }
+    };
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteTransaction,
-    onSuccess: () => {
-      // Remove the transaction from all transaction queries
-      queryClient.setQueriesData<InfiniteTransactionData>(
-        { queryKey: ["transactions"] },
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              data: page.data.filter((t) => t.id !== initialData?.id),
-            })),
-          };
-        },
-      );
-    },
-  });
-
-  const defaultValues: TransactionFormValues = {
-    type: type,
-    wallet_id: walletId,
-    date: date,
-    currency: walletMap.get(walletId)?.currency ?? "USD",
-    description: "",
-    category_id: "",
-    label_id: "",
-    amount: initialData ? Math.abs(initialData.amount_cents) / 100 : 0,
-    tags: initialData?.tags ?? [],
-  };
-
-  const handleSubmit = async (values: TransactionFormValues) => {
-    await mutate(values);
-
-    if (addAnother) {
-      // Reset all fields except date
-      const prevDate = values.date;
-      return {
-        error: undefined,
-        resetValues: {
-          ...defaultValues,
-          date: prevDate,
-        },
-      };
+    if (!open) {
+      document.addEventListener("keydown", down);
     }
+    return () => document.removeEventListener("keydown", down);
+  }, [setOpen, open, enableListeners]);
 
-    return { error: undefined };
-  };
-
-  const handleDelete = async () => {
-    if (!initialData?.id) return { error: "No transaction ID provided" };
-    try {
-      await deleteMutation.mutateAsync(initialData.id);
-      return { error: undefined };
-    } catch (error) {
-      return {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to delete transaction",
-      };
+  const handleOpenChange = (v: boolean) => {
+    if (!v) {
+      setKeyboardType(undefined);
     }
+    setOpen?.(v);
   };
 
-  const convertToFormValues = (
-    transaction: Transaction,
-  ): TransactionFormValues => ({
-    id: transaction.id,
-    amount: Math.abs(transaction.amount_cents) / 100,
-    type: transaction.type,
-    date: transaction.date,
-    description: transaction.description ?? undefined,
-    category_id: transaction.category_id ?? "",
-    label_id: transaction.label_id ?? "",
-    wallet_id: transaction.wallet_id,
-    currency: transaction.currency,
-    tags: transaction.tags ?? undefined,
-  });
+  if (!walletId) return null;
+
+  const calcType = keyboardType ?? type;
 
   return (
-    <EntityForm
-      title={type}
-      entity={initialData ? convertToFormValues(initialData) : undefined}
-      open={open}
-      onOpenChange={onOpenChange}
-      onSuccess={onSuccess}
-      defaultValues={defaultValues}
-      onSubmit={handleSubmit}
-      onDelete={handleDelete}
-      addAnother={addAnother}
-      setAddAnother={setAddAnother}
-      isLoading={isPending || deleteMutation.isPending}
-    >
-      <FormField
-        name="amount"
-        render={({ field }) => (
-          <FormItem>
-            <FormControl>
-              <AmountInput {...field} autoFocus />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
+    <>
+      <TransferForm
+        open={open && calcType === "transfer"}
+        onOpenChange={handleOpenChange}
+        type="transfer"
+        walletId={walletId}
+        onSuccess={onSuccess}
+        initialData={initialData}
       />
-
-      <div className="grid grid-cols-2 gap-4">
-        <FormField
-          name="category_id"
-          rules={{ required: "Category is required" }}
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <CategoryCombobox {...field} type={type} className="w-full" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <DescriptionInput {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <FormField
-          name="date"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormControl>
-                <DaterPicker {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          name="label_id"
-          rules={{ required: "Label is required" }}
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <LabelCombobox {...field} className="w-full" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-
-      <FormField
-        name="tags"
-        render={({ field }) => (
-          <FormItem>
-            <FormControl>
-              <CreatableMultiSelect {...field} className="w-full" />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
+      <ExpenseIncomeForm
+        open={open && (calcType === "income" || calcType === "expense")}
+        onOpenChange={handleOpenChange}
+        type={calcType}
+        walletId={walletId}
+        onSuccess={onSuccess}
+        initialData={initialData}
       />
-    </EntityForm>
+    </>
   );
-};
+}
 
 export default TransactionForm;
