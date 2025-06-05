@@ -10,21 +10,11 @@ import TransactionForm from "./transaction-form";
 import TransactionRow, { TransactionRowLoading } from "./transaction-row";
 import TransferForm from "./transfer-form";
 
+import useFilters from "@/hooks/use-filters";
 import { PAGE_SIZE } from "@/utils/constants";
 import { createClient } from "@/utils/supabase/client";
 import { listTransactions } from "@/utils/supabase/queries";
 import { Transaction } from "@/utils/supabase/types";
-
-interface TransactionListProps {
-  initialTransactions: Transaction[];
-  filters?: {
-    label_id?: string;
-    category_id?: string;
-    to?: string;
-    from?: string;
-    wallet_id?: string;
-  };
-}
 
 interface TransactionPage {
   data: Transaction[];
@@ -40,14 +30,11 @@ interface InfiniteTransactionData {
 const dayHeaderHeight = 32;
 const transactionRowHeight = 40;
 
-export default function TransactionList({
-  initialTransactions,
-  filters,
-}: TransactionListProps) {
+export default function TransactionList() {
+  const filters = useFilters();
   const [selectedTransaction, setSelectedTransaction] =
     useState<Transaction | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
     useInfiniteQuery<TransactionPage, Error, InfiniteTransactionData>({
       queryKey: ["transactions", filters],
@@ -66,16 +53,6 @@ export default function TransactionList({
           error: null,
           count: result.count || 0,
         };
-      },
-      initialData: {
-        pages: [
-          {
-            data: initialTransactions,
-            error: null,
-            count: initialTransactions.length,
-          },
-        ],
-        pageParams: [0],
       },
       initialPageParam: 0,
       getNextPageParam: (lastPage, allPages) => {
@@ -151,7 +128,7 @@ export default function TransactionList({
   // Re-render the virtualized list when transactions change
   useEffect(() => {
     rowVirtualizer.measure();
-  }, [data?.pages, rowVirtualizer]);
+  }, [rowVirtualizer]);
 
   if (status === "error") {
     return <div>Error loading transactions</div>;
@@ -174,7 +151,7 @@ export default function TransactionList({
               groupedTransactions[virtualRow.index];
             return (
               <div
-                key={date}
+                key={`${date}-${dateTransactions.map((t) => t.id).join(",")}`}
                 style={{
                   position: "absolute",
                   top: 0,
