@@ -49,7 +49,7 @@ export default function CategorySection({ type, title }: CategoriesProps) {
   };
 
   return (
-    <div>
+    <div className="my-8">
       <div className="flex items-center justify-between gap-2">
         <Subtitle>{title}</Subtitle>
         <Button size="sm" variant="outline" onClick={handleAdd}>

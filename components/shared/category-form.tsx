@@ -1,12 +1,12 @@
 "use client";
 
-import { Icon } from "../ui/icon";
+import { toast } from "sonner";
+
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
 import { Input } from "../ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 
 import { EntityForm } from "@/components/shared/entity-form";
-import { Button } from "@/components/ui/button";
 import CreatableMultiSelect from "@/components/ui/creatable-multi-select";
 import {
   FormControl,
@@ -47,20 +47,101 @@ const CategoryForm = ({
     keywords: [],
   };
 
-  const handleSubmit = async (values: CategoryFormValues) => {
-    let error;
-    if (category) {
-      ({ error } = await updateCategory({ ...values, id: category.id }));
-    } else {
-      ({ error } = await createCategory(values));
-    }
-    return { error: error?.message };
+  const queryClient = useQueryClient();
+
+  const createMutation = useMutation({
+    mutationFn: async (values: CategoryFormValues) => {
+      return await createCategory(values);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      onSuccess?.();
+    },
+    onError(error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to create category");
+      }
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (values: CategoryFormValues) => {
+      return await updateCategory({ ...values, id: category?.id });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      onSuccess?.();
+    },
+    onError(error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to update category");
+      }
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!category?.id) throw new Error("No category ID provided");
+      return await deleteCategory(category.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+      onSuccess?.();
+    },
+    onError(error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to delete category");
+      }
+    },
+  });
+
+  const handleSubmit = (values: CategoryFormValues) => {
+    return new Promise<{ error?: string }>((resolve) => {
+      if (category) {
+        updateMutation.mutate(values, {
+          onSuccess: () => resolve({}),
+          onError: (error: unknown) => {
+            if (error instanceof Error) {
+              resolve({ error: error.message });
+            } else {
+              resolve({ error: "Failed to update category" });
+            }
+          },
+        });
+      } else {
+        createMutation.mutate(values, {
+          onSuccess: () => resolve({}),
+          onError: (error: unknown) => {
+            if (error instanceof Error) {
+              resolve({ error: error.message });
+            } else {
+              resolve({ error: "Failed to create category" });
+            }
+          },
+        });
+      }
+    });
   };
 
-  const handleDelete = async () => {
-    if (!category?.id) return { error: "No category ID provided" };
-    const { error } = await deleteCategory(category.id);
-    return { error: error?.message };
+  const handleDelete = () => {
+    return new Promise<{ error?: string }>((resolve) => {
+      deleteMutation.mutate(undefined, {
+        onSuccess: () => resolve({}),
+        onError: (error: unknown) => {
+          if (error instanceof Error) {
+            resolve({ error: error.message });
+          } else {
+            resolve({ error: "Failed to delete category" });
+          }
+        },
+      });
+    });
   };
 
   return (
@@ -75,7 +156,7 @@ const CategoryForm = ({
       onDelete={handleDelete}
     >
       <div className="flex gap-4">
-        <div className="flex-1">
+        {/* <div className="flex-1">
           <FormField
             name="icon"
             render={({ field }) => (
@@ -107,7 +188,7 @@ const CategoryForm = ({
               </FormItem>
             )}
           />
-        </div>
+        </div> */}
         <div className="flex-1">
           <FormField
             name="name"

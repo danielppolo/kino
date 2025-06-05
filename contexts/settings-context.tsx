@@ -2,7 +2,16 @@
 
 import React, { createContext, ReactNode, useContext } from "react";
 
+import { useSuspenseQuery } from "@tanstack/react-query";
+
 import { TRANSFER_CATEGORIES } from "@/utils/constants";
+import { fetchAllConversions } from "@/utils/fetch-conversions";
+import { createClient } from "@/utils/supabase/client";
+import {
+  listCategories,
+  listLabels,
+  listWallets,
+} from "@/utils/supabase/queries";
 import { Category, Label, Wallet } from "@/utils/supabase/types";
 
 export interface CurrencyConversion {
@@ -25,22 +34,73 @@ const SettingsContext = createContext<SettingsContextType | undefined>(
 
 interface SettingsProviderProps {
   children: ReactNode;
-  categories: Category[];
-  labels: Label[];
-  wallets: Wallet[];
-  conversionRates: Record<string, CurrencyConversion>;
-  baseCurrency: string;
 }
 
 export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   children,
-  categories,
-  labels,
-  wallets,
-  conversionRates,
-  baseCurrency,
 }) => {
-  const value = { categories, labels, wallets, conversionRates, baseCurrency };
+  const { data: categories = [] } = useSuspenseQuery<Category[]>({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const supabase = await createClient();
+      const result = await listCategories(supabase);
+      if (result.error) throw result.error;
+      return result.data || [];
+    },
+  });
+
+  const { data: labels = [] } = useSuspenseQuery<Label[]>({
+    queryKey: ["labels"],
+    queryFn: async () => {
+      const supabase = await createClient();
+      const result = await listLabels(supabase);
+      if (result.error) throw result.error;
+      return result.data || [];
+    },
+  });
+
+  const { data: wallets = [] } = useSuspenseQuery<Wallet[]>({
+    queryKey: ["wallets"],
+    queryFn: async () => {
+      const supabase = await createClient();
+      const result = await listWallets(supabase);
+      if (result.error) throw result.error;
+      return result.data || [];
+    },
+  });
+
+  const { data: preferences } = useSuspenseQuery<{ base_currency: string }>({
+    queryKey: ["preferences"],
+    queryFn: async () => {
+      const supabase = await createClient();
+      const result = await supabase
+        .from("user_preferences")
+        .select("*")
+        .single();
+      if (result.error) throw result.error;
+      return result.data;
+    },
+  });
+
+  const baseCurrency = preferences?.base_currency || "USD";
+
+  // Get unique currencies from wallets
+  const currencies = Array.from(new Set(wallets.map((w) => w.currency)));
+
+  const { data: conversionRates = {} } = useSuspenseQuery<
+    Record<string, CurrencyConversion>
+  >({
+    queryKey: ["conversionRates", currencies, baseCurrency],
+    queryFn: () => fetchAllConversions(currencies, baseCurrency),
+  });
+
+  const value: SettingsContextType = {
+    categories,
+    labels,
+    wallets,
+    conversionRates,
+    baseCurrency,
+  };
 
   return (
     <SettingsContext.Provider value={value}>

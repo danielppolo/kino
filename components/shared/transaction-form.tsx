@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { format } from "date-fns";
 
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
 import CreatableMultiSelect from "../ui/creatable-multi-select";
 import DaterPicker from "../ui/date-picker";
 import { AmountInput } from "./amount-input";
@@ -21,6 +23,17 @@ import {
 import { useWallets } from "@/contexts/settings-context";
 import { deleteTransaction } from "@/utils/supabase/mutations";
 import { Transaction } from "@/utils/supabase/types";
+
+interface TransactionPage {
+  data: Transaction[];
+  error: null;
+  count: number;
+}
+
+interface InfiniteTransactionData {
+  pages: TransactionPage[];
+  pageParams: number[];
+}
 
 interface TransactionFormProps {
   walletId: string;
@@ -56,6 +69,72 @@ const TransactionForm = ({
 }: TransactionFormProps) => {
   const [, walletMap] = useWallets();
   const [addAnother, setAddAnother] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { mutate, isPending } = useMutation<
+    { data: Transaction[] },
+    Error,
+    TransactionFormValues
+  >({
+    mutationFn: createTransaction,
+    onSuccess: (response) => {
+      // Update the cache for all transaction queries
+      queryClient.setQueriesData<InfiniteTransactionData>(
+        { queryKey: ["transactions"] },
+        (old) => {
+          // TODO: Handle update
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => {
+              // Find the correct position to insert the new transaction
+              const insertIndex = page.data.findIndex(
+                (t) => t.date < response.data[0].date,
+              );
+              const newData = [...page.data];
+              if (insertIndex === -1) {
+                // If no earlier date found, append to the end
+                newData.push(response.data[0]);
+              } else {
+                // Insert at the correct position
+                newData.splice(insertIndex, 0, response.data[0]);
+              }
+              return {
+                ...page,
+                data: newData,
+              };
+            }),
+          };
+        },
+      );
+      if (onSuccess) {
+        onSuccess();
+      }
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteTransaction,
+    onSuccess: () => {
+      // Remove the transaction from all transaction queries
+      queryClient.setQueriesData<InfiniteTransactionData>(
+        { queryKey: ["transactions"] },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              data: page.data.filter((t) => t.id !== initialData?.id),
+            })),
+          };
+        },
+      );
+      if (onSuccess) {
+        onSuccess();
+      }
+    },
+  });
 
   const defaultValues: TransactionFormValues = {
     type: type,
@@ -70,10 +149,7 @@ const TransactionForm = ({
   };
 
   const handleSubmit = async (values: TransactionFormValues) => {
-    const { error } = await createTransaction(values, walletId);
-    if (error) {
-      return { error };
-    }
+    await mutate(values);
 
     if (addAnother) {
       // Reset all fields except date
@@ -92,8 +168,17 @@ const TransactionForm = ({
 
   const handleDelete = async () => {
     if (!initialData?.id) return { error: "No transaction ID provided" };
-    const { error } = await deleteTransaction(initialData.id);
-    return { error: error?.message };
+    try {
+      await deleteMutation.mutateAsync(initialData.id);
+      return { error: undefined };
+    } catch (error) {
+      return {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to delete transaction",
+      };
+    }
   };
 
   const convertToFormValues = (
@@ -123,6 +208,7 @@ const TransactionForm = ({
       onDelete={handleDelete}
       addAnother={addAnother}
       setAddAnother={setAddAnother}
+      isLoading={isPending || deleteMutation.isPending}
     >
       <FormField
         name="amount"
