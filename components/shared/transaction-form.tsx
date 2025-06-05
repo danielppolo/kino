@@ -80,46 +80,9 @@ const TransactionForm = ({
   >({
     mutationFn: createTransaction,
     onSuccess: (response) => {
-      // Update the cache for all transaction queries
-      queryClient.setQueriesData<InfiniteTransactionData>(
-        { queryKey: ["transactions"] },
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page) => {
-              // Find the correct position to insert the new transaction
-              const insertIndex = page.data.findIndex(
-                (t) => t.date < response.data[0].date,
-              );
-              const newData = [...page.data];
-
-              // Check if we're updating an existing transaction
-              const existingIndex = newData.findIndex(
-                (t) => t.id === response.data[0].id,
-              );
-              if (existingIndex !== -1) {
-                // Replace the existing transaction
-                newData[existingIndex] = response.data[0];
-              } else {
-                // For new transactions, insert at the correct position
-                if (insertIndex === -1) {
-                  // If no earlier date found, append to the end
-                  newData.push(response.data[0]);
-                } else {
-                  // Insert at the correct position
-                  newData.splice(insertIndex, 0, response.data[0]);
-                }
-              }
-
-              return {
-                ...page,
-                data: newData,
-              };
-            }),
-          };
-        },
-      );
+      queryClient.invalidateQueries({
+        queryKey: ["transactions", filters],
+      });
     },
   });
 
