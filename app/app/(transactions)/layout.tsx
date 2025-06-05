@@ -4,8 +4,10 @@ import ChartToggle from "./(components)/chart-toggle";
 
 import { AddTransactionDropdown } from "@/components/shared/add-transaction-dropdown";
 import { FiltersDropdown } from "@/components/shared/filters-dropdown";
+import TransactionForm from "@/components/shared/transaction-form";
 import { TransactionsSidebar } from "@/components/shared/transactions-sidebar";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { TransactionFormProvider } from "@/contexts/transaction-form-context";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -13,7 +15,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = async ({ children }) => {
   return (
-    <>
+    <TransactionFormProvider>
       <TransactionsSidebar />
       <SidebarInset>
         <main className="flex-1">
@@ -30,7 +32,8 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
           {children}
         </main>
       </SidebarInset>
-    </>
+      <TransactionForm />
+    </TransactionFormProvider>
   );
 };
 
