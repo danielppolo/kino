@@ -33,10 +33,7 @@ export const createTransaction = async (transaction: Transaction) => {
       id,
       ...rest,
       type,
-      amount_cents:
-        type === "expense"
-          ? -Math.round(amount) * 100
-          : Math.round(amount) * 100,
+      amount_cents: type === "expense" ? -amount * 100 : amount * 100,
     })
     .select();
 

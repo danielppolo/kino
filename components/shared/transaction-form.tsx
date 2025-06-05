@@ -21,6 +21,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useWallets } from "@/contexts/settings-context";
+import useFilters from "@/hooks/use-filters";
 import { deleteTransaction } from "@/utils/supabase/mutations";
 import { Transaction } from "@/utils/supabase/types";
 
@@ -68,6 +69,7 @@ const TransactionForm = ({
   onOpenChange,
 }: TransactionFormProps) => {
   const [, walletMap] = useWallets();
+  const filters = useFilters();
   const [addAnother, setAddAnother] = useState(false);
   const queryClient = useQueryClient();
 
@@ -82,7 +84,6 @@ const TransactionForm = ({
       queryClient.setQueriesData<InfiniteTransactionData>(
         { queryKey: ["transactions"] },
         (old) => {
-          // TODO: Handle update
           if (!old) return old;
           return {
             ...old,
@@ -92,13 +93,25 @@ const TransactionForm = ({
                 (t) => t.date < response.data[0].date,
               );
               const newData = [...page.data];
-              if (insertIndex === -1) {
-                // If no earlier date found, append to the end
-                newData.push(response.data[0]);
+
+              // Check if we're updating an existing transaction
+              const existingIndex = newData.findIndex(
+                (t) => t.id === response.data[0].id,
+              );
+              if (existingIndex !== -1) {
+                // Replace the existing transaction
+                newData[existingIndex] = response.data[0];
               } else {
-                // Insert at the correct position
-                newData.splice(insertIndex, 0, response.data[0]);
+                // For new transactions, insert at the correct position
+                if (insertIndex === -1) {
+                  // If no earlier date found, append to the end
+                  newData.push(response.data[0]);
+                } else {
+                  // Insert at the correct position
+                  newData.splice(insertIndex, 0, response.data[0]);
+                }
               }
+
               return {
                 ...page,
                 data: newData,
@@ -192,7 +205,7 @@ const TransactionForm = ({
 
   return (
     <EntityForm
-      title="Transaction"
+      title={type}
       entity={initialData ? convertToFormValues(initialData) : undefined}
       open={open}
       onOpenChange={onOpenChange}

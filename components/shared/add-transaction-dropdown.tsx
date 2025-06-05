@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { useParams } from "next/navigation";
 
@@ -8,6 +8,7 @@ import TransactionForm from "./transaction-form";
 import TransferForm from "./transfer-form";
 
 import { Button } from "@/components/ui/button";
+import { CommandShortcut } from "@/components/ui/command";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,17 +27,46 @@ export function AddTransactionDropdown() {
   );
   const { walletId } = useParams<{ walletId: string }>();
 
-  if (!walletId) return null;
+  const handleTransactionSelect = useCallback(
+    (type: "income" | "expense" | "transfer") => {
+      if (type === "transfer") {
+        setFormType("transfer");
+      } else {
+        setFormType("transaction");
+        setTransactionType(type);
+      }
+      setOpen(true);
+    },
+    [],
+  );
 
-  const handleTransactionSelect = (type: "income" | "expense" | "transfer") => {
-    if (type === "transfer") {
-      setFormType("transfer");
-    } else {
-      setFormType("transaction");
-      setTransactionType(type);
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key) {
+        switch (e.key.toLowerCase()) {
+          case "e":
+            e.preventDefault();
+            handleTransactionSelect("expense");
+            break;
+          case "i":
+            e.preventDefault();
+            handleTransactionSelect("income");
+            break;
+          case "t":
+            e.preventDefault();
+            handleTransactionSelect("transfer");
+            break;
+        }
+      }
+    };
+
+    if (!open) {
+      document.addEventListener("keydown", down);
     }
-    setOpen(true);
-  };
+    return () => document.removeEventListener("keydown", down);
+  }, [handleTransactionSelect, open]);
+
+  if (!walletId) return null;
 
   return (
     <>
@@ -49,17 +79,25 @@ export function AddTransactionDropdown() {
         <DropdownMenuContent align="end">
           <DropdownMenuGroup>
             <DropdownMenuItem
+              className="justify-between"
               onClick={() => handleTransactionSelect("expense")}
             >
               Expense
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleTransactionSelect("income")}>
-              Income
+              <CommandShortcut>E</CommandShortcut>
             </DropdownMenuItem>
             <DropdownMenuItem
+              className="justify-between"
+              onClick={() => handleTransactionSelect("income")}
+            >
+              Income
+              <CommandShortcut>I</CommandShortcut>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="justify-between"
               onClick={() => handleTransactionSelect("transfer")}
             >
               Transfer
+              <CommandShortcut>T</CommandShortcut>
             </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>
