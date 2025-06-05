@@ -122,7 +122,7 @@ export default function TransactionList() {
     fetchNextPage,
     groupedTransactions.length,
     isFetchingNextPage,
-    rowVirtualizer.getVirtualItems(),
+    rowVirtualizer,
   ]);
 
   // Re-render the virtualized list when transactions change
@@ -164,7 +164,7 @@ export default function TransactionList() {
                 <DayHeader date={date} />
                 {dateTransactions.map((transaction) => (
                   <TransactionRow
-                    key={transaction.id}
+                    key={`${transaction.id}-${transaction.amount_cents}-${transaction.description ?? ""}-${transaction.tags?.join(",") ?? ""}-${transaction.category_id}-${transaction.label_id}`}
                     transaction={transaction}
                     onClick={() => handleTransactionClick(transaction)}
                   />
