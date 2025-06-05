@@ -1,14 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 import DayHeader, { DayHeaderLoading } from "./day-header";
-import TransactionForm from "./transaction-form";
 import TransactionRow, { TransactionRowLoading } from "./transaction-row";
 
+import { useTransactionForm } from "@/contexts/transaction-form-context";
 import useFilters from "@/hooks/use-filters";
 import { PAGE_SIZE } from "@/utils/constants";
 import { createClient } from "@/utils/supabase/client";
@@ -31,9 +31,7 @@ const transactionRowHeight = 40;
 
 export default function TransactionList() {
   const filters = useFilters();
-  const [selectedTransaction, setSelectedTransaction] =
-    useState<Transaction | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const { openForm } = useTransactionForm();
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
     useInfiniteQuery<TransactionPage, Error, InfiniteTransactionData>({
       queryKey: ["transactions", filters],
@@ -48,7 +46,16 @@ export default function TransactionList() {
           throw result.error;
         }
         return {
-          data: result.data || [],
+          data:
+            result.data?.map((t) => ({
+              ...t,
+              amount_cents: t.amount_cents ?? 0,
+              currency: t.currency ?? "USD",
+              date: t.date ?? new Date().toISOString().split("T")[0],
+              id: t.id ?? "",
+              wallet_id: t.wallet_id ?? "",
+              type: t.type ?? "expense",
+            })) ?? [],
           error: null,
           count: result.count || 0,
         };
@@ -61,15 +68,16 @@ export default function TransactionList() {
       },
     });
 
-  const handleTransactionClick = useCallback((transaction: Transaction) => {
-    setSelectedTransaction(transaction);
-    setIsDrawerOpen(true);
-  }, []);
-
-  const handleDrawerClose = useCallback(() => {
-    setIsDrawerOpen(false);
-    setSelectedTransaction(null);
-  }, []);
+  const handleTransactionClick = useCallback(
+    (transaction: Transaction) => {
+      openForm({
+        type: transaction.type,
+        walletId: transaction.wallet_id,
+        initialData: transaction,
+      });
+    },
+    [openForm],
+  );
 
   // Group transactions by date
   const groupedTransactions = useMemo(() => {
@@ -178,14 +186,6 @@ export default function TransactionList() {
           <TransactionRowLoading />
         </div>
       )}
-      <TransactionForm
-        type={selectedTransaction?.type}
-        open={isDrawerOpen}
-        setOpen={setIsDrawerOpen}
-        walletId={selectedTransaction?.wallet_id}
-        initialData={selectedTransaction}
-        onSuccess={handleDrawerClose}
-      />
     </div>
   );
 }
