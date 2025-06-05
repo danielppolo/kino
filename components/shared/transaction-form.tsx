@@ -107,9 +107,6 @@ const TransactionForm = ({
           };
         },
       );
-      if (onSuccess) {
-        onSuccess();
-      }
     },
   });
 
@@ -130,9 +127,6 @@ const TransactionForm = ({
           };
         },
       );
-      if (onSuccess) {
-        onSuccess();
-      }
     },
   });
 

@@ -58,6 +58,17 @@ export function EntityForm<T extends FieldValues>({
       return toast.error(error);
     }
     toast.success(isEdit ? "Updated successfully!" : "Created successfully!");
+
+    if (addAnother) {
+      // Reset form but keep the date field if it exists
+      const dateValue = values.date;
+      form.reset({
+        ...defaultValues,
+        date: dateValue,
+      });
+      return;
+    }
+
     onSuccess?.();
   };
 
@@ -84,8 +95,8 @@ export function EntityForm<T extends FieldValues>({
           className="flex flex-col gap-4"
         >
           {children}
-          <div className="flex justify-end gap-2">
-            {!!isEdit && addAnother && (
+          <div className="flex justify-end gap-4">
+            {!isEdit && (
               <div className="flex items-center gap-2">
                 <Switch
                   id="add-another"

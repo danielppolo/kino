@@ -1,4 +1,6 @@
-import { createClient } from "@/utils/supabase/client";
+"use server";
+
+import { createClient } from "@/utils/supabase/server";
 
 export interface CurrencyConversion {
   rate: number;
