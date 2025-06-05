@@ -104,6 +104,10 @@ const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
       category: row.category,
       label: row.label,
       date: new Date(row.date).toISOString().split("T")[0], // Format YYYY-MM-DD
+      tags: row.tags
+        ?.split(",")
+        .filter((tag) => tag.trim() !== "")
+        .map((tag) => tag.trim()),
     }));
 
     const { error } = await importTransactions({

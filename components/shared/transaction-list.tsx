@@ -8,7 +8,6 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import DayHeader, { DayHeaderLoading } from "./day-header";
 import TransactionForm from "./transaction-form";
 import TransactionRow, { TransactionRowLoading } from "./transaction-row";
-import TransferForm from "./transfer-form";
 
 import useFilters from "@/hooks/use-filters";
 import { PAGE_SIZE } from "@/utils/constants";
@@ -179,26 +178,14 @@ export default function TransactionList() {
           <TransactionRowLoading />
         </div>
       )}
-      {selectedTransaction?.type === "transfer" && (
-        <TransferForm
-          open={isDrawerOpen}
-          onOpenChange={setIsDrawerOpen}
-          type="transfer"
-          walletId={selectedTransaction.wallet_id}
-          onSuccess={handleDrawerClose}
-          initialData={selectedTransaction}
-        />
-      )}
-      {selectedTransaction && selectedTransaction?.type !== "transfer" && (
-        <TransactionForm
-          open={isDrawerOpen}
-          onOpenChange={setIsDrawerOpen}
-          type={selectedTransaction.type}
-          walletId={selectedTransaction.wallet_id}
-          onSuccess={handleDrawerClose}
-          initialData={selectedTransaction}
-        />
-      )}
+      <TransactionForm
+        type={selectedTransaction?.type}
+        open={isDrawerOpen}
+        setOpen={setIsDrawerOpen}
+        walletId={selectedTransaction?.wallet_id}
+        initialData={selectedTransaction}
+        onSuccess={handleDrawerClose}
+      />
     </div>
   );
 }

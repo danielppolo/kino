@@ -1,11 +1,9 @@
-"use server";
-
-import { randomUUID } from "crypto";
+import { v4 as randomUUID } from "uuid";
 
 import { SupabaseClient } from "@supabase/supabase-js";
 
 import { COLORS, ICONS } from "@/utils/constants";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/utils/supabase/client";
 
 interface ImportTransaction {
   date: string;
