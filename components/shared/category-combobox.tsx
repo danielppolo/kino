@@ -1,9 +1,13 @@
 import React from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import Category from "./category";
 
 import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 import { useCategories } from "@/contexts/settings-context";
+import { ICONS } from "@/utils/constants";
+import { createCategory } from "@/utils/supabase/mutations";
+import { Database } from "@/utils/supabase/database.types";
 import { Category as CategoryType } from "@/utils/supabase/types";
 
 interface CategoryComboboxProps {
@@ -52,6 +56,23 @@ const CategoryCombobox = ({
     return map;
   }, [sortedCategories]);
 
+  const queryClient = useQueryClient();
+  const createMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const values: Database["public"]["Tables"]["categories"]["Insert"] = {
+        name,
+        type: type || "expense",
+        icon: ICONS[Math.floor(Math.random() * ICONS.length)],
+        keywords: [],
+      };
+      const result = await createCategory(values);
+      return result[0];
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+    },
+  });
+
   return (
     <Combobox
       variant={variant}
@@ -84,6 +105,19 @@ const CategoryCombobox = ({
           );
         }
         return option.label;
+      }}
+      onCreateOption={async (name) => {
+        const newCat = await createMutation.mutateAsync(name);
+        if (newCat) {
+          onChange(newCat.id);
+        }
+        return newCat
+          ? {
+              value: newCat.id,
+              label: newCat.name,
+              keywords: newCat.keywords || [newCat.name.toLowerCase()],
+            }
+          : undefined;
       }}
     />
   );
