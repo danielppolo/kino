@@ -32,41 +32,46 @@ const transactionRowHeight = 40;
 export default function TransactionList() {
   const filters = useFilters();
   const { openForm } = useTransactionForm();
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
-    useInfiniteQuery<TransactionPage, Error, InfiniteTransactionData>({
-      queryKey: ["transactions", filters],
-      queryFn: async ({ pageParam = 0 }) => {
-        const supabase = createClient();
-        const result = await listTransactions(supabase, {
-          ...filters,
-          page: pageParam as number,
-          pageSize: PAGE_SIZE,
-        });
-        if (result.error) {
-          throw result.error;
-        }
-        return {
-          data:
-            result.data?.map((t) => ({
-              ...t,
-              amount_cents: t.amount_cents ?? 0,
-              currency: t.currency ?? "USD",
-              date: t.date ?? new Date().toISOString().split("T")[0],
-              id: t.id ?? "",
-              wallet_id: t.wallet_id ?? "",
-              type: t.type ?? "expense",
-            })) ?? [],
-          error: null,
-          count: result.count || 0,
-        };
-      },
-      initialPageParam: 0,
-      getNextPageParam: (lastPage, allPages) => {
-        if (!lastPage.data || lastPage.data.length < PAGE_SIZE)
-          return undefined;
-        return allPages.length;
-      },
-    });
+  const {
+    data,
+    dataUpdatedAt,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    status,
+  } = useInfiniteQuery<TransactionPage, Error, InfiniteTransactionData>({
+    queryKey: ["transactions", filters],
+    queryFn: async ({ pageParam = 0 }) => {
+      const supabase = createClient();
+      const result = await listTransactions(supabase, {
+        ...filters,
+        page: pageParam as number,
+        pageSize: PAGE_SIZE,
+      });
+      if (result.error) {
+        throw result.error;
+      }
+      return {
+        data:
+          result.data?.map((t) => ({
+            ...t,
+            amount_cents: t.amount_cents ?? 0,
+            currency: t.currency ?? "USD",
+            date: t.date ?? new Date().toISOString().split("T")[0],
+            id: t.id ?? "",
+            wallet_id: t.wallet_id ?? "",
+            type: t.type ?? "expense",
+          })) ?? [],
+        error: null,
+        count: result.count || 0,
+      };
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      if (!lastPage.data || lastPage.data.length < PAGE_SIZE) return undefined;
+      return allPages.length;
+    },
+  });
 
   const handleTransactionClick = useCallback(
     (transaction: Transaction) => {
@@ -135,7 +140,7 @@ export default function TransactionList() {
   // Re-render the virtualized list when transactions change
   useEffect(() => {
     rowVirtualizer.measure();
-  }, [rowVirtualizer]);
+  }, [rowVirtualizer, dataUpdatedAt]);
 
   if (status === "error") {
     return <div>Error loading transactions</div>;
