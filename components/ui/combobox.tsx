@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check } from "lucide-react";
+import { Check, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +36,7 @@ interface ComboboxProps {
   className?: string;
   renderValue?: (option: ComboboxOption | undefined) => React.ReactNode;
   renderOption?: (option: ComboboxOption) => React.ReactNode;
+  onCreateOption?: (label: string) => Promise<ComboboxOption | void>;
 }
 
 export function Combobox({
@@ -49,8 +50,10 @@ export function Combobox({
   className,
   renderValue,
   renderOption,
+  onCreateOption,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
+  const [query, setQuery] = React.useState("");
   const selectedOption = options.find((option) => option.value === value);
 
   return (
@@ -73,10 +76,35 @@ export function Combobox({
       </PopoverTrigger>
       <PopoverContent className="w-[200px] p-0">
         <Command>
-          <CommandInput placeholder={searchPlaceholder} />
+          <CommandInput
+            placeholder={searchPlaceholder}
+            value={query}
+            onValueChange={setQuery}
+          />
           <CommandList>
             <CommandEmpty>No option found.</CommandEmpty>
             <CommandGroup>
+              {onCreateOption &&
+                query.trim() &&
+                !options.some(
+                  (o) => o.label.toLowerCase() === query.trim().toLowerCase(),
+                ) && (
+                  <CommandItem
+                    value="__create"
+                    className="cursor-pointer text-primary"
+                    onSelect={async () => {
+                      const newOption = await onCreateOption(query.trim());
+                      if (newOption) {
+                        onChange(newOption.value);
+                      }
+                      setOpen(false);
+                      setQuery("");
+                    }}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create "{query.trim()}"
+                  </CommandItem>
+                )}
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
