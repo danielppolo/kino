@@ -134,7 +134,7 @@ export default function TransactionList() {
     fetchNextPage,
     groupedTransactions.length,
     isFetchingNextPage,
-    rowVirtualizer,
+    rowVirtualizer.getVirtualItems(),
   ]);
 
   // Re-render the virtualized list when transactions change
