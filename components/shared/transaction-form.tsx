@@ -62,6 +62,10 @@ function TransactionForm() {
         type="transfer"
         walletId={walletId}
         initialData={initialData}
+        onSuccess={() => {
+          setKeyboardType(undefined);
+          setOpen(false);
+        }}
       />
       <ExpenseIncomeForm
         open={open && (formType === "income" || formType === "expense")}
@@ -69,6 +73,10 @@ function TransactionForm() {
         type={formType}
         walletId={walletId}
         initialData={initialData}
+        onSuccess={() => {
+          setKeyboardType(undefined);
+          setOpen(false);
+        }}
       />
     </>
   );
