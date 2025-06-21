@@ -23,6 +23,8 @@ function useFilters(): Filters {
       search: searchParams.get("search") || "",
       sort: searchParams.get("sort") || "",
       sortOrder: searchParams.get("sortOrder") || "",
+      from: searchParams.get("from") || "",
+      to: searchParams.get("to") || "",
     };
   }, [params.walletId, searchParams]);
   return filters;

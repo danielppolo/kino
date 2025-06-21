@@ -106,7 +106,7 @@ const TransferForm = ({
     date: initialData?.date ?? date,
     currency: initialData?.currency ?? currency,
     description: initialData?.description ?? undefined,
-    amount: initialData ? initialData.amount_cents / 100 : 0,
+    amount: initialData ? initialData.amount_cents / 100 : undefined,
   };
 
   const handleSubmit = async (data: TransferFormValues) => {

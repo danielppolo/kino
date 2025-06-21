@@ -1,10 +1,8 @@
 "use client";
 
-import { add, sub } from "date-fns";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { PaginationNext } from "@/components/ui/pagination";
 
 interface DateRange {
   from: Date | undefined;
@@ -35,28 +33,6 @@ const DateRangeFilter = () => {
     router.push(`${pathname}?${params.toString()}`);
   };
 
-  const handlePreviousPeriod = () => {
-    if (from && to) {
-      const diff = to.getTime() - from.getTime();
-      const seconds = diff / 1000;
-      setDateRange({
-        from: sub(from, { seconds }),
-        to: sub(to, { seconds }),
-      });
-    }
-  };
-
-  const handleNextPeriod = () => {
-    if (from && to) {
-      const diff = to.getTime() - from.getTime();
-      const seconds = diff / 1000;
-      setDateRange({
-        from: add(from, { seconds }),
-        to: add(to, { seconds }),
-      });
-    }
-  };
-
   return (
     <DateRangePicker
       variant={from || to ? "secondary" : "ghost"}
@@ -71,14 +47,6 @@ const DateRangeFilter = () => {
         });
       }}
     />
-  );
-
-  return (
-    <div className="flex h-full w-full items-center justify-between gap-2">
-      {/* <PaginationPrevious onClick={handlePreviousPeriod} /> */}
-
-      <PaginationNext onClick={handleNextPeriod} />
-    </div>
   );
 };
 
