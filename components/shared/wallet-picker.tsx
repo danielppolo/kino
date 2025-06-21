@@ -24,13 +24,15 @@ interface WalletPickerProps {
 }
 
 const WalletPicker = forwardRef<HTMLButtonElement, WalletPickerProps>(
-  ({ onChange, value, currency, exclude }, ref) => {
+  ({ onChange, value, currency, exclude }) => {
     const [open, setOpen] = useState(false);
     const [wallets, walletMap] = useWallets();
-    const filteredWallets = wallets.filter((wallet) => {
-      if (exclude && wallet.id === exclude) return false;
-      return !currency || wallet.currency === currency;
-    });
+    const filteredWallets = wallets
+      .filter((wallet) => {
+        if (exclude && wallet.id === exclude) return false;
+        return !currency || wallet.currency === currency;
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>

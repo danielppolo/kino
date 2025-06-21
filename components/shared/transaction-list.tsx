@@ -31,6 +31,7 @@ const transactionRowHeight = 40;
 
 export default function TransactionList() {
   const filters = useFilters();
+  console.log(filters);
   const { openForm } = useTransactionForm();
   const {
     data,
