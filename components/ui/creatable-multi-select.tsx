@@ -24,6 +24,7 @@ interface CreatableMultiSelectProps {
   onChange: (value: string[]) => void;
   placeholder?: string;
   maxCount?: number;
+  options?: string[];
   className?: string;
 }
 
@@ -38,6 +39,7 @@ export const CreatableMultiSelect = React.forwardRef<
       onChange,
       placeholder = "Add items",
       maxCount = 3,
+      options = [],
       className,
     },
     ref,
@@ -47,8 +49,8 @@ export const CreatableMultiSelect = React.forwardRef<
     const [customOptions, setCustomOptions] = React.useState<string[]>([]);
 
     const allOptions = React.useMemo(
-      () => Array.from(new Set([...value, ...customOptions])),
-      [value, customOptions],
+      () => Array.from(new Set([...(options ?? []), ...value, ...customOptions])),
+      [options, value, customOptions],
     );
 
     const handleInputKeyDown = (

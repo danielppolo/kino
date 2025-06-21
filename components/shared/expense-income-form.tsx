@@ -10,6 +10,7 @@ import DaterPicker from "../ui/date-picker";
 import { AmountInput } from "./amount-input";
 import { DescriptionInput } from "./description-input";
 import LabelCombobox from "./label-combobox";
+import { useTags } from "@/hooks/use-tags";
 
 import { createTransaction } from "@/actions/create-transaction";
 import CategoryCombobox from "@/components/shared/category-combobox";
@@ -70,6 +71,7 @@ const ExpenseIncomeForm = ({
 }: ExpenseIncomeFormProps) => {
   const [, walletMap] = useWallets();
   const filters = useFilters();
+  const { data: availableTags = [] } = useTags();
   const [addAnother, setAddAnother] = useState(false);
   const queryClient = useQueryClient();
 
@@ -250,7 +252,11 @@ const ExpenseIncomeForm = ({
         render={({ field }) => (
           <FormItem>
             <FormControl>
-              <CreatableMultiSelect {...field} className="w-full" />
+              <CreatableMultiSelect
+                {...field}
+                options={availableTags}
+                className="w-full"
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
