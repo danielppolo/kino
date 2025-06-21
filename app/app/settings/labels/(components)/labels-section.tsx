@@ -58,7 +58,7 @@ export default function LabelSection() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Color</TableHead>
+              <TableHead className="w-[20px]"></TableHead>
               <TableHead>Name</TableHead>
             </TableRow>
           </TableHeader>
@@ -69,7 +69,7 @@ export default function LabelSection() {
                 onClick={() => handleEdit(label)}
                 className="cursor-pointer"
               >
-                <TableCell>
+                <TableCell className="w-[20px]">
                   <Color size="sm" color={label.color} />
                 </TableCell>
                 <TableCell>{label.name}</TableCell>

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, Plus } from "lucide-react";
+import { Check, ChevronsUpDown, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +39,32 @@ interface ComboboxProps {
   onCreateOption?: (label: string) => Promise<ComboboxOption | void>;
 }
 
+function CommandAddItem({
+  query,
+  onCreate,
+}: {
+  query: string;
+  onCreate: () => void;
+}) {
+  return (
+    <div
+      tabIndex={0}
+      onClick={onCreate}
+      onKeyDown={(event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === "Enter") {
+          onCreate();
+        }
+      }}
+      className={cn(
+        "hover:bg-accent hover:text-accent-foreground relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
+      )}
+    >
+      <Plus className="mr-2 h-4 w-4" />
+      &quot;{query}&quot;
+    </div>
+  );
+}
+
 export function Combobox({
   size = "default",
   variant = "outline",
@@ -56,8 +82,25 @@ export function Combobox({
   const [query, setQuery] = React.useState("");
   const selectedOption = options.find((option) => option.value === value);
 
+  const canCreate = React.useMemo(() => {
+    if (!query.trim() || !onCreateOption) return false;
+    return !options.some(
+      (o) => o.label.toLowerCase() === query.trim().toLowerCase(),
+    );
+  }, [query, options, onCreateOption]);
+
+  const handleCreate = React.useCallback(async () => {
+    if (!onCreateOption || !query.trim()) return;
+
+    const newOption = await onCreateOption(query.trim());
+    if (newOption) {
+      onChange(newOption.value);
+    }
+    setOpen(false);
+  }, [onCreateOption, query, onChange]);
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal>
       <PopoverTrigger asChild>
         <Button
           variant={variant}
@@ -71,40 +114,39 @@ export function Combobox({
               ? renderValue(selectedOption)
               : selectedOption?.label
             : placeholder}
-          {/* <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /> */}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-0">
+      <PopoverContent
+        className="z-[100] max-h-[300px] w-[200px] overflow-y-auto p-0"
+        side="bottom"
+        align="start"
+        sideOffset={4}
+      >
         <Command>
           <CommandInput
             placeholder={searchPlaceholder}
             value={query}
             onValueChange={setQuery}
+            onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
+              if (event.key === "Enter" && canCreate) {
+                event.preventDefault();
+                handleCreate();
+              }
+            }}
           />
           <CommandList>
-            <CommandEmpty>No option found.</CommandEmpty>
+            <CommandEmpty>
+              {query ? (
+                <CommandAddItem query={query} onCreate={handleCreate} />
+              ) : (
+                "No option found."
+              )}
+            </CommandEmpty>
             <CommandGroup>
-              {onCreateOption &&
-                query.trim() &&
-                !options.some(
-                  (o) => o.label.toLowerCase() === query.trim().toLowerCase(),
-                ) && (
-                  <CommandItem
-                    value="__create"
-                    className="cursor-pointer text-primary"
-                    onSelect={async () => {
-                      const newOption = await onCreateOption(query.trim());
-                      if (newOption) {
-                        onChange(newOption.value);
-                      }
-                      setOpen(false);
-                      setQuery("");
-                    }}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create "{query.trim()}"
-                  </CommandItem>
-                )}
+              {query && canCreate && (
+                <CommandAddItem query={query} onCreate={handleCreate} />
+              )}
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
@@ -113,6 +155,7 @@ export function Combobox({
                   onSelect={(currentValue) => {
                     onChange(currentValue === value ? "" : currentValue);
                     setOpen(false);
+                    setQuery("");
                   }}
                 >
                   <Check

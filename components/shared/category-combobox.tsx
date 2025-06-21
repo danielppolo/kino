@@ -1,13 +1,12 @@
 import React from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import Category from "./category";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 import { useCategories } from "@/contexts/settings-context";
 import { ICONS } from "@/utils/constants";
-import { createCategory } from "@/utils/supabase/mutations";
 import { Database } from "@/utils/supabase/database.types";
+import { createCategory } from "@/utils/supabase/mutations";
 import { Category as CategoryType } from "@/utils/supabase/types";
 
 interface CategoryComboboxProps {
@@ -73,6 +72,7 @@ const CategoryCombobox = ({
     },
   });
 
+  console.log(value);
   return (
     <Combobox
       variant={variant}
@@ -82,35 +82,8 @@ const CategoryCombobox = ({
       onChange={onChange}
       placeholder={placeholder}
       className={className}
-      renderValue={(option) => {
-        const cat = option && categoryMap.get(option.value);
-        if (cat) {
-          return (
-            <span className="flex items-center gap-2">
-              <Category category={cat} />
-              <span>{cat.name}</span>
-            </span>
-          );
-        }
-        return placeholder;
-      }}
-      renderOption={(option) => {
-        const cat = categoryMap.get(option.value);
-        if (cat) {
-          return (
-            <span className="flex items-center gap-2">
-              <Category category={cat} />
-              <span>{cat.name}</span>
-            </span>
-          );
-        }
-        return option.label;
-      }}
       onCreateOption={async (name) => {
         const newCat = await createMutation.mutateAsync(name);
-        if (newCat) {
-          onChange(newCat.id);
-        }
         return newCat
           ? {
               value: newCat.id,

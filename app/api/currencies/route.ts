@@ -64,8 +64,19 @@ export async function GET(request: Request) {
     );
 
     if (!response.ok) {
+      console.error("Failed to fetch currency data", response.statusText);
+
+      // If API fails, try to return cached data if available
+      if (cachedRate) {
+        return NextResponse.json({
+          rate: cachedRate.rate,
+          lastUpdated: cachedRate.updated_at,
+          source: "cache_fallback",
+        });
+      }
+
       return NextResponse.json(
-        { error: "Failed to fetch currency data" },
+        { error: "Failed to fetch currency data and no cached data available" },
         { status: response.status },
       );
     }
