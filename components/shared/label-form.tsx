@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -38,12 +39,17 @@ const LabelForm = ({
   onOpenChange,
   label,
 }: LabelFormProps) => {
+  console.log(label);
   const isEdit = !!label;
   const form = useForm<LabelFormValues>({
-    defaultValues: label
-      ? { ...label }
-      : { color: COLORS[Math.floor(Math.random() * COLORS.length)] },
+    defaultValues: label,
   });
+
+  useEffect(() => {
+    if (label) {
+      form.reset(label);
+    }
+  }, [label]);
 
   const queryClient = useQueryClient();
 
@@ -111,7 +117,11 @@ const LabelForm = ({
                   <FormControl>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="ghost" size="sm">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="flex items-center justify-center"
+                        >
                           <Color color={field.value} size="sm" />
                         </Button>
                       </PopoverTrigger>

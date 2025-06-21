@@ -1,6 +1,6 @@
 import React from "react";
 
-import Label from "./label";
+import Color from "./color";
 
 import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 import { useLabels } from "@/contexts/settings-context";
@@ -53,7 +53,7 @@ const LabelCombobox = ({
         if (label) {
           return (
             <span className="flex items-center gap-2">
-              <Label label={label} size="sm" />
+              <Color size="sm" color={label.color} />
               <span>{label.name}</span>
             </span>
           );
@@ -65,7 +65,7 @@ const LabelCombobox = ({
         if (label) {
           return (
             <span className="flex items-center gap-2">
-              <Label label={label} size="sm" />
+              <Color size="sm" color={label.color} />
               <span>{label.name}</span>
             </span>
           );

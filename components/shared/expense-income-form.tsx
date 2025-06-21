@@ -114,7 +114,7 @@ const ExpenseIncomeForm = ({
     description: "",
     category_id: "",
     label_id: "",
-    amount: initialData ? Math.abs(initialData.amount_cents) / 100 : 0,
+    amount: initialData ? Math.abs(initialData.amount_cents) / 100 : undefined,
     tags: initialData?.tags ?? [],
   };
 
@@ -192,7 +192,6 @@ const ExpenseIncomeForm = ({
           </FormItem>
         )}
       />
-
       <div className="grid grid-cols-2 gap-4">
         <FormField
           name="category_id"
@@ -247,10 +246,16 @@ const ExpenseIncomeForm = ({
 
       <FormField
         name="tags"
-        render={({ field }) => (
+        render={({ field: { onChange, ...field } }) => (
           <FormItem>
             <FormControl>
-              <CreatableMultiSelect {...field} className="w-full" />
+              <CreatableMultiSelect
+                {...field}
+                className="w-full"
+                onChange={(value) => {
+                  onChange(value.map((v) => v.toLowerCase()));
+                }}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
