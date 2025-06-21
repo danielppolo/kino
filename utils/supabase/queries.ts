@@ -62,6 +62,23 @@ export const listWallets = async (client: TypedSupabaseClient) => {
   return client.from("wallets").select("*");
 };
 
+export const listTags = async (client: TypedSupabaseClient) => {
+  const { data, error } = await client
+    .from("transactions")
+    .select("tags")
+    .not("tags", "is", null);
+
+  if (error) {
+    return { data: null, error } as const;
+  }
+
+  const tags = Array.from(
+    new Set((data ?? []).flatMap((row) => row.tags ?? [])),
+  ).sort((a, b) => a.localeCompare(b));
+
+  return { data: tags, error: null } as const;
+};
+
 export const getWalletMonthlyBalances = async (
   client: TypedSupabaseClient,
   params: {

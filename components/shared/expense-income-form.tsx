@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/form";
 import { useWallets } from "@/contexts/settings-context";
 import useFilters from "@/hooks/use-filters";
+import { useTags } from "@/hooks/use-tags";
 import { deleteTransaction } from "@/utils/supabase/mutations";
 import { Transaction } from "@/utils/supabase/types";
 
@@ -70,6 +71,7 @@ const ExpenseIncomeForm = ({
 }: ExpenseIncomeFormProps) => {
   const [, walletMap] = useWallets();
   const filters = useFilters();
+  const { data: availableTags = [] } = useTags();
   const [addAnother, setAddAnother] = useState(false);
   const queryClient = useQueryClient();
 
@@ -251,10 +253,11 @@ const ExpenseIncomeForm = ({
             <FormControl>
               <CreatableMultiSelect
                 {...field}
-                className="w-full"
                 onChange={(value) => {
                   onChange(value.map((v) => v.toLowerCase()));
                 }}
+                options={availableTags}
+                className="w-full"
               />
             </FormControl>
             <FormMessage />
