@@ -20,7 +20,7 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
       <TransactionsSidebar />
       <SidebarInset>
         <main className="flex-1">
-          <div className="flex h-11 items-center justify-between gap-2 px-4">
+          <div className="flex h-11 items-center justify-between gap-2 px-3">
             <div className="flex items-center gap-2">
               <MonthPagination />
             </div>

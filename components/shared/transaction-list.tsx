@@ -31,7 +31,6 @@ const transactionRowHeight = 40;
 
 export default function TransactionList() {
   const filters = useFilters();
-  console.log(filters);
   const { openForm } = useTransactionForm();
   const {
     data,
@@ -145,6 +144,10 @@ export default function TransactionList() {
 
   if (status === "error") {
     return <div>Error loading transactions</div>;
+  }
+
+  if (status === "pending") {
+    return <TransactionListLoading />;
   }
 
   return (
