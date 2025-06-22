@@ -15,6 +15,7 @@ import {
 } from "./command";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 import { Separator } from "./separator";
+import { Text } from "./typography";
 
 import { cn } from "@/lib/utils";
 
@@ -49,7 +50,8 @@ export const CreatableMultiSelect = React.forwardRef<
     const [customOptions, setCustomOptions] = React.useState<string[]>([]);
 
     const allOptions = React.useMemo(
-      () => Array.from(new Set([...(options ?? []), ...value, ...customOptions])),
+      () =>
+        Array.from(new Set([...(options ?? []), ...value, ...customOptions])),
       [options, value, customOptions],
     );
 
@@ -98,7 +100,7 @@ export const CreatableMultiSelect = React.forwardRef<
     };
 
     return (
-      <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+      <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen} modal>
         <PopoverTrigger asChild>
           <Button
             disabled={disabled}
@@ -194,7 +196,7 @@ export const CreatableMultiSelect = React.forwardRef<
                       }}
                       className="text-primary cursor-pointer"
                     >
-                      <span>Add "{inputValue.trim()}"</span>
+                      <span>Add &quot;{inputValue.trim()}&quot;</span>
                     </CommandItem>
                   )}
                 {allOptions.map((option) => {
@@ -203,10 +205,10 @@ export const CreatableMultiSelect = React.forwardRef<
                     <CommandItem
                       key={option}
                       onSelect={() => toggleOption(option)}
-                      className="cursor-pointer"
+                      className="flex cursor-pointer items-center gap-2"
                     >
                       <Checkbox checked={isSelected} />
-                      <span>{option}</span>
+                      <Text as="span">{option}</Text>
                     </CommandItem>
                   );
                 })}

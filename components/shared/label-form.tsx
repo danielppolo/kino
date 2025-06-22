@@ -39,7 +39,6 @@ const LabelForm = ({
   onOpenChange,
   label,
 }: LabelFormProps) => {
-  console.log(label);
   const isEdit = !!label;
   const form = useForm<LabelFormValues>({
     defaultValues: label,

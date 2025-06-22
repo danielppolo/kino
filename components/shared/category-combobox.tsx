@@ -72,7 +72,6 @@ const CategoryCombobox = ({
     },
   });
 
-  console.log(value);
   return (
     <Combobox
       variant={variant}
