@@ -79,13 +79,21 @@ function MonthPagination() {
   const handleMonthSelect = (monthName: string) => {
     if (!from) return;
 
-    const monthIndex = months.indexOf(monthName);
-    const newDate = new Date(from.getFullYear(), monthIndex, 1);
+    if (monthName === "All") {
+      // Select the entire year
+      setDateRange({
+        from: new Date(from.getFullYear(), 0, 1), // January 1st
+        to: new Date(from.getFullYear(), 11, 31), // December 31st
+      });
+    } else {
+      const monthIndex = months.indexOf(monthName);
+      const newDate = new Date(from.getFullYear(), monthIndex, 1);
 
-    setDateRange({
-      from: startOfMonth(newDate),
-      to: endOfMonth(newDate),
-    });
+      setDateRange({
+        from: startOfMonth(newDate),
+        to: endOfMonth(newDate),
+      });
+    }
     setMonthPopoverOpen(false);
   };
 
@@ -127,6 +135,12 @@ function MonthPagination() {
       // Only handle arrow keys when popovers are closed
       if (monthPopoverOpen || yearPopoverOpen) return;
 
+      // Check if there are any dialogs or modals open
+      const hasOpenDialog = document.querySelector(
+        '[role="dialog"]:not([data-state="closed"]), [data-radix-popper-content-wrapper], .modal, .dialog, [aria-modal="true"]',
+      );
+      if (hasOpenDialog) return;
+
       switch (event.key) {
         case "ArrowLeft":
           event.preventDefault();
@@ -161,6 +175,12 @@ function MonthPagination() {
 
   const currentMonth = months[from.getMonth()];
   const currentYearValue = from.getFullYear();
+  const isAll =
+    from.getMonth() === 0 &&
+    from.getDate() === 1 &&
+    to.getMonth() === 11 &&
+    to.getDate() === 31 &&
+    from.getFullYear() === to.getFullYear();
 
   return (
     <div className="flex h-full w-full items-center">
@@ -168,7 +188,7 @@ function MonthPagination() {
       <Popover open={monthPopoverOpen} onOpenChange={setMonthPopoverOpen}>
         <PopoverTrigger asChild>
           <Button variant="ghost" size="sm" className="justify-between px-1">
-            <Text>{currentMonth}</Text>
+            <Text>{isAll ? "All" : currentMonth}</Text>
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[200px] p-0" align="start">
@@ -177,6 +197,9 @@ function MonthPagination() {
             <CommandList>
               <CommandEmpty>No month found.</CommandEmpty>
               <CommandGroup>
+                <CommandItem onSelect={() => handleMonthSelect("All")}>
+                  <Text className="w-full font-medium">All</Text>
+                </CommandItem>
                 {months.map((month) => (
                   <CommandItem
                     key={month}

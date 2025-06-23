@@ -1,9 +1,12 @@
 "use client";
 
 import { toast } from "sonner";
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Input } from "../ui/input";
+import GroupCombobox from "./group-combobox";
+
 import { EntityForm } from "@/components/shared/entity-form";
 import {
   FormControl,
@@ -34,18 +37,23 @@ const TagForm = ({ tag, onSuccess, open, onOpenChange }: TagFormProps) => {
       onSuccess?.();
     },
     onError(error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to create tag");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create tag",
+      );
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (values: TagFormValues) => updateTag({ ...values, id: tag?.id }),
+    mutationFn: async (values: TagFormValues) =>
+      updateTag({ ...values, id: tag?.id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tags"] });
       onSuccess?.();
     },
     onError(error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to update tag");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update tag",
+      );
     },
   });
 
@@ -59,7 +67,9 @@ const TagForm = ({ tag, onSuccess, open, onOpenChange }: TagFormProps) => {
       onSuccess?.();
     },
     onError(error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete tag");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete tag",
+      );
     },
   });
 
@@ -72,7 +82,8 @@ const TagForm = ({ tag, onSuccess, open, onOpenChange }: TagFormProps) => {
           onSuccess: () => resolve({}),
           onError: (error: unknown) =>
             resolve({
-              error: error instanceof Error ? error.message : "Failed to update tag",
+              error:
+                error instanceof Error ? error.message : "Failed to update tag",
             }),
         });
       } else {
@@ -80,7 +91,8 @@ const TagForm = ({ tag, onSuccess, open, onOpenChange }: TagFormProps) => {
           onSuccess: () => resolve({}),
           onError: (error: unknown) =>
             resolve({
-              error: error instanceof Error ? error.message : "Failed to create tag",
+              error:
+                error instanceof Error ? error.message : "Failed to create tag",
             }),
         });
       }
@@ -93,7 +105,8 @@ const TagForm = ({ tag, onSuccess, open, onOpenChange }: TagFormProps) => {
         onSuccess: () => resolve({}),
         onError: (error: unknown) =>
           resolve({
-            error: error instanceof Error ? error.message : "Failed to delete tag",
+            error:
+              error instanceof Error ? error.message : "Failed to delete tag",
           }),
       });
     });
@@ -126,7 +139,12 @@ const TagForm = ({ tag, onSuccess, open, onOpenChange }: TagFormProps) => {
         render={({ field }) => (
           <FormItem>
             <FormControl>
-              <Input type="text" placeholder="Enter group" {...field} />
+              <GroupCombobox
+                value={field.value || ""}
+                onChange={field.onChange}
+                placeholder="Enter group"
+                className="w-full"
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
