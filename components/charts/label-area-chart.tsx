@@ -7,6 +7,12 @@ import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -206,6 +212,52 @@ export default function LabelAreaChart({
     return config;
   }, [data]);
 
+  // Calculate aggregated totals by label
+  const labelTotals = useMemo(() => {
+    const totals: Array<{
+      name: string;
+      total: number;
+      color: string;
+      safeKey: string;
+    }> = [];
+
+    if (data && data.length > 0) {
+      // Collect unique labels and their totals
+      const labelMap = new Map();
+
+      data.forEach((item) => {
+        const labelId = item.labels?.id;
+        const labelName = item.labels?.name || "Unknown";
+        const labelColor = item.labels?.color || "#8884d8";
+        const safeKey = labelName.replace(/[^a-zA-Z0-9]/g, "_");
+
+        const value =
+          type === "income"
+            ? item.income_cents
+            : type === "expense"
+              ? Math.abs(item.outcome_cents)
+              : Math.abs(item.net_cents);
+
+        if (!labelMap.has(labelId)) {
+          labelMap.set(labelId, {
+            name: labelName,
+            total: 0,
+            color: labelColor,
+            safeKey: safeKey,
+          });
+        }
+
+        labelMap.get(labelId).total += value;
+      });
+
+      // Convert to array and sort by total (descending)
+      totals.push(...Array.from(labelMap.values()));
+      totals.sort((a, b) => b.total - a.total);
+    }
+
+    return totals;
+  }, [data, type]);
+
   if (isLoading) {
     return (
       <Card>
@@ -375,15 +427,45 @@ export default function LabelAreaChart({
         </ChartContainer>
       </CardContent>
       <CardFooter>
-        <div className="flex w-full items-start gap-2 text-sm">
-          <div className="grid gap-2">
-            <div className="flex items-center gap-2 leading-none font-medium">
-              Total: ${formatCents(total)} | {labelCount} labels
-            </div>
-            <div className="text-muted-foreground flex items-center gap-2 leading-none">
-              {from && to ? `${from} - ${to}` : "All time"}
-              {walletId ? "" : " | All wallets"}
-            </div>
+        <div className="flex w-full flex-col gap-3 text-sm">
+          <div className="flex items-center gap-2 leading-none font-medium">
+            Total: {formatCents(total)} | {labelCount} labels
+          </div>
+
+          {labelTotals.length > 0 && (
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="label-totals" className="border-none">
+                <AccordionTrigger className="text-muted-foreground py-2 text-xs font-medium tracking-wide uppercase hover:no-underline">
+                  Aggregated by Label
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="grid gap-1">
+                    {labelTotals.map((label) => (
+                      <div
+                        key={label.safeKey}
+                        className="flex items-center justify-between gap-2"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="h-2 w-2 rounded-full"
+                            style={{ backgroundColor: label.color }}
+                          />
+                          <span className="text-sm">{label.name}</span>
+                        </div>
+                        <span className="text-sm font-medium">
+                          {formatCents(label.total)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          )}
+
+          <div className="text-muted-foreground flex items-center gap-2 leading-none">
+            {from && to ? `${from} - ${to}` : "All time"}
+            {walletId ? "" : " | All wallets"}
           </div>
         </div>
       </CardFooter>
