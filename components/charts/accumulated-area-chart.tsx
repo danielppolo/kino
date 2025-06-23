@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import { format } from "date-fns";
-import { TrendingUp } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
@@ -22,6 +21,7 @@ import {
   ChartLegendContent,
   ChartTooltip,
 } from "@/components/ui/chart";
+import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import { createClient } from "@/utils/supabase/client";
 import { getWalletMonthlyBalances } from "@/utils/supabase/queries";
@@ -49,7 +49,9 @@ function calculateAccumulatedTotal(
   conversionRates: Record<string, { rate: number }>,
   baseCurrency: string,
   walletMap: Map<string, Wallet>,
+  walletId?: string,
 ): ChartDataPoint[] {
+  console.log(monthlyBalances);
   // Group by month and wallet, converting to base currency
   const groupedByMonthAndWallet = monthlyBalances.reduce(
     (acc, { month, balance_cents, wallet_id }) => {
@@ -72,7 +74,7 @@ function calculateAccumulatedTotal(
   );
 
   // Convert to array and sort by month
-  return Object.entries(groupedByMonthAndWallet)
+  const chartData: ChartDataPoint[] = Object.entries(groupedByMonthAndWallet)
     .map(([month, balances]) => ({
       month,
       ...Object.entries(balances).reduce(
@@ -84,6 +86,16 @@ function calculateAccumulatedTotal(
       ),
     }))
     .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
+
+  // If filtering by a specific wallet, ensure all data points have that wallet's data
+  if (walletId) {
+    return chartData.map((dataPoint) => ({
+      ...dataPoint,
+      [walletId]: dataPoint[walletId] || 0,
+    }));
+  }
+
+  return chartData;
 }
 
 export function AccumulatedAreaChart({
@@ -120,17 +132,23 @@ export function AccumulatedAreaChart({
         conversionRates,
         baseCurrency,
         walletMap,
+        walletId,
       ),
-    [monthlyBalances, conversionRates, baseCurrency, walletMap],
+    [monthlyBalances, conversionRates, baseCurrency, walletMap, walletId],
   );
 
   // Get visible wallets and create chart config
   const visibleWallets = useMemo(() => {
-    // Get unique wallet IDs from monthlyBalances
-    const walletIds = new Set(monthlyBalances?.map((b) => b.wallet_id) ?? []);
-    // Filter visible wallets that have data
-    return Array.from(walletMap.values()).filter((w) => walletIds.has(w.id));
-  }, [walletMap, monthlyBalances]);
+    if (walletId) {
+      // When walletId is provided, show only that wallet
+      const wallet = walletMap.get(walletId);
+      return wallet ? [wallet] : [];
+    } else {
+      // When no walletId, show all wallets that have data
+      const walletIds = new Set(monthlyBalances?.map((b) => b.wallet_id) ?? []);
+      return Array.from(walletMap.values()).filter((w) => walletIds.has(w.id));
+    }
+  }, [walletMap, monthlyBalances, walletId]);
 
   const chartConfig: ChartConfig = useMemo(() => {
     return visibleWallets.reduce(
@@ -149,11 +167,13 @@ export function AccumulatedAreaChart({
   const calculatePercentageChange = () => {
     if (chartData.length < 2) return 0;
     const current = visibleWallets.reduce((total, wallet) => {
-      const balance = chartData[chartData.length - 1][wallet.id] || 0;
+      const balance =
+        (chartData[chartData.length - 1][wallet.id] as number) || 0;
       return total + balance;
     }, 0);
     const previous = visibleWallets.reduce((total, wallet) => {
-      const balance = chartData[chartData.length - 2][wallet.id] || 0;
+      const balance =
+        (chartData[chartData.length - 2][wallet.id] as number) || 0;
       return total + balance;
     }, 0);
     return ((current - previous) / Math.abs(previous)) * 100;
@@ -165,9 +185,13 @@ export function AccumulatedAreaChart({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Accumulated Total</CardTitle>
+          <CardTitle>
+            {walletId ? "Wallet Balance" : "Accumulated Total"}
+          </CardTitle>
           <CardDescription>
-            Showing total balance over time by wallet in {baseCurrency}
+            {walletId
+              ? `Showing balance over time in ${baseCurrency}`
+              : `Showing total balance over time by wallet in ${baseCurrency}`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -183,9 +207,13 @@ export function AccumulatedAreaChart({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Accumulated Total</CardTitle>
+          <CardTitle>
+            {walletId ? "Wallet Balance" : "Accumulated Total"}
+          </CardTitle>
           <CardDescription>
-            Showing total balance over time by wallet in {baseCurrency}
+            {walletId
+              ? `Showing balance over time in ${baseCurrency}`
+              : `Showing total balance over time by wallet in ${baseCurrency}`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -196,14 +224,18 @@ export function AccumulatedAreaChart({
       </Card>
     );
   }
-
+  console.log(chartData);
   if (!chartData || chartData.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Accumulated Total</CardTitle>
+          <CardTitle>
+            {walletId ? "Wallet Balance" : "Accumulated Total"}
+          </CardTitle>
           <CardDescription>
-            Showing total balance over time by wallet in {baseCurrency}
+            {walletId
+              ? `Showing balance over time in ${baseCurrency}`
+              : `Showing total balance over time by wallet in ${baseCurrency}`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -218,9 +250,13 @@ export function AccumulatedAreaChart({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Accumulated Total</CardTitle>
+        <CardTitle>
+          {walletId ? "Wallet Balance" : "Accumulated Total"}
+        </CardTitle>
         <CardDescription>
-          Showing total balance over time by wallet in {baseCurrency}
+          {walletId
+            ? `Showing balance over time in ${baseCurrency}`
+            : `Showing total balance over time by wallet in ${baseCurrency}`}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -339,26 +375,15 @@ export function AccumulatedAreaChart({
         </ChartContainer>
       </CardContent>
       <CardFooter>
-        <div className="flex w-full items-start gap-2 text-sm">
-          <div className="grid gap-2">
-            <div className="flex items-center gap-2 leading-none font-medium">
-              {percentageChange > 0 ? "Trending up" : "Trending down"} by{" "}
-              {Math.abs(percentageChange).toFixed(1)}% this month{" "}
-              <TrendingUp className="h-4 w-4" />
-            </div>
-            <div className="text-muted-foreground flex items-center gap-2 leading-none">
-              {chartData.length > 0 && (
-                <>
-                  {format(new Date(chartData[0].month), "MMMM yyyy")} -{" "}
-                  {format(
-                    new Date(chartData[chartData.length - 1].month),
-                    "MMMM yyyy",
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+        <TrendingIndicator
+          percentageChange={percentageChange}
+          startDate={chartData.length > 0 ? chartData[0].month : undefined}
+          endDate={
+            chartData.length > 0
+              ? chartData[chartData.length - 1].month
+              : undefined
+          }
+        />
       </CardFooter>
     </Card>
   );

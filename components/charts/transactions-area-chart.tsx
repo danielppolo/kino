@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import { format } from "date-fns";
-import { TrendingUp } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import {
@@ -19,6 +18,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useLabels } from "@/contexts/settings-context";
 import { Label, TransactionList } from "@/utils/supabase/types";
 
@@ -116,6 +116,31 @@ export function TransactionsAreaChart({
     [labels],
   );
 
+  // Calculate percentage change for total transactions
+  const calculatePercentageChange = () => {
+    if (chartData.length < 2) return 0;
+
+    const current = Object.keys(chartData[chartData.length - 1])
+      .filter((key) => key !== "month")
+      .reduce((total, labelId) => {
+        return (
+          total + ((chartData[chartData.length - 1][labelId] as number) || 0)
+        );
+      }, 0);
+
+    const previous = Object.keys(chartData[chartData.length - 2])
+      .filter((key) => key !== "month")
+      .reduce((total, labelId) => {
+        return (
+          total + ((chartData[chartData.length - 2][labelId] as number) || 0)
+        );
+      }, 0);
+
+    return previous > 0 ? ((current - previous) / previous) * 100 : 0;
+  };
+
+  const percentageChange = calculatePercentageChange();
+
   return (
     <Card>
       <CardHeader>
@@ -186,16 +211,15 @@ export function TransactionsAreaChart({
         </ChartContainer>
       </CardContent>
       <CardFooter>
-        <div className="flex w-full items-start gap-2 text-sm">
-          <div className="grid gap-2">
-            <div className="flex items-center gap-2 leading-none font-medium">
-              Trending up by 5.2% this month <TrendingUp className="h-4 w-4" />
-            </div>
-            <div className="text-muted-foreground flex items-center gap-2 leading-none">
-              January - June 2024
-            </div>
-          </div>
-        </div>
+        <TrendingIndicator
+          percentageChange={percentageChange}
+          startDate={chartData.length > 0 ? chartData[0].month : undefined}
+          endDate={
+            chartData.length > 0
+              ? chartData[chartData.length - 1].month
+              : undefined
+          }
+        />
       </CardFooter>
     </Card>
   );

@@ -143,7 +143,6 @@ export default function LabelAreaChart({
     const labelSafeKeys = Array.from(labels.values()).map(
       (label) => label.safeKey,
     );
-    console.log(months, allMonths);
     allMonths.forEach((month) => {
       const monthEntry: { month: string; [key: string]: number | string } = {
         month,
