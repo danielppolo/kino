@@ -5,6 +5,8 @@ import { format } from "date-fns";
 import { TrendingUp } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
+import { useQuery } from "@tanstack/react-query";
+
 import {
   Card,
   CardContent,
@@ -21,6 +23,8 @@ import {
   ChartTooltip,
 } from "@/components/ui/chart";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
+import { createClient } from "@/utils/supabase/client";
+import { getWalletMonthlyBalances } from "@/utils/supabase/queries";
 import { Wallet } from "@/utils/supabase/types";
 
 interface MonthlyBalance {
@@ -35,7 +39,9 @@ interface ChartDataPoint {
 }
 
 interface AccumulatedAreaChartProps {
-  monthlyBalances: MonthlyBalance[];
+  walletId?: string;
+  from?: string;
+  to?: string;
 }
 
 function calculateAccumulatedTotal(
@@ -81,8 +87,29 @@ function calculateAccumulatedTotal(
 }
 
 export function AccumulatedAreaChart({
-  monthlyBalances,
+  walletId,
+  from,
+  to,
 }: AccumulatedAreaChartProps) {
+  const {
+    data: monthlyBalances,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["accumulated-area-chart", walletId, from, to],
+    queryFn: async () => {
+      const supabase = await createClient();
+      const { data, error } = await getWalletMonthlyBalances(supabase, {
+        walletId,
+        from,
+        to,
+      });
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const [, walletMap] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
 
@@ -100,14 +127,14 @@ export function AccumulatedAreaChart({
   // Get visible wallets and create chart config
   const visibleWallets = useMemo(() => {
     // Get unique wallet IDs from monthlyBalances
-    const walletIds = new Set(monthlyBalances.map((b) => b.wallet_id));
+    const walletIds = new Set(monthlyBalances?.map((b) => b.wallet_id) ?? []);
     // Filter visible wallets that have data
     return Array.from(walletMap.values()).filter((w) => walletIds.has(w.id));
   }, [walletMap, monthlyBalances]);
 
   const chartConfig: ChartConfig = useMemo(() => {
     return visibleWallets.reduce(
-      (acc, wallet, index) => ({
+      (acc, wallet) => ({
         ...acc,
         [wallet.id]: {
           label: wallet.name,
@@ -133,6 +160,60 @@ export function AccumulatedAreaChart({
   };
 
   const percentageChange = calculatePercentageChange();
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Accumulated Total</CardTitle>
+          <CardDescription>
+            Showing total balance over time by wallet in {baseCurrency}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex h-64 items-center justify-center">
+            Loading...
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Accumulated Total</CardTitle>
+          <CardDescription>
+            Showing total balance over time by wallet in {baseCurrency}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex h-64 items-center justify-center text-red-500">
+            Error loading chart data
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!chartData || chartData.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Accumulated Total</CardTitle>
+          <CardDescription>
+            Showing total balance over time by wallet in {baseCurrency}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex h-64 items-center justify-center text-gray-500">
+            No data available for this period
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
