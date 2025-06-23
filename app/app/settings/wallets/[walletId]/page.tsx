@@ -5,20 +5,45 @@ import { format } from "date-fns";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
 
-import CsvTransactionUploader from "./(components)/import-transactions";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { exportTransactions } from "@/actions/export-transactions";
 import { SubmitButton } from "@/components/submit-button";
+import { Switch } from "@/components/ui/switch";
 import { Subtitle, Title } from "@/components/ui/typography";
 import UNAMDonation from "@/components/UNAMDonation";
 import { useWallets } from "@/contexts/settings-context";
 import { formatCents } from "@/utils/format-cents";
+import { createClient } from "@/utils/supabase/client";
 
 export default function Page() {
   const params = useParams();
   const [, walletsMap] = useWallets();
   const wallet = walletsMap.get(params.walletId as string);
   const formRef = useRef<HTMLFormElement>(null);
+  const queryClient = useQueryClient();
+
+  const visibilityMutation = useMutation({
+    mutationFn: async ({
+      walletId,
+      visible,
+    }: {
+      walletId: string;
+      visible: boolean;
+    }) => {
+      const supabase = await createClient();
+      const { error } = await supabase
+        .from("wallets")
+        .update({ visible })
+        .eq("id", walletId);
+
+      if (error) throw new Error(error.message);
+      return { error: null };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wallets"] });
+    },
+  });
 
   const handleExport = async () => {
     const { error, data } = await exportTransactions({
@@ -46,6 +71,21 @@ export default function Page() {
     formRef.current?.reset();
   };
 
+  const handleVisibilityToggle = async (checked: boolean) => {
+    if (!wallet) return;
+
+    try {
+      await visibilityMutation.mutateAsync({
+        walletId: wallet.id,
+        visible: checked,
+      });
+      queryClient.invalidateQueries({ queryKey: ["wallets"] });
+      toast.success(`Wallet ${checked ? "shown" : "hidden"} successfully`);
+    } catch {
+      toast.error("Error updating wallet visibility");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -59,12 +99,22 @@ export default function Page() {
         <p>{wallet?.currency}</p>
         <Subtitle>Balance</Subtitle>
         <p>{formatCents(wallet?.balance_cents ?? 0)}</p>
+        <Subtitle>Visibility</Subtitle>
+        <div className="flex items-center gap-4">
+          <p className="text-muted-foreground text-sm">
+            Show in wallet overview
+          </p>
+          <Switch
+            checked={wallet?.visible ?? true}
+            onCheckedChange={handleVisibilityToggle}
+            disabled={visibilityMutation.isPending}
+          />
+        </div>
         <Subtitle>Export</Subtitle>
         <form action={handleExport} ref={formRef}>
           <SubmitButton>Export</SubmitButton>
         </form>
         <Subtitle>Import</Subtitle>
-        <CsvTransactionUploader walletId={params.walletId as string} />
       </div>
     </div>
   );

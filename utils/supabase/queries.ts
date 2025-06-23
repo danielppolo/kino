@@ -66,6 +66,7 @@ export const listTags = async (client: TypedSupabaseClient) => {
   const { data, error } = await client
     .from("transactions")
     .select("tags")
+    .limit(1000)
     .not("tags", "is", null);
 
   if (error) {

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
+import { useParams } from "next/navigation";
 import Papa from "papaparse";
 import { toast } from "sonner";
 
@@ -15,13 +16,20 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useCategories, useLabels } from "@/contexts/settings-context";
 import { formatCents } from "@/utils/format-cents";
 
-interface CsvTransactionUploaderProps {
-  walletId: string;
+interface SerializedRow {
+  date: string;
+  type?: string;
+  amount?: string;
+  description?: string;
+  category?: string;
+  label?: string;
+  tags?: string;
 }
 
 interface Row {
@@ -34,8 +42,12 @@ interface Row {
   tags?: string;
 }
 
-const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+const CsvTransactionUploader = ({
+  fileInputRef,
+}: {
+  fileInputRef: React.RefObject<HTMLInputElement>;
+}) => {
+  const { walletId } = useParams();
   const [, categoriesMap] = useCategories("name");
   const [, labelsMap] = useLabels("name");
   const [open, setOpen] = useState(false);
@@ -77,14 +89,14 @@ const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    Papa.parse<Row>(file, {
+    Papa.parse<SerializedRow>(file, {
       header: true,
       skipEmptyLines: true,
       complete: (result) => {
         const rawData = result.data.map((row) => ({
           date: row.date,
           type: row.type,
-          amount: row.amount ? Number(row.amount) : undefined,
+          amount: row.amount ? Number(row.amount.replace(/,/g, "")) : undefined,
           description: row.description,
           category: row.category,
           label: row.label,
@@ -98,12 +110,18 @@ const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
 
   const handleSubmit = async () => {
     const transactions = csvData.map((row) => ({
-      amount: row.amount,
+      amount: row.amount
+        ? row.type === "expense"
+          ? -Math.abs(row.amount)
+          : Math.abs(row.amount)
+        : undefined,
       type: row.type,
       description: row.description,
       category: row.category,
       label: row.label,
-      date: new Date(row.date).toISOString().split("T")[0], // Format YYYY-MM-DD
+      date: new Date(row.date.split("/").reverse().join("-"))
+        .toISOString()
+        .split("T")[0], // Parse DD/MM/YYYY to YYYY-MM-DD
       tags: row.tags
         ?.split(",")
         .filter((tag) => tag.trim() !== "")
@@ -132,31 +150,37 @@ const CsvTransactionUploader = ({ walletId }: CsvTransactionUploaderProps) => {
     }
   };
 
+  if (!walletId) return null;
+
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <Input
-        ref={fileInputRef}
-        className="h-10 w-48"
-        type="file"
-        accept=".csv"
-        onChange={handleFileUpload}
-      />
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Upload CSV Transactions</DialogTitle>
-          <DialogDescription>
-            Ensure your CSV has the correct columns: Category ID, Label ID,
-            Amount, Description, and Created At.
-          </DialogDescription>
-        </DialogHeader>
-        <TransactionListPreview transactions={csvDisplayData} />
-        <DialogFooter>
-          <form action={handleSubmit}>
-            <SubmitButton>Submit Transactions</SubmitButton>
-          </form>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogTrigger>
+          <Input
+            ref={fileInputRef}
+            className="hidden"
+            type="file"
+            accept=".csv"
+            onChange={handleFileUpload}
+          />
+        </DialogTrigger>
+        <DialogContent className="max-h-1/2 max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Upload CSV Transactions</DialogTitle>
+            <DialogDescription>
+              Ensure your CSV has the correct columns: Category ID, Label ID,
+              Amount, Description, and Created At.
+            </DialogDescription>
+          </DialogHeader>
+          <TransactionListPreview transactions={csvDisplayData} />
+          <DialogFooter>
+            <form action={handleSubmit}>
+              <SubmitButton>Submit Transactions</SubmitButton>
+            </form>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
