@@ -57,9 +57,10 @@ export default function LabelAreaChart({
   const chartData = useMemo(() => {
     if (!data || data.length === 0) return [];
 
-    // First pass: collect all unique labels and months
+    // First pass: collect all unique labels and months, and aggregate values
     const labels = new Map();
     const months = new Set();
+    const aggregatedData = new Map(); // Map<`${month}|${labelId}`, aggregatedValue>
 
     data.forEach((item) => {
       const month = item.month;
@@ -81,6 +82,18 @@ export default function LabelAreaChart({
       }
 
       months.add(month);
+
+      // Aggregate values for the same month and label
+      const value =
+        type === "income"
+          ? item.income_cents
+          : type === "expense"
+            ? Math.abs(item.outcome_cents)
+            : Math.abs(item.net_cents);
+
+      const key = `${month}|${labelId}`;
+      const existingValue = aggregatedData.get(key) || 0;
+      aggregatedData.set(key, existingValue + value);
     });
 
     // Second pass: create month entries with all labels initialized to 0
@@ -102,22 +115,14 @@ export default function LabelAreaChart({
       monthlyData.set(month, monthEntry);
     });
 
-    // Third pass: populate actual values
-    data.forEach((item) => {
-      const month = item.month;
-      const labelName = item.labels?.name || "Unknown";
-      const safeKey = labelName.replace(/[^a-zA-Z0-9]/g, "_");
+    // Third pass: populate aggregated values
+    aggregatedData.forEach((value, key) => {
+      const [month, labelId] = key.split("|");
+      const label = labels.get(labelId);
 
-      const monthEntry = monthlyData.get(month);
-      if (monthEntry) {
-        const value =
-          type === "income"
-            ? item.income_cents
-            : type === "expense"
-              ? Math.abs(item.outcome_cents)
-              : Math.abs(item.net_cents);
-
-        monthEntry[safeKey] = value;
+      if (label && monthlyData.has(month)) {
+        const monthEntry = monthlyData.get(month);
+        monthEntry[label.safeKey] = value;
       }
     });
 
@@ -127,18 +132,17 @@ export default function LabelAreaChart({
     );
   }, [data, type]);
 
-  // Create chart config from labels
+  // Create chart config from labels (reuse the labels from chartData transformation)
   const chartConfig = useMemo(() => {
     const config: ChartConfig = {};
 
-    if (data) {
+    if (data && data.length > 0) {
+      // Collect unique labels (same logic as in chartData)
       const labels = new Map();
       data.forEach((item) => {
         const labelId = item.labels?.id;
         const labelName = item.labels?.name || "Unknown";
         const labelColor = item.labels?.color || "#8884d8";
-
-        // Create safe key for CSS variables
         const safeKey = labelName.replace(/[^a-zA-Z0-9]/g, "_");
 
         if (!labels.has(labelId)) {
@@ -227,6 +231,7 @@ export default function LabelAreaChart({
         <CardTitle>{title}</CardTitle>
         <CardDescription>
           Showing {type} trends by label over time
+          {walletId ? " for this wallet" : " across all wallets"}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -332,6 +337,7 @@ export default function LabelAreaChart({
             </div>
             <div className="text-muted-foreground flex items-center gap-2 leading-none">
               {from && to ? `${from} - ${to}` : "All time"}
+              {walletId ? "" : " | All wallets"}
             </div>
           </div>
         </div>
