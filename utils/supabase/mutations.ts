@@ -46,6 +46,19 @@ export const createLabel = async (
   return result;
 };
 
+export const createTag = async (
+  data: Database["public"]["Tables"]["tags"]["Insert"],
+) => {
+  const supabase = await createClient();
+
+  const { data: result, error } = await supabase
+    .from("tags")
+    .upsert(data)
+    .select();
+  if (error) throw new Error(error.message);
+  return result;
+};
+
 export const updateWallet = async (
   data: Database["public"]["Tables"]["wallets"]["Update"],
 ) => {
@@ -121,6 +134,28 @@ export const updateLabel = async (
   return result;
 };
 
+export const updateTag = async (
+  data: Database["public"]["Tables"]["tags"]["Update"],
+) => {
+  const supabase = await createClient();
+
+  if (!data.title) {
+    throw new Error("Title is required for tag updates");
+  }
+
+  const tag = {
+    ...data,
+    title: data.title,
+  } satisfies Database["public"]["Tables"]["tags"]["Update"];
+
+  const { data: result, error } = await supabase
+    .from("tags")
+    .upsert(tag)
+    .select();
+  if (error) throw new Error(error.message);
+  return result;
+};
+
 // Delete Functions
 export const deleteTransaction = async (id: string) => {
   const supabase = await createClient();
@@ -143,6 +178,12 @@ export const deleteCategory = async (id: string) => {
 export const deleteLabel = async (id: string) => {
   const supabase = await createClient();
   const { error } = await supabase.from("labels").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+};
+
+export const deleteTag = async (id: string) => {
+  const supabase = await createClient();
+  const { error } = await supabase.from("tags").delete().eq("id", id);
   if (error) throw new Error(error.message);
 };
 
