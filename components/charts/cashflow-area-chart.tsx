@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import { format } from "date-fns";
-import { TrendingUp } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
@@ -22,6 +21,7 @@ import {
   ChartLegendContent,
   ChartTooltip,
 } from "@/components/ui/chart";
+import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency } from "@/contexts/settings-context";
 import { createClient } from "@/utils/supabase/client";
 import { getMonthlyStats } from "@/utils/supabase/queries";
@@ -307,26 +307,15 @@ export function CashflowAreaChart({
         </ChartContainer>
       </CardContent>
       <CardFooter>
-        <div className="flex w-full items-start gap-2 text-sm">
-          <div className="grid gap-2">
-            <div className="flex items-center gap-2 leading-none font-medium">
-              {percentageChange > 0 ? "Trending up" : "Trending down"} by{" "}
-              {Math.abs(percentageChange).toFixed(1)}% this month{" "}
-              <TrendingUp className="h-4 w-4" />
-            </div>
-            <div className="text-muted-foreground flex items-center gap-2 leading-none">
-              {chartData.length > 0 && (
-                <>
-                  {format(new Date(chartData[0].month), "MMMM yyyy")} -{" "}
-                  {format(
-                    new Date(chartData[chartData.length - 1].month),
-                    "MMMM yyyy",
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+        <TrendingIndicator
+          percentageChange={percentageChange}
+          startDate={chartData.length > 0 ? chartData[0].month : undefined}
+          endDate={
+            chartData.length > 0
+              ? chartData[chartData.length - 1].month
+              : undefined
+          }
+        />
       </CardFooter>
     </Card>
   );

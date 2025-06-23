@@ -134,8 +134,6 @@ export const getTotalExpenses = async (
     .select("outcome_cents")
     .eq("wallet_id", walletId);
 
-  console.log(data);
-
   if (error) {
     return { data: null, error } as const;
   }
