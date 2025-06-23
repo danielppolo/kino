@@ -50,11 +50,11 @@ function CommandAddItem({
     <div
       tabIndex={0}
       onClick={onCreate}
-      onKeyDown={(event: React.KeyboardEvent<HTMLDivElement>) => {
-        if (event.key === "Enter") {
-          onCreate();
-        }
-      }}
+      // onKeyDown={(event: React.KeyboardEvent<HTMLDivElement>) => {
+      //   if (event.key === "Enter") {
+      //     onCreate();
+      //   }
+      // }}
       className={cn(
         "hover:bg-accent hover:text-accent-foreground relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
       )}
@@ -128,12 +128,12 @@ export function Combobox({
             placeholder={searchPlaceholder}
             value={query}
             onValueChange={setQuery}
-            onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
-              if (event.key === "Enter" && canCreate) {
-                event.preventDefault();
-                handleCreate();
-              }
-            }}
+            // onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
+            //   if (event.key === "Enter" && canCreate) {
+            //     event.preventDefault();
+            //     handleCreate();
+            //   }
+            // }}
           />
           <CommandList>
             <CommandEmpty>
@@ -144,9 +144,6 @@ export function Combobox({
               )}
             </CommandEmpty>
             <CommandGroup>
-              {query && canCreate && (
-                <CommandAddItem query={query} onCreate={handleCreate} />
-              )}
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
@@ -167,6 +164,9 @@ export function Combobox({
                   {renderOption ? renderOption(option) : option.label}
                 </CommandItem>
               ))}
+              {query && canCreate && (
+                <CommandAddItem query={query} onCreate={handleCreate} />
+              )}
             </CommandGroup>
           </CommandList>
         </Command>

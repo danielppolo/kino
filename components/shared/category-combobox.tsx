@@ -7,7 +7,6 @@ import { useCategories } from "@/contexts/settings-context";
 import { ICONS } from "@/utils/constants";
 import { Database } from "@/utils/supabase/database.types";
 import { createCategory } from "@/utils/supabase/mutations";
-import { Category as CategoryType } from "@/utils/supabase/types";
 
 interface CategoryComboboxProps {
   size?: "sm" | "default" | "lg";
@@ -47,13 +46,6 @@ const CategoryCombobox = ({
         ? category.keywords
         : [category.name.toLowerCase(), category.type, category.icon ?? ""],
   }));
-
-  // For rendering, map id to category
-  const categoryMap = React.useMemo(() => {
-    const map = new Map<string, CategoryType>();
-    sortedCategories.forEach((cat) => map.set(cat.id, cat));
-    return map;
-  }, [sortedCategories]);
 
   const queryClient = useQueryClient();
   const createMutation = useMutation({

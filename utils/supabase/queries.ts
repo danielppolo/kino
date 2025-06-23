@@ -137,3 +137,26 @@ export async function getMonthlyStats(
 
   return query;
 }
+
+export const getTotalExpenses = async (
+  client: TypedSupabaseClient,
+  walletId: string,
+) => {
+  const { data, error } = await client
+    .from("monthly_stats")
+    .select("outcome_cents")
+    .eq("wallet_id", walletId);
+
+  console.log(data);
+
+  if (error) {
+    return { data: null, error } as const;
+  }
+
+  const totalExpenses = (data ?? []).reduce(
+    (sum, month) => sum + Math.abs(month.outcome_cents ?? 0),
+    0,
+  );
+
+  return { data: totalExpenses, error: null } as const;
+};
