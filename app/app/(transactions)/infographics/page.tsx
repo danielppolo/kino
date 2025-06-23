@@ -2,6 +2,7 @@ import React from "react";
 
 import { AccumulatedAreaChart } from "@/components/charts/accumulated-area-chart";
 import { CashflowAreaChart } from "@/components/charts/cashflow-area-chart";
+import LabelAreaChart from "@/components/charts/label-area-chart";
 import {
   Filters,
   getMonthlyStats,
@@ -49,6 +50,24 @@ async function InfographicsPage({ searchParams }: PageParams) {
       </div>
       <div className="md:col-span-2 lg:col-span-3">
         <CashflowAreaChart monthlyStats={monthlyStats ?? []} />
+      </div>
+      {/* Label Area Chart - Full Width */}
+      <div className="md:col-span-2 lg:col-span-3">
+        <LabelAreaChart
+          from={filters.from}
+          to={filters.to}
+          type="expense"
+          title="Expense Trends by Label"
+        />
+      </div>
+      {/* Label Area Chart - Full Width */}
+      <div className="md:col-span-2 lg:col-span-3">
+        <LabelAreaChart
+          from={filters.from}
+          to={filters.to}
+          type="income"
+          title="Income Trends by Label"
+        />
       </div>
     </div>
   );
