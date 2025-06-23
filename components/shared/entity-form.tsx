@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { FieldValues, useForm } from "react-hook-form";
+import { DefaultValues, FieldValues, useForm } from "react-hook-form";
 import { Trash } from "lucide-react";
 import { toast } from "sonner";
 
@@ -19,7 +19,7 @@ interface EntityFormProps<T extends FieldValues> {
   setAddAnother?: (addAnother: boolean) => void;
   onOpenChange?: (open: boolean) => void;
   onSuccess?: () => void;
-  defaultValues: T;
+  defaultValues: DefaultValues<T>;
   onSubmit: (values: T) => Promise<{ error?: string }>;
   onDelete?: (entity: T) => Promise<{ error?: string }>;
   children: React.ReactNode;
@@ -42,7 +42,7 @@ export function EntityForm<T extends FieldValues>({
 }: EntityFormProps<T>) {
   const isEdit = !!entity;
   const form = useForm<T>({
-    defaultValues: (entity || defaultValues) as T,
+    defaultValues: (entity || defaultValues) as DefaultValues<T>,
   });
 
   useEffect(() => {
@@ -65,7 +65,7 @@ export function EntityForm<T extends FieldValues>({
       form.reset({
         ...defaultValues,
         date: dateValue,
-      });
+      } as T);
       return;
     }
 
