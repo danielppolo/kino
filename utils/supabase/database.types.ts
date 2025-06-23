@@ -109,6 +109,30 @@ export type Database = {
         }
         Relationships: []
       }
+      tags: {
+        Row: {
+          created_at: string | null
+          group: string | null
+          id: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          group?: string | null
+          id?: string
+          title: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string | null
+          group?: string | null
+          id?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount_cents: number

@@ -125,3 +125,22 @@ create policy "labels_update_policy"
 create policy "labels_delete_policy"
     on labels
     for delete using ( (select auth.uid()) = user_id );
+
+create policy "tags_policy"
+    on tags
+    for select using ( (select auth.uid()) = user_id );
+create policy "tags_insert_policy"
+    on tags
+    for insert
+    to authenticated
+    with check (true);
+create policy "tags_update_policy"
+    on tags
+    for update
+    to authenticated
+    using ( (select auth.uid()) = user_id )
+    with check ( (select auth.uid()) = user_id );
+create policy "tags_delete_policy"
+    on tags
+    for delete using ( (select auth.uid()) = user_id );
+
