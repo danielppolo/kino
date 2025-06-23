@@ -2,7 +2,7 @@
 
 import { endOfMonth, format, startOfMonth } from "date-fns";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 import { SidebarWrapper } from "./sidebar-wrapper";
 
@@ -19,12 +19,17 @@ import { formatCents } from "@/utils/format-cents";
 
 export function TransactionsSidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { walletsByCurrency } = useTotalBalance();
 
-  // Get current month's start and end dates
+  // Get current month's start and end dates as fallback
   const now = new Date();
-  const fromDate = format(startOfMonth(now), "yyyy-MM-dd");
-  const toDate = format(endOfMonth(now), "yyyy-MM-dd");
+  const defaultFromDate = format(startOfMonth(now), "yyyy-MM-dd");
+  const defaultToDate = format(endOfMonth(now), "yyyy-MM-dd");
+
+  // Use existing search params if they exist, otherwise use current month
+  const fromDate = searchParams.get("from") || defaultFromDate;
+  const toDate = searchParams.get("to") || defaultToDate;
 
   return (
     <SidebarWrapper>

@@ -32,7 +32,14 @@ interface TagMultiSelectProps {
 
 const TagMultiSelect = React.forwardRef<HTMLButtonElement, TagMultiSelectProps>(
   (
-    { disabled, value = [], onChange, options, placeholder = "Select tags", className },
+    {
+      disabled,
+      value = [],
+      onChange,
+      options,
+      placeholder = "Select tags",
+      className,
+    },
     ref,
   ) => {
     const [open, setOpen] = React.useState(false);
@@ -45,7 +52,9 @@ const TagMultiSelect = React.forwardRef<HTMLButtonElement, TagMultiSelectProps>(
         if (!map[group]) map[group] = [];
         map[group].push(tag);
       });
-      Object.values(map).forEach((arr) => arr.sort((a, b) => a.title.localeCompare(b.title)));
+      Object.values(map).forEach((arr) =>
+        arr.sort((a, b) => a.title.localeCompare(b.title)),
+      );
       return map;
     }, [options]);
 
@@ -103,19 +112,33 @@ const TagMultiSelect = React.forwardRef<HTMLButtonElement, TagMultiSelectProps>(
               </div>
             ) : (
               <div className="mx-auto flex w-full items-center justify-between">
-                <span className="text-muted-foreground mx-3 text-sm">{placeholder}</span>
+                <span className="text-muted-foreground mx-3 text-sm">
+                  {placeholder}
+                </span>
                 <ChevronDown className="text-muted-foreground mx-2 h-4 cursor-pointer" />
               </div>
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start" onEscapeKeyDown={() => setOpen(false)}>
+        <PopoverContent
+          className="w-auto p-0"
+          align="start"
+          onEscapeKeyDown={() => setOpen(false)}
+        >
           <Command shouldFilter={false} className="w-48">
-            <CommandInput placeholder="Search tags..." value={query} onValueChange={setQuery} />
+            <CommandInput
+              placeholder="Search tags..."
+              value={query}
+              onValueChange={setQuery}
+            />
             <CommandList>
               <CommandEmpty>No tags found.</CommandEmpty>
               {Object.entries(filteredGrouped).map(([group, items]) => (
-                <CommandGroup key={group} heading={group}>
+                <CommandGroup
+                  key={group}
+                  heading={group}
+                  className="capitalize"
+                >
                   {items.map((tag) => {
                     const selected = value.includes(tag.title);
                     return (
@@ -136,13 +159,22 @@ const TagMultiSelect = React.forwardRef<HTMLButtonElement, TagMultiSelectProps>(
                 <div className="flex items-center justify-between">
                   {value.length > 0 && (
                     <>
-                      <CommandItem onSelect={handleClear} className="flex-1 cursor-pointer justify-center">
+                      <CommandItem
+                        onSelect={handleClear}
+                        className="flex-1 cursor-pointer justify-center"
+                      >
                         Clear
                       </CommandItem>
-                      <Separator orientation="vertical" className="flex h-full min-h-6" />
+                      <Separator
+                        orientation="vertical"
+                        className="flex h-full min-h-6"
+                      />
                     </>
                   )}
-                  <CommandItem onSelect={() => setOpen(false)} className="max-w-full flex-1 cursor-pointer justify-center">
+                  <CommandItem
+                    onSelect={() => setOpen(false)}
+                    className="max-w-full flex-1 cursor-pointer justify-center"
+                  >
                     Close
                   </CommandItem>
                 </div>
