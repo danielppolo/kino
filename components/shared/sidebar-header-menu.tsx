@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+
+import { TransactionLink } from "./transaction-link";
 
 import {
   SidebarMenu,
@@ -22,7 +23,7 @@ export function SidebarHeaderMenu() {
           size="lg"
           className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
         >
-          <Link href="/app/transactions">
+          <TransactionLink>
             <>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="font-display truncate">cuatrocientosdos</span>
@@ -31,7 +32,7 @@ export function SidebarHeaderMenu() {
                 </span>
               </div>
             </>
-          </Link>
+          </TransactionLink>
         </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>

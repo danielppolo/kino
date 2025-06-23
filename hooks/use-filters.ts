@@ -25,6 +25,8 @@ function useFilters(): Filters {
       sortOrder: searchParams.get("sortOrder") || "",
       from: searchParams.get("from") || "",
       to: searchParams.get("to") || "",
+      label_id: searchParams.get("label_id") || "",
+      category_id: searchParams.get("category_id") || "",
     };
   }, [params.walletId, searchParams]);
   return filters;

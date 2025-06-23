@@ -6,6 +6,9 @@ import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
 
+import Color from "../shared/color";
+import { TransactionLink } from "../shared/transaction-link";
+
 import {
   Accordion,
   AccordionContent,
@@ -218,6 +221,7 @@ export default function LabelAreaChart({
       total: number;
       color: string;
       safeKey: string;
+      id: string;
     }> = [];
 
     if (data && data.length > 0) {
@@ -243,6 +247,7 @@ export default function LabelAreaChart({
             total: 0,
             color: labelColor,
             safeKey: safeKey,
+            id: labelId,
           });
         }
 
@@ -440,21 +445,20 @@ export default function LabelAreaChart({
                 <AccordionContent>
                   <div className="grid gap-1">
                     {labelTotals.map((label) => (
-                      <div
+                      <TransactionLink
                         key={label.safeKey}
+                        walletId={walletId}
+                        labelId={label.id}
                         className="flex items-center justify-between gap-2"
                       >
                         <div className="flex items-center gap-2">
-                          <div
-                            className="h-2 w-2 rounded-full"
-                            style={{ backgroundColor: label.color }}
-                          />
+                          <Color color={label.color} size="sm" />
                           <span className="text-sm">{label.name}</span>
                         </div>
                         <span className="text-sm font-medium">
                           {formatCents(label.total)}
                         </span>
-                      </div>
+                      </TransactionLink>
                     ))}
                   </div>
                 </AccordionContent>
