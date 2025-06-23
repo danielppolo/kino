@@ -5,6 +5,8 @@ import { format } from "date-fns";
 import { TrendingUp } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
+import { useQuery } from "@tanstack/react-query";
+
 import {
   Card,
   CardContent,
@@ -21,6 +23,8 @@ import {
   ChartTooltip,
 } from "@/components/ui/chart";
 import { useCurrency } from "@/contexts/settings-context";
+import { createClient } from "@/utils/supabase/client";
+import { getMonthlyStats } from "@/utils/supabase/queries";
 
 interface MonthlyStats {
   month: string;
@@ -30,7 +34,9 @@ interface MonthlyStats {
 }
 
 interface CashflowAreaChartProps {
-  monthlyStats: MonthlyStats[];
+  walletId?: string;
+  from?: string;
+  to?: string;
 }
 
 // Utility function to aggregate stats by month
@@ -54,12 +60,35 @@ function aggregateMonthlyStats(stats: MonthlyStats[]) {
   }));
 }
 
-export function CashflowAreaChart({ monthlyStats }: CashflowAreaChartProps) {
+export function CashflowAreaChart({
+  walletId,
+  from,
+  to,
+}: CashflowAreaChartProps) {
+  const {
+    data: monthlyStats,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["cashflow-area-chart", walletId, from, to],
+    queryFn: async () => {
+      const supabase = await createClient();
+      const { data, error } = await getMonthlyStats(supabase, {
+        walletId,
+        from,
+        to,
+      });
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { baseCurrency } = useCurrency();
 
   // Aggregate by month
   const aggregatedStats = useMemo(
-    () => aggregateMonthlyStats(monthlyStats),
+    () => aggregateMonthlyStats(monthlyStats ?? []),
     [monthlyStats],
   );
 
@@ -98,6 +127,60 @@ export function CashflowAreaChart({ monthlyStats }: CashflowAreaChartProps) {
   };
 
   const percentageChange = calculatePercentageChange();
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Cashflow Analysis</CardTitle>
+          <CardDescription>
+            Showing income, outcome, and net cashflow over time
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex h-64 items-center justify-center">
+            Loading...
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Cashflow Analysis</CardTitle>
+          <CardDescription>
+            Showing income, outcome, and net cashflow over time
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex h-64 items-center justify-center text-red-500">
+            Error loading chart data
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!chartData || chartData.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Cashflow Analysis</CardTitle>
+          <CardDescription>
+            Showing income, outcome, and net cashflow over time
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex h-64 items-center justify-center text-gray-500">
+            No data available for this period
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
