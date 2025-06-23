@@ -4,15 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 
 import { Badge } from "./ui/badge";
 
-import { useWallets } from "@/contexts/settings-context";
 import { formatCents } from "@/utils/format-cents";
 import { createClient } from "@/utils/supabase/client";
 import { getTotalExpenses } from "@/utils/supabase/queries";
 
 export default function UNAMDonation() {
   const walletId = "c357aa5c-ad41-4c41-8d67-bf5516117187";
-  const [, walletsMap] = useWallets();
-  const wallet = walletsMap.get(walletId);
 
   const {
     data: totalExpenses,
