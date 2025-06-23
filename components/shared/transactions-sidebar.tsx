@@ -1,10 +1,10 @@
 "use client";
 
 import { endOfMonth, format, startOfMonth } from "date-fns";
-import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 import { SidebarWrapper } from "./sidebar-wrapper";
+import { TransactionLink } from "./transaction-link";
 
 import {
   SidebarGroup,
@@ -18,7 +18,6 @@ import { useTotalBalance } from "@/hooks/use-total-balance";
 import { formatCents } from "@/utils/format-cents";
 
 export function TransactionsSidebar() {
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { walletsByCurrency } = useTotalBalance();
 
@@ -44,10 +43,12 @@ export function TransactionsSidebar() {
                 <SidebarMenuItem key={wallet.id}>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname.includes(wallet.id)}
+                    isActive={searchParams.get("walletId") === wallet.id}
                   >
-                    <Link
-                      href={`/app/transactions/${wallet.id}?from=${fromDate}&to=${toDate}`}
+                    <TransactionLink
+                      walletId={wallet.id}
+                      from={fromDate}
+                      to={toDate}
                     >
                       <span className="flex-1">{wallet.name}</span>
                       <span className="text-muted-foreground text-xs">
@@ -56,7 +57,7 @@ export function TransactionsSidebar() {
                           wallet.currency,
                         )}
                       </span>
-                    </Link>
+                    </TransactionLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
