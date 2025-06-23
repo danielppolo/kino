@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { format } from "date-fns";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
@@ -55,11 +56,41 @@ export default function LabelAreaChart({
 
   // Transform data for area chart
   const chartData = useMemo(() => {
-    if (!data || data.length === 0) return [];
+    // Generate all months between from and to dates in YYYY-MM-01 format
+    const allMonths = new Set<string>();
+    if (from && to) {
+      const startDate = new Date(from);
+      startDate.setDate(1);
+      startDate.setHours(0, 0, 0, 0);
+
+      const endDate = new Date(to);
+      endDate.setDate(1);
+      endDate.setHours(0, 0, 0, 0);
+
+      const currentDate = new Date(startDate);
+      while (currentDate <= endDate) {
+        // Format as YYYY-MM-01
+        const monthKey = format(currentDate, "yyyy-MM-01");
+        allMonths.add(monthKey);
+        currentDate.setMonth(currentDate.getMonth() + 1);
+      }
+    }
+
+    if (!data || data.length === 0) {
+      // If no data but we have a date range, create empty chart data
+      if (from && to && allMonths.size > 0) {
+        const emptyChartData = Array.from(allMonths).map((month) => ({
+          month: month as string,
+          empty: 0, // Add empty field for chart structure
+        }));
+        return emptyChartData.sort((a, b) => a.month.localeCompare(b.month));
+      }
+      return [];
+    }
 
     // First pass: collect all unique labels and months, and aggregate values
     const labels = new Map();
-    const months = new Set();
+    const months = new Set<string>();
     const aggregatedData = new Map(); // Map<`${month}|${labelId}`, aggregatedValue>
 
     data.forEach((item) => {
@@ -96,15 +127,21 @@ export default function LabelAreaChart({
       aggregatedData.set(key, existingValue + value);
     });
 
+    // If no date range specified, use only months with data
+    if (!from || !to) {
+      months.forEach((month) => allMonths.add(month));
+    }
+
     // Second pass: create month entries with all labels initialized to 0
     const monthlyData = new Map();
     const labelSafeKeys = Array.from(labels.values()).map(
       (label) => label.safeKey,
     );
-
-    months.forEach((month) => {
+    console.log(months, allMonths);
+    allMonths.forEach((month) => {
       const monthEntry: { month: string; [key: string]: number | string } = {
-        month: month as string,
+        month,
+        empty: 0, // Add empty field for chart structure
       };
 
       // Initialize all labels to 0
@@ -130,7 +167,7 @@ export default function LabelAreaChart({
     return Array.from(monthlyData.values()).sort((a, b) =>
       a.month.localeCompare(b.month),
     );
-  }, [data, type]);
+  }, [data, type, from, to]);
 
   // Create chart config from labels (reuse the labels from chartData transformation)
   const chartConfig = useMemo(() => {
@@ -219,7 +256,7 @@ export default function LabelAreaChart({
     return (
       sum +
       Object.keys(month)
-        .filter((key) => key !== "month")
+        .filter((key) => key !== "month" && key !== "empty")
         .reduce((monthSum, label) => monthSum + (month[label] || 0), 0)
     );
   }, 0);
@@ -326,6 +363,14 @@ export default function LabelAreaChart({
                 stackId="a"
               />
             ))}
+            {/* Always render empty area for chart structure */}
+            <Area
+              dataKey="empty"
+              type="step"
+              fill="transparent"
+              stroke="transparent"
+              stackId="a"
+            />
           </AreaChart>
         </ChartContainer>
       </CardContent>
