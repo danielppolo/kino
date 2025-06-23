@@ -66,6 +66,16 @@ async function InfographicsPage({ params, searchParams }: PageParams) {
           title="Expense Trends by Label"
         />
       </div>
+      {/* Label Area Chart - Full Width */}
+      <div className="md:col-span-2 lg:col-span-3">
+        <LabelAreaChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
+          type="income"
+          title="Income Trends by Label"
+        />
+      </div>
 
       {/* Pie Charts - Side by Side */}
       {/* <div className="md:col-span-1 lg:col-span-1">

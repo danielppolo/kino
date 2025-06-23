@@ -23,7 +23,7 @@ import { createClient } from "@/utils/supabase/client";
 import { getMonthlyLabelStats } from "@/utils/supabase/queries";
 
 interface LabelAreaChartProps {
-  walletId: string;
+  walletId?: string;
   from?: string;
   to?: string;
   type: "income" | "expense" | "net";
@@ -288,7 +288,7 @@ export default function LabelAreaChart({
                         {sortedPayload.map((entry) => (
                           <div
                             key={entry.dataKey}
-                            className="flex items-center justify-between gap-2"
+                            className="text-muted-foreground flex items-center justify-between gap-2"
                           >
                             <div className="flex items-center gap-2">
                               <div
@@ -299,7 +299,7 @@ export default function LabelAreaChart({
                                 {entry.name}
                               </span>
                             </div>
-                            <span className="text-muted-foreground text-sm">
+                            <span className="text-sm">
                               {formatCents(Number(entry.value) || 0)}
                             </span>
                           </div>
@@ -314,7 +314,7 @@ export default function LabelAreaChart({
               <Area
                 key={safeKey}
                 dataKey={safeKey}
-                type="monotone"
+                type="step"
                 fill={`var(--color-${safeKey})`}
                 fillOpacity={0.4}
                 stroke={`var(--color-${safeKey})`}
@@ -328,7 +328,7 @@ export default function LabelAreaChart({
         <div className="flex w-full items-start gap-2 text-sm">
           <div className="grid gap-2">
             <div className="flex items-center gap-2 leading-none font-medium">
-              Total: ${(total / 100).toFixed(2)} | {labelCount} labels
+              Total: ${formatCents(total)} | {labelCount} labels
             </div>
             <div className="text-muted-foreground flex items-center gap-2 leading-none">
               {from && to ? `${from} - ${to}` : "All time"}
