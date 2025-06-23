@@ -5,7 +5,7 @@ import { format } from "date-fns";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import CreatableMultiSelect from "../ui/creatable-multi-select";
+import TagMultiSelect from "./tag-multi-select";
 import DaterPicker from "../ui/date-picker";
 import { AmountInput } from "./amount-input";
 import { DescriptionInput } from "./description-input";
@@ -251,11 +251,9 @@ const ExpenseIncomeForm = ({
         render={({ field: { onChange, ...field } }) => (
           <FormItem>
             <FormControl>
-              <CreatableMultiSelect
+              <TagMultiSelect
                 {...field}
-                onChange={(value) => {
-                  onChange(value.map((v) => v.toLowerCase()));
-                }}
+                onChange={onChange}
                 options={availableTags}
                 className="w-full"
               />
