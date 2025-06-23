@@ -170,7 +170,7 @@ export const CreatableMultiSelect = React.forwardRef<
           align="start"
           onEscapeKeyDown={() => setIsPopoverOpen(false)}
         >
-          <Command shouldFilter={false}>
+          <Command>
             <CommandInput
               placeholder="Type and press Enter to add..."
               value={inputValue}
@@ -204,6 +204,7 @@ export const CreatableMultiSelect = React.forwardRef<
                   return (
                     <CommandItem
                       key={option}
+                      keywords={[option]}
                       onSelect={() => toggleOption(option)}
                       className="flex cursor-pointer items-center gap-2"
                     >

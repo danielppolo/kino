@@ -1,5 +1,6 @@
 "use client";
 
+import { endOfMonth, format, startOfMonth } from "date-fns";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -20,6 +21,11 @@ export function TransactionsSidebar() {
   const pathname = usePathname();
   const { walletsByCurrency } = useTotalBalance();
 
+  // Get current month's start and end dates
+  const now = new Date();
+  const fromDate = format(startOfMonth(now), "yyyy-MM-dd");
+  const toDate = format(endOfMonth(now), "yyyy-MM-dd");
+
   return (
     <SidebarWrapper>
       {Object.entries(walletsByCurrency).map(([currency, currencyWallets]) => (
@@ -35,7 +41,9 @@ export function TransactionsSidebar() {
                     asChild
                     isActive={pathname.includes(wallet.id)}
                   >
-                    <Link href={`/app/transactions/${wallet.id}`}>
+                    <Link
+                      href={`/app/transactions/${wallet.id}?from=${fromDate}&to=${toDate}`}
+                    >
                       <span className="flex-1">{wallet.name}</span>
                       <span className="text-muted-foreground text-xs">
                         {formatCents(

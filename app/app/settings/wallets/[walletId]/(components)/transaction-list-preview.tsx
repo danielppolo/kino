@@ -11,19 +11,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+interface Transaction {
+  [key: string]: string | number | null | undefined;
+}
+
 interface TransactionListPreviewProps {
-  transactions: any[];
+  transactions: Transaction[];
 }
 
 const TransactionListPreview: React.FC<TransactionListPreviewProps> = ({
   transactions,
 }) => {
-  const displayedTransactions = transactions.slice(0, 5);
-  const remainingTransactionsCount = transactions.length - 5;
-
   return (
-    <div className="w-full overflow-auto">
-      <Table className="w-full overflow-y-scroll">
+    <div className="h-[200px] w-full overflow-auto">
+      <Table className="h-full w-full">
         <TableHeader>
           <TableRow>
             {transactions.length > 0 &&
@@ -34,8 +35,8 @@ const TransactionListPreview: React.FC<TransactionListPreviewProps> = ({
               ))}
           </TableRow>
         </TableHeader>
-        <TableBody>
-          {displayedTransactions.map((row, rowIndex) => (
+        <TableBody className="overflow-y-scroll">
+          {transactions.map((row, rowIndex) => (
             <TableRow key={rowIndex} className="h-8">
               {Object.values(row).map((cell, cellIndex) => (
                 <TableCell key={cellIndex} className="truncate p-1 px-2">
@@ -44,17 +45,6 @@ const TransactionListPreview: React.FC<TransactionListPreviewProps> = ({
               ))}
             </TableRow>
           ))}
-          {remainingTransactionsCount > 0 && (
-            <TableRow className="h-8">
-              <TableCell
-                colSpan={Object.keys(transactions[0]).length}
-                className="p-1"
-              >
-                + {remainingTransactionsCount} more transaction
-                {remainingTransactionsCount !== 1 ? "s" : ""}
-              </TableCell>
-            </TableRow>
-          )}
         </TableBody>
       </Table>
     </div>

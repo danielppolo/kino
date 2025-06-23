@@ -11,6 +11,7 @@ export function useTags() {
     queryFn: async () => {
       const supabase = await createClient();
       const { data, error } = await listTags(supabase);
+      console.log(data);
       if (error) throw error;
       return (data ?? []).sort((a, b) => a.localeCompare(b));
     },

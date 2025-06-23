@@ -5,6 +5,7 @@ import { ChevronsUpDown, LogOut, Settings } from "lucide-react";
 import Link from "next/link";
 
 import { signOutAction } from "@/app/actions";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -100,6 +101,16 @@ export function NavUser() {
                 <Settings className="size-4" />
                 Settings
               </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem className="gap-2 p-2">
+              <ThemeSwitcher
+                variant="ghost"
+                size="sm"
+                className="h-auto w-full justify-start gap-2 p-0"
+                showToast={false}
+              >
+                Theme
+              </ThemeSwitcher>
             </DropdownMenuItem>
             <DropdownMenuItem>
               <form action={signOutAction} className="w-full">
