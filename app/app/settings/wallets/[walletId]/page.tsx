@@ -9,6 +9,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { exportTransactions } from "@/actions/export-transactions";
 import { SubmitButton } from "@/components/submit-button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Subtitle, Title } from "@/components/ui/typography";
 import UNAMDonation from "@/components/UNAMDonation";
@@ -87,35 +93,51 @@ export default function Page() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <div className="flex w-full items-center justify-between gap-2">
-          <Title>{wallet?.name}</Title>
-          {params.walletId === "c357aa5c-ad41-4c41-8d67-bf5516117187" && (
-            <UNAMDonation />
-          )}
-        </div>
-        <Subtitle>Currency</Subtitle>
-        <p>{wallet?.currency}</p>
-        <Subtitle>Balance</Subtitle>
-        <p>{formatCents(wallet?.balance_cents ?? 0)}</p>
-        <Subtitle>Visibility</Subtitle>
-        <div className="flex items-center gap-4">
-          <p className="text-muted-foreground text-sm">
-            Show in wallet overview
-          </p>
-          <Switch
-            checked={wallet?.visible ?? true}
-            onCheckedChange={handleVisibilityToggle}
-            disabled={visibilityMutation.isPending}
-          />
-        </div>
-        <Subtitle>Export</Subtitle>
-        <form action={handleExport} ref={formRef}>
-          <SubmitButton>Export</SubmitButton>
-        </form>
-        <Subtitle>Import</Subtitle>
-      </div>
+    <div className="container max-w-2xl py-8">
+      <Card>
+        <CardHeader>
+          <div className="flex w-full items-center justify-between gap-2">
+            <CardTitle className="text-xl">
+              <Title>{wallet?.name}</Title>
+            </CardTitle>
+            {params.walletId === "c357aa5c-ad41-4c41-8d67-bf5516117187" && (
+              <UNAMDonation />
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Subtitle>Currency</Subtitle>
+            <p>{wallet?.currency}</p>
+          </div>
+          <div>
+            <Subtitle>Balance</Subtitle>
+            <p>{formatCents(wallet?.balance_cents ?? 0)}</p>
+          </div>
+          <div>
+            <Subtitle>Visibility</Subtitle>
+            <div className="flex items-center gap-4">
+              <p className="text-muted-foreground text-sm">
+                Show in wallet overview
+              </p>
+              <Switch
+                checked={wallet?.visible ?? true}
+                onCheckedChange={handleVisibilityToggle}
+                disabled={visibilityMutation.isPending}
+              />
+            </div>
+          </div>
+          <div>
+            <Subtitle>Export</Subtitle>
+            <form action={handleExport} ref={formRef}>
+              <SubmitButton>Export</SubmitButton>
+            </form>
+          </div>
+          <div>
+            <Subtitle>Import</Subtitle>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
