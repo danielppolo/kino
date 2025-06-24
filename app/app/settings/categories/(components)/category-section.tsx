@@ -4,6 +4,12 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 
 import CategoryForm from "@/components/shared/category-form";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -49,15 +55,16 @@ export default function CategorySection({ type, title }: CategoriesProps) {
   };
 
   return (
-    <div className="my-8">
-      <div className="flex items-center justify-between gap-2">
-        <Subtitle>{title}</Subtitle>
+    <Card className="my-8">
+      <CardHeader className="flex flex-row items-center justify-between gap-2">
+        <CardTitle className="text-base font-medium">
+          <Subtitle>{title}</Subtitle>
+        </CardTitle>
         <Button size="sm" variant="outline" onClick={handleAdd}>
           <Plus className="size-4" />
         </Button>
-      </div>
-
-      <div>
+      </CardHeader>
+      <CardContent className="pt-0">
         <Table>
           <TableHeader>
             <TableRow>
@@ -82,7 +89,7 @@ export default function CategorySection({ type, title }: CategoriesProps) {
             ))}
           </TableBody>
         </Table>
-      </div>
+      </CardContent>
       <CategoryForm
         type={type}
         category={selectedCategory ?? undefined}
@@ -90,6 +97,6 @@ export default function CategorySection({ type, title }: CategoriesProps) {
         onOpenChange={handleClose}
         onSuccess={handleClose}
       />
-    </div>
+    </Card>
   );
 }
