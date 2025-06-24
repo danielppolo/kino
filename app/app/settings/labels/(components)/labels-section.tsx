@@ -5,6 +5,12 @@ import { Plus } from "lucide-react";
 
 import Color from "@/components/shared/color";
 import LabelForm from "@/components/shared/label-form";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -42,19 +48,20 @@ export default function LabelSection() {
   const sortedLabels = [...labels].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <div>
-      <div className="mb-4 flex w-full items-center justify-between">
-        <Button size="sm" variant="ghost" onClick={handleAdd}>
+    <Card>
+      <CardHeader className="flex items-center justify-between">
+        <CardTitle className="text-base font-medium">Labels</CardTitle>
+        <Button size="sm" variant="outline" onClick={handleAdd}>
           <Plus className="size-4" />
         </Button>
-      </div>
-      <LabelForm
-        open={open}
-        onOpenChange={setOpen}
-        onSuccess={handleClose}
-        label={editLabel}
-      />
-      <div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <LabelForm
+          open={open}
+          onOpenChange={setOpen}
+          onSuccess={handleClose}
+          label={editLabel}
+        />
         <Table>
           <TableHeader>
             <TableRow>
@@ -77,7 +84,7 @@ export default function LabelSection() {
             ))}
           </TableBody>
         </Table>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
