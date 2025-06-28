@@ -233,3 +233,21 @@ export const updateTransfer = async (
 
   if (error) throw new Error(error.message);
 };
+
+export const mergeCategories = async (targetId: string, ids: string[]) => {
+  const supabase = await createClient();
+  const idsToMerge = ids.filter((id) => id !== targetId);
+  if (idsToMerge.length === 0) return;
+
+  const { error } = await supabase
+    .from("transactions")
+    .update({ category_id: targetId })
+    .in("category_id", idsToMerge);
+  if (error) throw new Error(error.message);
+
+  const { error: deleteError } = await supabase
+    .from("categories")
+    .delete()
+    .in("id", idsToMerge);
+  if (deleteError) throw new Error(deleteError.message);
+};
