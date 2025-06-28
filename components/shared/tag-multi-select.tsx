@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, XCircle } from "lucide-react";
+import { ChevronDown, Plus, XCircle } from "lucide-react";
 
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -20,6 +20,29 @@ import { Text } from "../ui/typography";
 
 import { cn } from "@/lib/utils";
 import { Tag } from "@/utils/supabase/types";
+import { createTag } from "@/utils/supabase/mutations";
+import { Database } from "@/utils/supabase/database.types";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+function CommandAddItem({
+  query,
+  onCreate,
+}: {
+  query: string;
+  onCreate: () => void;
+}) {
+  return (
+    <div
+      tabIndex={0}
+      onClick={onCreate}
+      className={cn(
+        "hover:bg-accent hover:text-accent-foreground relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
+      )}
+    >
+      <Plus className="mr-2 h-4 w-4" />"{query}"
+    </div>
+  );
+}
 
 interface TagMultiSelectProps {
   disabled?: boolean;
@@ -44,6 +67,20 @@ const TagMultiSelect = React.forwardRef<HTMLButtonElement, TagMultiSelectProps>(
   ) => {
     const [open, setOpen] = React.useState(false);
     const [query, setQuery] = React.useState("");
+
+    const queryClient = useQueryClient();
+    const createMutation = useMutation({
+      mutationFn: async (title: string) => {
+        const values: Database["public"]["Tables"]["tags"]["Insert"] = {
+          title,
+        };
+        const result = await createTag(values);
+        return result[0];
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["tags"] });
+      },
+    });
 
     const groupedOptions = React.useMemo(() => {
       const map: Record<string, Tag[]> = {};
@@ -77,6 +114,24 @@ const TagMultiSelect = React.forwardRef<HTMLButtonElement, TagMultiSelectProps>(
       });
       return map;
     }, [groupedOptions, query]);
+
+    const canCreate = React.useMemo(() => {
+      if (!query.trim()) return false;
+      return !options.some(
+        (t) => t.title.toLowerCase() === query.trim().toLowerCase(),
+      );
+    }, [query, options]);
+
+    const handleCreate = async () => {
+      const title = query.trim();
+      if (!title) return;
+      const newTag = await createMutation.mutateAsync(title);
+      if (newTag) {
+        onChange([...value, newTag.title]);
+      }
+      setOpen(false);
+      setQuery("");
+    };
 
     return (
       <Popover open={open} onOpenChange={setOpen} modal>
@@ -132,7 +187,13 @@ const TagMultiSelect = React.forwardRef<HTMLButtonElement, TagMultiSelectProps>(
               onValueChange={setQuery}
             />
             <CommandList>
-              <CommandEmpty>No tags found.</CommandEmpty>
+              <CommandEmpty>
+                {query && canCreate ? (
+                  <CommandAddItem query={query} onCreate={handleCreate} />
+                ) : (
+                  "No tags found."
+                )}
+              </CommandEmpty>
               {Object.entries(filteredGrouped).map(([group, items]) => (
                 <CommandGroup
                   key={group}
@@ -155,6 +216,9 @@ const TagMultiSelect = React.forwardRef<HTMLButtonElement, TagMultiSelectProps>(
                   })}
                 </CommandGroup>
               ))}
+              {query && canCreate && (
+                <CommandAddItem query={query} onCreate={handleCreate} />
+              )}
               <CommandGroup>
                 <div className="flex items-center justify-between">
                   {value.length > 0 && (
