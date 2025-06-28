@@ -24,14 +24,6 @@ export default function TagsSection({
   onEdit,
 }: TagsSectionProps) {
   const [tags] = useTags();
-
-  const sorted = [...tags].sort((a, b) => {
-    const gA = a.group ?? "";
-    const gB = b.group ?? "";
-    if (gA !== gB) return gA.localeCompare(gB);
-    return a.title.localeCompare(b.title);
-  });
-
   // Fetch transaction counts using react-query
   const { data: transactionCountsData } = useQuery({
     queryKey: ["tag-transaction-counts"],
@@ -57,7 +49,7 @@ export default function TagsSection({
     <div className="space-y-4">
       <Table>
         <TableBody>
-          {sorted.map((tag) => {
+          {tags.map((tag) => {
             const isSelected = selected.includes(tag.id);
             const transactionCount = transactionCountsData?.get(tag.id) || 0;
             return (
