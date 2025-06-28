@@ -3,18 +3,16 @@
 import { useState } from "react";
 import { Combine, Plus, Trash2 } from "lucide-react";
 
-import TagsSection from "./(components)/tags-section";
 import DeleteTagsDialog from "./(components)/delete-tags-dialog";
 import MergeTagsDialog from "./(components)/merge-tags-dialog";
+import TagsSection from "./(components)/tags-section";
 
 import TagForm from "@/components/shared/tag-form";
 import { Button } from "@/components/ui/button";
 import { Title } from "@/components/ui/typography";
-import { useTags } from "@/contexts/settings-context";
 import { Tag } from "@/utils/supabase/types";
 
 export default function Page() {
-  const [tags] = useTags();
   const [selected, setSelected] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
@@ -85,7 +83,11 @@ export default function Page() {
         </div>
       </div>
 
-      <TagsSection selected={selected} onToggle={toggleSelect} onEdit={handleEdit} />
+      <TagsSection
+        selected={selected}
+        onToggle={toggleSelect}
+        onEdit={handleEdit}
+      />
 
       <TagForm
         open={open}

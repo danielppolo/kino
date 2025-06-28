@@ -437,3 +437,64 @@ export const getCategoryTransactionCounts = async (
 
   return { data: result, error: null };
 };
+
+// Get tag transaction counts (total across all months)
+export const getTagTransactionCounts = async (
+  client: TypedSupabaseClient,
+  params?: {
+    walletId?: string;
+  },
+) => {
+  // First get all tags
+  const { data: tags, error: tagsError } = await client
+    .from("tags")
+    .select("id");
+
+  if (tagsError) {
+    return { data: null, error: tagsError };
+  }
+
+  // Count transactions for each tag using the transaction_tags junction table
+  const result = await Promise.all(
+    tags.map(async (tag) => {
+      let query = client
+        .from("transaction_tags")
+        .select("transaction_id", { count: "exact", head: true })
+        .eq("tag_id", tag.id);
+
+      // If walletId is specified, we need to join with transactions to filter by wallet
+      if (params?.walletId) {
+        query = client
+          .from("transaction_tags")
+          .select(
+            `
+            transaction_id,
+            transactions!inner (
+              wallet_id
+            )
+          `,
+            { count: "exact", head: true },
+          )
+          .eq("tag_id", tag.id)
+          .eq("transactions.wallet_id", params.walletId);
+      }
+
+      const { count, error } = await query;
+
+      if (error) {
+        console.error(`Error counting transactions for tag ${tag.id}:`, error);
+        return {
+          tag_id: tag.id,
+          transaction_count: 0,
+        };
+      }
+
+      return {
+        tag_id: tag.id,
+        transaction_count: count || 0,
+      };
+    }),
+  );
+
+  return { data: result, error: null };
+};

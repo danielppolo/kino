@@ -56,7 +56,7 @@ function CommandAddItem({
       //   }
       // }}
       className={cn(
-        "hover:bg-accent hover:text-accent-foreground relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
+        "hover:bg-accent hover:text-accent-foreground relative flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
       )}
     >
       <Plus className="mr-2 h-4 w-4" />
@@ -117,7 +117,7 @@ export function Combobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="z-[100] max-h-[300px] w-[200px] overflow-y-auto p-0"
+        className="max-h-[300px] min-w-[var(--radix-popover-trigger-width)] overflow-hidden p-0"
         side="bottom"
         align="start"
         sideOffset={4}

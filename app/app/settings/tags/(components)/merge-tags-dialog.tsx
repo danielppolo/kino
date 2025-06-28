@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import TagCombobox from "@/components/shared/tag-combobox";
@@ -33,19 +34,14 @@ export default function MergeTagsDialog({
   const [target, setTarget] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (!open) {
-      setTarget(null);
-    }
-  }, [open]);
-
   const mutation = useMutation({
     mutationFn: async () => {
+      console.log(target, selected);
       if (!target) return;
       await mergeTags(target, selected);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries();
+      queryClient.invalidateQueries({ queryKey: ["tags"] });
       toast.success("Tags merged");
       onOpenChange(false);
       setTarget(null);
@@ -62,7 +58,15 @@ export default function MergeTagsDialog({
   };
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog
+      open={open}
+      onOpenChange={(open) => {
+        onOpenChange(open);
+        if (!open) {
+          setTarget(null);
+        }
+      }}
+    >
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
@@ -73,12 +77,17 @@ export default function MergeTagsDialog({
             tag and delete the others.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <TagCombobox
-          value={target}
-          onChange={setTarget}
-          placeholder="Target tag"
-          className="w-full"
-        />
+        <div className="relative w-full">
+          <TagCombobox
+            value={target}
+            onChange={(value) => {
+              setTarget(value);
+              console.log(value);
+            }}
+            placeholder="Target tag"
+            className="relative w-full"
+          />
+        </div>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
