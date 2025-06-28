@@ -67,7 +67,7 @@ export default function RootLayout({
       className={`${display.variable} ${untitledSans.variable} bg-sidebar`}
       suppressHydrationWarning
     >
-      <body className="bg-background">
+      <body className="bg-sidebar">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
