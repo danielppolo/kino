@@ -3,6 +3,8 @@
 import * as React from "react";
 import { ChevronDown, Plus, XCircle } from "lucide-react";
 
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
@@ -19,10 +21,9 @@ import { Separator } from "../ui/separator";
 import { Text } from "../ui/typography";
 
 import { cn } from "@/lib/utils";
-import { Tag } from "@/utils/supabase/types";
-import { createTag } from "@/utils/supabase/mutations";
 import { Database } from "@/utils/supabase/database.types";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createTag } from "@/utils/supabase/mutations";
+import { Tag } from "@/utils/supabase/types";
 
 function CommandAddItem({
   query,

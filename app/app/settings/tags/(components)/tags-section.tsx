@@ -4,21 +4,9 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 
 import TagForm from "@/components/shared/tag-form";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
+import { Title } from "@/components/ui/typography";
 import { useTags } from "@/hooks/use-tags";
 import { Tag } from "@/utils/supabase/types";
 
@@ -50,41 +38,36 @@ export default function TagsSection() {
   });
 
   return (
-    <Card>
-      <CardHeader className="flex items-center justify-between">
-        <CardTitle className="text-base font-medium">Tags</CardTitle>
-        <Button size="sm" variant="outline" onClick={handleAdd}>
-          <Plus className="size-4" />
-        </Button>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <TagForm
-          open={open}
-          onOpenChange={setOpen}
-          onSuccess={handleClose}
-          tag={editTag}
-        />
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Group</TableHead>
+    <div>
+      <div className="bg-background sticky top-0 z-10 flex items-center justify-between py-6">
+        <Title>Tags</Title>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={handleAdd}>
+            <Plus className="size-4" />
+          </Button>
+        </div>
+      </div>
+
+      <Table>
+        <TableBody>
+          {sorted.map((tag) => (
+            <TableRow
+              key={tag.id}
+              onClick={() => handleEdit(tag)}
+              className="cursor-pointer"
+            >
+              <TableCell>{tag.title}</TableCell>
+              <TableCell>{tag.group}</TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sorted.map((tag) => (
-              <TableRow
-                key={tag.id}
-                onClick={() => handleEdit(tag)}
-                className="cursor-pointer"
-              >
-                <TableCell>{tag.title}</TableCell>
-                <TableCell>{tag.group}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+          ))}
+        </TableBody>
+      </Table>
+      <TagForm
+        open={open}
+        onOpenChange={setOpen}
+        onSuccess={handleClose}
+        tag={editTag}
+      />
+    </div>
   );
 }
