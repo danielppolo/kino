@@ -8,6 +8,7 @@ export interface Filters {
   to?: string | undefined;
   from?: string | undefined;
   wallet_id?: string | undefined;
+  tag?: string | undefined;
 }
 
 export const listTransactions = async (
@@ -32,6 +33,11 @@ export const listTransactions = async (
   // Filter by category_id if available
   if (params?.category_id) {
     query = query.eq("category_id", params.category_id);
+  }
+
+  // Filter by tag if available
+  if (params?.tag) {
+    query = query.contains("tags", [params.tag]);
   }
 
   // Filter by wallet_id if available
