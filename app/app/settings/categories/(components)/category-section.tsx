@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -26,9 +27,16 @@ import { Category } from "@/utils/supabase/types";
 interface CategoriesProps {
   type: "income" | "expense";
   title: string;
+  selected: string[];
+  onToggle: (category: Category) => void;
 }
 
-export default function CategorySection({ type, title }: CategoriesProps) {
+export default function CategorySection({
+  type,
+  title,
+  selected,
+  onToggle,
+}: CategoriesProps) {
   const [categories] = useCategories();
   const [open, setOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(
@@ -68,25 +76,42 @@ export default function CategorySection({ type, title }: CategoriesProps) {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-4">
+                <span className="sr-only">Select</span>
+              </TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Keywords</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredCategories?.map((category) => (
-              <TableRow
-                key={category.id}
-                className="cursor-pointer"
-                onClick={() => handleEdit(category)}
-              >
-                <TableCell>{category.name}</TableCell>
-                <TableCell>
-                  {Array.isArray(category.keywords)
-                    ? category.keywords.join(", ")
-                    : ""}
-                </TableCell>
-              </TableRow>
-            ))}
+            {filteredCategories?.map((category) => {
+              const isSelected = selected.includes(category.id);
+              return (
+                <TableRow
+                  key={category.id}
+                  data-state={isSelected ? "selected" : undefined}
+                  className="cursor-pointer"
+                  onClick={() => handleEdit(category)}
+                >
+                  <TableCell
+                    className="w-4"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => onToggle(category)}
+                      aria-label="Select category"
+                    />
+                  </TableCell>
+                  <TableCell>{category.name}</TableCell>
+                  <TableCell>
+                    {Array.isArray(category.keywords)
+                      ? category.keywords.join(", ")
+                      : ""}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </CardContent>
