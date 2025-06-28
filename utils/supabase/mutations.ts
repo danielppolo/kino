@@ -193,6 +193,12 @@ export const deleteTag = async (id: string) => {
   if (error) throw new Error(error.message);
 };
 
+export const deleteTags = async (ids: string[]) => {
+  const supabase = await createClient();
+  const { error } = await supabase.from("tags").delete().in("id", ids);
+  if (error) throw new Error(error.message);
+};
+
 export const deleteTransfer = async (transferId: string) => {
   const supabase = await createClient();
   const { error } = await supabase
@@ -280,6 +286,45 @@ export const mergeCategories = async (targetId: string, ids: string[]) => {
 
   const { error: deleteError } = await supabase
     .from("categories")
+    .delete()
+    .in("id", idsToMerge);
+  if (deleteError) throw new Error(deleteError.message);
+};
+
+export const mergeTags = async (targetId: string, ids: string[]) => {
+  const supabase = await createClient();
+  const idsToMerge = ids.filter((id) => id !== targetId);
+  if (idsToMerge.length === 0) return;
+
+  const { data: rows, error: fetchError } = await supabase
+    .from("transaction_tags")
+    .select("transaction_id")
+    .in("tag_id", idsToMerge);
+  if (fetchError) throw new Error(fetchError.message);
+
+  const transactionIds = Array.from(
+    new Set(rows?.map((r) => r.transaction_id) || []),
+  );
+
+  if (transactionIds.length > 0) {
+    const insertRows = transactionIds.map((transaction_id) => ({
+      transaction_id,
+      tag_id: targetId,
+    }));
+    const { error: insertError } = await supabase
+      .from("transaction_tags")
+      .upsert(insertRows);
+    if (insertError) throw new Error(insertError.message);
+  }
+
+  const { error: deleteLinkError } = await supabase
+    .from("transaction_tags")
+    .delete()
+    .in("tag_id", idsToMerge);
+  if (deleteLinkError) throw new Error(deleteLinkError.message);
+
+  const { error: deleteError } = await supabase
+    .from("tags")
     .delete()
     .in("id", idsToMerge);
   if (deleteError) throw new Error(deleteError.message);

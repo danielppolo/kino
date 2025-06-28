@@ -1,34 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import { Plus } from "lucide-react";
-
-import TagForm from "@/components/shared/tag-form";
-import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
-import { Title } from "@/components/ui/typography";
 import { useTags } from "@/contexts/settings-context";
 import { Tag } from "@/utils/supabase/types";
 
-export default function TagsSection() {
+interface TagsSectionProps {
+  selected: string[];
+  onToggle: (tag: Tag) => void;
+  onEdit: (tag: Tag) => void;
+}
+
+export default function TagsSection({
+  selected,
+  onToggle,
+  onEdit,
+}: TagsSectionProps) {
   const [tags] = useTags();
-  const [open, setOpen] = useState(false);
-  const [editTag, setEditTag] = useState<Tag | undefined>(undefined);
-
-  const handleAdd = () => {
-    setEditTag(undefined);
-    setOpen(true);
-  };
-
-  const handleEdit = (tag: Tag) => {
-    setEditTag(tag);
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-    setEditTag(undefined);
-  };
 
   const sorted = [...tags].sort((a, b) => {
     const gA = a.group ?? "";
@@ -38,36 +26,32 @@ export default function TagsSection() {
   });
 
   return (
-    <div>
-      <div className="bg-background sticky top-0 z-10 flex items-center justify-between py-6">
-        <Title>Tags</Title>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={handleAdd}>
-            <Plus className="size-4" />
-          </Button>
-        </div>
-      </div>
-
+    <div className="space-y-4">
       <Table>
         <TableBody>
-          {sorted.map((tag) => (
-            <TableRow
-              key={tag.id}
-              onClick={() => handleEdit(tag)}
-              className="cursor-pointer"
-            >
-              <TableCell>{tag.title}</TableCell>
-              <TableCell>{tag.group}</TableCell>
-            </TableRow>
-          ))}
+          {sorted.map((tag) => {
+            const isSelected = selected.includes(tag.id);
+            return (
+              <TableRow
+                key={tag.id}
+                data-state={isSelected ? "selected" : undefined}
+                className="cursor-pointer"
+                onClick={() => onEdit(tag)}
+              >
+                <TableCell className="w-4" onClick={(e) => e.stopPropagation()}>
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={() => onToggle(tag)}
+                    aria-label="Select tag"
+                  />
+                </TableCell>
+                <TableCell>{tag.title}</TableCell>
+                <TableCell>{tag.group}</TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
-      <TagForm
-        open={open}
-        onOpenChange={setOpen}
-        onSuccess={handleClose}
-        tag={editTag}
-      />
     </div>
   );
 }
