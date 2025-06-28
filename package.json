@@ -39,7 +39,6 @@
     "clsx": "^2.1.1",
     "cmdk": "1.0.0",
     "date-fns": "^4.1.0",
-    "gapi-script": "^1.2.0",
     "geist": "^1.2.1",
     "lucide-react": "^0.445.0",
     "lucide-static": "^0.451.0",
