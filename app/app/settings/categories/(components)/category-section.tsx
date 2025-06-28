@@ -1,14 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Combine, Plus } from "lucide-react";
 import Link from "next/link";
 
-import MergeCategoriesDialog from "./merge-categories-dialog";
+import { useQuery } from "@tanstack/react-query";
 
-import CategoryForm from "@/components/shared/category-form";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { useCategories } from "@/contexts/settings-context";
@@ -18,109 +14,48 @@ import { Category } from "@/utils/supabase/types";
 
 interface CategoriesProps {
   type: "income" | "expense";
-  title: string;
   selected: string[];
   onToggle: (category: Category) => void;
-  onMergeSuccess?: () => void;
+  onEdit: (category: Category) => void;
 }
 
 export default function CategorySection({
   type,
-  title,
   selected,
   onToggle,
-  onMergeSuccess,
+  onEdit,
 }: CategoriesProps) {
   const [categories] = useCategories();
-  const [open, setOpen] = useState(false);
-  const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
-    null,
-  );
-  const [transactionCounts, setTransactionCounts] = useState<
-    Map<string, number>
-  >(new Map());
 
   const filteredCategories = categories
     .filter((category) => category.type === type)
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  const selectedCategories = selected
-    .map((id) => categories.find((c) => c.id === id))
-    .filter(Boolean) as Category[];
+  // Fetch transaction counts using react-query
+  const { data: transactionCountsData } = useQuery({
+    queryKey: ["category-transaction-counts", type],
+    queryFn: async () => {
+      const supabase = createClient();
+      const { data, error } = await getCategoryTransactionCounts(supabase, {
+        type,
+      });
 
-  const selectedType =
-    selectedCategories.length > 0 &&
-    selectedCategories.every((c) => c.type === type)
-      ? type
-      : null;
-
-  // Fetch transaction counts
-  useEffect(() => {
-    const fetchTransactionCounts = async () => {
-      try {
-        const supabase = createClient();
-        const { data, error } = await getCategoryTransactionCounts(supabase, {
-          type,
-        });
-
-        if (error) {
-          console.error("Error fetching transaction counts:", error);
-          return;
-        }
-
-        const countsMap = new Map<string, number>();
-        data?.forEach((item) => {
-          countsMap.set(item.category_id, item.transaction_count);
-        });
-
-        setTransactionCounts(countsMap);
-      } catch (error) {
-        console.error("Error fetching transaction counts:", error);
+      if (error) {
+        throw error;
       }
-    };
 
-    fetchTransactionCounts();
-  }, [type]);
+      // Convert array to Map for easier lookup
+      const countsMap = new Map<string, number>();
+      data?.forEach((item) => {
+        countsMap.set(item.category_id, item.transaction_count);
+      });
 
-  const handleAdd = () => {
-    setSelectedCategory(null);
-    setOpen(true);
-  };
-
-  const handleEdit = (category: Category) => {
-    setSelectedCategory(category);
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-    setSelectedCategory(null);
-  };
-
-  const handleMergeSuccess = () => {
-    setMergeDialogOpen(false);
-    onMergeSuccess?.();
-  };
+      return countsMap;
+    },
+  });
 
   return (
-    <div className="my-8">
-      <div className="flex flex-row items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">{title}</h2>
-        <div className="flex gap-2">
-          <Button
-            size="icon"
-            variant="outline"
-            onClick={() => setMergeDialogOpen(true)}
-            disabled={selected.length < 2 || !selectedType}
-          >
-            <Combine className="size-4" />
-          </Button>
-          <Button size="icon" variant="outline" onClick={handleAdd}>
-            <Plus className="size-4" />
-          </Button>
-        </div>
-      </div>
+    <div className="space-y-4">
       <Table>
         {/* <TableHeader>
           <TableRow>
@@ -135,13 +70,14 @@ export default function CategorySection({
         <TableBody>
           {filteredCategories?.map((category) => {
             const isSelected = selected.includes(category.id);
-            const transactionCount = transactionCounts.get(category.id) || 0;
+            const transactionCount =
+              transactionCountsData?.get(category.id) || 0;
             return (
               <TableRow
                 key={category.id}
                 data-state={isSelected ? "selected" : undefined}
                 className="cursor-pointer"
-                onClick={() => handleEdit(category)}
+                onClick={() => onEdit(category)}
               >
                 <TableCell className="w-4" onClick={(e) => e.stopPropagation()}>
                   <Checkbox
@@ -173,20 +109,6 @@ export default function CategorySection({
           })}
         </TableBody>
       </Table>
-      <CategoryForm
-        type={type}
-        category={selectedCategory ?? undefined}
-        open={open}
-        onOpenChange={handleClose}
-        onSuccess={handleClose}
-      />
-      <MergeCategoriesDialog
-        open={mergeDialogOpen}
-        onOpenChange={setMergeDialogOpen}
-        selected={selected}
-        type={selectedType}
-        onSuccess={handleMergeSuccess}
-      />
     </div>
   );
 }
