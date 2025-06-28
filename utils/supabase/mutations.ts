@@ -175,6 +175,12 @@ export const deleteCategory = async (id: string) => {
   if (error) throw new Error(error.message);
 };
 
+export const deleteCategories = async (ids: string[]) => {
+  const supabase = await createClient();
+  const { error } = await supabase.from("categories").delete().in("id", ids);
+  if (error) throw new Error(error.message);
+};
+
 export const deleteLabel = async (id: string) => {
   const supabase = await createClient();
   const { error } = await supabase.from("labels").delete().eq("id", id);

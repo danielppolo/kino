@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Combine, Plus } from "lucide-react";
+import { Combine, Plus, Trash2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import CategorySection from "./(components)/category-section";
+import DeleteCategoriesDialog from "./(components)/delete-categories-dialog";
 import MergeCategoriesDialog from "./(components)/merge-categories-dialog";
 
 import CategoryForm from "@/components/shared/category-form";
@@ -20,6 +21,7 @@ export default function Page() {
   const [selected, setSelected] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(
     null,
   );
@@ -44,9 +46,11 @@ export default function Page() {
       const exists = prev.includes(category.id);
       if (exists) return prev.filter((id) => id !== category.id);
 
-      // Prevent selecting transfer categories
+      // Prevent selecting transfer categories for any bulk operations
       if (category.type === "transfer") {
-        toast.error("Transfer categories cannot be merged");
+        toast.error(
+          "Transfer categories cannot be selected for bulk operations",
+        );
         return prev;
       }
 
@@ -78,6 +82,11 @@ export default function Page() {
     setSelected([]);
   };
 
+  const handleDeleteSuccess = () => {
+    setDeleteDialogOpen(false);
+    setSelected([]);
+  };
+
   const handleTabChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("type", value);
@@ -85,12 +94,12 @@ export default function Page() {
   };
 
   return (
-    <div className="space-y-6">
+    <div>
       <Tabs
         onValueChange={handleTabChange}
         defaultValue={searchParams.get("type") || "expense"}
       >
-        <div className="flex items-center justify-between">
+        <div className="bg-background sticky top-0 z-10 flex items-center justify-between py-4">
           <div className="flex items-center gap-4">
             <Title>Categories</Title>
             <TabsList>
@@ -99,21 +108,33 @@ export default function Page() {
             </TabsList>
           </div>
           <div className="flex gap-2">
-            <Button
-              size="icon"
-              variant="outline"
-              onClick={() => setMergeDialogOpen(true)}
-              disabled={selected.length < 2 || !selectedType}
-            >
-              <Combine className="size-4" />
-            </Button>
-            <Button size="icon" variant="outline" onClick={handleAdd}>
+            {selected.length > 0 && (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setDeleteDialogOpen(true)}
+                  disabled={selected.length === 0}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setMergeDialogOpen(true)}
+                  disabled={selected.length < 2 || !selectedType}
+                >
+                  <Combine className="size-4" />
+                </Button>
+              </>
+            )}
+            <Button size="sm" variant="outline" onClick={handleAdd}>
               <Plus className="size-4" />
             </Button>
           </div>
         </div>
 
-        <TabsContent value="income" className="mt-6">
+        <TabsContent value="income">
           <CategorySection
             type="income"
             selected={selected}
@@ -122,7 +143,7 @@ export default function Page() {
           />
         </TabsContent>
 
-        <TabsContent value="expense" className="mt-6">
+        <TabsContent value="expense">
           <CategorySection
             type="expense"
             selected={selected}
@@ -145,6 +166,12 @@ export default function Page() {
         selected={selected}
         type={selectedType}
         onSuccess={handleMergeSuccess}
+      />
+      <DeleteCategoriesDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        selected={selected}
+        onSuccess={handleDeleteSuccess}
       />
     </div>
   );

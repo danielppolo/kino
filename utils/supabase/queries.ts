@@ -9,6 +9,8 @@ export interface Filters {
   from?: string | undefined;
   wallet_id?: string | undefined;
   tag?: string | undefined;
+  type?: string | undefined;
+  transfer_id?: string | undefined;
 }
 
 export const listTransactions = async (
@@ -40,9 +42,19 @@ export const listTransactions = async (
     query = query.contains("tags", [params.tag]);
   }
 
+  // Filter by type if available
+  if (params?.type) {
+    query = query.eq("type", params.type);
+  }
+
   // Filter by wallet_id if available
   if (params?.wallet_id) {
     query = query.eq("wallet_id", params.wallet_id);
+  }
+
+  // Filter by transfer_id if available
+  if (params?.transfer_id) {
+    query = query.eq("transfer_id", params.transfer_id);
   }
 
   const page = params?.page || 0;
