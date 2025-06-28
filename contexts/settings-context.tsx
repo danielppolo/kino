@@ -88,9 +88,9 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
       const result = await supabase
         .from("user_preferences")
         .select("*")
-        .single();
+        .maybeSingle();
       if (result.error) throw result.error;
-      return result.data;
+      return result.data || { base_currency: "USD" };
     },
   });
 
