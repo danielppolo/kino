@@ -49,6 +49,9 @@ export const metadata = {
   metadataBase: new URL(defaultUrl),
   title: "Kino",
   description: "Kino is finance app",
+  other: {
+    "apple-mobile-web-app-title": "cuatrocientosdos",
+  },
 };
 
 export default function RootLayout({

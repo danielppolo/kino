@@ -9,12 +9,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { exportTransactions } from "@/actions/export-transactions";
 import { SubmitButton } from "@/components/submit-button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Subtitle, Title } from "@/components/ui/typography";
 import UNAMDonation from "@/components/UNAMDonation";
@@ -132,9 +127,6 @@ export default function Page() {
             <form action={handleExport} ref={formRef}>
               <SubmitButton>Export</SubmitButton>
             </form>
-          </div>
-          <div>
-            <Subtitle>Import</Subtitle>
           </div>
         </CardContent>
       </Card>
