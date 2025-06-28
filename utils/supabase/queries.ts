@@ -351,3 +351,59 @@ export const getLabelPieChartData = async (
 
   return query.order("transaction_count", { ascending: false });
 };
+
+// Get category transaction counts (total across all months)
+export const getCategoryTransactionCounts = async (
+  client: TypedSupabaseClient,
+  params?: {
+    walletId?: string;
+    type?: "income" | "expense";
+  },
+) => {
+  // First get all categories of the specified type
+  const { data: categories, error: categoriesError } = await client
+    .from("categories")
+    .select("id")
+    .eq("type", params?.type || "expense");
+
+  if (categoriesError) {
+    return { data: null, error: categoriesError };
+  }
+
+  // Count transactions for each category
+  const result = await Promise.all(
+    categories.map(async (category) => {
+      let query = client
+        .from("transactions")
+        .select("*", { count: "exact", head: true })
+        .eq("category_id", category.id);
+
+      if (params?.walletId) {
+        query = query.eq("wallet_id", params.walletId);
+      }
+
+      // Don't filter by transaction type here since we already filtered by category type
+      // This allows transfer transactions that use income/expense categories to be counted
+
+      const { count, error } = await query;
+
+      if (error) {
+        console.error(
+          `Error counting transactions for category ${category.id}:`,
+          error,
+        );
+        return {
+          category_id: category.id,
+          transaction_count: 0,
+        };
+      }
+
+      return {
+        category_id: category.id,
+        transaction_count: count || 0,
+      };
+    }),
+  );
+
+  return { data: result, error: null };
+};

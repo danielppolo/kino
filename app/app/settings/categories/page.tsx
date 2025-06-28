@@ -30,6 +30,13 @@ export default function Page() {
     setSelected((prev) => {
       const exists = prev.includes(category.id);
       if (exists) return prev.filter((id) => id !== category.id);
+
+      // Prevent selecting transfer categories
+      if (category.type === "transfer") {
+        toast.error("Transfer categories cannot be merged");
+        return prev;
+      }
+
       if (prev.length > 0 && selectedType && category.type !== selectedType) {
         toast.error("Select categories of the same type");
         return prev;
