@@ -76,9 +76,15 @@ const TagForm = ({ tag, onSuccess, open, onOpenChange }: TagFormProps) => {
   const defaultValues: TagFormValues = { title: "", group: "" };
 
   const handleSubmit = (values: TagFormValues) => {
+    // Trim the title field to remove leading and trailing spaces
+    const trimmedValues = {
+      ...values,
+      title: values.title?.trim() || "",
+    };
+
     return new Promise<{ error?: string }>((resolve) => {
       if (tag) {
-        updateMutation.mutate(values, {
+        updateMutation.mutate(trimmedValues, {
           onSuccess: () => resolve({}),
           onError: (error: unknown) =>
             resolve({
@@ -87,7 +93,7 @@ const TagForm = ({ tag, onSuccess, open, onOpenChange }: TagFormProps) => {
             }),
         });
       } else {
-        createMutation.mutate(values, {
+        createMutation.mutate(trimmedValues, {
           onSuccess: () => resolve({}),
           onError: (error: unknown) =>
             resolve({
