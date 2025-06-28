@@ -1,7 +1,7 @@
 import React from "react";
 
 import { Combobox, ComboboxOption } from "@/components/ui/combobox";
-import { useTags } from "@/hooks/use-tags";
+import { useTags } from "@/contexts/settings-context";
 
 interface GroupComboboxProps {
   size?: "sm" | "default" | "lg";
@@ -20,7 +20,7 @@ const GroupCombobox = ({
   placeholder = "Select group...",
   className,
 }: GroupComboboxProps) => {
-  const { data: tags = [] } = useTags();
+  const [tags] = useTags();
 
   // Extract unique groups from tags, filter out null/empty values, and sort
   const uniqueGroups = React.useMemo(() => {

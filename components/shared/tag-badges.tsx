@@ -4,57 +4,47 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Badge } from "../ui/badge";
 import LinkTransferButton from "./link-transfer-button";
 
-import { Transaction } from "@/utils/supabase/types";
+import { useTags } from "@/contexts/settings-context";
+import { TransactionList } from "@/utils/supabase/types";
 
 interface TagBadgesProps {
-  transaction: Transaction;
+  transaction: TransactionList;
+  className?: string;
 }
 
-const TagBadges: React.FC<TagBadgesProps> = ({ transaction }) => {
+const TagBadges = ({ transaction, className }: TagBadgesProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [tags] = useTags();
 
-  const setTag = (value: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("tag", value);
+  const handleTagClick = (tagId: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("tag", tagId);
     router.push(`/app/transactions?${params.toString()}`);
   };
 
-  const handleTagChange = (value: string) => {
-    setTag(value);
-  };
+  if (!transaction.tag_ids || transaction.tag_ids.length === 0) {
+    return null;
+  }
 
   return (
-    <div className="flex gap-1">
-      {transaction.tags?.map((tag) => (
-        <Badge
-          variant="outline"
-          key={tag}
-          onClick={(event) => {
-            event.stopPropagation();
-            handleTagChange(tag);
-          }}
-        >
-          {tag}
-        </Badge>
-      ))}
-      {transaction.transfer_id && (
-        <Badge
-          variant="secondary"
-          className="font-mono font-light"
-          onClick={(event) => {
-            event.stopPropagation();
-            router.push(
-              `/app/transactions/${transaction.transfer_wallet_id}?transfer_id=${transaction.transfer_id}`,
-            );
-          }}
-        >
-          {transaction.transfer_id.slice(-4).toUpperCase()}
-        </Badge>
-      )}
-      {!transaction.transfer_id && transaction.type === "transfer" && (
-        <LinkTransferButton transaction={transaction} />
-      )}
+    <div className={`flex flex-wrap gap-1 ${className}`}>
+      {transaction.tag_ids.map((tagId: string) => {
+        const tag = tags.find((t) => t.id === tagId);
+        if (!tag) return null;
+
+        return (
+          <Badge
+            key={tagId}
+            variant="secondary"
+            className="cursor-pointer text-xs"
+            onClick={() => handleTagClick(tagId)}
+          >
+            {tag.title}
+          </Badge>
+        );
+      })}
+      <LinkTransferButton transaction={transaction} />
     </div>
   );
 };

@@ -7,11 +7,11 @@ import TagForm from "@/components/shared/tag-form";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Title } from "@/components/ui/typography";
-import { useTags } from "@/hooks/use-tags";
+import { useTags } from "@/contexts/settings-context";
 import { Tag } from "@/utils/supabase/types";
 
 export default function TagsSection() {
-  const { data: tags = [] } = useTags();
+  const [tags] = useTags();
   const [open, setOpen] = useState(false);
   const [editTag, setEditTag] = useState<Tag | undefined>(undefined);
 

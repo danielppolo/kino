@@ -10,9 +10,10 @@ import { createClient } from "@/utils/supabase/client";
 import {
   listCategories,
   listLabels,
+  listTags,
   listWallets,
 } from "@/utils/supabase/queries";
-import { Category, Label, Wallet } from "@/utils/supabase/types";
+import { Category, Label, Tag, Wallet } from "@/utils/supabase/types";
 
 export interface CurrencyConversion {
   rate: number;
@@ -23,6 +24,7 @@ export interface CurrencyConversion {
 interface SettingsContextType {
   categories: Category[];
   labels: Label[];
+  tags: Tag[];
   wallets: Wallet[];
   conversionRates: Record<string, CurrencyConversion>;
   baseCurrency: string;
@@ -45,7 +47,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
       const supabase = await createClient();
       const result = await listCategories(supabase);
       if (result.error) throw result.error;
-      return result.data || [];
+      return (result.data || []).sort((a, b) => a.name.localeCompare(b.name));
     },
   });
 
@@ -55,7 +57,17 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
       const supabase = await createClient();
       const result = await listLabels(supabase);
       if (result.error) throw result.error;
-      return result.data || [];
+      return (result.data || []).sort((a, b) => a.name.localeCompare(b.name));
+    },
+  });
+
+  const { data: tags = [] } = useSuspenseQuery<Tag[]>({
+    queryKey: ["tags"],
+    queryFn: async () => {
+      const supabase = await createClient();
+      const result = await listTags(supabase);
+      if (result.error) throw result.error;
+      return (result.data || []).sort((a, b) => a.title.localeCompare(b.title));
     },
   });
 
@@ -65,7 +77,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
       const supabase = await createClient();
       const result = await listWallets(supabase);
       if (result.error) throw result.error;
-      return result.data || [];
+      return (result.data || []).sort((a, b) => a.name.localeCompare(b.name));
     },
   });
 
@@ -97,6 +109,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   const value: SettingsContextType = {
     categories,
     labels,
+    tags,
     wallets,
     conversionRates,
     baseCurrency,
@@ -139,6 +152,18 @@ export const useLabels = (
   const map = new Map(
     context.labels.map((label) => [String(label[key]), label]),
   );
+
+  return [list, map];
+};
+
+export const useTags = (key: keyof Tag = "id"): [Tag[], Map<string, Tag>] => {
+  const context = useContext(SettingsContext);
+  if (context === undefined) {
+    throw new Error("useTags must be used within a SettingsProvider");
+  }
+
+  const list = context.tags;
+  const map = new Map(context.tags.map((tag) => [String(tag[key]), tag]));
 
   return [list, map];
 };

@@ -20,9 +20,8 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import { useWallets } from "@/contexts/settings-context";
+import { useTags, useWallets } from "@/contexts/settings-context";
 import useFilters from "@/hooks/use-filters";
-import { useTags } from "@/hooks/use-tags";
 import { deleteTransaction } from "@/utils/supabase/mutations";
 import { Transaction } from "@/utils/supabase/types";
 
@@ -71,7 +70,7 @@ const ExpenseIncomeForm = ({
 }: ExpenseIncomeFormProps) => {
   const [, walletMap] = useWallets();
   const filters = useFilters();
-  const { data: availableTags = [] } = useTags();
+  const [availableTags] = useTags();
   const [addAnother, setAddAnother] = useState(false);
   const queryClient = useQueryClient();
 

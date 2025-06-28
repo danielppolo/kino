@@ -20,18 +20,29 @@ import { linkTransfers } from "@/actions/link-transfers";
 import { useWallets } from "@/contexts/settings-context";
 import { formatCents } from "@/utils/format-cents";
 import { createClient } from "@/utils/supabase/client";
-import { Transaction } from "@/utils/supabase/types";
+import { Transaction, TransactionList } from "@/utils/supabase/types";
 
 interface LinkTransferButtonProps {
-  transaction: Transaction;
+  transaction: TransactionList;
 }
 
 const fetchTransferOptions = async (
   selectedCurrency: string,
-  transaction: Transaction,
+  transaction: TransactionList,
   transactionWalletCurrency: string | undefined,
 ): Promise<Transaction[]> => {
   const supabase = createClient();
+
+  // Add null checks for required fields
+  if (
+    !transaction.date ||
+    !transaction.type ||
+    !transaction.amount_cents ||
+    !transaction.wallet_id
+  ) {
+    return [];
+  }
+
   const query = supabase
     .from("transactions")
     .select("*")
@@ -106,7 +117,12 @@ const LinkTransferButton: React.FC<LinkTransferButtonProps> = ({
   };
 
   const createCounterTransaction = async (counterTransactionId: string) => {
-    const { error } = await linkTransfers(transaction.id, counterTransactionId);
+    if (!transaction.id) return;
+
+    const { error } = await linkTransfers(
+      transaction.id!,
+      counterTransactionId,
+    );
     if (error) {
       return toast.error(error.message);
     }
@@ -117,6 +133,16 @@ const LinkTransferButton: React.FC<LinkTransferButtonProps> = ({
     });
     onOpenChange(false);
   };
+
+  // Add null checks for required fields after hooks
+  if (
+    !transaction.wallet_id ||
+    !transaction.date ||
+    !transaction.type ||
+    !transaction.amount_cents
+  ) {
+    return null;
+  }
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -163,7 +189,9 @@ const LinkTransferButton: React.FC<LinkTransferButtonProps> = ({
                         key={t.id}
                         value={t.id}
                         onSelect={() => {
-                          createCounterTransaction(t.id);
+                          if (t.id) {
+                            createCounterTransaction(t.id);
+                          }
                         }}
                       >
                         {`${walletMap.get(t.wallet_id)?.name} ${formatCents(t.amount_cents)}`}
