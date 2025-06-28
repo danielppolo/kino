@@ -57,16 +57,6 @@ export default function CategorySection({
   return (
     <div className="space-y-4">
       <Table>
-        {/* <TableHeader>
-          <TableRow>
-            <TableHead className="w-4">
-              <span className="sr-only">Select</span>
-            </TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>Keywords</TableHead>
-            <TableHead className="w-20">Transactions</TableHead>
-          </TableRow>
-        </TableHeader> */}
         <TableBody>
           {filteredCategories?.map((category) => {
             const isSelected = selected.includes(category.id);

@@ -53,7 +53,7 @@ export default function LabelSection() {
 
   return (
     <div className="space-y-4">
-      <div className="sticky top-0 flex items-center justify-between py-6">
+      <div className="bg-background sticky top-0 flex items-center justify-between py-6">
         <Title>Labels</Title>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={handleAdd}>
