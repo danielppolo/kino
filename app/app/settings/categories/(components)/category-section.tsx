@@ -10,14 +10,7 @@ import CategoryForm from "@/components/shared/category-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { useCategories } from "@/contexts/settings-context";
 import { createClient } from "@/utils/supabase/client";
 import { getCategoryTransactionCounts } from "@/utils/supabase/queries";
@@ -129,7 +122,7 @@ export default function CategorySection({
         </div>
       </div>
       <Table>
-        <TableHeader>
+        {/* <TableHeader>
           <TableRow>
             <TableHead className="w-4">
               <span className="sr-only">Select</span>
@@ -138,7 +131,7 @@ export default function CategorySection({
             <TableHead>Keywords</TableHead>
             <TableHead className="w-20">Transactions</TableHead>
           </TableRow>
-        </TableHeader>
+        </TableHeader> */}
         <TableBody>
           {filteredCategories?.map((category) => {
             const isSelected = selected.includes(category.id);
