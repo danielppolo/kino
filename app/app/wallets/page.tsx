@@ -9,6 +9,9 @@ import { Subtitle, Title } from "@/components/ui/typography";
 import { useWallets } from "@/contexts/settings-context";
 import { formatCents } from "@/utils/format-cents";
 
+// Force dynamic rendering since this page uses user-specific data
+export const dynamic = "force-dynamic";
+
 export default function WalletsPage() {
   const [wallets] = useWallets();
   const sortedWallets = wallets
