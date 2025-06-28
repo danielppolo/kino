@@ -51,6 +51,8 @@ export const metadata = {
   description: "Kino is finance app",
   other: {
     "apple-mobile-web-app-title": "cuatrocientosdos",
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "black-translucent",
   },
 };
 
