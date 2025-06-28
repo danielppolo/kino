@@ -27,7 +27,9 @@ function useFilters(): Filters {
       to: searchParams.get("to") || "",
       label_id: searchParams.get("label_id") || "",
       category_id: searchParams.get("category_id") || "",
+      transfer_id: searchParams.get("transfer_id") || "",
       tag: searchParams.get("tag") || "",
+      type: searchParams.get("type") || "",
     };
   }, [params.walletId, searchParams]);
   return filters;

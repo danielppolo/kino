@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { SidebarWrapper } from "./sidebar-wrapper";
 
@@ -17,6 +18,7 @@ import { useWallets } from "@/contexts/settings-context";
 
 const SettingsSidebar: React.FC = () => {
   const [wallets] = useWallets();
+  const pathname = usePathname();
 
   // Sort wallets alphabetically by name
   const sortedWallets = wallets.sort((a, b) => a.name.localeCompare(b.name));
@@ -29,32 +31,50 @@ const SettingsSidebar: React.FC = () => {
         <SidebarGroupContent>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === "/app/settings"}
+              >
                 <Link href="/app/settings">General</Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === "/app/settings/overview"}
+              >
                 <Link href="/app/settings/overview">Overview</Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === "/app/settings/categories"}
+              >
                 <Link href="/app/settings/categories">Categories</Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === "/app/settings/labels"}
+              >
                 <Link href="/app/settings/labels">Labels</Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === "/app/settings/tags"}
+              >
                 <Link href="/app/settings/tags">Tags</Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === "/app/settings/profile"}
+              >
                 <Link href="/app/settings/profile">Profile</Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -69,7 +89,10 @@ const SettingsSidebar: React.FC = () => {
           <SidebarMenu>
             {sortedWallets?.map((wallet) => (
               <SidebarMenuItem key={wallet.id}>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === `/app/settings/wallets/${wallet.id}`}
+                >
                   <Link href={`/app/settings/wallets/${wallet.id}`}>
                     {wallet.name}
                   </Link>
