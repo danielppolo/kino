@@ -1,7 +1,67 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { gapi } from "gapi-script";
+
+// TypeScript declarations for Google API
+declare global {
+  interface Window {
+    gapi: {
+      load: (api: string, callback: () => void) => void;
+      client: {
+        init: (config: {
+          apiKey: string;
+          clientId: string;
+          discoveryDocs: string[];
+          scope: string;
+        }) => Promise<void>;
+        calendar: {
+          calendarList: {
+            list: () => Promise<{
+              result: {
+                items?: Array<{
+                  id?: string;
+                  summary?: string;
+                }>;
+              };
+            }>;
+          };
+          events: {
+            list: (params: {
+              calendarId: string;
+              timeMin: string;
+              timeMax: string;
+              showDeleted: boolean;
+              singleEvents: boolean;
+            }) => Promise<{
+              result: {
+                items?: Array<{
+                  start?: {
+                    dateTime?: string;
+                    date?: string;
+                  };
+                  end?: {
+                    dateTime?: string;
+                    date?: string;
+                  };
+                }>;
+              };
+            }>;
+          };
+        };
+      };
+      auth2: {
+        getAuthInstance: () => {
+          isSignedIn: {
+            get: () => boolean;
+            listen: (callback: (signedIn: boolean) => void) => void;
+          };
+          signIn: () => void;
+          signOut: () => void;
+        };
+      };
+    };
+  }
+}
 
 const SCOPES = "https://www.googleapis.com/auth/calendar.readonly";
 const DISCOVERY_DOCS = [
@@ -26,37 +86,52 @@ export function useGoogleCalendar() {
   useEffect(() => {
     if (!clientId || !apiKey) return;
 
-    function start() {
-      gapi.client
-        .init({
-          apiKey,
-          clientId,
-          discoveryDocs: DISCOVERY_DOCS,
-          scope: SCOPES,
-        })
-        .then(() => {
-          const auth = gapi.auth2.getAuthInstance();
-          setSignedIn(auth.isSignedIn.get());
-          auth.isSignedIn.listen(setSignedIn);
-        })
-        .catch(() => setError("Failed to initialize Google API"));
-    }
+    // Load the Google API script dynamically
+    const script = document.createElement("script");
+    script.src = "https://apis.google.com/js/api.js";
+    script.onload = () => {
+      if (window.gapi) {
+        window.gapi.load("client:auth2", () => {
+          window.gapi.client
+            .init({
+              apiKey,
+              clientId,
+              discoveryDocs: DISCOVERY_DOCS,
+              scope: SCOPES,
+            })
+            .then(() => {
+              const auth = window.gapi.auth2.getAuthInstance();
+              setSignedIn(auth.isSignedIn.get());
+              auth.isSignedIn.listen(setSignedIn);
+            })
+            .catch(() => setError("Failed to initialize Google API"));
+        });
+      }
+    };
+    script.onerror = () => setError("Failed to load Google API");
+    document.head.appendChild(script);
 
-    gapi.load("client:auth2", start);
+    return () => {
+      document.head.removeChild(script);
+    };
   }, [clientId, apiKey]);
 
   const signIn = () => {
-    const auth = gapi.auth2.getAuthInstance();
-    auth.signIn();
+    if (window.gapi) {
+      const auth = window.gapi.auth2.getAuthInstance();
+      auth.signIn();
+    }
   };
 
   const signOut = () => {
-    const auth = gapi.auth2.getAuthInstance();
-    auth.signOut();
+    if (window.gapi) {
+      const auth = window.gapi.auth2.getAuthInstance();
+      auth.signOut();
+    }
   };
 
   useEffect(() => {
-    if (!signedIn) return;
+    if (!signedIn || !window.gapi) return;
 
     async function fetchData() {
       try {
@@ -65,7 +140,8 @@ export function useGoogleCalendar() {
         const monthAgo = new Date();
         monthAgo.setMonth(now.getMonth() - 1);
 
-        const calendarRes = await gapi.client.calendar.calendarList.list();
+        const calendarRes =
+          await window.gapi.client.calendar.calendarList.list();
         const calendars = calendarRes.result.items || [];
         const colors = [
           "#0088FE",
@@ -81,7 +157,7 @@ export function useGoogleCalendar() {
         const totals: CalendarTotal[] = [];
         for (let i = 0; i < calendars.length; i++) {
           const cal = calendars[i];
-          const eventsRes = await gapi.client.calendar.events.list({
+          const eventsRes = await window.gapi.client.calendar.events.list({
             calendarId: cal.id!,
             timeMin: monthAgo.toISOString(),
             timeMax: now.toISOString(),
@@ -105,6 +181,7 @@ export function useGoogleCalendar() {
         }
         setTotals(totals);
       } catch (err) {
+        console.error("Failed to load calendar data:", err);
         setError("Failed to load calendar data");
       } finally {
         setLoading(false);
