@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import CategoryMultiSelect from "@/components/shared/category-multi-select";
 import CategoryCombobox from "@/components/shared/category-combobox";
 import { Button } from "@/components/ui/button";
 import { DrawerDialog } from "@/components/ui/drawer-dialog";
@@ -18,16 +17,30 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useCategories } from "@/contexts/settings-context";
 import { mergeCategories } from "@/utils/supabase/mutations";
 
-export default function MergeCategoriesDialog() {
-  const [open, setOpen] = useState(false);
+interface MergeCategoriesDialogProps {
+  selected: string[];
+  type: "income" | "expense" | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+export default function MergeCategoriesDialog({
+  selected,
+  type,
+  open,
+  onOpenChange,
+}: MergeCategoriesDialogProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [selected, setSelected] = useState<string[]>([]);
   const [target, setTarget] = useState<string | null>(null);
-  const [categories] = useCategories();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!open) {
+      setTarget(null);
+      setConfirmOpen(false);
+    }
+  }, [open]);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -37,8 +50,7 @@ export default function MergeCategoriesDialog() {
     onSuccess: () => {
       queryClient.invalidateQueries();
       toast.success("Categories merged");
-      setOpen(false);
-      setSelected([]);
+      onOpenChange(false);
       setTarget(null);
     },
     onError: (err: unknown) => {
@@ -58,29 +70,15 @@ export default function MergeCategoriesDialog() {
 
   return (
     <>
-      <DrawerDialog
-        open={open}
-        onOpenChange={setOpen}
-        title="Merge Categories"
-        trigger={<Button size="sm" variant="outline">Merge Categories</Button>}
-      >
+      <DrawerDialog open={open} onOpenChange={onOpenChange} title="Merge Categories">
         <div className="flex flex-col gap-4">
-          <CategoryMultiSelect
-            options={categories}
-            value={selected}
-            onChange={setSelected}
-            placeholder="Select categories"
-          />
           <CategoryCombobox
+            type={type || undefined}
             value={target}
             onChange={setTarget}
             placeholder="Target category"
           />
-          <Button
-            size="sm"
-            onClick={handleMerge}
-            disabled={selected.length < 2 || !target}
-          >
+          <Button size="sm" onClick={handleMerge} disabled={!target}>
             Merge
           </Button>
         </div>
