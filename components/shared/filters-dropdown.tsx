@@ -5,6 +5,7 @@ import { SlidersHorizontal } from "lucide-react";
 import CategoryFilter from "@/app/app/(transactions)/transactions/(components)/category-filter";
 import DateRangeFilter from "@/app/app/(transactions)/transactions/(components)/date-range-filter";
 import LabelFilter from "@/app/app/(transactions)/transactions/(components)/label-filter";
+import TagFilter from "@/app/app/(transactions)/transactions/(components)/tag-filter";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -32,6 +33,9 @@ export function FiltersDropdown() {
           </div>
           <div className="p-2">
             <LabelFilter />
+          </div>
+          <div className="p-2">
+            <TagFilter />
           </div>
           <div className="p-2">
             <CategoryFilter />
