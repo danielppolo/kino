@@ -2,6 +2,7 @@ import React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { Badge } from "../ui/badge";
+import LinkTransferButton from "./link-transfer-button";
 
 import { Transaction } from "@/utils/supabase/types";
 
@@ -50,6 +51,9 @@ const TagBadges: React.FC<TagBadgesProps> = ({ transaction }) => {
         >
           {transaction.transfer_id.slice(-4).toUpperCase()}
         </Badge>
+      )}
+      {!transaction.transfer_id && transaction.type === "transfer" && (
+        <LinkTransferButton transaction={transaction} />
       )}
     </div>
   );

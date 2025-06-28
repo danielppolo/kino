@@ -31,6 +31,7 @@ function useFilters(): Filters {
       tag: searchParams.get("tag") || "",
       type: searchParams.get("type") || "",
       description: searchParams.get("description") || "",
+      id: searchParams.get("id") || "",
     };
   }, [params.walletId, searchParams]);
   return filters;
