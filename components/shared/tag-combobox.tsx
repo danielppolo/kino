@@ -25,7 +25,7 @@ const TagCombobox = ({
   const options: ComboboxOption[] = tags
     .sort((a, b) => a.title.localeCompare(b.title))
     .map((tag) => ({
-      value: tag.title,
+      value: tag.id,
       label: tag.title,
       keywords: [tag.title.toLowerCase(), tag.group ?? ""],
     }));

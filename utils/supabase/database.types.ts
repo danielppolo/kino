@@ -174,6 +174,21 @@ export type Database = {
         };
         Relationships: [];
       };
+      transaction_tags: {
+        Row: {
+          transaction_id: string;
+          tag_id: string;
+        };
+        Insert: {
+          transaction_id: string;
+          tag_id: string;
+        };
+        Update: {
+          transaction_id?: string;
+          tag_id?: string;
+        };
+        Relationships: [];
+      };
       transactions: {
         Row: {
           amount_cents: number;
@@ -185,7 +200,6 @@ export type Database = {
           id: string;
           label_id: string | null;
           note: string | null;
-          tags: string[] | null;
           transfer_id: string | null;
           type: Database["public"]["Enums"]["transaction_type_enum"];
           wallet_id: string;
@@ -200,7 +214,6 @@ export type Database = {
           id?: string;
           label_id?: string | null;
           note?: string | null;
-          tags?: string[] | null;
           transfer_id?: string | null;
           type: Database["public"]["Enums"]["transaction_type_enum"];
           wallet_id: string;
@@ -215,7 +228,6 @@ export type Database = {
           id?: string;
           label_id?: string | null;
           note?: string | null;
-          tags?: string[] | null;
           transfer_id?: string | null;
           type?: Database["public"]["Enums"]["transaction_type_enum"];
           wallet_id?: string;
@@ -487,6 +499,7 @@ export type Database = {
           label_id: string | null;
           note: string | null;
           tags: string[] | null;
+          tag_ids: string[] | null;
           transfer_id: string | null;
           transfer_wallet_id: string | null;
           type: Database["public"]["Enums"]["transaction_type_enum"] | null;

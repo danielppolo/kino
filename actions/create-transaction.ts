@@ -12,7 +12,7 @@ const TransactionSchema = z.object({
   label_id: z.string().uuid(),
   wallet_id: z.string().uuid(),
   currency: z.string(),
-  tags: z.array(z.string()).optional(),
+  tags: z.array(z.string().uuid()).optional(),
 });
 
 type Transaction = z.infer<typeof TransactionSchema>;
@@ -42,6 +42,23 @@ export const createTransaction = async (transaction: Transaction) => {
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  const transactionId = data?.[0]?.id ?? id;
+  if (transactionId && validatedData.data.tags) {
+    // Replace existing tags
+    await supabase
+      .from("transaction_tags")
+      .delete()
+      .eq("transaction_id", transactionId);
+
+    const rows = validatedData.data.tags.map((tagId) => ({
+      transaction_id: transactionId,
+      tag_id: tagId,
+    }));
+    if (rows.length) {
+      await supabase.from("transaction_tags").upsert(rows);
+    }
   }
 
   return { data };
