@@ -117,7 +117,7 @@ const ExpenseIncomeForm = ({
     category_id: "",
     label_id: "",
     amount: initialData ? Math.abs(initialData.amount_cents) / 100 : undefined,
-    tags: initialData?.tags ?? [],
+    tags: initialData?.tag_ids ?? [],
   };
 
   const handleSubmit = async (values: ExpenseIncomeFormValues) => {
@@ -165,7 +165,7 @@ const ExpenseIncomeForm = ({
     label_id: transaction.label_id ?? "",
     wallet_id: transaction.wallet_id,
     currency: transaction.currency,
-    tags: transaction.tags ?? undefined,
+    tags: transaction.tag_ids ?? undefined,
   });
 
   return (

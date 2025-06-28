@@ -225,7 +225,6 @@ export const importTransactions = async ({
       description,
       currency: wallet.currency,
       type,
-      tags: transaction.tags,
       ...transferAttributes,
     });
   }

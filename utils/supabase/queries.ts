@@ -41,7 +41,7 @@ export const listTransactions = async (
 
   // Filter by tag if available
   if (params?.tag) {
-    query = query.contains("tags", [params.tag]);
+    query = query.contains("tag_ids", [params.tag]);
   }
 
   // Filter by type if available

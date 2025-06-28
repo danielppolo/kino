@@ -153,7 +153,7 @@ const TagMultiSelect = React.forwardRef<HTMLButtonElement, TagMultiSelectProps>(
                 <div className="flex flex-wrap items-center">
                   {value.map((val) => (
                     <Badge key={val} className="m-1">
-                      {val}
+                      {options.find((o) => o.id === val)?.title ?? val}
                       <XCircle
                         className="ml-2 h-4 w-4 cursor-pointer"
                         onClick={(e) => {
@@ -202,12 +202,12 @@ const TagMultiSelect = React.forwardRef<HTMLButtonElement, TagMultiSelectProps>(
                   className="capitalize"
                 >
                   {items.map((tag) => {
-                    const selected = value.includes(tag.title);
+                    const selected = value.includes(tag.id);
                     return (
                       <CommandItem
                         key={tag.id}
                         value={tag.title}
-                        onSelect={() => toggleOption(tag.title)}
+                        onSelect={() => toggleOption(tag.id)}
                         className="flex cursor-pointer items-center gap-2"
                       >
                         <Checkbox checked={selected} />
