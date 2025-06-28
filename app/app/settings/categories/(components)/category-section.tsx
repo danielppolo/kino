@@ -3,14 +3,11 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 
+import MergeCategoriesDialog from "./merge-categories-dialog";
+
 import CategoryForm from "@/components/shared/category-form";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
@@ -29,6 +26,7 @@ interface CategoriesProps {
   title: string;
   selected: string[];
   onToggle: (category: Category) => void;
+  onMergeSuccess?: () => void;
 }
 
 export default function CategorySection({
@@ -36,9 +34,11 @@ export default function CategorySection({
   title,
   selected,
   onToggle,
+  onMergeSuccess,
 }: CategoriesProps) {
   const [categories] = useCategories();
   const [open, setOpen] = useState(false);
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(
     null,
   );
@@ -46,6 +46,16 @@ export default function CategorySection({
   const filteredCategories = categories
     .filter((category) => category.type === type)
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  const selectedCategories = selected
+    .map((id) => categories.find((c) => c.id === id))
+    .filter(Boolean) as Category[];
+
+  const selectedType =
+    selectedCategories.length > 0 &&
+    selectedCategories.every((c) => c.type === type)
+      ? type
+      : null;
 
   const handleAdd = () => {
     setSelectedCategory(null);
@@ -62,15 +72,30 @@ export default function CategorySection({
     setSelectedCategory(null);
   };
 
+  const handleMergeSuccess = () => {
+    setMergeDialogOpen(false);
+    onMergeSuccess?.();
+  };
+
   return (
     <Card className="my-8">
       <CardHeader className="flex flex-row items-center justify-between gap-2">
         <CardTitle className="text-base font-medium">
           <Subtitle>{title}</Subtitle>
         </CardTitle>
-        <Button size="sm" variant="outline" onClick={handleAdd}>
-          <Plus className="size-4" />
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setMergeDialogOpen(true)}
+            disabled={selected.length < 2 || !selectedType}
+          >
+            Merge Selected
+          </Button>
+          <Button size="sm" variant="outline" onClick={handleAdd}>
+            <Plus className="size-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="pt-0">
         <Table>
@@ -121,6 +146,13 @@ export default function CategorySection({
         open={open}
         onOpenChange={handleClose}
         onSuccess={handleClose}
+      />
+      <MergeCategoriesDialog
+        open={mergeDialogOpen}
+        onOpenChange={setMergeDialogOpen}
+        selected={selected}
+        type={selectedType}
+        onSuccess={handleMergeSuccess}
       />
     </Card>
   );
