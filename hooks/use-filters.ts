@@ -30,6 +30,7 @@ function useFilters(): Filters {
       transfer_id: searchParams.get("transfer_id") || "",
       tag: searchParams.get("tag") || "",
       type: searchParams.get("type") || "",
+      description: searchParams.get("description") || "",
     };
   }, [params.walletId, searchParams]);
   return filters;
