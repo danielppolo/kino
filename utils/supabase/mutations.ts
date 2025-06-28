@@ -294,6 +294,7 @@ export const mergeCategories = async (targetId: string, ids: string[]) => {
 export const mergeTags = async (targetId: string, ids: string[]) => {
   const supabase = await createClient();
   const idsToMerge = ids.filter((id) => id !== targetId);
+  console.log(idsToMerge);
   if (idsToMerge.length === 0) return;
 
   const { data: rows, error: fetchError } = await supabase

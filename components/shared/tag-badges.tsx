@@ -15,7 +15,7 @@ interface TagBadgesProps {
 const TagBadges = ({ transaction, className }: TagBadgesProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [tags] = useTags();
+  const [, tagMap] = useTags();
 
   const handleTagClick = (tagId: string) => {
     const params = new URLSearchParams(searchParams);
@@ -30,7 +30,7 @@ const TagBadges = ({ transaction, className }: TagBadgesProps) => {
   return (
     <div className={`flex flex-wrap gap-1 ${className}`}>
       {transaction.tag_ids.map((tagId: string) => {
-        const tag = tags.find((t) => t.id === tagId);
+        const tag = tagMap.get(tagId);
         if (!tag) return null;
 
         return (

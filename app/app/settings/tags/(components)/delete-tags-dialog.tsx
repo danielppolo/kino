@@ -2,6 +2,7 @@
 
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -60,9 +61,9 @@ export default function DeleteTagsDialog({
             Delete {selected.length} tags
           </AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete{' '}
-            {selected.length} tag{selected.length === 1 ? '' : 's'} and remove all
-            associated transactions from these tags.
+            This action cannot be undone. This will permanently delete{" "}
+            {selected.length} tag{selected.length === 1 ? "" : "s"} and remove
+            all associated transactions from these tags.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
