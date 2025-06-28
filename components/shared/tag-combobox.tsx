@@ -1,7 +1,7 @@
 import React from "react";
 
 import { Combobox, ComboboxOption } from "@/components/ui/combobox";
-import { useTags } from "@/hooks/use-tags";
+import { useTags } from "@/contexts/settings-context";
 
 interface TagComboboxProps {
   size?: "sm" | "default" | "lg";
@@ -20,15 +20,13 @@ const TagCombobox = ({
   placeholder = "Select tag...",
   className,
 }: TagComboboxProps) => {
-  const { data: tags = [] } = useTags();
+  const [tags] = useTags();
 
-  const options: ComboboxOption[] = tags
-    .sort((a, b) => a.title.localeCompare(b.title))
-    .map((tag) => ({
-      value: tag.id,
-      label: tag.title,
-      keywords: [tag.title.toLowerCase(), tag.group ?? ""],
-    }));
+  const options: ComboboxOption[] = tags.map((tag) => ({
+    value: tag.id,
+    label: tag.title,
+    keywords: [tag.title.toLowerCase(), tag.group ?? ""],
+  }));
 
   return (
     <Combobox

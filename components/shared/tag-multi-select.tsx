@@ -40,7 +40,8 @@ function CommandAddItem({
         "hover:bg-accent hover:text-accent-foreground relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
       )}
     >
-      <Plus className="mr-2 h-4 w-4" />"{query}"
+      <Plus className="mr-2 h-4 w-4" />
+      &ldquo;{query}&rdquo;
     </div>
   );
 }

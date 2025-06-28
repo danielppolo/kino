@@ -6,9 +6,6 @@ JOIN LATERAL unnest(t.tags) AS tag_title(title) ON true
 JOIN public.tags tg ON tg.title = tag_title.title
 ON CONFLICT DO NOTHING;
 
--- Drop old tags column
-ALTER TABLE public.transactions DROP COLUMN IF EXISTS tags;
-
 -- Recreate transaction_list view with aggregated tags and tag_ids
 DROP VIEW IF EXISTS public.transaction_list;
 CREATE VIEW public.transaction_list AS
@@ -25,8 +22,8 @@ SELECT
   t.label_id,
   t.transfer_id,
   t.note,
-  array_remove(array_agg(DISTINCT tg.title ORDER BY tg.title), NULL) AS tags,
-  array_remove(array_agg(DISTINCT tg.id ORDER BY tg.title), NULL) AS tag_ids,
+  array_remove(array_agg(DISTINCT tg.title), NULL) AS tags,
+  array_remove(array_agg(DISTINCT tg.id), NULL) AS tag_ids,
   CASE
     WHEN t.type = 'transfer' THEN ct.wallet_id
     ELSE NULL
