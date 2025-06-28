@@ -239,6 +239,33 @@ export const mergeCategories = async (targetId: string, ids: string[]) => {
   const idsToMerge = ids.filter((id) => id !== targetId);
   if (idsToMerge.length === 0) return;
 
+  // Fetch all categories to validate their types
+  const { data: categories, error: fetchError } = await supabase
+    .from("categories")
+    .select("id, type")
+    .in("id", [...idsToMerge, targetId]);
+
+  if (fetchError) throw new Error(fetchError.message);
+  if (!categories || categories.length === 0) {
+    throw new Error("No categories found");
+  }
+
+  // Check if any category is of type "transfer"
+  const transferCategories = categories.filter(
+    (cat) => cat.type === "transfer",
+  );
+  if (transferCategories.length > 0) {
+    throw new Error("Merging transfer categories is not allowed");
+  }
+
+  // Validate all categories have the same type
+  const categoryTypes = Array.from(new Set(categories.map((cat) => cat.type)));
+  if (categoryTypes.length > 1) {
+    throw new Error(
+      "All categories must be of the same type (income or expense)",
+    );
+  }
+
   const { error } = await supabase
     .from("transactions")
     .update({ category_id: targetId })

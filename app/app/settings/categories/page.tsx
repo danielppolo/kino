@@ -4,9 +4,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import CategorySection from "./(components)/category-section";
-import MergeCategoriesDialog from "./(components)/merge-categories-dialog";
 
-import { Button } from "@/components/ui/button";
 import { Title } from "@/components/ui/typography";
 import { useCategories } from "@/contexts/settings-context";
 import { Category } from "@/utils/supabase/types";
@@ -14,10 +12,12 @@ import { Category } from "@/utils/supabase/types";
 export default function Page() {
   const [categories] = useCategories();
   const [selected, setSelected] = useState<string[]>([]);
-  const [dialogOpen, setDialogOpen] = useState(false);
 
   const selectedCategories = useMemo(
-    () => selected.map((id) => categories.find((c) => c.id === id)).filter(Boolean) as Category[],
+    () =>
+      selected
+        .map((id) => categories.find((c) => c.id === id))
+        .filter(Boolean) as Category[],
     [selected, categories],
   );
   const selectedType =
@@ -38,28 +38,27 @@ export default function Page() {
     });
   };
 
+  const handleMergeSuccess = () => {
+    setSelected([]);
+  };
+
   return (
-    <div className="container max-w-2xl space-y-6 py-8">
+    <div>
       <Title>Categories</Title>
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={() => setDialogOpen(true)}
-        disabled={selected.length < 2 || !selectedType}
-      >
-        Merge Selected
-      </Button>
-      <MergeCategoriesDialog
-        open={dialogOpen}
-        onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) setSelected([]);
-        }}
+      <CategorySection
+        type="income"
+        title="Income"
         selected={selected}
-        type={selectedType}
+        onToggle={toggleSelect}
+        onMergeSuccess={handleMergeSuccess}
       />
-      <CategorySection type="income" title="Income" selected={selected} onToggle={toggleSelect} />
-      <CategorySection type="expense" title="Expense" selected={selected} onToggle={toggleSelect} />
+      <CategorySection
+        type="expense"
+        title="Expense"
+        selected={selected}
+        onToggle={toggleSelect}
+        onMergeSuccess={handleMergeSuccess}
+      />
     </div>
   );
 }
