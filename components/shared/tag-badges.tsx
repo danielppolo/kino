@@ -23,13 +23,9 @@ const TagBadges = ({ transaction, className }: TagBadgesProps) => {
     router.push(`/app/transactions?${params.toString()}`);
   };
 
-  if (!transaction.tag_ids || transaction.tag_ids.length === 0) {
-    return null;
-  }
-
   return (
     <div className={`flex flex-wrap gap-1 ${className}`}>
-      {transaction.tag_ids.map((tagId: string) => {
+      {transaction.tag_ids?.map((tagId: string) => {
         const tag = tagMap.get(tagId);
         if (!tag) return null;
 
@@ -44,7 +40,23 @@ const TagBadges = ({ transaction, className }: TagBadgesProps) => {
           </Badge>
         );
       })}
-      <LinkTransferButton transaction={transaction} />
+      {transaction.type === "transfer" && !transaction.transfer_id && (
+        <LinkTransferButton transaction={transaction} />
+      )}
+      {transaction.type === "transfer" && transaction.transfer_id && (
+        <Badge
+          variant="secondary"
+          className="cursor-pointer text-xs uppercase"
+          onClick={(event) => {
+            event.stopPropagation();
+            router.push(
+              `/app/transactions/${transaction.wallet_id}?transfer_id=${transaction.transfer_id}`,
+            );
+          }}
+        >
+          {transaction.transfer_id.slice(-4)}
+        </Badge>
+      )}
     </div>
   );
 };
