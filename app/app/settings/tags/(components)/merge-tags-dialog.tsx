@@ -58,16 +58,8 @@ export default function MergeTagsDialog({
   };
 
   return (
-    <AlertDialog
-      open={open}
-      onOpenChange={(open) => {
-        onOpenChange(open);
-        if (!open) {
-          setTarget(null);
-        }
-      }}
-    >
-      <AlertDialogContent>
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="overflow-visible">
         <AlertDialogHeader>
           <AlertDialogTitle>
             You are about to merge {selected.length} tags

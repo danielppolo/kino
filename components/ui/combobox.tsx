@@ -117,7 +117,7 @@ export function Combobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="max-h-[300px] min-w-[var(--radix-popover-trigger-width)] overflow-hidden p-0"
+        className="z-50 max-h-[300px] min-w-[var(--radix-popover-trigger-width)] overflow-hidden p-0"
         side="bottom"
         align="start"
         sideOffset={4}
