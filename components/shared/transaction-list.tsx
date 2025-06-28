@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { TentTree } from "lucide-react";
 
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
+import { Subtitle, Text } from "../ui/typography";
 import DayHeader, { DayHeaderLoading } from "./day-header";
 import TransactionRow, { TransactionRowLoading } from "./transaction-row";
 
@@ -150,6 +152,11 @@ export default function TransactionList() {
     return <TransactionListLoading />;
   }
 
+  // Show empty state when no transactions
+  if (!groupedTransactions.length) {
+    return <TransactionListEmpty />;
+  }
+
   return (
     <div className="relative">
       <div
@@ -209,6 +216,20 @@ export const TransactionListLoading = () => {
       {Array.from({ length: 20 }).map((_, index) => (
         <TransactionRowLoading key={index} />
       ))}
+    </div>
+  );
+};
+
+const TransactionListEmpty = () => {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
+      <TentTree className="size-10 stroke-1" />
+      <div className="flex flex-col items-center gap-0">
+        <Subtitle className="text-foreground">No transactions found</Subtitle>
+        <Text className="text-muted-foreground">
+          Please try again or add a new transaction.
+        </Text>
+      </div>
     </div>
   );
 };

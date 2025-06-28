@@ -59,7 +59,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${display.variable} ${untitledSans.variable}`}
+      className={`${display.variable} ${untitledSans.variable} bg-sidebar`}
       suppressHydrationWarning
     >
       <body className="bg-background">
