@@ -12,6 +12,7 @@ export interface Filters {
   type?: string | undefined;
   transfer_id?: string | undefined;
   description?: string | undefined;
+  id?: string | undefined;
 }
 
 export const listTransactions = async (
@@ -61,6 +62,11 @@ export const listTransactions = async (
   // Filter by description if available
   if (params?.description) {
     query = query.ilike("description", `%${params.description}%`);
+  }
+
+  // Filter by id if available
+  if (params?.id) {
+    query = query.eq("id", params.id);
   }
 
   const page = params?.page || 0;
