@@ -55,6 +55,7 @@ const CategoryForm = ({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
+      toast.success(`Added category in ${type}`);
       onSuccess?.();
     },
     onError(error: unknown) {
