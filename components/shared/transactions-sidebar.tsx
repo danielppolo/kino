@@ -1,6 +1,7 @@
 "use client";
 
 import { endOfMonth, format, startOfMonth } from "date-fns";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 import { SidebarWrapper } from "./sidebar-wrapper";
@@ -15,11 +16,13 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useTotalBalance } from "@/hooks/use-total-balance";
+import { useViews } from "@/contexts/settings-context";
 import { formatCents } from "@/utils/format-cents";
 
 export function TransactionsSidebar() {
   const searchParams = useSearchParams();
   const { walletsByCurrency } = useTotalBalance();
+  const [views] = useViews();
 
   // Get current month's start and end dates as fallback
   const now = new Date();
@@ -32,6 +35,22 @@ export function TransactionsSidebar() {
 
   return (
     <SidebarWrapper>
+      {views.length > 0 && (
+        <SidebarGroup>
+          <SidebarGroupLabel>Views</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {views.map((view) => (
+                <SidebarMenuItem key={view.id}>
+                  <SidebarMenuButton asChild>
+                    <Link href={`/app/transactions?${view.query_params}`}>{view.name}</Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      )}
       {Object.entries(walletsByCurrency).map(([currency, currencyWallets]) => (
         <SidebarGroup key={currency}>
           <SidebarGroupLabel className="flex items-center justify-between">

@@ -59,6 +59,19 @@ export const createTag = async (
   return result;
 };
 
+export const createView = async (
+  data: Database["public"]["Tables"]["views"]["Insert"],
+) => {
+  const supabase = await createClient();
+
+  const { data: result, error } = await supabase
+    .from("views")
+    .upsert(data)
+    .select();
+  if (error) throw new Error(error.message);
+  return result;
+};
+
 export const updateWallet = async (
   data: Database["public"]["Tables"]["wallets"]["Update"],
 ) => {
@@ -196,6 +209,12 @@ export const deleteTag = async (id: string) => {
 export const deleteTags = async (ids: string[]) => {
   const supabase = await createClient();
   const { error } = await supabase.from("tags").delete().in("id", ids);
+  if (error) throw new Error(error.message);
+};
+
+export const deleteViews = async (ids: string[]) => {
+  const supabase = await createClient();
+  const { error } = await supabase.from("views").delete().in("id", ids);
   if (error) throw new Error(error.message);
 };
 

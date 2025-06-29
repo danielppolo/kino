@@ -11,9 +11,10 @@ import {
   listCategories,
   listLabels,
   listTags,
+  listViews,
   listWallets,
 } from "@/utils/supabase/queries";
-import { Category, Label, Tag, Wallet } from "@/utils/supabase/types";
+import { Category, Label, Tag, View, Wallet } from "@/utils/supabase/types";
 
 export interface CurrencyConversion {
   rate: number;
@@ -25,6 +26,7 @@ interface SettingsContextType {
   categories: Category[];
   labels: Label[];
   tags: Tag[];
+  views: View[];
   wallets: Wallet[];
   conversionRates: Record<string, CurrencyConversion>;
   baseCurrency: string;
@@ -71,6 +73,16 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
     },
   });
 
+  const { data: views = [] } = useSuspenseQuery<View[]>({
+    queryKey: ["views"],
+    queryFn: async () => {
+      const supabase = await createClient();
+      const result = await listViews(supabase);
+      if (result.error) throw result.error;
+      return (result.data || []).sort((a, b) => a.name.localeCompare(b.name));
+    },
+  });
+
   const { data: wallets = [] } = useSuspenseQuery<Wallet[]>({
     queryKey: ["wallets"],
     queryFn: async () => {
@@ -110,6 +122,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
     categories,
     labels,
     tags,
+    views,
     wallets,
     conversionRates,
     baseCurrency,
@@ -164,6 +177,18 @@ export const useTags = (key: keyof Tag = "id"): [Tag[], Map<string, Tag>] => {
 
   const list = context.tags;
   const map = new Map(context.tags.map((tag) => [String(tag[key]), tag]));
+
+  return [list, map];
+};
+
+export const useViews = (key: keyof View = "id"): [View[], Map<string, View>] => {
+  const context = useContext(SettingsContext);
+  if (context === undefined) {
+    throw new Error("useViews must be used within a SettingsProvider");
+  }
+
+  const list = context.views;
+  const map = new Map(context.views.map((view) => [String(view[key]), view]));
 
   return [list, map];
 };
