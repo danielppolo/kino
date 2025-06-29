@@ -13,3 +13,17 @@ export type Tag = Database["public"]["Tables"]["tags"]["Row"];
 export type View = Database["public"]["Tables"]["views"]["Row"];
 export type TransactionTemplate =
   Database["public"]["Tables"]["transaction_templates"]["Row"];
+
+export interface RecurringTransaction {
+  id: string;
+  wallet_id: string;
+  category_id: string;
+  label_id?: string | null;
+  description?: string | null;
+  amount_cents: number;
+  currency: string;
+  interval_type: string;
+  start_date: string;
+  end_date?: string | null;
+  next_run_date?: string | null;
+}
