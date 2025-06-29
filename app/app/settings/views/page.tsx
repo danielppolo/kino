@@ -6,8 +6,9 @@ import { Trash2 } from "lucide-react";
 import DeleteViewsDialog from "./(components)/delete-views-dialog";
 import ViewsSection from "./(components)/views-section";
 
+import { BulkActions } from "@/components/shared/bulk-actions";
 import { Button } from "@/components/ui/button";
-import { Title } from "@/components/ui/typography";
+import PageHeader from "@/components/shared/page-header";
 import { View } from "@/utils/supabase/types";
 
 export default function Page() {
@@ -16,7 +17,9 @@ export default function Page() {
 
   const toggleSelect = (view: View) => {
     setSelected((prev) =>
-      prev.includes(view.id) ? prev.filter((id) => id !== view.id) : [...prev, view.id],
+      prev.includes(view.id)
+        ? prev.filter((id) => id !== view.id)
+        : [...prev, view.id],
     );
   };
 
@@ -26,19 +29,19 @@ export default function Page() {
   };
 
   return (
-    <div>
-      <div className="bg-background sticky top-0 flex items-center justify-between py-6">
-        <Title>Views</Title>
-        <div className="flex gap-2">
-          {selected.length > 0 && (
-            <Button size="sm" variant="outline" onClick={() => setDeleteDialogOpen(true)}>
-              <Trash2 className="size-4" />
-            </Button>
-          )}
+    <>
+      <PageHeader>
+        <div className="flex items-center gap-4">
+          {/* Header content can be added here if needed */}
         </div>
-      </div>
+        <div className="flex gap-2">
+          {/* Add button can be added here if needed */}
+        </div>
+      </PageHeader>
 
-      <ViewsSection selected={selected} onToggle={toggleSelect} />
+      <div style={{ height: "calc(100vh - 44px)", overflow: "auto" }}>
+        <ViewsSection selected={selected} onToggle={toggleSelect} />
+      </div>
 
       <DeleteViewsDialog
         open={deleteDialogOpen}
@@ -46,6 +49,20 @@ export default function Page() {
         selected={selected}
         onSuccess={handleDeleteSuccess}
       />
-    </div>
+
+      <BulkActions
+        selectedCount={selected.length}
+        onClear={() => setSelected([])}
+      >
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setDeleteDialogOpen(true)}
+          disabled={selected.length === 0}
+        >
+          <Trash2 className="size-4" />
+        </Button>
+      </BulkActions>
+    </>
   );
 }
