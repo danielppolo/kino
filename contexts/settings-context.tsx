@@ -11,9 +11,16 @@ import {
   listCategories,
   listLabels,
   listTags,
+  listTransactionTemplates,
   listWallets,
 } from "@/utils/supabase/queries";
-import { Category, Label, Tag, Wallet } from "@/utils/supabase/types";
+import {
+  Category,
+  Label,
+  Tag,
+  Wallet,
+  TransactionTemplate,
+} from "@/utils/supabase/types";
 
 export interface CurrencyConversion {
   rate: number;
@@ -25,6 +32,7 @@ interface SettingsContextType {
   categories: Category[];
   labels: Label[];
   tags: Tag[];
+  templates: TransactionTemplate[];
   wallets: Wallet[];
   conversionRates: Record<string, CurrencyConversion>;
   baseCurrency: string;
@@ -71,6 +79,16 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
     },
   });
 
+  const { data: templates = [] } = useSuspenseQuery<TransactionTemplate[]>({
+    queryKey: ["transaction-templates"],
+    queryFn: async () => {
+      const supabase = await createClient();
+      const result = await listTransactionTemplates(supabase);
+      if (result.error) throw result.error;
+      return (result.data || []).sort((a, b) => a.name.localeCompare(b.name));
+    },
+  });
+
   const { data: wallets = [] } = useSuspenseQuery<Wallet[]>({
     queryKey: ["wallets"],
     queryFn: async () => {
@@ -110,6 +128,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
     categories,
     labels,
     tags,
+    templates,
     wallets,
     conversionRates,
     baseCurrency,
@@ -164,6 +183,22 @@ export const useTags = (key: keyof Tag = "id"): [Tag[], Map<string, Tag>] => {
 
   const list = context.tags;
   const map = new Map(context.tags.map((tag) => [String(tag[key]), tag]));
+
+  return [list, map];
+};
+
+export const useTemplates = (
+  key: keyof TransactionTemplate = "id",
+): [TransactionTemplate[], Map<string, TransactionTemplate>] => {
+  const context = useContext(SettingsContext);
+  if (context === undefined) {
+    throw new Error("useTemplates must be used within a SettingsProvider");
+  }
+
+  const list = context.templates;
+  const map = new Map(
+    context.templates.map((t) => [String(t[key]), t]),
+  );
 
   return [list, map];
 };

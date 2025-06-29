@@ -10,3 +10,5 @@ export type Category = Database["public"]["Tables"]["categories"]["Row"];
 export type Label = Database["public"]["Tables"]["labels"]["Row"];
 export type Wallet = Database["public"]["Tables"]["wallets"]["Row"];
 export type Tag = Database["public"]["Tables"]["tags"]["Row"];
+export type TransactionTemplate =
+  Database["public"]["Tables"]["transaction_templates"]["Row"];
