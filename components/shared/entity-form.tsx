@@ -99,7 +99,7 @@ export function EntityForm<T extends FieldValues>({
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(handleSubmit)}
-          className="flex flex-col gap-4"
+          className="relative flex flex-col gap-4"
         >
           {children}
           <div className="flex justify-end gap-4">

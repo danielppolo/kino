@@ -210,6 +210,48 @@ export type Database = {
         };
         Relationships: [];
       };
+      transaction_templates: {
+        Row: {
+          id: string;
+          name: string;
+          type: Database["public"]["Enums"]["transaction_type_enum"];
+          amount_cents: number;
+          description: string | null;
+          category_id: string | null;
+          label_id: string | null;
+          tags: string[] | null;
+          currency: string;
+          user_id: string;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          type: Database["public"]["Enums"]["transaction_type_enum"];
+          amount_cents: number;
+          description?: string | null;
+          category_id?: string | null;
+          label_id?: string | null;
+          tags?: string[] | null;
+          currency: string;
+          user_id?: string;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          type?: Database["public"]["Enums"]["transaction_type_enum"];
+          amount_cents?: number;
+          description?: string | null;
+          category_id?: string | null;
+          label_id?: string | null;
+          tags?: string[] | null;
+          currency?: string;
+          user_id?: string;
+          created_at?: string | null;
+        };
+        Relationships: [];
+      };
       transactions: {
         Row: {
           amount_cents: number;

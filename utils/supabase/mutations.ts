@@ -72,6 +72,19 @@ export const createView = async (
   return result;
 };
 
+export const createTransactionTemplate = async (
+  data: Database["public"]["Tables"]["transaction_templates"]["Insert"],
+) => {
+  const supabase = await createClient();
+
+  const { data: result, error } = await supabase
+    .from("transaction_templates")
+    .upsert(data)
+    .select();
+  if (error) throw new Error(error.message);
+  return result;
+};
+
 export const updateWallet = async (
   data: Database["public"]["Tables"]["wallets"]["Update"],
 ) => {
@@ -169,6 +182,19 @@ export const updateTag = async (
   return result;
 };
 
+export const updateTransactionTemplate = async (
+  data: Database["public"]["Tables"]["transaction_templates"]["Update"],
+) => {
+  const supabase = await createClient();
+
+  const { data: result, error } = await supabase
+    .from("transaction_templates")
+    .upsert(data)
+    .select();
+  if (error) throw new Error(error.message);
+  return result;
+};
+
 // Delete Functions
 export const deleteTransaction = async (id: string) => {
   const supabase = await createClient();
@@ -215,6 +241,15 @@ export const deleteTags = async (ids: string[]) => {
 export const deleteViews = async (ids: string[]) => {
   const supabase = await createClient();
   const { error } = await supabase.from("views").delete().in("id", ids);
+  if (error) throw new Error(error.message);
+};
+
+export const deleteTransactionTemplate = async (id: string) => {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("transaction_templates")
+    .delete()
+    .eq("id", id);
   if (error) throw new Error(error.message);
 };
 
