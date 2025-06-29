@@ -2,7 +2,7 @@
 
 import React, { createContext, ReactNode, useContext } from "react";
 
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 
 import { TRANSFER_CATEGORIES } from "@/utils/constants";
 import { createClient } from "@/utils/supabase/client";
@@ -85,7 +85,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
     },
   });
 
-  const { data: templates = [] } = useSuspenseQuery<TransactionTemplate[]>({
+  const { data: templates = [] } = useQuery<TransactionTemplate[]>({
     queryKey: ["transaction-templates"],
     queryFn: async () => {
       const supabase = await createClient();
@@ -95,7 +95,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
     },
   });
 
-  const { data: views = [] } = useSuspenseQuery<View[]>({
+  const { data: views = [] } = useQuery<View[]>({
     queryKey: ["views"],
     queryFn: async () => {
       const supabase = await createClient();
