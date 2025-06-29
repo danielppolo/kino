@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { TentTree } from "lucide-react";
+import { Edit, Pencil, TentTree } from "lucide-react";
 
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -233,8 +233,8 @@ export default function TransactionList() {
           selectedCount={selected.size}
           onClear={() => setSelected(new Set())}
         >
-          <Button size="sm" onClick={() => setBulkOpen(true)}>
-            Edit
+          <Button variant="ghost" size="sm" onClick={() => setBulkOpen(true)}>
+            <Pencil className="size-4" />
           </Button>
         </BulkActions>
       )}

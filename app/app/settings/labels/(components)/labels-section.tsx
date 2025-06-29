@@ -5,6 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 
 import LabelRow from "@/components/shared/label-row";
 import LabelForm from "@/components/shared/label-form";
+import DeleteLabelsDialog from "./delete-labels-dialog";
 import { BulkActions } from "@/components/shared/bulk-actions";
 import { Button } from "@/components/ui/button";
 import { Text, Title } from "@/components/ui/typography";
@@ -16,6 +17,7 @@ import PageHeader from "@/components/shared/page-header";
 export default function LabelSection() {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editLabel, setEditLabel] = useState<
     Database["public"]["Tables"]["labels"]["Row"] | undefined
   >(undefined);
@@ -34,6 +36,11 @@ export default function LabelSection() {
   const handleClose = () => {
     setOpen(false);
     setEditLabel(undefined);
+  };
+
+  const handleDeleteSuccess = () => {
+    setDeleteDialogOpen(false);
+    setSelected([]);
   };
 
   const toggleSelect = (
@@ -96,6 +103,13 @@ export default function LabelSection() {
         label={editLabel}
       />
 
+      <DeleteLabelsDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        selected={selected}
+        onSuccess={handleDeleteSuccess}
+      />
+
       <BulkActions
         selectedCount={selected.length}
         onClear={() => setSelected([])}
@@ -103,10 +117,7 @@ export default function LabelSection() {
         <Button
           size="sm"
           variant="ghost"
-          onClick={() => {
-            // TODO: Implement bulk delete for labels
-            console.log("Delete labels:", selected);
-          }}
+          onClick={() => setDeleteDialogOpen(true)}
           disabled={selected.length === 0}
         >
           <Trash2 className="size-4" />
