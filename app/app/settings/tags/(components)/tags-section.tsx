@@ -9,8 +9,7 @@ import BulkCategoryChangeDialog from "./bulk-category-change-dialog";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
+import SelectableRow from "@/components/shared/selectable-row";
 import { useTags } from "@/contexts/settings-context";
 import { createClient } from "@/utils/supabase/client";
 import { getTagTransactionCounts } from "@/utils/supabase/queries";
@@ -56,66 +55,61 @@ export default function TagsSection({
   });
 
   return (
-    <div className="space-y-4">
-      <Table>
-        <TableBody>
-          {tags.map((tag) => {
-            const isSelected = selected.includes(tag.id);
-            const transactionCount = transactionCountsData?.get(tag.id) || 0;
-            return (
-              <TableRow
-                key={tag.id}
-                data-state={isSelected ? "selected" : undefined}
-                className="cursor-pointer"
-                onClick={() => onEdit(tag)}
-              >
-                <TableCell className="w-4" onClick={(e) => e.stopPropagation()}>
-                  <Checkbox
-                    checked={isSelected}
-                    onCheckedChange={() => onToggle(tag)}
-                    aria-label="Select tag"
-                  />
-                </TableCell>
-                <TableCell>{tag.title}</TableCell>
-                <TableCell>{tag.group}</TableCell>
-                <TableCell>
-                  {!!transactionCount && (
-                    <Badge
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push(`/app/transactions?tag=${tag.id}`);
-                      }}
-                      className="h-5 min-w-5 rounded-full px-2 font-mono text-xs font-light tabular-nums"
-                      variant="outline"
-                    >
-                      {transactionCount}
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell
-                  className="w-20"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {!!transactionCount && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setBulkChangeDialog({
-                          tag,
-                          transactionCount,
-                        });
-                      }}
-                    >
-                      Change Category
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+    <div className="space-y-1">
+      {tags.map((tag) => {
+        const isSelected = selected.includes(tag.id);
+        const transactionCount = transactionCountsData?.get(tag.id) || 0;
+
+        return (
+          <SelectableRow
+            key={tag.id}
+            id={tag.id}
+            selected={isSelected}
+            onToggleSelect={() => onToggle(tag)}
+            onClick={() => onEdit(tag)}
+          >
+            <div className="flex flex-1 items-center justify-between">
+              <div className="flex flex-1 items-center gap-4">
+                <span className="font-medium">{tag.title}</span>
+                <span className="text-muted-foreground text-sm">
+                  {tag.group}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {!!transactionCount && (
+                  <Badge
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/app/transactions?tag=${tag.id}`);
+                    }}
+                    className="h-5 min-w-5 cursor-pointer rounded-full px-2 font-mono text-xs font-light tabular-nums"
+                    variant="outline"
+                  >
+                    {transactionCount}
+                  </Badge>
+                )}
+
+                {!!transactionCount && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setBulkChangeDialog({
+                        tag,
+                        transactionCount,
+                      });
+                    }}
+                  >
+                    Change Category
+                  </Button>
+                )}
+              </div>
+            </div>
+          </SelectableRow>
+        );
+      })}
 
       {bulkChangeDialog && (
         <BulkCategoryChangeDialog
