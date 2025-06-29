@@ -8,6 +8,7 @@ import MergeTagsDialog from "./(components)/merge-tags-dialog";
 import TagsSection from "./(components)/tags-section";
 
 import TagForm from "@/components/shared/tag-form";
+import PageHeader from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Title } from "@/components/ui/typography";
 import { Tag } from "@/utils/supabase/types";
@@ -54,8 +55,7 @@ export default function Page() {
 
   return (
     <div>
-      <div className="bg-background sticky top-0 z-10 flex items-center justify-between py-6">
-        <Title>Tags</Title>
+      <PageHeader className="bg-background sticky top-0 z-10 py-6">
         <div className="flex gap-2">
           {selected.length > 0 && (
             <>
@@ -81,7 +81,7 @@ export default function Page() {
             <Plus className="size-4" />
           </Button>
         </div>
-      </div>
+      </PageHeader>
 
       <TagsSection
         selected={selected}
