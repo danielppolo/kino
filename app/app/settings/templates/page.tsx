@@ -9,7 +9,7 @@ import TemplatesSection from "./(components)/templates-section";
 import TemplateForm from "@/components/shared/template-form";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Title } from "@/components/ui/typography";
+import PageHeader from "@/components/shared/page-header";
 import { useTemplates } from "@/contexts/settings-context";
 import { TransactionTemplate } from "@/utils/supabase/types";
 
@@ -45,11 +45,10 @@ export default function Page() {
     (searchParams.get("type") as "income" | "expense") || "expense";
 
   return (
-    <div>
+    <>
       <Tabs onValueChange={handleTabChange} defaultValue={currentType}>
-        <div className="bg-background sticky top-0 z-10 flex items-center justify-between py-4">
+        <PageHeader>
           <div className="flex items-center gap-4">
-            <Title>Templates</Title>
             <TabsList>
               <TabsTrigger value="expense">Expense</TabsTrigger>
               <TabsTrigger value="income">Income</TabsTrigger>
@@ -60,15 +59,17 @@ export default function Page() {
               <Plus className="size-4" />
             </Button>
           </div>
+        </PageHeader>
+
+        <div style={{ height: "calc(100vh - 44px)", overflow: "auto" }}>
+          <TabsContent value="income">
+            <TemplatesSection type="income" onEdit={handleEdit} />
+          </TabsContent>
+
+          <TabsContent value="expense">
+            <TemplatesSection type="expense" onEdit={handleEdit} />
+          </TabsContent>
         </div>
-
-        <TabsContent value="income">
-          <TemplatesSection type="income" onEdit={handleEdit} />
-        </TabsContent>
-
-        <TabsContent value="expense">
-          <TemplatesSection type="expense" onEdit={handleEdit} />
-        </TabsContent>
       </Tabs>
 
       <TemplateForm
@@ -78,6 +79,6 @@ export default function Page() {
         onOpenChange={setOpen}
         onSuccess={handleClose}
       />
-    </div>
+    </>
   );
 }
