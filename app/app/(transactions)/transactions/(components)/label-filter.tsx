@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 
 import LabelCombobox from "@/components/shared/label-combobox";
+import { Sparkle } from "lucide-react";
 
 const LabelFilter = () => {
   const router = useRouter();
@@ -25,6 +26,7 @@ const LabelFilter = () => {
 
   return (
     <LabelCombobox
+      icon={<Sparkle className="size-4" />}
       size="sm"
       variant={labelId ? "secondary" : "ghost"}
       value={labelId ?? null}

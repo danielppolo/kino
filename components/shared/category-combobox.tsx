@@ -16,10 +16,12 @@ interface CategoryComboboxProps {
   onChange: (id: string) => void;
   placeholder?: string;
   className?: string;
+  icon?: React.ReactNode;
 }
 
 const CategoryCombobox = ({
   size = "default",
+  icon,
   variant = "outline",
   type,
   value,
@@ -68,6 +70,7 @@ const CategoryCombobox = ({
     <Combobox
       variant={variant}
       size={size}
+      icon={icon}
       options={options}
       value={value ?? ""}
       onChange={onChange}

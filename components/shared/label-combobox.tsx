@@ -13,6 +13,7 @@ interface LabelComboboxProps {
   onChange: (id: string) => void;
   placeholder?: string;
   className?: string;
+  icon?: React.ReactNode;
 }
 
 const LabelCombobox = ({
@@ -22,6 +23,7 @@ const LabelCombobox = ({
   onChange,
   placeholder = "Select label...",
   className,
+  icon,
 }: LabelComboboxProps) => {
   const [labels] = useLabels();
 
@@ -43,6 +45,7 @@ const LabelCombobox = ({
     <Combobox
       variant={variant}
       size={size}
+      icon={icon}
       options={options}
       value={value ?? ""}
       onChange={onChange}

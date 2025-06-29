@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 
 import TagCombobox from "@/components/shared/tag-combobox";
+import { Tag } from "lucide-react";
 
 const TagFilter = () => {
   const router = useRouter();
@@ -26,6 +27,7 @@ const TagFilter = () => {
   return (
     <TagCombobox
       size="sm"
+      icon={<Tag className="h-4 w-4" />}
       variant={tag ? "secondary" : "ghost"}
       value={tag ?? null}
       onChange={handleTagChange}

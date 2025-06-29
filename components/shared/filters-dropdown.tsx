@@ -4,6 +4,7 @@ import { SlidersHorizontal } from "lucide-react";
 
 import CategoryFilter from "@/app/app/(transactions)/transactions/(components)/category-filter";
 import DateRangeFilter from "@/app/app/(transactions)/transactions/(components)/date-range-filter";
+import DescriptionFilter from "@/app/app/(transactions)/transactions/(components)/description-filter";
 import LabelFilter from "@/app/app/(transactions)/transactions/(components)/label-filter";
 import TagFilter from "@/app/app/(transactions)/transactions/(components)/tag-filter";
 import { Button } from "@/components/ui/button";
@@ -35,10 +36,13 @@ export function FiltersDropdown() {
             <LabelFilter />
           </div>
           <div className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors select-none data-disabled:pointer-events-none data-disabled:opacity-50">
-            <TagFilter />
+            <CategoryFilter />
           </div>
           <div className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors select-none data-disabled:pointer-events-none data-disabled:opacity-50">
-            <CategoryFilter />
+            <DescriptionFilter />
+          </div>
+          <div className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors select-none data-disabled:pointer-events-none data-disabled:opacity-50">
+            <TagFilter />
           </div>
         </DropdownMenuGroup>
       </DropdownMenuContent>
