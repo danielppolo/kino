@@ -1,6 +1,7 @@
 import React, { memo } from "react";
 import SelectableRow from "./selectable-row";
 import { View } from "@/utils/supabase/types";
+import { Text } from "../ui/typography";
 
 interface ViewRowProps {
   view: View;
@@ -25,7 +26,7 @@ export function ViewRow({
       selectionMode={selectionMode}
       onToggleSelect={onToggleSelect}
     >
-      <div className="shrink grow truncate">{view.name}</div>
+      <Text className="shrink grow truncate">{view.name}</Text>
     </SelectableRow>
   );
 }

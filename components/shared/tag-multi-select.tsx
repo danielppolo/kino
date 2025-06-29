@@ -1,7 +1,20 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, Plus, XCircle } from "lucide-react";
+import {
+  CalendarFold,
+  ChevronDown,
+  HandCoins,
+  HandPlatter,
+  Handshake,
+  HeartPlus,
+  Map,
+  PencilRuler,
+  PiggyBank,
+  Plus,
+  User,
+  XCircle,
+} from "lucide-react";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -24,6 +37,17 @@ import { cn } from "@/lib/utils";
 import { Database } from "@/utils/supabase/database.types";
 import { createTag } from "@/utils/supabase/mutations";
 import { Tag } from "@/utils/supabase/types";
+
+const ICONS = {
+  doctor: <HeartPlus className="size-4" />,
+  empresa: <Handshake className="size-4" />,
+  evento: <CalendarFold className="size-4" />,
+  finanzas: <PiggyBank className="size-4" />,
+  persona: <User className="size-4" />,
+  proyecto: <PencilRuler className="size-4" />,
+  servicio: <HandPlatter className="size-4" />,
+  viaje: <Map className="size-4" />,
+};
 
 function CommandAddItem({
   query,
@@ -178,7 +202,7 @@ const TagMultiSelect = React.forwardRef<HTMLButtonElement, TagMultiSelectProps>(
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-auto p-0"
+          className="w-[200px] p-0"
           align="start"
           onEscapeKeyDown={() => setOpen(false)}
         >
@@ -199,7 +223,12 @@ const TagMultiSelect = React.forwardRef<HTMLButtonElement, TagMultiSelectProps>(
               {Object.entries(filteredGrouped).map(([group, items]) => (
                 <CommandGroup
                   key={group}
-                  heading={group}
+                  heading={
+                    <div className="flex items-center gap-2">
+                      {ICONS[group]}
+                      <Text className="text-muted-foreground">{group}</Text>
+                    </div>
+                  }
                   className="capitalize"
                 >
                   {items.map((tag) => {

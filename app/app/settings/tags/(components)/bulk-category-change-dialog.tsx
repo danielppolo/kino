@@ -16,6 +16,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   deleteTag,
   updateTransactionCategoriesByTag,
@@ -41,29 +43,38 @@ export default function BulkCategoryChangeDialog({
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null,
   );
+  const [deleteTagAfterUpdate, setDeleteTagAfterUpdate] = useState(true);
   const queryClient = useQueryClient();
 
   const updateMutation = useMutation({
     mutationFn: async ({
       tagId,
       categoryId,
+      shouldDeleteTag,
     }: {
       tagId: string;
       categoryId: string;
+      shouldDeleteTag: boolean;
     }) => {
       // First update the transaction categories
       const result = await updateTransactionCategoriesByTag(tagId, categoryId);
 
-      // Delete the tag after updating transactions (default behavior)
-      await deleteTag(tagId);
+      // Delete the tag only if the checkbox is checked
+      if (shouldDeleteTag) {
+        await deleteTag(tagId);
+      }
 
       return result;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
+      const actionText =
+        deleteTagAfterUpdate && variables.shouldDeleteTag
+          ? "and deleted the tag"
+          : "and kept the tag";
       toast.success(
         `Successfully converted ${data.updatedCount} transaction${
           data.updatedCount === 1 ? "" : "s"
-        } to the new category and deleted the tag.`,
+        } to the new category ${actionText}.`,
       );
       onSuccess?.();
       // Invalidate relevant queries to refresh the UI
@@ -72,6 +83,7 @@ export default function BulkCategoryChangeDialog({
       queryClient.invalidateQueries({ queryKey: ["tags"] });
       onOpenChange(false);
       setSelectedCategoryId(null);
+      setDeleteTagAfterUpdate(true);
     },
     onError: (error) => {
       toast.error(`Failed to convert transactions: ${error.message}`);
@@ -87,12 +99,14 @@ export default function BulkCategoryChangeDialog({
     updateMutation.mutate({
       tagId: tag.id,
       categoryId: selectedCategoryId,
+      shouldDeleteTag: deleteTagAfterUpdate,
     });
   };
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       setSelectedCategoryId(null);
+      setDeleteTagAfterUpdate(true);
     }
     onOpenChange(newOpen);
   };
@@ -105,18 +119,32 @@ export default function BulkCategoryChangeDialog({
           <AlertDialogDescription>
             This will change the category for all {transactionCount} transaction
             {transactionCount === 1 ? "" : "s"} tagged with &ldquo;{tag?.title}
-            &rdquo; and then delete the tag. This action cannot be undone.
+            &rdquo;. This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
             <CategoryCombobox
+              selectionType="checkbox"
               value={selectedCategoryId}
               onChange={(id) => setSelectedCategoryId(id)}
               placeholder="Choose a category..."
               className="w-full"
             />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="delete-tag"
+              checked={deleteTagAfterUpdate}
+              onCheckedChange={(checked) =>
+                setDeleteTagAfterUpdate(checked as boolean)
+              }
+            />
+            <Label htmlFor="delete-tag" className="text-sm">
+              Delete tag after updating transactions
+            </Label>
           </div>
         </div>
 
