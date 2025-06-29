@@ -23,6 +23,7 @@ import {
 import { Database } from "@/utils/supabase/database.types";
 import { TransactionTemplate } from "@/utils/supabase/types";
 import { useTags } from "@/contexts/settings-context";
+import { Input } from "../ui/input";
 
 interface TemplateFormProps {
   type: "income" | "expense";
@@ -55,8 +56,9 @@ const TemplateForm = ({
   const [availableTags] = useTags();
 
   const createMutation = useMutation({
-    mutationFn: async (values: Database["public"]["Tables"]["transaction_templates"]["Insert"]) =>
-      createTransactionTemplate(values),
+    mutationFn: async (
+      values: Database["public"]["Tables"]["transaction_templates"]["Insert"],
+    ) => createTransactionTemplate(values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transaction-templates"] });
       onSuccess?.();
@@ -69,8 +71,9 @@ const TemplateForm = ({
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (values: Database["public"]["Tables"]["transaction_templates"]["Update"]) =>
-      updateTransactionTemplate(values),
+    mutationFn: async (
+      values: Database["public"]["Tables"]["transaction_templates"]["Update"],
+    ) => updateTransactionTemplate(values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transaction-templates"] });
       onSuccess?.();
@@ -101,7 +104,6 @@ const TemplateForm = ({
     description: "",
     category_id: "",
     label_id: "",
-    currency: "USD",
     tags: [],
   };
 
@@ -122,20 +124,21 @@ const TemplateForm = ({
   const handleSubmit = async (
     values: TemplateFormValues,
   ): Promise<{ error?: string }> => {
-    const payload: Database["public"]["Tables"]["transaction_templates"]["Insert"] = {
-      id: values.id,
-      name: values.name,
-      type: values.type,
-      amount_cents:
-        values.type === "expense"
-          ? Math.round(-values.amount * 100)
-          : Math.round(values.amount * 100),
-      description: values.description,
-      category_id: values.category_id || null,
-      label_id: values.label_id || null,
-      currency: values.currency,
-      tags: values.tags,
-    };
+    const payload: Database["public"]["Tables"]["transaction_templates"]["Insert"] =
+      {
+        id: values.id,
+        name: values.name,
+        type: values.type,
+        amount_cents:
+          values.type === "expense"
+            ? Math.round(-values.amount * 100)
+            : Math.round(values.amount * 100),
+        description: values.description,
+        category_id: values.category_id || null,
+        label_id: values.label_id || null,
+        currency: values.currency,
+        tags: values.tags,
+      };
 
     return new Promise((resolve) => {
       if (template) {
@@ -195,7 +198,7 @@ const TemplateForm = ({
         render={({ field }) => (
           <FormItem>
             <FormControl>
-              <DescriptionInput {...field} placeholder="Template name" />
+              <Input type="text" placeholder="Description" {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -218,11 +221,7 @@ const TemplateForm = ({
           render={({ field }) => (
             <FormItem>
               <FormControl>
-                <CategoryCombobox
-                  {...field}
-                  type={type}
-                  className="w-full"
-                />
+                <CategoryCombobox {...field} type={type} className="w-full" />
               </FormControl>
               <FormMessage />
             </FormItem>
