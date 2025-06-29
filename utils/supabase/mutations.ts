@@ -187,9 +187,29 @@ export const updateTransactionTemplate = async (
 ) => {
   const supabase = await createClient();
 
+  // Ensure required fields are present for update
+  if (
+    !data.name ||
+    !data.type ||
+    data.amount_cents === undefined ||
+    !data.currency
+  ) {
+    throw new Error(
+      "Name, type, amount_cents, and currency are required fields for template updates",
+    );
+  }
+
+  const template = {
+    ...data,
+    name: data.name,
+    type: data.type,
+    amount_cents: data.amount_cents,
+    currency: data.currency,
+  } satisfies Database["public"]["Tables"]["transaction_templates"]["Update"];
+
   const { data: result, error } = await supabase
     .from("transaction_templates")
-    .upsert(data)
+    .upsert(template)
     .select();
   if (error) throw new Error(error.message);
   return result;
