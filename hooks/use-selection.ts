@@ -2,15 +2,24 @@ import { useState, useEffect, useCallback } from "react";
 
 interface UseSelectionOptions {
   onSelectionChange?: (selected: string[]) => void;
+  getAllIds?: () => string[];
 }
 
 export function useSelection(options: UseSelectionOptions = {}) {
   const [selected, setSelected] = useState<string[]>([]);
-  const { onSelectionChange } = options;
+  const { onSelectionChange, getAllIds } = options;
 
   const clearSelection = useCallback(() => {
     setSelected([]);
   }, []);
+
+  const selectAll = useCallback(() => {
+    if (getAllIds) {
+      const allIds = getAllIds();
+      setSelected(allIds);
+      onSelectionChange?.(allIds);
+    }
+  }, [getAllIds, onSelectionChange]);
 
   const toggleSelection = useCallback(
     (id: string) => {
@@ -61,19 +70,26 @@ export function useSelection(options: UseSelectionOptions = {}) {
     [onSelectionChange],
   );
 
-  // Handle escape key to clear selection
+  // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && selected.length > 0) {
         clearSelection();
       }
+
+      // Handle Ctrl+A (Windows/Linux) or Cmd+A (Mac) to select all
+      // FIXME: Enable this
+      // if (event.key === "w") {
+      //   event.preventDefault();
+      //   selectAll();
+      // }
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [selected.length, clearSelection]);
+  }, [selected.length, clearSelection, selectAll]);
 
   return {
     selected,
@@ -83,5 +99,6 @@ export function useSelection(options: UseSelectionOptions = {}) {
     addToSelection,
     removeFromSelection,
     setSelection,
+    selectAll,
   };
 }

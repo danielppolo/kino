@@ -138,7 +138,7 @@ export default function Page() {
       </Tabs>
 
       <CategoryForm
-        type={searchParams.get("type") as "income" | "expense"}
+        type={(searchParams.get("type") as "income" | "expense") || "expense"}
         category={selectedCategory ?? undefined}
         open={open}
         onOpenChange={handleClose}

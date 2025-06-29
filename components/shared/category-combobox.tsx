@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Label } from "../ui/label";
 
 interface CategoryComboboxProps {
+  selectionType: "combobox" | "checkbox";
   size?: "sm" | "default" | "lg";
   variant?: "ghost" | "outline" | "default" | "secondary" | "destructive";
   type?: "income" | "expense" | "transfer";
@@ -23,6 +24,7 @@ interface CategoryComboboxProps {
 }
 
 const CategoryCombobox = ({
+  selectionType = "combobox",
   size = "default",
   icon,
   variant = "outline",
@@ -85,7 +87,7 @@ const CategoryCombobox = ({
   });
 
   // If type is not provided, show type selector first
-  if (!type) {
+  if (!type && selectionType === "checkbox") {
     return (
       <div className="flex flex-col gap-4">
         <div className="space-y-2">

@@ -57,7 +57,7 @@ export default function CategorySection({
         const transactionCount = transactionCountsData?.get(category.id) || 0;
         return (
           <CategoryRow
-            key={category.id}
+            key={`${category.id}-${transactionCount}`}
             category={category}
             onClick={() => onEdit(category)}
             selected={isSelected}
