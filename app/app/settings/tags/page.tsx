@@ -1,26 +1,35 @@
 "use client";
 
 import { useState } from "react";
-import { Combine, Plus, Trash2 } from "lucide-react";
+import { Combine, Plus, Trash2, SquaresUnite } from "lucide-react";
 
+import BulkCategoryChangeDialog from "./(components)/bulk-category-change-dialog";
 import DeleteTagsDialog from "./(components)/delete-tags-dialog";
 import MergeTagsDialog from "./(components)/merge-tags-dialog";
 import TagsSection from "./(components)/tags-section";
 
+import { BulkActions } from "@/components/shared/bulk-actions";
 import TagForm from "@/components/shared/tag-form";
 import PageHeader from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Title } from "@/components/ui/typography";
-import { Tag } from "@/utils/supabase/types";
+import { useTags } from "@/contexts/settings-context";
+import { Tag as TagType } from "@/utils/supabase/types";
+import { TooltipButton } from "@/components/ui/tooltip-button";
 
 export default function Page() {
+  const [tags] = useTags();
   const [selected, setSelected] = useState<string[]>([]);
+  const [transactionCounts, setTransactionCounts] = useState<
+    Map<string, number>
+  >(new Map());
   const [open, setOpen] = useState(false);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedTag, setSelectedTag] = useState<Tag | null>(null);
+  const [bulkCategoryDialogOpen, setBulkCategoryDialogOpen] = useState(false);
+  const [selectedTag, setSelectedTag] = useState<TagType | null>(null);
 
-  const toggleSelect = (tag: Tag) => {
+  const toggleSelect = (tag: TagType) => {
     setSelected((prev) =>
       prev.includes(tag.id)
         ? prev.filter((id) => id !== tag.id)
@@ -33,7 +42,7 @@ export default function Page() {
     setOpen(true);
   };
 
-  const handleEdit = (tag: Tag) => {
+  const handleEdit = (tag: TagType) => {
     setSelectedTag(tag);
     setOpen(true);
   };
@@ -53,30 +62,20 @@ export default function Page() {
     setSelected([]);
   };
 
+  const handleTransactionCountsLoaded = (counts: Map<string, number>) => {
+    setTransactionCounts(counts);
+  };
+
+  const selectedTags = tags.filter((tag) => selected.includes(tag.id));
+  const hasSelectedWithTransactions = selectedTags.some(
+    (tag) => (transactionCounts.get(tag.id) || 0) > 0,
+  );
+
   return (
     <div>
       <PageHeader className="bg-background sticky top-0 z-10 py-6">
+        <Title>Tags</Title>
         <div className="flex gap-2">
-          {selected.length > 0 && (
-            <>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setDeleteDialogOpen(true)}
-                disabled={selected.length === 0}
-              >
-                <Trash2 className="size-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setMergeDialogOpen(true)}
-                disabled={selected.length < 2}
-              >
-                <Combine className="size-4" />
-              </Button>
-            </>
-          )}
           <Button size="sm" variant="outline" onClick={handleAdd}>
             <Plus className="size-4" />
           </Button>
@@ -87,7 +86,42 @@ export default function Page() {
         selected={selected}
         onToggle={toggleSelect}
         onEdit={handleEdit}
+        onTransactionCountsLoaded={handleTransactionCountsLoaded}
       />
+
+      <BulkActions
+        selectedCount={selected.length}
+        onClear={() => setSelected([])}
+      >
+        <TooltipButton
+          tooltip="Delete"
+          size="sm"
+          variant="ghost"
+          onClick={() => setDeleteDialogOpen(true)}
+        >
+          <Trash2 className="size-4" />
+        </TooltipButton>
+        <TooltipButton
+          tooltip="Merge"
+          size="sm"
+          variant="ghost"
+          onClick={() => setMergeDialogOpen(true)}
+          disabled={selected.length < 2}
+        >
+          <Combine className="size-4" />
+        </TooltipButton>
+        {hasSelectedWithTransactions && (
+          <TooltipButton
+            tooltip="Convert to category"
+            size="sm"
+            variant="ghost"
+            disabled={selectedTags.length > 1}
+            onClick={() => setBulkCategoryDialogOpen(true)}
+          >
+            <SquaresUnite className="size-4" />
+          </TooltipButton>
+        )}
+      </BulkActions>
 
       <TagForm
         open={open}
@@ -106,6 +140,12 @@ export default function Page() {
         onOpenChange={setDeleteDialogOpen}
         selected={selected}
         onSuccess={handleDeleteSuccess}
+      />
+      <BulkCategoryChangeDialog
+        tag={selectedTags[0]}
+        transactionCounts={transactionCounts}
+        open={bulkCategoryDialogOpen}
+        onOpenChange={setBulkCategoryDialogOpen}
       />
     </div>
   );

@@ -1,14 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import { useQuery } from "@tanstack/react-query";
 
-import BulkCategoryChangeDialog from "./bulk-category-change-dialog";
-
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import SelectableRow from "@/components/shared/selectable-row";
 import { useTags } from "@/contexts/settings-context";
 import { createClient } from "@/utils/supabase/client";
@@ -19,19 +16,17 @@ interface TagsSectionProps {
   selected: string[];
   onToggle: (tag: Tag) => void;
   onEdit: (tag: Tag) => void;
+  onTransactionCountsLoaded?: (counts: Map<string, number>) => void;
 }
 
 export default function TagsSection({
   selected,
   onToggle,
   onEdit,
+  onTransactionCountsLoaded,
 }: TagsSectionProps) {
   const router = useRouter();
   const [tags] = useTags();
-  const [bulkChangeDialog, setBulkChangeDialog] = useState<{
-    tag: Tag;
-    transactionCount: number;
-  } | null>(null);
 
   // Fetch transaction counts using react-query
   const { data: transactionCountsData } = useQuery({
@@ -53,6 +48,13 @@ export default function TagsSection({
       return countsMap;
     },
   });
+
+  // Pass transaction counts to parent when loaded
+  useEffect(() => {
+    if (transactionCountsData && onTransactionCountsLoaded) {
+      onTransactionCountsLoaded(transactionCountsData);
+    }
+  }, [transactionCountsData, onTransactionCountsLoaded]);
 
   return (
     <div className="space-y-1">
@@ -89,40 +91,11 @@ export default function TagsSection({
                     {transactionCount}
                   </Badge>
                 )}
-
-                {!!transactionCount && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setBulkChangeDialog({
-                        tag,
-                        transactionCount,
-                      });
-                    }}
-                  >
-                    Change Category
-                  </Button>
-                )}
               </div>
             </div>
           </SelectableRow>
         );
       })}
-
-      {bulkChangeDialog && (
-        <BulkCategoryChangeDialog
-          tag={bulkChangeDialog.tag}
-          transactionCount={bulkChangeDialog.transactionCount}
-          open={!!bulkChangeDialog}
-          onOpenChange={(open) => {
-            if (!open) {
-              setBulkChangeDialog(null);
-            }
-          }}
-        />
-      )}
     </div>
   );
 }
