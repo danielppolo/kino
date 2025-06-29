@@ -4,13 +4,13 @@ import { X } from "lucide-react";
 
 interface BulkActionsProps {
   selectedCount: number;
-  onClear: () => void;
+  clearSelection: () => void;
   children: React.ReactNode;
 }
 
 export function BulkActions({
   selectedCount,
-  onClear,
+  clearSelection,
   children,
 }: BulkActionsProps) {
   if (selectedCount === 0) return null;
@@ -23,7 +23,7 @@ export function BulkActions({
           size="sm"
           variant="ghost"
           tooltip="Clear selection"
-          onClick={onClear}
+          onClick={clearSelection}
         >
           <X className="size-4" />
         </TooltipButton>

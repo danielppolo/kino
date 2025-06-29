@@ -10,18 +10,21 @@ import { BulkActions } from "@/components/shared/bulk-actions";
 import { TooltipButton } from "@/components/ui/tooltip-button";
 import { Text, Title } from "@/components/ui/typography";
 import { useLabels } from "@/contexts/settings-context";
+import { useSelection } from "@/hooks/use-selection";
 import { COLORS } from "@/utils/constants";
 import { Database } from "@/utils/supabase/database.types";
 import PageHeader from "@/components/shared/page-header";
 
 export default function LabelSection() {
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<string[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editLabel, setEditLabel] = useState<
     Database["public"]["Tables"]["labels"]["Row"] | undefined
   >(undefined);
   const [labels] = useLabels();
+
+  const { selected, selectedCount, clearSelection, toggleSelection } =
+    useSelection();
 
   const handleAdd = () => {
     setEditLabel(undefined);
@@ -40,17 +43,13 @@ export default function LabelSection() {
 
   const handleDeleteSuccess = () => {
     setDeleteDialogOpen(false);
-    setSelected([]);
+    clearSelection();
   };
 
   const toggleSelect = (
     label: Database["public"]["Tables"]["labels"]["Row"],
   ) => {
-    setSelected((prev) => {
-      const exists = prev.includes(label.id);
-      if (exists) return prev.filter((id) => id !== label.id);
-      return [...prev, label.id];
-    });
+    toggleSelection(label.id);
   };
 
   const sortedLabels = [...labels].sort((a, b) => {
@@ -93,7 +92,7 @@ export default function LabelSection() {
                 label={label}
                 onClick={() => handleEdit(label)}
                 selected={isSelected}
-                selectionMode={selected.length > 0}
+                selectionMode={selectedCount > 0}
                 onToggleSelect={() => toggleSelect(label)}
               />
             );
@@ -116,15 +115,15 @@ export default function LabelSection() {
       />
 
       <BulkActions
-        selectedCount={selected.length}
-        onClear={() => setSelected([])}
+        selectedCount={selectedCount}
+        clearSelection={clearSelection}
       >
         <TooltipButton
           size="sm"
           variant="ghost"
           tooltip="Delete selected labels"
           onClick={() => setDeleteDialogOpen(true)}
-          disabled={selected.length === 0}
+          disabled={selectedCount === 0}
         >
           <Trash2 className="size-4" />
         </TooltipButton>

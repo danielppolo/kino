@@ -15,6 +15,7 @@ import { BulkActions } from "./bulk-actions";
 
 import { useTransactionForm } from "@/contexts/transaction-form-context";
 import useFilters from "@/hooks/use-filters";
+import { useSelection } from "@/hooks/use-selection";
 import { PAGE_SIZE } from "@/utils/constants";
 import { createClient } from "@/utils/supabase/client";
 import { listTransactions } from "@/utils/supabase/queries";
@@ -37,17 +38,18 @@ const transactionRowHeight = 40;
 export default function TransactionList() {
   const filters = useFilters();
   const { openForm } = useTransactionForm();
-  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
 
-  const toggleSelected = useCallback((id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
+  const { selected, selectedCount, clearSelection, toggleSelection } =
+    useSelection();
+
+  const toggleSelected = useCallback(
+    (id: string) => {
+      toggleSelection(id);
+    },
+    [toggleSelection],
+  );
+
   const {
     data,
     dataUpdatedAt,
@@ -91,13 +93,8 @@ export default function TransactionList() {
 
   const handleTransactionClick = useCallback(
     (transaction: TransactionList) => {
-      if (selected.size > 0) {
-        setSelected((prev) => {
-          const next = new Set(prev);
-          if (next.has(transaction.id!)) next.delete(transaction.id!);
-          else next.add(transaction.id!);
-          return next;
-        });
+      if (selectedCount > 0) {
+        toggleSelection(transaction.id!);
         return;
       }
       openForm({
@@ -106,7 +103,7 @@ export default function TransactionList() {
         initialData: transaction as any,
       });
     },
-    [openForm, selected],
+    [openForm, selectedCount, toggleSelection],
   );
 
   // Group transactions by date
@@ -165,7 +162,7 @@ export default function TransactionList() {
   // Re-render the virtualized list when transactions change
   useEffect(() => {
     rowVirtualizer.measure();
-  }, [rowVirtualizer, dataUpdatedAt, selected.size]);
+  }, [rowVirtualizer, dataUpdatedAt, selectedCount]);
 
   if (status === "error") {
     return <div>Error loading transactions</div>;
@@ -213,8 +210,8 @@ export default function TransactionList() {
                     key={`${transaction.id}-${transaction.amount_cents}-${transaction.description ?? ""}-${transaction.tag_ids?.join(",") ?? ""}-${transaction.category_id}-${transaction.label_id}`}
                     transaction={transaction}
                     onClick={() => handleTransactionClick(transaction)}
-                    selected={selected.has(transaction.id!)}
-                    selectionMode={selected.size > 0}
+                    selected={selected.includes(transaction.id!)}
+                    selectionMode={selectedCount > 0}
                     onToggleSelect={() => toggleSelected(transaction.id!)}
                   />
                 ))}
@@ -228,10 +225,10 @@ export default function TransactionList() {
           <TransactionRowLoading />
         </div>
       )}
-      {selected.size > 0 && (
+      {selectedCount > 0 && (
         <BulkActions
-          selectedCount={selected.size}
-          onClear={() => setSelected(new Set())}
+          selectedCount={selectedCount}
+          clearSelection={clearSelection}
         >
           <TooltipButton
             variant="ghost"
@@ -246,15 +243,15 @@ export default function TransactionList() {
       <BulkTransactionEditForm
         open={bulkOpen}
         onOpenChange={setBulkOpen}
-        transactionIds={Array.from(selected)}
+        transactionIds={selected}
         selectedTransactions={
           data?.pages
             .flatMap((page) => page.data)
-            .filter((t) => selected.has(t.id!)) ?? []
+            .filter((t) => selected.includes(t.id!)) ?? []
         }
         onSuccess={() => {
           setBulkOpen(false);
-          setSelected(new Set());
+          clearSelection();
         }}
       />
     </div>

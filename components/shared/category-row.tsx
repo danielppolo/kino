@@ -31,13 +31,10 @@ export function CategoryRow({
       selectionMode={selectionMode}
       onToggleSelect={onToggleSelect}
     >
-      <div className="shrink-0">
-        <LazyIcon name={category.icon} className="h-4 w-4" />
-      </div>
-      <Text className="shrink grow truncate">{category.name}</Text>
-      <div className="text-muted-foreground shrink-0">
+      <Text className="shrink-0 truncate">{category.name}</Text>
+      <Text className="text-muted-foreground shrink-0 grow text-xs">
         {Array.isArray(category.keywords) ? category.keywords.join(", ") : ""}
-      </div>
+      </Text>
       <div className="shrink-0">
         {!!transactionCount && (
           <Link href={`/app/transactions?category_id=${category.id}`}>

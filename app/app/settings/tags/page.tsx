@@ -16,10 +16,10 @@ import { Title } from "@/components/ui/typography";
 import { useTags } from "@/contexts/settings-context";
 import { Tag as TagType } from "@/utils/supabase/types";
 import { TooltipButton } from "@/components/ui/tooltip-button";
+import { useSelection } from "@/hooks/use-selection";
 
 export default function Page() {
   const [tags] = useTags();
-  const [selected, setSelected] = useState<string[]>([]);
   const [transactionCounts, setTransactionCounts] = useState<
     Map<string, number>
   >(new Map());
@@ -29,12 +29,11 @@ export default function Page() {
   const [bulkCategoryDialogOpen, setBulkCategoryDialogOpen] = useState(false);
   const [selectedTag, setSelectedTag] = useState<TagType | null>(null);
 
+  const { selected, selectedCount, clearSelection, toggleSelection } =
+    useSelection();
+
   const toggleSelect = (tag: TagType) => {
-    setSelected((prev) =>
-      prev.includes(tag.id)
-        ? prev.filter((id) => id !== tag.id)
-        : [...prev, tag.id],
-    );
+    toggleSelection(tag.id);
   };
 
   const handleAdd = () => {
@@ -54,17 +53,17 @@ export default function Page() {
 
   const handleMergeSuccess = () => {
     setMergeDialogOpen(false);
-    setSelected([]);
+    clearSelection();
   };
 
   const handleConvertSuccess = () => {
     setBulkCategoryDialogOpen(false);
-    setSelected([]);
+    clearSelection();
   };
 
   const handleDeleteSuccess = () => {
     setDeleteDialogOpen(false);
-    setSelected([]);
+    clearSelection();
   };
 
   const handleTransactionCountsLoaded = (counts: Map<string, number>) => {
@@ -78,7 +77,7 @@ export default function Page() {
 
   return (
     <div>
-      <PageHeader className="bg-background sticky top-0 z-10 py-6">
+      <PageHeader className="justify-end">
         <Button size="sm" variant="outline" onClick={handleAdd}>
           <Plus className="size-4" />
         </Button>
@@ -92,8 +91,8 @@ export default function Page() {
       />
 
       <BulkActions
-        selectedCount={selected.length}
-        onClear={() => setSelected([])}
+        selectedCount={selectedCount}
+        clearSelection={clearSelection}
       >
         <TooltipButton
           tooltip="Delete"
@@ -108,19 +107,19 @@ export default function Page() {
           size="sm"
           variant="ghost"
           onClick={() => setMergeDialogOpen(true)}
-          disabled={selected.length < 2}
+          disabled={selectedCount < 2}
         >
-          <Combine className="size-4" />
+          <SquaresUnite className="size-4" />
         </TooltipButton>
         {hasSelectedWithTransactions && (
           <TooltipButton
-            tooltip="Convert to category"
+            tooltip="Merge to category"
             size="sm"
             variant="ghost"
             disabled={selectedTags.length > 1}
             onClick={() => setBulkCategoryDialogOpen(true)}
           >
-            <SquaresUnite className="size-4" />
+            <Combine className="size-4" />
           </TooltipButton>
         )}
       </BulkActions>

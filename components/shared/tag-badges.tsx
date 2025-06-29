@@ -39,10 +39,10 @@ const TagBadges = ({ transaction, className }: TagBadgesProps) => {
           <Badge
             key={tagId}
             variant="outline"
-            className="bg-background absolute right-0 cursor-pointer text-xs"
-            style={{
-              transform: `translateX(${-18 * index}px)`,
-            }}
+            className="bg-background cursor-pointer text-xs"
+            // style={{
+            //   transform: `translateX(${-18 * index}px)`,
+            // }}
             onClick={(event) => {
               event.stopPropagation();
               handleTagClick(tagId);
