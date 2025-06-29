@@ -10,11 +10,13 @@ import DeleteCategoriesDialog from "./(components)/delete-categories-dialog";
 import MergeCategoriesDialog from "./(components)/merge-categories-dialog";
 
 import CategoryForm from "@/components/shared/category-form";
+import { BulkActions } from "@/components/shared/bulk-actions";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Title } from "@/components/ui/typography";
 import { useCategories } from "@/contexts/settings-context";
 import { Category } from "@/utils/supabase/types";
+import PageHeader from "@/components/shared/page-header";
 
 export default function Page() {
   const [categories] = useCategories();
@@ -94,63 +96,43 @@ export default function Page() {
   };
 
   return (
-    <div>
+    <>
       <Tabs
         onValueChange={handleTabChange}
         defaultValue={searchParams.get("type") || "expense"}
       >
-        <div className="bg-background sticky top-0 z-10 flex items-center justify-between py-4">
+        <PageHeader>
           <div className="flex items-center gap-4">
-            <Title>Categories</Title>
             <TabsList>
               <TabsTrigger value="expense">Expense</TabsTrigger>
               <TabsTrigger value="income">Income</TabsTrigger>
             </TabsList>
           </div>
           <div className="flex gap-2">
-            {selected.length > 0 && (
-              <>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setDeleteDialogOpen(true)}
-                  disabled={selected.length === 0}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setMergeDialogOpen(true)}
-                  disabled={selected.length < 2 || !selectedType}
-                >
-                  <Combine className="size-4" />
-                </Button>
-              </>
-            )}
             <Button size="sm" variant="outline" onClick={handleAdd}>
               <Plus className="size-4" />
             </Button>
           </div>
+        </PageHeader>
+        <div style={{ height: "calc(100vh - 44px)", overflow: "auto" }}>
+          <TabsContent value="income">
+            <CategorySection
+              type="income"
+              selected={selected}
+              onToggle={toggleSelect}
+              onEdit={handleEdit}
+            />
+          </TabsContent>
+
+          <TabsContent value="expense">
+            <CategorySection
+              type="expense"
+              selected={selected}
+              onToggle={toggleSelect}
+              onEdit={handleEdit}
+            />
+          </TabsContent>
         </div>
-
-        <TabsContent value="income">
-          <CategorySection
-            type="income"
-            selected={selected}
-            onToggle={toggleSelect}
-            onEdit={handleEdit}
-          />
-        </TabsContent>
-
-        <TabsContent value="expense">
-          <CategorySection
-            type="expense"
-            selected={selected}
-            onToggle={toggleSelect}
-            onEdit={handleEdit}
-          />
-        </TabsContent>
       </Tabs>
 
       <CategoryForm
@@ -173,6 +155,28 @@ export default function Page() {
         selected={selected}
         onSuccess={handleDeleteSuccess}
       />
-    </div>
+
+      <BulkActions
+        selectedCount={selected.length}
+        onClear={() => setSelected([])}
+      >
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setDeleteDialogOpen(true)}
+          disabled={selected.length === 0}
+        >
+          <Trash2 className="size-4" />
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setMergeDialogOpen(true)}
+          disabled={selected.length < 2 || !selectedType}
+        >
+          <Combine className="size-4" />
+        </Button>
+      </BulkActions>
+    </>
   );
 }

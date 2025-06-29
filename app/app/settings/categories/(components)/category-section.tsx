@@ -1,12 +1,8 @@
 "use client";
 
-import Link from "next/link";
-
 import { useQuery } from "@tanstack/react-query";
 
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
+import CategoryRow from "@/components/shared/category-row";
 import { useCategories } from "@/contexts/settings-context";
 import { createClient } from "@/utils/supabase/client";
 import { getCategoryTransactionCounts } from "@/utils/supabase/queries";
@@ -55,50 +51,22 @@ export default function CategorySection({
   });
 
   return (
-    <div className="space-y-4">
-      <Table>
-        <TableBody>
-          {filteredCategories?.map((category) => {
-            const isSelected = selected.includes(category.id);
-            const transactionCount =
-              transactionCountsData?.get(category.id) || 0;
-            return (
-              <TableRow
-                key={category.id}
-                data-state={isSelected ? "selected" : undefined}
-                className="cursor-pointer"
-                onClick={() => onEdit(category)}
-              >
-                <TableCell className="w-4" onClick={(e) => e.stopPropagation()}>
-                  <Checkbox
-                    checked={isSelected}
-                    onCheckedChange={() => onToggle(category)}
-                    aria-label="Select category"
-                  />
-                </TableCell>
-                <TableCell>{category.name}</TableCell>
-                <TableCell>
-                  {Array.isArray(category.keywords)
-                    ? category.keywords.join(", ")
-                    : ""}
-                </TableCell>
-                <TableCell>
-                  {!!transactionCount && (
-                    <Link href={`/app/transactions?category_id=${category.id}`}>
-                      <Badge
-                        className="h-5 min-w-5 rounded-full px-2 font-mono text-xs font-light tabular-nums"
-                        variant="outline"
-                      >
-                        {transactionCount}
-                      </Badge>
-                    </Link>
-                  )}
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+    <div className="divide-y">
+      {filteredCategories?.map((category) => {
+        const isSelected = selected.includes(category.id);
+        const transactionCount = transactionCountsData?.get(category.id) || 0;
+        return (
+          <CategoryRow
+            key={category.id}
+            category={category}
+            onClick={() => onEdit(category)}
+            selected={isSelected}
+            selectionMode={selected.length > 0}
+            onToggleSelect={() => onToggle(category)}
+            transactionCount={transactionCount}
+          />
+        );
+      })}
     </div>
   );
 }

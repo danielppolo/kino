@@ -1,19 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 
-import Color from "@/components/shared/color";
+import LabelRow from "@/components/shared/label-row";
 import LabelForm from "@/components/shared/label-form";
+import { BulkActions } from "@/components/shared/bulk-actions";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
-import { Title } from "@/components/ui/typography";
+import { Text, Title } from "@/components/ui/typography";
 import { useLabels } from "@/contexts/settings-context";
 import { COLORS } from "@/utils/constants";
 import { Database } from "@/utils/supabase/database.types";
+import PageHeader from "@/components/shared/page-header";
 
 export default function LabelSection() {
   const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
   const [editLabel, setEditLabel] = useState<
     Database["public"]["Tables"]["labels"]["Row"] | undefined
   >(undefined);
@@ -34,6 +36,16 @@ export default function LabelSection() {
     setEditLabel(undefined);
   };
 
+  const toggleSelect = (
+    label: Database["public"]["Tables"]["labels"]["Row"],
+  ) => {
+    setSelected((prev) => {
+      const exists = prev.includes(label.id);
+      if (exists) return prev.filter((id) => id !== label.id);
+      return [...prev, label.id];
+    });
+  };
+
   const sortedLabels = [...labels].sort((a, b) => {
     const aIndex = COLORS.indexOf(a.color);
     const bIndex = COLORS.indexOf(b.color);
@@ -52,37 +64,54 @@ export default function LabelSection() {
   });
 
   return (
-    <div className="space-y-4">
-      <div className="bg-background sticky top-0 flex items-center justify-between py-6">
-        <Title>Labels</Title>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={handleAdd}>
-            <Plus className="size-4" />
-          </Button>
+    <>
+      <PageHeader className="justify-end">
+        <Button size="sm" variant="outline" onClick={handleAdd}>
+          <Plus className="size-4" />
+        </Button>
+      </PageHeader>
+
+      <div style={{ height: "calc(100vh - 44px)", overflow: "auto" }}>
+        <div className="divide-y">
+          {sortedLabels?.map((label) => {
+            const isSelected = selected.includes(label.id);
+            return (
+              <LabelRow
+                key={label.id}
+                label={label}
+                onClick={() => handleEdit(label)}
+                selected={isSelected}
+                selectionMode={selected.length > 0}
+                onToggleSelect={() => toggleSelect(label)}
+              />
+            );
+          })}
         </div>
       </div>
-      <Table>
-        <TableBody>
-          {sortedLabels?.map((label) => (
-            <TableRow
-              key={label.id}
-              onClick={() => handleEdit(label)}
-              className="cursor-pointer"
-            >
-              <TableCell className="w-[20px]">
-                <Color size="sm" color={label.color} />
-              </TableCell>
-              <TableCell>{label.name}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+
       <LabelForm
         open={open}
         onOpenChange={setOpen}
         onSuccess={handleClose}
         label={editLabel}
       />
-    </div>
+
+      <BulkActions
+        selectedCount={selected.length}
+        onClear={() => setSelected([])}
+      >
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            // TODO: Implement bulk delete for labels
+            console.log("Delete labels:", selected);
+          }}
+          disabled={selected.length === 0}
+        >
+          <Trash2 className="size-4" />
+        </Button>
+      </BulkActions>
+    </>
   );
 }

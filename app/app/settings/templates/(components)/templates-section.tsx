@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
+import TemplateRow from "@/components/shared/template-row";
 import { useTemplates } from "@/contexts/settings-context";
 import { TransactionTemplate } from "@/utils/supabase/types";
 
@@ -24,21 +24,10 @@ export default function TemplatesSection({
   }, [templates, type]);
 
   return (
-    <div className="space-y-4">
-      <Table>
-        <TableBody>
-          {filteredTemplates.map((tpl) => (
-            <TableRow
-              key={tpl.id}
-              onClick={() => onEdit(tpl)}
-              className="cursor-pointer"
-            >
-              <TableCell>{tpl.name}</TableCell>
-              <TableCell>{tpl.type}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+    <div className="divide-y">
+      {filteredTemplates.map((tpl) => (
+        <TemplateRow key={tpl.id} template={tpl} onClick={() => onEdit(tpl)} />
+      ))}
     </div>
   );
 }

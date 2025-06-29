@@ -54,7 +54,7 @@ const CategoryCombobox = ({
     mutationFn: async (name: string) => {
       const values: Database["public"]["Tables"]["categories"]["Insert"] = {
         name,
-        type: type || "expense",
+        type,
         icon: ICONS[Math.floor(Math.random() * ICONS.length)],
         keywords: [],
       };

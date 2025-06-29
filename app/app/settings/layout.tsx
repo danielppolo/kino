@@ -13,7 +13,7 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
       <SettingsSidebar />
 
       <SidebarInset>
-        <div className="flex-1 px-6">{children}</div>
+        <main className="relative flex-1">{children}</main>
       </SidebarInset>
     </>
   );
