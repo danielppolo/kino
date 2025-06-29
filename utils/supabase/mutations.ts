@@ -435,3 +435,55 @@ export const updateTransactionCategoriesByTag = async (
 
   return { updatedCount: transactionIds.length };
 };
+
+export const createRecurringTransaction = async (data: {
+  wallet_id: string;
+  category_id: string;
+  label_id?: string | null;
+  amount_cents: number;
+  currency: string;
+  description?: string | null;
+  interval_type: string;
+  start_date: string;
+  end_date?: string | null;
+}) => {
+  const supabase = await createClient();
+  const { data: result, error } = await supabase
+    .from("recurring_transactions")
+    .insert(data)
+    .select();
+  if (error) throw new Error(error.message);
+  return result;
+};
+
+export const updateRecurringTransaction = async (
+  id: string,
+  data: {
+    category_id?: string;
+    label_id?: string | null;
+    amount_cents?: number;
+    currency?: string;
+    description?: string | null;
+    interval_type?: string;
+    start_date?: string;
+    end_date?: string | null;
+  },
+) => {
+  const supabase = await createClient();
+  const { data: result, error } = await supabase
+    .from("recurring_transactions")
+    .update(data)
+    .eq("id", id)
+    .select();
+  if (error) throw new Error(error.message);
+  return result;
+};
+
+export const deleteRecurringTransaction = async (id: string) => {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("recurring_transactions")
+    .delete()
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+};

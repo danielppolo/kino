@@ -505,3 +505,20 @@ export const getTagTransactionCounts = async (
 
   return { data: result, error: null };
 };
+
+export const listRecurringTransactions = async (
+  client: TypedSupabaseClient,
+  params?: { walletId?: string },
+) => {
+  let query = client
+    .from("recurring_transactions")
+    .select("*")
+    .order("start_date", { ascending: false });
+
+  if (params?.walletId) {
+    query = query.eq("wallet_id", params.walletId);
+  }
+
+  const { data, error } = await query;
+  return { data, error };
+};
