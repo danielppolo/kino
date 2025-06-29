@@ -11,6 +11,7 @@ import { useTags } from "@/contexts/settings-context";
 import { createClient } from "@/utils/supabase/client";
 import { getTagTransactionCounts } from "@/utils/supabase/queries";
 import { Tag } from "@/utils/supabase/types";
+import { Text } from "@/components/ui/typography";
 
 interface TagsSectionProps {
   selected: string[];
@@ -72,10 +73,8 @@ export default function TagsSection({
           >
             <div className="flex flex-1 items-center justify-between">
               <div className="flex flex-1 items-center gap-4">
-                <span className="font-medium">{tag.title}</span>
-                <span className="text-muted-foreground text-sm">
-                  {tag.group}
-                </span>
+                <Text>{tag.title}</Text>
+                <Text className="text-muted-foreground">{tag.group}</Text>
               </div>
 
               <div className="flex items-center gap-2">
