@@ -7,7 +7,7 @@ import DeleteViewsDialog from "./(components)/delete-views-dialog";
 import ViewsSection from "./(components)/views-section";
 
 import { BulkActions } from "@/components/shared/bulk-actions";
-import { Button } from "@/components/ui/button";
+import { TooltipButton } from "@/components/ui/tooltip-button";
 import PageHeader from "@/components/shared/page-header";
 import { View } from "@/utils/supabase/types";
 
@@ -54,14 +54,15 @@ export default function Page() {
         selectedCount={selected.length}
         onClear={() => setSelected([])}
       >
-        <Button
+        <TooltipButton
           size="sm"
           variant="ghost"
+          tooltip="Delete selected views"
           onClick={() => setDeleteDialogOpen(true)}
           disabled={selected.length === 0}
         >
           <Trash2 className="size-4" />
-        </Button>
+        </TooltipButton>
       </BulkActions>
     </>
   );

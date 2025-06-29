@@ -1,19 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { BookmarkPlus, Pin } from "lucide-react";
+import { BookmarkPlus, Folder, FolderPlus, Pin } from "lucide-react";
 
 import SaveViewDialog from "./save-view-dialog";
-import { Button } from "@/components/ui/button";
+import { TooltipButton } from "@/components/ui/tooltip-button";
 
 export default function SaveViewButton() {
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
-        <Pin className="h-4 w-4" />
-      </Button>
+      <TooltipButton
+        variant="ghost"
+        size="sm"
+        tooltip="Save current view"
+        onClick={() => setOpen(true)}
+      >
+        <Folder className="h-4 w-4" />
+      </TooltipButton>
       <SaveViewDialog open={open} onOpenChange={setOpen} />
     </>
   );

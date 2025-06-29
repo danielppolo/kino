@@ -8,7 +8,7 @@ import {
   useSearchParams,
 } from "next/navigation";
 
-import { Toggle } from "@/components/ui/toggle";
+import { TooltipToggle } from "@/components/ui/tooltip-toggle";
 
 function ChartToggle() {
   const router = useRouter();
@@ -18,8 +18,9 @@ function ChartToggle() {
   const walletId = params.walletId as string;
 
   return (
-    <Toggle
+    <TooltipToggle
       size="sm"
+      tooltip="Toggle charts view"
       pressed={pathname.includes("infographics")}
       onPressedChange={(pressed) => {
         const currentSearchParams = new URLSearchParams(searchParams);
@@ -42,7 +43,7 @@ function ChartToggle() {
       }}
     >
       <ChartArea className="size-4" />
-    </Toggle>
+    </TooltipToggle>
   );
 }
 

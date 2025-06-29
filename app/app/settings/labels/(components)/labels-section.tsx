@@ -7,7 +7,7 @@ import LabelRow from "@/components/shared/label-row";
 import LabelForm from "@/components/shared/label-form";
 import DeleteLabelsDialog from "./delete-labels-dialog";
 import { BulkActions } from "@/components/shared/bulk-actions";
-import { Button } from "@/components/ui/button";
+import { TooltipButton } from "@/components/ui/tooltip-button";
 import { Text, Title } from "@/components/ui/typography";
 import { useLabels } from "@/contexts/settings-context";
 import { COLORS } from "@/utils/constants";
@@ -73,9 +73,14 @@ export default function LabelSection() {
   return (
     <>
       <PageHeader className="justify-end">
-        <Button size="sm" variant="outline" onClick={handleAdd}>
+        <TooltipButton
+          size="sm"
+          variant="outline"
+          tooltip="Add label"
+          onClick={handleAdd}
+        >
           <Plus className="size-4" />
-        </Button>
+        </TooltipButton>
       </PageHeader>
 
       <div style={{ height: "calc(100vh - 44px)", overflow: "auto" }}>
@@ -114,14 +119,15 @@ export default function LabelSection() {
         selectedCount={selected.length}
         onClear={() => setSelected([])}
       >
-        <Button
+        <TooltipButton
           size="sm"
           variant="ghost"
+          tooltip="Delete selected labels"
           onClick={() => setDeleteDialogOpen(true)}
           disabled={selected.length === 0}
         >
           <Trash2 className="size-4" />
-        </Button>
+        </TooltipButton>
       </BulkActions>
     </>
   );

@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
+import { TooltipButton } from "@/components/ui/tooltip-button";
 import {
   Command,
   CommandEmpty,
@@ -22,6 +22,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Text } from "@/components/ui/typography";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 function MonthPagination() {
@@ -159,9 +165,10 @@ function MonthPagination() {
 
   if (!from || !to)
     return (
-      <Button
+      <TooltipButton
         variant="ghost"
         size="sm"
+        tooltip="Set to current month"
         onClick={() =>
           setDateRange({
             from: startOfMonth(new Date()),
@@ -170,7 +177,7 @@ function MonthPagination() {
         }
       >
         This month
-      </Button>
+      </TooltipButton>
     );
 
   const currentMonth = months[from.getMonth()];
@@ -187,9 +194,14 @@ function MonthPagination() {
       {/* Month Popover */}
       <Popover open={monthPopoverOpen} onOpenChange={setMonthPopoverOpen}>
         <PopoverTrigger asChild>
-          <Button variant="ghost" size="sm" className="justify-between px-1">
+          <TooltipButton
+            variant="ghost"
+            size="sm"
+            tooltip="Select month"
+            className="justify-between px-1"
+          >
             <Text>{isAll ? "All" : currentMonth}</Text>
-          </Button>
+          </TooltipButton>
         </PopoverTrigger>
         <PopoverContent className="w-[200px] p-0" align="start">
           <Command>
@@ -224,9 +236,14 @@ function MonthPagination() {
       {/* Year Popover */}
       <Popover open={yearPopoverOpen} onOpenChange={setYearPopoverOpen}>
         <PopoverTrigger asChild>
-          <Button variant="ghost" size="sm" className="justify-between px-1">
+          <TooltipButton
+            variant="ghost"
+            size="sm"
+            tooltip="Select year"
+            className="justify-between px-1"
+          >
             <Text>{currentYearValue}</Text>
-          </Button>
+          </TooltipButton>
         </PopoverTrigger>
         <PopoverContent className="w-[200px] p-0" align="start">
           <Command>

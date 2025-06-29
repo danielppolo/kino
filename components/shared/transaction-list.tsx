@@ -10,7 +10,7 @@ import { Subtitle, Text } from "../ui/typography";
 import DayHeader, { DayHeaderLoading } from "./day-header";
 import TransactionRow, { TransactionRowLoading } from "./transaction-row";
 import BulkTransactionEditForm from "./bulk-transaction-edit-form";
-import { Button } from "../ui/button";
+import { TooltipButton } from "../ui/tooltip-button";
 import { BulkActions } from "./bulk-actions";
 
 import { useTransactionForm } from "@/contexts/transaction-form-context";
@@ -233,9 +233,14 @@ export default function TransactionList() {
           selectedCount={selected.size}
           onClear={() => setSelected(new Set())}
         >
-          <Button variant="ghost" size="sm" onClick={() => setBulkOpen(true)}>
+          <TooltipButton
+            variant="ghost"
+            size="sm"
+            tooltip="Edit selected transactions"
+            onClick={() => setBulkOpen(true)}
+          >
             <Pencil className="size-4" />
-          </Button>
+          </TooltipButton>
         </BulkActions>
       )}
       <BulkTransactionEditForm
