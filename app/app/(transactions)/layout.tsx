@@ -11,6 +11,7 @@ import TransactionForm from "@/components/shared/transaction-form";
 import { TransactionsSidebar } from "@/components/shared/transactions-sidebar";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { TransactionFormProvider } from "@/contexts/transaction-form-context";
+import PageHeader from "@/components/shared/page-header";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -22,7 +23,7 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
       <TransactionsSidebar />
       <SidebarInset>
         <main className="flex-1">
-          <div className="flex h-11 items-center justify-between gap-2 px-3">
+          <PageHeader>
             <div className="flex items-center gap-2">
               <MonthPagination />
             </div>
@@ -34,7 +35,7 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
               <AddTransactionDropdown />
               <SidebarTrigger />
             </div>
-          </div>
+          </PageHeader>
           {children}
         </main>
       </SidebarInset>

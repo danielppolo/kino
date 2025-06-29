@@ -11,6 +11,7 @@ import DayHeader, { DayHeaderLoading } from "./day-header";
 import TransactionRow, { TransactionRowLoading } from "./transaction-row";
 import BulkTransactionEditForm from "./bulk-transaction-edit-form";
 import { Button } from "../ui/button";
+import { BulkActions } from "./bulk-actions";
 
 import { useTransactionForm } from "@/contexts/transaction-form-context";
 import useFilters from "@/hooks/use-filters";
@@ -228,20 +229,14 @@ export default function TransactionList() {
         </div>
       )}
       {selected.size > 0 && (
-        <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2">
-          <div className="bg-background flex gap-2 rounded-full border px-4 py-2 shadow">
-            <Button size="sm" onClick={() => setBulkOpen(true)}>
-              Edit
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setSelected(new Set())}
-            >
-              Clear
-            </Button>
-          </div>
-        </div>
+        <BulkActions
+          selectedCount={selected.size}
+          onClear={() => setSelected(new Set())}
+        >
+          <Button size="sm" onClick={() => setBulkOpen(true)}>
+            Edit
+          </Button>
+        </BulkActions>
       )}
       <BulkTransactionEditForm
         open={bulkOpen}

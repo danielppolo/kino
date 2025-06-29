@@ -2,8 +2,7 @@
 
 import { useRouter } from "next/navigation";
 
-import { Checkbox } from "@/components/ui/checkbox";
-import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
+import ViewRow from "@/components/shared/view-row";
 import { useViews } from "@/contexts/settings-context";
 import { View } from "@/utils/supabase/types";
 
@@ -12,36 +11,30 @@ interface ViewsSectionProps {
   onToggle: (view: View) => void;
 }
 
-export default function ViewsSection({ selected, onToggle }: ViewsSectionProps) {
+export default function ViewsSection({
+  selected,
+  onToggle,
+}: ViewsSectionProps) {
   const [views] = useViews();
   const router = useRouter();
 
   return (
-    <div className="space-y-4">
-      <Table>
-        <TableBody>
-          {views.map((view) => {
-            const isSelected = selected.includes(view.id);
-            return (
-              <TableRow
-                key={view.id}
-                data-state={isSelected ? "selected" : undefined}
-                className="cursor-pointer"
-                onClick={() => router.push(`/app/transactions?${view.query_params}`)}
-              >
-                <TableCell className="w-4" onClick={(e) => e.stopPropagation()}>
-                  <Checkbox
-                    checked={isSelected}
-                    onCheckedChange={() => onToggle(view)}
-                    aria-label="Select view"
-                  />
-                </TableCell>
-                <TableCell>{view.name}</TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+    <div className="divide-y">
+      {views.map((view) => {
+        const isSelected = selected.includes(view.id);
+        return (
+          <ViewRow
+            key={view.id}
+            view={view}
+            onClick={() =>
+              router.push(`/app/transactions?${view.query_params}`)
+            }
+            selected={isSelected}
+            selectionMode={selected.length > 0}
+            onToggleSelect={() => onToggle(view)}
+          />
+        );
+      })}
     </div>
   );
 }
