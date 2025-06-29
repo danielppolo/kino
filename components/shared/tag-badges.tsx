@@ -5,6 +5,7 @@ import { Badge } from "../ui/badge";
 import LinkTransferButton from "./link-transfer-button";
 
 import { useTags } from "@/contexts/settings-context";
+import { cn } from "@/lib/utils";
 import { TransactionList } from "@/utils/supabase/types";
 
 interface TagBadgesProps {
@@ -24,7 +25,7 @@ const TagBadges = ({ transaction, className }: TagBadgesProps) => {
   };
 
   return (
-    <div className={`flex flex-wrap gap-1 ${className}`}>
+    <div className={cn("hidden flex-wrap gap-1 md:flex", className)}>
       {transaction.tag_ids?.map((tagId: string) => {
         const tag = tagMap.get(tagId);
         if (!tag) return null;

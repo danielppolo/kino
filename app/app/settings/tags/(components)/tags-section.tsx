@@ -1,10 +1,14 @@
 "use client";
 
-import Link from "next/link";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { useQuery } from "@tanstack/react-query";
 
+import BulkCategoryChangeDialog from "./bulk-category-change-dialog";
+
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { useTags } from "@/contexts/settings-context";
@@ -23,7 +27,13 @@ export default function TagsSection({
   onToggle,
   onEdit,
 }: TagsSectionProps) {
+  const router = useRouter();
   const [tags] = useTags();
+  const [bulkChangeDialog, setBulkChangeDialog] = useState<{
+    tag: Tag;
+    transactionCount: number;
+  } | null>(null);
+
   // Fetch transaction counts using react-query
   const { data: transactionCountsData } = useQuery({
     queryKey: ["tag-transaction-counts"],
@@ -70,14 +80,35 @@ export default function TagsSection({
                 <TableCell>{tag.group}</TableCell>
                 <TableCell>
                   {!!transactionCount && (
-                    <Link href={`/app/transactions?tag=${tag.id}`}>
-                      <Badge
-                        className="h-5 min-w-5 rounded-full px-2 font-mono text-xs font-light tabular-nums"
-                        variant="outline"
-                      >
-                        {transactionCount}
-                      </Badge>
-                    </Link>
+                    <Badge
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/app/transactions?tag=${tag.id}`);
+                      }}
+                      className="h-5 min-w-5 rounded-full px-2 font-mono text-xs font-light tabular-nums"
+                      variant="outline"
+                    >
+                      {transactionCount}
+                    </Badge>
+                  )}
+                </TableCell>
+                <TableCell
+                  className="w-20"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {!!transactionCount && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setBulkChangeDialog({
+                          tag,
+                          transactionCount,
+                        });
+                      }}
+                    >
+                      Change Category
+                    </Button>
                   )}
                 </TableCell>
               </TableRow>
@@ -85,6 +116,19 @@ export default function TagsSection({
           })}
         </TableBody>
       </Table>
+
+      {bulkChangeDialog && (
+        <BulkCategoryChangeDialog
+          tag={bulkChangeDialog.tag}
+          transactionCount={bulkChangeDialog.transactionCount}
+          open={!!bulkChangeDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              setBulkChangeDialog(null);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
