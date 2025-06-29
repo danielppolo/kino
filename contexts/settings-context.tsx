@@ -12,8 +12,16 @@ import {
   listTags,
   listViews,
   listWallets,
+  listTransactionTemplates,
 } from "@/utils/supabase/queries";
-import { Category, Label, Tag, View, Wallet } from "@/utils/supabase/types";
+import {
+  Category,
+  Label,
+  Tag,
+  Wallet,
+  View,
+  TransactionTemplate,
+} from "@/utils/supabase/types";
 
 export interface CurrencyConversion {
   rate: number;
@@ -26,6 +34,7 @@ interface SettingsContextType {
   labels: Label[];
   tags: Tag[];
   views: View[];
+  templates: TransactionTemplate[];
   wallets: Wallet[];
   conversionRates: Record<string, CurrencyConversion>;
   baseCurrency: string;
@@ -76,6 +85,16 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
     },
   });
 
+  const { data: templates = [] } = useSuspenseQuery<TransactionTemplate[]>({
+    queryKey: ["transaction-templates"],
+    queryFn: async () => {
+      const supabase = await createClient();
+      const result = await listTransactionTemplates(supabase);
+      if (result.error) throw result.error;
+      return (result.data || []).sort((a, b) => a.name.localeCompare(b.name));
+    },
+  });
+
   const { data: views = [] } = useSuspenseQuery<View[]>({
     queryKey: ["views"],
     queryFn: async () => {
@@ -101,6 +120,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
     labels,
     tags,
     views,
+    templates,
     wallets,
     conversionRates: initialConversionRates,
     baseCurrency: initialBaseCurrency,
@@ -159,7 +179,9 @@ export const useTags = (key: keyof Tag = "id"): [Tag[], Map<string, Tag>] => {
   return [list, map];
 };
 
-export const useViews = (key: keyof View = "id"): [View[], Map<string, View>] => {
+export const useViews = (
+  key: keyof View = "id",
+): [View[], Map<string, View>] => {
   const context = useContext(SettingsContext);
   if (context === undefined) {
     throw new Error("useViews must be used within a SettingsProvider");
@@ -167,6 +189,19 @@ export const useViews = (key: keyof View = "id"): [View[], Map<string, View>] =>
 
   const list = context.views;
   const map = new Map(context.views.map((view) => [String(view[key]), view]));
+  return [list, map];
+};
+
+export const useTemplates = (
+  key: keyof TransactionTemplate = "id",
+): [TransactionTemplate[], Map<string, TransactionTemplate>] => {
+  const context = useContext(SettingsContext);
+  if (context === undefined) {
+    throw new Error("useTemplates must be used within a SettingsProvider");
+  }
+
+  const list = context.templates;
+  const map = new Map(context.templates.map((t) => [String(t[key]), t]));
 
   return [list, map];
 };

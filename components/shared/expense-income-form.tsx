@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { format } from "date-fns";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -10,6 +10,8 @@ import { AmountInput } from "./amount-input";
 import { DescriptionInput } from "./description-input";
 import LabelCombobox from "./label-combobox";
 import TagMultiSelect from "./tag-multi-select";
+import TemplateCombobox from "./template-combobox";
+import { useFormContext } from "react-hook-form";
 
 import { createTransaction } from "@/actions/create-transaction";
 import CategoryCombobox from "@/components/shared/category-combobox";
@@ -20,10 +22,10 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import { useTags, useWallets } from "@/contexts/settings-context";
+import { useTags, useWallets, useTemplates } from "@/contexts/settings-context";
 import useFilters from "@/hooks/use-filters";
 import { deleteTransaction } from "@/utils/supabase/mutations";
-import { Transaction } from "@/utils/supabase/types";
+import { Transaction, TransactionTemplate } from "@/utils/supabase/types";
 
 interface TransactionPage {
   data: Transaction[];
@@ -58,6 +60,32 @@ type ExpenseIncomeFormValues = {
   currency: string;
   tags?: string[];
 };
+
+function TemplateSelect({ type }: { type: "income" | "expense" }) {
+  const { setValue } = useFormContext<ExpenseIncomeFormValues>();
+  const [templates] = useTemplates();
+  const map = useMemo(() => {
+    const m = new Map<string, TransactionTemplate>();
+    templates.forEach((t) => {
+      if (t.type === type) m.set(t.id, t);
+    });
+    return m;
+  }, [templates, type]);
+
+  return (
+    <TemplateCombobox
+      type={type}
+      onSelect={(tpl) => {
+        setValue("amount", Math.abs(tpl.amount_cents) / 100);
+        setValue("description", tpl.description ?? "");
+        setValue("category_id", tpl.category_id ?? "");
+        setValue("label_id", tpl.label_id ?? "");
+        setValue("tags", tpl.tags ?? []);
+      }}
+      className="absolute top-4 left-4 z-10"
+    />
+  );
+}
 
 const ExpenseIncomeForm = ({
   walletId,
@@ -181,6 +209,7 @@ const ExpenseIncomeForm = ({
       setAddAnother={setAddAnother}
       isLoading={isPending || deleteMutation.isPending}
     >
+      <TemplateSelect type={type} />
       <FormField
         name="amount"
         defaultValue={null}
