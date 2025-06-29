@@ -17,7 +17,7 @@ export function BulkActions({
 
   return (
     <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2">
-      <div className="bg-background flex gap-2 rounded-full border px-4 py-2 shadow">
+      <div className="bg-background flex gap-2 rounded-xl border p-2 shadow">
         {children}
         <TooltipButton
           size="sm"

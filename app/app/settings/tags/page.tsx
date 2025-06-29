@@ -57,6 +57,11 @@ export default function Page() {
     setSelected([]);
   };
 
+  const handleConvertSuccess = () => {
+    setBulkCategoryDialogOpen(false);
+    setSelected([]);
+  };
+
   const handleDeleteSuccess = () => {
     setDeleteDialogOpen(false);
     setSelected([]);
@@ -74,12 +79,9 @@ export default function Page() {
   return (
     <div>
       <PageHeader className="bg-background sticky top-0 z-10 py-6">
-        <Title>Tags</Title>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={handleAdd}>
-            <Plus className="size-4" />
-          </Button>
-        </div>
+        <Button size="sm" variant="outline" onClick={handleAdd}>
+          <Plus className="size-4" />
+        </Button>
       </PageHeader>
 
       <TagsSection
@@ -146,6 +148,7 @@ export default function Page() {
         transactionCounts={transactionCounts}
         open={bulkCategoryDialogOpen}
         onOpenChange={setBulkCategoryDialogOpen}
+        onSuccess={handleConvertSuccess}
       />
     </div>
   );

@@ -27,12 +27,14 @@ interface BulkCategoryChangeDialogProps {
   transactionCounts: Map<string, number>;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
 }
 
 export default function BulkCategoryChangeDialog({
   tag,
   transactionCounts,
   open,
+  onSuccess,
   onOpenChange,
 }: BulkCategoryChangeDialogProps) {
   const transactionCount = tag?.id ? transactionCounts.get(tag.id) : 0;
@@ -63,6 +65,7 @@ export default function BulkCategoryChangeDialog({
           data.updatedCount === 1 ? "" : "s"
         } to the new category and deleted the tag.`,
       );
+      onSuccess?.();
       // Invalidate relevant queries to refresh the UI
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["tag-transaction-counts"] });
