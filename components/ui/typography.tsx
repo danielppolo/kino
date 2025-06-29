@@ -96,7 +96,7 @@ export function Text({
         "text-foreground text-lg leading-7 md:text-sm",
         small && "text-base md:text-sm",
         muted && "text-muted-foreground",
-        destructive && "text-destructive-foreground",
+        destructive && "text-foreground",
         className,
       )}
     >

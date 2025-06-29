@@ -174,6 +174,27 @@ export type Database = {
         };
         Relationships: [];
       };
+      views: {
+        Row: {
+          id: string;
+          name: string;
+          query_params: string;
+          user_id: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          query_params: string;
+          user_id?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          query_params?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       transaction_tags: {
         Row: {
           transaction_id: string;

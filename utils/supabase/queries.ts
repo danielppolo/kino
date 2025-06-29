@@ -96,6 +96,10 @@ export const listTags = async (client: TypedSupabaseClient) => {
   return client.from("tags").select("*");
 };
 
+export const listViews = async (client: TypedSupabaseClient) => {
+  return client.from("views").select("*");
+};
+
 export const getWalletMonthlyBalances = async (
   client: TypedSupabaseClient,
   params: {

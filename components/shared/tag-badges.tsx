@@ -35,7 +35,10 @@ const TagBadges = ({ transaction, className }: TagBadgesProps) => {
             key={tagId}
             variant="secondary"
             className="cursor-pointer text-xs"
-            onClick={() => handleTagClick(tagId)}
+            onClick={(event) => {
+              event.stopPropagation();
+              handleTagClick(tagId);
+            }}
           >
             {tag.title}
           </Badge>
