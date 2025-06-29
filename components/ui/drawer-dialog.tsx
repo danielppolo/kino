@@ -7,6 +7,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -15,6 +16,7 @@ import {
   Drawer,
   DrawerContent,
   DrawerDescription,
+  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
@@ -25,6 +27,7 @@ interface DrawerDialogProps {
   description?: string;
   children: React.ReactNode;
   trigger?: React.ReactNode;
+  footer?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
@@ -34,6 +37,7 @@ export function DrawerDialog({
   title,
   description,
   trigger,
+  footer,
   open,
   onOpenChange,
 }: DrawerDialogProps) {
@@ -51,6 +55,11 @@ export function DrawerDialog({
             )}
           </DialogHeader>
           {children}
+          {footer && (
+            <DialogFooter className="flex items-center justify-end space-x-2 border-t pt-4">
+              {footer}
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
     );
@@ -65,6 +74,11 @@ export function DrawerDialog({
           {description && <DrawerDescription>{description}</DrawerDescription>}
         </DrawerHeader>
         {children}
+        {footer && (
+          <DrawerFooter className="mt-4 flex items-center justify-end space-x-2 border-t pt-4">
+            {footer}
+          </DrawerFooter>
+        )}
       </DrawerContent>
     </Drawer>
   );

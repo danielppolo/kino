@@ -2,6 +2,8 @@ import React from "react";
 import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 import { useTemplates } from "@/contexts/settings-context";
 import { TransactionTemplate } from "@/utils/supabase/types";
+import { StickyNote } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface TemplateComboboxProps {
   type: "income" | "expense";
@@ -9,7 +11,11 @@ interface TemplateComboboxProps {
   className?: string;
 }
 
-const TemplateCombobox = ({ type, onSelect, className }: TemplateComboboxProps) => {
+const TemplateCombobox = ({
+  type,
+  onSelect,
+  className,
+}: TemplateComboboxProps) => {
   const [templates] = useTemplates();
   const filtered = templates.filter((t) => t.type === type);
   const options: ComboboxOption[] = filtered.map((t) => ({
@@ -31,11 +37,12 @@ const TemplateCombobox = ({ type, onSelect, className }: TemplateComboboxProps) 
     <Combobox
       size="sm"
       variant="outline"
+      comboboxVariant="icon"
       options={options}
       value=""
       onChange={handleChange}
-      placeholder="Use template"
-      className={className}
+      icon={<StickyNote className="size-4" />}
+      className={cn("w-auto")}
     />
   );
 };

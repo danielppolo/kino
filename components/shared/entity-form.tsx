@@ -10,6 +10,7 @@ import { Switch } from "../ui/switch";
 import { Button } from "@/components/ui/button";
 import { DrawerDialog } from "@/components/ui/drawer-dialog";
 import { Form } from "@/components/ui/form";
+import TemplateSelect from "./template-select";
 
 interface EntityFormProps<T extends FieldValues> {
   title: string;
@@ -102,33 +103,38 @@ export function EntityForm<T extends FieldValues>({
           className="relative flex flex-col gap-4"
         >
           {children}
-          <div className="flex justify-end gap-4">
-            {!isEdit && (
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="add-another"
-                  checked={addAnother}
-                  onCheckedChange={setAddAnother}
-                />
-                <label htmlFor="add-another" className="text-sm">
-                  Create more
-                </label>
-              </div>
-            )}
-            {isEdit && onDelete && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleDelete}
-                disabled={isLoading}
-              >
-                <Trash className="size-4" />
+          <div className="flex justify-between gap-4">
+            <div className="flex justify-end gap-4">
+              <TemplateSelect type="expense" />
+            </div>
+            <div className="flex justify-end gap-4">
+              {!isEdit && (
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="add-another"
+                    checked={addAnother}
+                    onCheckedChange={setAddAnother}
+                  />
+                  <label htmlFor="add-another" className="text-sm">
+                    Create more
+                  </label>
+                </div>
+              )}
+              {isEdit && onDelete && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDelete}
+                  disabled={isLoading}
+                >
+                  <Trash className="size-4" />
+                </Button>
+              )}
+              <Button type="submit" size="sm" disabled={isLoading}>
+                {isEdit ? "Update" : "Create"}
               </Button>
-            )}
-            <Button type="submit" size="sm" disabled={isLoading}>
-              {isEdit ? "Update" : "Create"}
-            </Button>
+            </div>
           </div>
         </form>
       </Form>
