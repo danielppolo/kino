@@ -23,18 +23,19 @@ import {
 import { Tag } from "@/utils/supabase/types";
 
 interface BulkCategoryChangeDialogProps {
-  tag: Tag;
-  transactionCount: number;
+  tag?: Tag;
+  transactionCounts: Map<string, number>;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 export default function BulkCategoryChangeDialog({
   tag,
-  transactionCount,
+  transactionCounts,
   open,
   onOpenChange,
 }: BulkCategoryChangeDialogProps) {
+  const transactionCount = tag?.id ? transactionCounts.get(tag.id) : 0;
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null,
   );
@@ -75,7 +76,7 @@ export default function BulkCategoryChangeDialog({
   });
 
   const handleConfirm = () => {
-    if (!selectedCategoryId) {
+    if (!selectedCategoryId || !tag?.id) {
       toast.error("Please select a category");
       return;
     }
@@ -100,7 +101,7 @@ export default function BulkCategoryChangeDialog({
           <AlertDialogTitle>Convert Tag to Category</AlertDialogTitle>
           <AlertDialogDescription>
             This will change the category for all {transactionCount} transaction
-            {transactionCount === 1 ? "" : "s"} tagged with &ldquo;{tag.title}
+            {transactionCount === 1 ? "" : "s"} tagged with &ldquo;{tag?.title}
             &rdquo; and then delete the tag. This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
