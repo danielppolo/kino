@@ -25,16 +25,24 @@ const TagBadges = ({ transaction, className }: TagBadgesProps) => {
   };
 
   return (
-    <div className={cn("hidden flex-wrap gap-1 md:flex", className)}>
-      {transaction.tag_ids?.map((tagId: string) => {
+    <div
+      className={cn(
+        "relative hidden flex-wrap items-center gap-1 md:flex",
+        className,
+      )}
+    >
+      {transaction.tag_ids?.map((tagId: string, index) => {
         const tag = tagMap.get(tagId);
         if (!tag) return null;
 
         return (
           <Badge
             key={tagId}
-            variant="secondary"
-            className="cursor-pointer text-xs"
+            variant="outline"
+            className="bg-background absolute right-0 cursor-pointer text-xs"
+            style={{
+              transform: `translateX(${-18 * index}px)`,
+            }}
             onClick={(event) => {
               event.stopPropagation();
               handleTagClick(tagId);
