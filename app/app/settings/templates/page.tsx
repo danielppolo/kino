@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import TemplatesSection from "./(components)/templates-section";
 
 import TemplateForm from "@/components/shared/template-form";
-import { Button } from "@/components/ui/button";
+import { TooltipButton } from "@/components/ui/tooltip-button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageHeader from "@/components/shared/page-header";
 import { useTemplates } from "@/contexts/settings-context";
@@ -55,9 +55,14 @@ export default function Page() {
             </TabsList>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={handleAdd}>
+            <TooltipButton
+              size="sm"
+              variant="outline"
+              tooltip="Add template"
+              onClick={handleAdd}
+            >
               <Plus className="size-4" />
-            </Button>
+            </TooltipButton>
           </div>
         </PageHeader>
 

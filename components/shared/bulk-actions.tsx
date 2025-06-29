@@ -1,5 +1,5 @@
 import React from "react";
-import { Button } from "../ui/button";
+import { TooltipButton } from "../ui/tooltip-button";
 import { X } from "lucide-react";
 
 interface BulkActionsProps {
@@ -19,9 +19,14 @@ export function BulkActions({
     <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2">
       <div className="bg-background flex gap-2 rounded-full border px-4 py-2 shadow">
         {children}
-        <Button size="sm" variant="ghost" onClick={onClear}>
+        <TooltipButton
+          size="sm"
+          variant="ghost"
+          tooltip="Clear selection"
+          onClick={onClear}
+        >
           <X className="size-4" />
-        </Button>
+        </TooltipButton>
       </div>
     </div>
   );

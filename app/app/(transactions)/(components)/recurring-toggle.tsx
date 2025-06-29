@@ -8,7 +8,7 @@ import {
   useSearchParams,
 } from "next/navigation";
 
-import { Toggle } from "@/components/ui/toggle";
+import { TooltipToggle } from "@/components/ui/tooltip-toggle";
 
 function RecurringToggle() {
   const router = useRouter();
@@ -18,8 +18,9 @@ function RecurringToggle() {
   const walletId = params.walletId as string | undefined;
 
   return (
-    <Toggle
+    <TooltipToggle
       size="sm"
+      tooltip="Toggle recurring transactions"
       pressed={pathname.includes("recurrent_transactions")}
       onPressedChange={(pressed) => {
         const currentSearchParams = new URLSearchParams(searchParams);
@@ -42,7 +43,7 @@ function RecurringToggle() {
       }}
     >
       <Repeat className="size-4" />
-    </Toggle>
+    </TooltipToggle>
   );
 }
 

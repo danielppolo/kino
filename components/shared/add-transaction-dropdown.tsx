@@ -5,7 +5,7 @@ import { Plus } from "lucide-react";
 import { useParams } from "next/navigation";
 
 import CsvTransactionUploader from "@/app/app/settings/wallets/[walletId]/(components)/import-transactions";
-import { Button } from "@/components/ui/button";
+import { TooltipButton } from "@/components/ui/tooltip-button";
 import { CommandShortcut } from "@/components/ui/command";
 import {
   DropdownMenu,
@@ -31,9 +31,9 @@ export function AddTransactionDropdown() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm">
+          <TooltipButton variant="ghost" size="sm" tooltip="Add transaction">
             <Plus className="h-4 w-4" />
-          </Button>
+          </TooltipButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuGroup>

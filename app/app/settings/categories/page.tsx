@@ -11,7 +11,7 @@ import MergeCategoriesDialog from "./(components)/merge-categories-dialog";
 
 import CategoryForm from "@/components/shared/category-form";
 import { BulkActions } from "@/components/shared/bulk-actions";
-import { Button } from "@/components/ui/button";
+import { TooltipButton } from "@/components/ui/tooltip-button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Title } from "@/components/ui/typography";
 import { useCategories } from "@/contexts/settings-context";
@@ -109,9 +109,14 @@ export default function Page() {
             </TabsList>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={handleAdd}>
+            <TooltipButton
+              size="sm"
+              variant="outline"
+              tooltip="Add category"
+              onClick={handleAdd}
+            >
               <Plus className="size-4" />
-            </Button>
+            </TooltipButton>
           </div>
         </PageHeader>
         <div style={{ height: "calc(100vh - 44px)", overflow: "auto" }}>
@@ -160,22 +165,24 @@ export default function Page() {
         selectedCount={selected.length}
         onClear={() => setSelected([])}
       >
-        <Button
+        <TooltipButton
           size="sm"
           variant="ghost"
+          tooltip="Delete selected categories"
           onClick={() => setDeleteDialogOpen(true)}
           disabled={selected.length === 0}
         >
           <Trash2 className="size-4" />
-        </Button>
-        <Button
+        </TooltipButton>
+        <TooltipButton
           size="sm"
           variant="ghost"
+          tooltip="Merge selected categories"
           onClick={() => setMergeDialogOpen(true)}
           disabled={selected.length < 2 || !selectedType}
         >
           <Combine className="size-4" />
-        </Button>
+        </TooltipButton>
       </BulkActions>
     </>
   );
