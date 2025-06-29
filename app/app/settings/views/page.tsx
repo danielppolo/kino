@@ -9,23 +9,22 @@ import ViewsSection from "./(components)/views-section";
 import { BulkActions } from "@/components/shared/bulk-actions";
 import { TooltipButton } from "@/components/ui/tooltip-button";
 import PageHeader from "@/components/shared/page-header";
+import { useSelection } from "@/hooks/use-selection";
 import { View } from "@/utils/supabase/types";
 
 export default function Page() {
-  const [selected, setSelected] = useState<string[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
+  const { selected, selectedCount, clearSelection, toggleSelection } =
+    useSelection();
+
   const toggleSelect = (view: View) => {
-    setSelected((prev) =>
-      prev.includes(view.id)
-        ? prev.filter((id) => id !== view.id)
-        : [...prev, view.id],
-    );
+    toggleSelection(view.id);
   };
 
   const handleDeleteSuccess = () => {
     setDeleteDialogOpen(false);
-    setSelected([]);
+    clearSelection();
   };
 
   return (
@@ -51,15 +50,15 @@ export default function Page() {
       />
 
       <BulkActions
-        selectedCount={selected.length}
-        onClear={() => setSelected([])}
+        selectedCount={selectedCount}
+        clearSelection={clearSelection}
       >
         <TooltipButton
           size="sm"
           variant="ghost"
           tooltip="Delete selected views"
           onClick={() => setDeleteDialogOpen(true)}
-          disabled={selected.length === 0}
+          disabled={selectedCount === 0}
         >
           <Trash2 className="size-4" />
         </TooltipButton>

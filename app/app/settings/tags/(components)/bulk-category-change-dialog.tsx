@@ -101,7 +101,7 @@ export default function BulkCategoryChangeDialog({
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Convert Tag to Category</AlertDialogTitle>
+          <AlertDialogTitle>Merge to Category</AlertDialogTitle>
           <AlertDialogDescription>
             This will change the category for all {transactionCount} transaction
             {transactionCount === 1 ? "" : "s"} tagged with &ldquo;{tag?.title}
@@ -111,7 +111,6 @@ export default function BulkCategoryChangeDialog({
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Select New Category</label>
             <CategoryCombobox
               value={selectedCategoryId}
               onChange={(id) => setSelectedCategoryId(id)}
@@ -129,7 +128,7 @@ export default function BulkCategoryChangeDialog({
             onClick={handleConfirm}
             disabled={!selectedCategoryId || updateMutation.isPending}
           >
-            {updateMutation.isPending ? "Converting..." : "Convert to Category"}
+            {updateMutation.isPending ? "Merging..." : "Merge to Category"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

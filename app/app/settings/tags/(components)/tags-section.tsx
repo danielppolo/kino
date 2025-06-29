@@ -66,7 +66,7 @@ export default function TagsSection({
         return (
           <SelectableRow
             key={tag.id}
-            id={tag.id}
+            id={`${tag.id}-${transactionCount}`}
             selected={isSelected}
             onToggleSelect={() => onToggle(tag)}
             onClick={() => onEdit(tag)}

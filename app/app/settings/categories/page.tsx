@@ -17,10 +17,10 @@ import { Title } from "@/components/ui/typography";
 import { useCategories } from "@/contexts/settings-context";
 import { Category } from "@/utils/supabase/types";
 import PageHeader from "@/components/shared/page-header";
+import { useSelection } from "@/hooks/use-selection";
 
 export default function Page() {
   const [categories] = useCategories();
-  const [selected, setSelected] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -29,6 +29,9 @@ export default function Page() {
   );
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const { selected, selectedCount, clearSelection, toggleSelection } =
+    useSelection();
 
   const selectedCategories = useMemo(
     () =>
@@ -44,24 +47,18 @@ export default function Page() {
       : null;
 
   const toggleSelect = (category: Category) => {
-    setSelected((prev) => {
-      const exists = prev.includes(category.id);
-      if (exists) return prev.filter((id) => id !== category.id);
+    // Prevent selecting transfer categories for any bulk operations
+    if (category.type === "transfer") {
+      toast.error("Transfer categories cannot be selected for bulk operations");
+      return;
+    }
 
-      // Prevent selecting transfer categories for any bulk operations
-      if (category.type === "transfer") {
-        toast.error(
-          "Transfer categories cannot be selected for bulk operations",
-        );
-        return prev;
-      }
+    if (selectedCount > 0 && selectedType && category.type !== selectedType) {
+      toast.error("Select categories of the same type");
+      return;
+    }
 
-      if (prev.length > 0 && selectedType && category.type !== selectedType) {
-        toast.error("Select categories of the same type");
-        return prev;
-      }
-      return [...prev, category.id];
-    });
+    toggleSelection(category.id);
   };
 
   const handleAdd = () => {
@@ -81,12 +78,12 @@ export default function Page() {
 
   const handleMergeSuccess = () => {
     setMergeDialogOpen(false);
-    setSelected([]);
+    clearSelection();
   };
 
   const handleDeleteSuccess = () => {
     setDeleteDialogOpen(false);
-    setSelected([]);
+    clearSelection();
   };
 
   const handleTabChange = (value: string) => {
@@ -162,15 +159,15 @@ export default function Page() {
       />
 
       <BulkActions
-        selectedCount={selected.length}
-        onClear={() => setSelected([])}
+        selectedCount={selectedCount}
+        clearSelection={clearSelection}
       >
         <TooltipButton
           size="sm"
           variant="ghost"
           tooltip="Delete selected categories"
           onClick={() => setDeleteDialogOpen(true)}
-          disabled={selected.length === 0}
+          disabled={selectedCount === 0}
         >
           <Trash2 className="size-4" />
         </TooltipButton>
@@ -179,7 +176,7 @@ export default function Page() {
           variant="ghost"
           tooltip="Merge selected categories"
           onClick={() => setMergeDialogOpen(true)}
-          disabled={selected.length < 2 || !selectedType}
+          disabled={selectedCount < 2 || !selectedType}
         >
           <Combine className="size-4" />
         </TooltipButton>
