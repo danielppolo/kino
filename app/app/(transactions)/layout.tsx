@@ -4,6 +4,7 @@ import ChartToggle from "./(components)/chart-toggle";
 import MonthPagination from "./transactions/(components)/month-pagination";
 
 import { AddTransactionDropdown } from "@/components/shared/add-transaction-dropdown";
+import SaveViewButton from "@/components/shared/save-view-button";
 import { FiltersDropdown } from "@/components/shared/filters-dropdown";
 import TransactionForm from "@/components/shared/transaction-form";
 import { TransactionsSidebar } from "@/components/shared/transactions-sidebar";
@@ -27,6 +28,7 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
             <div className="flex items-center gap-2">
               <SidebarTrigger />
               <FiltersDropdown />
+              <SaveViewButton />
               <ChartToggle />
               <AddTransactionDropdown />
             </div>

@@ -65,6 +65,14 @@ const SettingsSidebar: React.FC = () => {
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
+                isActive={pathname === "/app/settings/views"}
+              >
+                <Link href="/app/settings/views">Views</Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
                 isActive={pathname === "/app/settings/profile"}
               >
                 <Link href="/app/settings/profile">Profile</Link>
