@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 
 import CategoryCombobox from "@/components/shared/category-combobox";
+import { Cone } from "lucide-react";
 
 const CategoryFilter = () => {
   const router = useRouter();
@@ -26,6 +27,7 @@ const CategoryFilter = () => {
   return (
     <CategoryCombobox
       size="sm"
+      icon={<Cone className="size-4" />}
       variant={categoryId ? "secondary" : "ghost"}
       value={categoryId ?? null}
       onChange={handleCategoryChange}

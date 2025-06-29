@@ -10,6 +10,7 @@ import { ToggleGroup, ToggleGroupItem } from "./toggle-group";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { CalendarRange } from "lucide-react";
 
 export function DateRangePicker({
   variant = "outline",
@@ -64,6 +65,7 @@ export function DateRangePicker({
             !selected && "text-muted-foreground",
           )}
         >
+          <CalendarRange className="size-4" />
           {selected?.from ? (
             selected.to ? (
               <>

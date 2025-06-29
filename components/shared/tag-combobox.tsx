@@ -10,12 +10,14 @@ interface TagComboboxProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  icon?: React.ReactNode;
 }
 
 const TagCombobox = ({
   size = "default",
   variant = "outline",
   value,
+  icon,
   onChange,
   placeholder = "Select tag...",
   className,
@@ -37,6 +39,7 @@ const TagCombobox = ({
       onChange={onChange}
       placeholder={placeholder}
       className={className}
+      icon={icon}
     />
   );
 };

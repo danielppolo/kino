@@ -34,6 +34,7 @@ interface ComboboxProps {
   placeholder?: string;
   searchPlaceholder?: string;
   className?: string;
+  icon?: React.ReactNode;
   renderValue?: (option: ComboboxOption | undefined) => React.ReactNode;
   renderOption?: (option: ComboboxOption) => React.ReactNode;
   onCreateOption?: (label: string) => Promise<ComboboxOption | void>;
@@ -70,6 +71,7 @@ export function Combobox({
   variant = "outline",
   options,
   value,
+  icon,
   onChange,
   placeholder = "Select an option...",
   searchPlaceholder = "Search...",
@@ -107,8 +109,9 @@ export function Combobox({
           size={size}
           role="combobox"
           aria-expanded={open}
-          className={cn("w-[200px] justify-between", className)}
+          className={cn("w-[200px] justify-between gap-2", className)}
         >
+          {icon}
           {value
             ? renderValue
               ? renderValue(selectedOption)
