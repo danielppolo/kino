@@ -27,6 +27,7 @@ export interface ComboboxOption {
 
 interface ComboboxProps {
   variant?: "ghost" | "outline" | "default" | "secondary" | "destructive";
+  comboboxVariant?: "icon" | "default";
   size?: "sm" | "default" | "lg";
   options: ComboboxOption[];
   value: string;
@@ -72,6 +73,7 @@ export function Combobox({
   options,
   value,
   icon,
+  comboboxVariant = "default",
   onChange,
   placeholder = "Select an option...",
   searchPlaceholder = "Search...",
@@ -112,11 +114,12 @@ export function Combobox({
           className={cn("w-[200px] justify-between gap-2", className)}
         >
           {icon}
-          {value
-            ? renderValue
-              ? renderValue(selectedOption)
-              : selectedOption?.label
-            : placeholder}
+          {comboboxVariant !== "icon" &&
+            (value
+              ? renderValue
+                ? renderValue(selectedOption)
+                : selectedOption?.label
+              : placeholder)}
         </Button>
       </PopoverTrigger>
       <PopoverContent

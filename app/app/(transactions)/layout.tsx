@@ -26,11 +26,11 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
               <MonthPagination />
             </div>
             <div className="flex items-center gap-2">
-              <SidebarTrigger />
-              <FiltersDropdown />
               <SaveViewButton />
               <ChartToggle />
+              <FiltersDropdown />
               <AddTransactionDropdown />
+              <SidebarTrigger />
             </div>
           </div>
           {children}

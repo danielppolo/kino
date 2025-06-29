@@ -61,32 +61,6 @@ type ExpenseIncomeFormValues = {
   tags?: string[];
 };
 
-function TemplateSelect({ type }: { type: "income" | "expense" }) {
-  const { setValue } = useFormContext<ExpenseIncomeFormValues>();
-  const [templates] = useTemplates();
-  const map = useMemo(() => {
-    const m = new Map<string, TransactionTemplate>();
-    templates.forEach((t) => {
-      if (t.type === type) m.set(t.id, t);
-    });
-    return m;
-  }, [templates, type]);
-
-  return (
-    <TemplateCombobox
-      type={type}
-      onSelect={(tpl) => {
-        setValue("amount", Math.abs(tpl.amount_cents) / 100);
-        setValue("description", tpl.description ?? "");
-        setValue("category_id", tpl.category_id ?? "");
-        setValue("label_id", tpl.label_id ?? "");
-        setValue("tags", tpl.tags ?? []);
-      }}
-      className="absolute top-4 left-4 z-10"
-    />
-  );
-}
-
 const ExpenseIncomeForm = ({
   walletId,
   date = format(Date.now(), "yyyy-MM-dd"),
@@ -209,7 +183,6 @@ const ExpenseIncomeForm = ({
       setAddAnother={setAddAnother}
       isLoading={isPending || deleteMutation.isPending}
     >
-      <TemplateSelect type={type} />
       <FormField
         name="amount"
         defaultValue={null}
