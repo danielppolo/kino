@@ -3,23 +3,46 @@ import React, { memo } from "react";
 import TagBadges from "./tag-badges";
 import TransactionAmount from "./transaction-amount";
 import TransactionDescription from "./transaction-description";
+import { Checkbox } from "../ui/checkbox";
 
-import { Transaction } from "@/utils/supabase/types";
+import { TransactionList } from "@/utils/supabase/types";
 
 interface TransactionRowProps {
-  transaction: Transaction;
+  transaction: TransactionList;
   onClick?: () => void;
+  selected?: boolean;
+  selectionMode?: boolean;
+  onToggleSelect?: () => void;
 }
 
-export function TransactionRow({ transaction, onClick }: TransactionRowProps) {
+export function TransactionRow({
+  transaction,
+  onClick,
+  selected = false,
+  selectionMode = false,
+  onToggleSelect,
+}: TransactionRowProps) {
   return (
     <div
-      id={transaction.id}
-      className="hover:bg-accent/50 flex h-10 cursor-pointer items-center gap-2 px-4"
+      id={transaction.id!}
+      className="group hover:bg-accent/50 flex h-10 cursor-pointer items-center gap-2 px-4"
       onClick={onClick}
     >
+      <div
+        className={`mr-2 shrink-0 ${
+          selected || selectionMode
+            ? "visible"
+            : "invisible group-hover:visible"
+        }`}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleSelect?.();
+        }}
+      >
+        <Checkbox checked={selected} aria-label="Select" />
+      </div>
       <div className="shrink grow truncate">
-        <TransactionDescription transaction={transaction} />
+        <TransactionDescription transaction={transaction as any} />
       </div>
       <div className="shrink-0">
         <TagBadges transaction={transaction} />
@@ -27,8 +50,8 @@ export function TransactionRow({ transaction, onClick }: TransactionRowProps) {
       <div className="shrink-0">
         <TransactionAmount
           className="text-right"
-          amount={transaction.amount_cents}
-          currency={transaction.currency}
+          amount={transaction.amount_cents!}
+          currency={transaction.currency!}
         />
       </div>
     </div>
@@ -48,5 +71,7 @@ export function TransactionRowLoading() {
 export default memo(
   TransactionRow,
   (prevProps, nextProps) =>
-    prevProps.transaction.id === nextProps.transaction.id,
+    prevProps.transaction.id === nextProps.transaction.id &&
+    prevProps.selected === nextProps.selected &&
+    prevProps.selectionMode === nextProps.selectionMode,
 );

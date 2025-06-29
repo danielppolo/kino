@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TentTree } from "lucide-react";
 
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -9,16 +9,18 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { Subtitle, Text } from "../ui/typography";
 import DayHeader, { DayHeaderLoading } from "./day-header";
 import TransactionRow, { TransactionRowLoading } from "./transaction-row";
+import BulkTransactionEditForm from "./bulk-transaction-edit-form";
+import { Button } from "../ui/button";
 
 import { useTransactionForm } from "@/contexts/transaction-form-context";
 import useFilters from "@/hooks/use-filters";
 import { PAGE_SIZE } from "@/utils/constants";
 import { createClient } from "@/utils/supabase/client";
 import { listTransactions } from "@/utils/supabase/queries";
-import { Transaction } from "@/utils/supabase/types";
+import { type TransactionList } from "@/utils/supabase/types";
 
 interface TransactionPage {
-  data: Transaction[];
+  data: TransactionList[];
   error: null;
   count: number;
 }
@@ -34,6 +36,17 @@ const transactionRowHeight = 40;
 export default function TransactionList() {
   const filters = useFilters();
   const { openForm } = useTransactionForm();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
   const {
     data,
     dataUpdatedAt,
@@ -76,28 +89,37 @@ export default function TransactionList() {
   });
 
   const handleTransactionClick = useCallback(
-    (transaction: Transaction) => {
+    (transaction: TransactionList) => {
+      if (selected.size > 0) {
+        setSelected((prev) => {
+          const next = new Set(prev);
+          if (next.has(transaction.id!)) next.delete(transaction.id!);
+          else next.add(transaction.id!);
+          return next;
+        });
+        return;
+      }
       openForm({
-        type: transaction.type,
-        walletId: transaction.wallet_id,
-        initialData: transaction,
+        type: transaction.type!,
+        walletId: transaction.wallet_id!,
+        initialData: transaction as any,
       });
     },
-    [openForm],
+    [openForm, selected],
   );
 
   // Group transactions by date
   const groupedTransactions = useMemo(() => {
-    const groups: { [key: string]: Transaction[] } = {};
+    const groups: { [key: string]: TransactionList[] } = {};
     const seenIds = new Set<string>();
 
     data?.pages.forEach((page: TransactionPage) => {
-      page.data.forEach((transaction: Transaction) => {
+      page.data.forEach((transaction: TransactionList) => {
         // Skip if we've already seen this transaction
-        if (seenIds.has(transaction.id)) return;
-        seenIds.add(transaction.id);
+        if (seenIds.has(transaction.id!)) return;
+        seenIds.add(transaction.id!);
 
-        const date = transaction.date;
+        const date = transaction.date!;
         if (!groups[date]) {
           groups[date] = [];
         }
@@ -142,7 +164,7 @@ export default function TransactionList() {
   // Re-render the virtualized list when transactions change
   useEffect(() => {
     rowVirtualizer.measure();
-  }, [rowVirtualizer, dataUpdatedAt]);
+  }, [rowVirtualizer, dataUpdatedAt, selected.size]);
 
   if (status === "error") {
     return <div>Error loading transactions</div>;
@@ -187,9 +209,12 @@ export default function TransactionList() {
                 <DayHeader date={date} />
                 {dateTransactions.map((transaction) => (
                   <TransactionRow
-                    key={`${transaction.id}-${transaction.amount_cents}-${transaction.description ?? ""}-${transaction.tags?.join(",") ?? ""}-${transaction.category_id}-${transaction.label_id}`}
+                    key={`${transaction.id}-${transaction.amount_cents}-${transaction.description ?? ""}-${transaction.tag_ids?.join(",") ?? ""}-${transaction.category_id}-${transaction.label_id}`}
                     transaction={transaction}
                     onClick={() => handleTransactionClick(transaction)}
+                    selected={selected.has(transaction.id!)}
+                    selectionMode={selected.size > 0}
+                    onToggleSelect={() => toggleSelected(transaction.id!)}
                   />
                 ))}
               </div>
@@ -202,6 +227,36 @@ export default function TransactionList() {
           <TransactionRowLoading />
         </div>
       )}
+      {selected.size > 0 && (
+        <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2">
+          <div className="bg-background flex gap-2 rounded-full border px-4 py-2 shadow">
+            <Button size="sm" onClick={() => setBulkOpen(true)}>
+              Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelected(new Set())}
+            >
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+      <BulkTransactionEditForm
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        transactionIds={Array.from(selected)}
+        selectedTransactions={
+          data?.pages
+            .flatMap((page) => page.data)
+            .filter((t) => selected.has(t.id!)) ?? []
+        }
+        onSuccess={() => {
+          setBulkOpen(false);
+          setSelected(new Set());
+        }}
+      />
     </div>
   );
 }
