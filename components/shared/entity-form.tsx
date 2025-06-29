@@ -17,6 +17,7 @@ interface EntityFormProps<T extends FieldValues> {
   entity?: T;
   open?: boolean;
   addAnother?: boolean;
+  type?: "expense" | "income";
   setAddAnother?: (addAnother: boolean) => void;
   onOpenChange?: (open: boolean) => void;
   onSuccess?: () => void;
@@ -32,6 +33,7 @@ export function EntityForm<T extends FieldValues>({
   entity,
   open,
   addAnother,
+  type,
   setAddAnother,
   onOpenChange,
   onSuccess,
@@ -105,7 +107,7 @@ export function EntityForm<T extends FieldValues>({
           {children}
           <div className="flex justify-between gap-4">
             <div className="flex justify-end gap-4">
-              <TemplateSelect type="expense" />
+              {type && <TemplateSelect type={type} />}
             </div>
             <div className="flex justify-end gap-4">
               {!isEdit && (

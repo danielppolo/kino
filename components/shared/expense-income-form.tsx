@@ -113,7 +113,7 @@ const ExpenseIncomeForm = ({
     type,
     wallet_id: walletId,
     date: date,
-    currency: walletMap.get(walletId)?.currency ?? "USD",
+    currency: walletMap.get(walletId)?.currency,
     description: "",
     category_id: "",
     label_id: "",
@@ -172,6 +172,7 @@ const ExpenseIncomeForm = ({
   return (
     <EntityForm
       title={type}
+      type={type}
       entity={initialData ? convertToFormValues(initialData) : undefined}
       open={open}
       onOpenChange={onOpenChange}
