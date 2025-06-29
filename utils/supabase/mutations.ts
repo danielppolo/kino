@@ -330,3 +330,34 @@ export const mergeTags = async (targetId: string, ids: string[]) => {
     .in("id", idsToMerge);
   if (deleteError) throw new Error(deleteError.message);
 };
+
+export const updateTransactionCategoriesByTag = async (
+  tagId: string,
+  newCategoryId: string,
+) => {
+  const supabase = await createClient();
+
+  // First, get all transaction IDs associated with this tag
+  const { data: transactionTags, error: fetchError } = await supabase
+    .from("transaction_tags")
+    .select("transaction_id")
+    .eq("tag_id", tagId);
+
+  if (fetchError) throw new Error(fetchError.message);
+
+  if (!transactionTags || transactionTags.length === 0) {
+    return { updatedCount: 0 };
+  }
+
+  const transactionIds = transactionTags.map((tt) => tt.transaction_id);
+
+  // Update all transactions with the new category
+  const { error: updateError } = await supabase
+    .from("transactions")
+    .update({ category_id: newCategoryId })
+    .in("id", transactionIds);
+
+  if (updateError) throw new Error(updateError.message);
+
+  return { updatedCount: transactionIds.length };
+};
