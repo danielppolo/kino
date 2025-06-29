@@ -5,7 +5,6 @@ import React, { createContext, ReactNode, useContext } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 
 import { TRANSFER_CATEGORIES } from "@/utils/constants";
-import { fetchAllConversions } from "@/utils/fetch-conversions";
 import { createClient } from "@/utils/supabase/client";
 import {
   listCategories,
@@ -36,10 +35,14 @@ const SettingsContext = createContext<SettingsContextType | undefined>(
 
 interface SettingsProviderProps {
   children: ReactNode;
+  initialConversionRates: Record<string, CurrencyConversion>;
+  initialBaseCurrency: string;
 }
 
 export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   children,
+  initialConversionRates,
+  initialBaseCurrency,
 }) => {
   const { data: categories = [] } = useSuspenseQuery<Category[]>({
     queryKey: ["categories"],
@@ -81,38 +84,13 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
     },
   });
 
-  const { data: preferences } = useSuspenseQuery<{ base_currency: string }>({
-    queryKey: ["preferences"],
-    queryFn: async () => {
-      const supabase = await createClient();
-      const result = await supabase
-        .from("user_preferences")
-        .select("*")
-        .maybeSingle();
-      if (result.error) throw result.error;
-      return result.data || { base_currency: "USD" };
-    },
-  });
-
-  const baseCurrency = preferences?.base_currency || "USD";
-
-  // Get unique currencies from wallets
-  const currencies = Array.from(new Set(wallets.map((w) => w.currency)));
-
-  const { data: conversionRates = {} } = useSuspenseQuery<
-    Record<string, CurrencyConversion>
-  >({
-    queryKey: ["conversionRates", currencies, baseCurrency],
-    queryFn: () => fetchAllConversions(currencies, baseCurrency),
-  });
-
   const value: SettingsContextType = {
     categories,
     labels,
     tags,
     wallets,
-    conversionRates,
-    baseCurrency,
+    conversionRates: initialConversionRates,
+    baseCurrency: initialBaseCurrency,
   };
 
   return (
