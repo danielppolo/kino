@@ -3,8 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { Badge } from "./ui/badge";
+import { Money } from "./ui/money";
 
-import { formatCents } from "@/utils/format-cents";
 import { createClient } from "@/utils/supabase/client";
 import { getTotalExpenses } from "@/utils/supabase/queries";
 
@@ -39,7 +39,7 @@ export default function UNAMDonation() {
       variant="secondary"
       className="gap-2 bg-blue-500 text-white dark:bg-blue-600"
     >
-      Donated {formatCents(donationAmount, "USD")}
+      Donated <Money cents={donationAmount} currency="USD" />
     </Badge>
   );
 }

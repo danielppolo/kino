@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronsUpDown, LogOut, Settings } from "lucide-react";
+import { ChevronsUpDown, LogOut, Settings, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 
 import { signOutAction } from "@/app/actions";
@@ -21,9 +21,11 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { createClient } from "@/utils/supabase/client";
+import { useSettings } from "@/contexts/settings-context";
 
 export function NavUser() {
   const { isMobile } = useSidebar();
+  const { moneyVisible, toggleMoneyVisibility } = useSettings();
   const [user, setUser] = useState<{
     name: string;
     email: string;
@@ -111,6 +113,17 @@ export function NavUser() {
               >
                 Theme
               </ThemeSwitcher>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="gap-2 p-2"
+              onClick={toggleMoneyVisibility}
+            >
+              {moneyVisible ? (
+                <EyeOff className="size-4" />
+              ) : (
+                <Eye className="size-4" />
+              )}
+              {moneyVisible ? "Hide" : "Show"} Money
             </DropdownMenuItem>
             <DropdownMenuItem>
               <form action={signOutAction} className="w-full">

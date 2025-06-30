@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, ReactNode, useContext } from "react";
+import React, { createContext, ReactNode, useContext, useState } from "react";
 
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 
@@ -38,6 +38,8 @@ interface SettingsContextType {
   wallets: Wallet[];
   conversionRates: Record<string, CurrencyConversion>;
   baseCurrency: string;
+  moneyVisible: boolean;
+  toggleMoneyVisibility: () => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(
@@ -55,6 +57,12 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   initialConversionRates,
   initialBaseCurrency,
 }) => {
+  const [moneyVisible, setMoneyVisible] = useState(true);
+
+  const toggleMoneyVisibility = () => {
+    setMoneyVisible((prev) => !prev);
+  };
+
   const { data: categories = [] } = useSuspenseQuery<Category[]>({
     queryKey: ["categories"],
     queryFn: async () => {
@@ -124,6 +132,8 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
     wallets,
     conversionRates: initialConversionRates,
     baseCurrency: initialBaseCurrency,
+    moneyVisible,
+    toggleMoneyVisibility,
   };
 
   return (
@@ -232,4 +242,13 @@ export const useCurrency = () => {
     conversionRates: context.conversionRates,
     baseCurrency: context.baseCurrency,
   };
+};
+
+export const useSettings = () => {
+  const context = useContext(SettingsContext);
+  if (context === undefined) {
+    throw new Error("useSettings must be used within a SettingsProvider");
+  }
+
+  return context;
 };

@@ -12,9 +12,9 @@ import { SubmitButton } from "@/components/submit-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Subtitle, Title } from "@/components/ui/typography";
+import { Money } from "@/components/ui/money";
 import UNAMDonation from "@/components/UNAMDonation";
 import { useWallets } from "@/contexts/settings-context";
-import { formatCents } from "@/utils/format-cents";
 import { createClient } from "@/utils/supabase/client";
 
 export default function Page() {
@@ -107,7 +107,10 @@ export default function Page() {
           </div>
           <div>
             <Subtitle>Balance</Subtitle>
-            <p>{formatCents(wallet?.balance_cents ?? 0)}</p>
+            <Money
+              cents={wallet?.balance_cents ?? 0}
+              currency={wallet?.currency}
+            />
           </div>
           <div>
             <Subtitle>Visibility</Subtitle>

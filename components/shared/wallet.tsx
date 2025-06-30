@@ -1,4 +1,4 @@
-import { formatCents } from "@/utils/format-cents";
+import { Money } from "../ui/money";
 import { Wallet as WalletType } from "@/utils/supabase/types";
 
 const Wallet = ({ name, color, currency, balance_cents }: WalletType) => {
@@ -11,10 +11,11 @@ const Wallet = ({ name, color, currency, balance_cents }: WalletType) => {
     >
       <div className="flex flex-col gap-2">
         <p className="font-xl leading-1 font-medium">{name}</p>
-        <p className="text font-light text-white/80">
-          {formatCents(balance_cents ?? 0, currency)}
-        </p>
-        {/* <p className="text-sm font-light opacity-80">{currency}</p> */}
+        <Money
+          cents={balance_cents ?? 0}
+          currency={currency}
+          className="text font-light text-white/80"
+        />
       </div>
     </div>
   );

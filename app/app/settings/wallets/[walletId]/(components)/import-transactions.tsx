@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import Papa from "papaparse";
 import { toast } from "sonner";
@@ -19,8 +19,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Money } from "@/components/ui/money";
 import { useCategories, useLabels } from "@/contexts/settings-context";
-import { formatCents } from "@/utils/format-cents";
 
 interface SerializedRow {
   date: string;
@@ -63,9 +63,7 @@ const CsvTransactionUploader = ({
     return csvData.map((row: Row) => ({
       date: row.date,
       type: row.type,
-      amount: row.amount
-        ? formatCents(Math.round(Number(row.amount) * 100))
-        : undefined,
+      amount: row.amount ? Math.round(Number(row.amount) * 100) : undefined,
       description: row.description,
       category:
         isCategory(row.category) || options.missingCategory === "new"
@@ -185,55 +183,3 @@ const CsvTransactionUploader = ({
 };
 
 export default CsvTransactionUploader;
-
-{
-  /* <div className="mt-4">
-{missingCategories.size > 0 && (
-  <div>
-    <p>Handle missing categories</p>
-    <RadioGroup
-      defaultValue={options.missingCategory}
-      onValueChange={(n) =>
-        setOptions((v) => ({
-          ...v,
-          missingCategory: n as "new" | "other",
-        }))
-      }
-    >
-      <div className="flex items-center space-x-2">
-        <RadioGroupItem value="new" id="new-category" />
-        <Label htmlFor="new-category">Create new</Label>
-      </div>
-      <div className="flex items-center space-x-2">
-        <RadioGroupItem value="other" id="other-category" />
-        <Label htmlFor="other-category">Use `Other`</Label>
-      </div>
-    </RadioGroup>
-  </div>
-)}
-
-{missingLabels.size > 0 && (
-  <div>
-    <p>Handle missing labels</p>
-    <RadioGroup
-      defaultValue={options.missingLabel}
-      onValueChange={(n) =>
-        setOptions((v) => ({
-          ...v,
-          missingLabel: n as "new" | "other",
-        }))
-      }
-    >
-      <div className="flex items-center space-x-2">
-        <RadioGroupItem value="new" id="new-label" />
-        <Label htmlFor="new-label">Create new</Label>
-      </div>
-      <div className="flex items-center space-x-2">
-        <RadioGroupItem value="other" id="other-label" />
-        <Label htmlFor="other-label">Use `Other`</Label>
-      </div>
-    </RadioGroup>
-  </div>
-)}
-</div> */
-}
