@@ -38,7 +38,7 @@ function TransactionForm() {
     };
 
     if (!open) {
-      document.addEventListener("keydown", down);
+      // document.addEventListener("keydown", down);
     }
     return () => document.removeEventListener("keydown", down);
   }, [setOpen, open]);

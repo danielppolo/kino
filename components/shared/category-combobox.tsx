@@ -46,19 +46,14 @@ const CategoryCombobox = ({
     ? categories.filter((category) => category.type === effectiveType)
     : categories;
 
-  // Sort categories alphabetically by name
-  const sortedCategories = [...filteredCategories].sort((a, b) =>
-    a.name.localeCompare(b.name),
-  );
-
   // Map categories to ComboboxOption
-  const options: ComboboxOption[] = sortedCategories.map((category) => ({
+  const options: ComboboxOption[] = filteredCategories.map((category) => ({
     value: category.id,
     label: category.name,
     keywords:
       Array.isArray(category.keywords) && category.keywords.length > 0
-        ? category.keywords
-        : [category.name.toLowerCase(), category.type, category.icon ?? ""],
+        ? [...category.keywords, category.name.toLowerCase()]
+        : [category.name.toLowerCase()],
   }));
 
   const queryClient = useQueryClient();

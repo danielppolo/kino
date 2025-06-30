@@ -30,8 +30,15 @@ export default function Page() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const { selected, selectedCount, clearSelection, toggleSelection } =
-    useSelection();
+  const {
+    selected,
+    selectedCount,
+    clearSelection,
+    toggleSelection,
+    selectAll,
+  } = useSelection({
+    getAllIds: () => categories.map((c) => c.id),
+  });
 
   const selectedCategories = useMemo(
     () =>
@@ -161,6 +168,7 @@ export default function Page() {
       <BulkActions
         selectedCount={selectedCount}
         clearSelection={clearSelection}
+        selectAll={selectAll}
       >
         <TooltipButton
           size="sm"

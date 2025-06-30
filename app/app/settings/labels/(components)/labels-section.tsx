@@ -23,8 +23,15 @@ export default function LabelSection() {
   >(undefined);
   const [labels] = useLabels();
 
-  const { selected, selectedCount, clearSelection, toggleSelection } =
-    useSelection();
+  const {
+    selected,
+    selectedCount,
+    clearSelection,
+    toggleSelection,
+    selectAll,
+  } = useSelection({
+    getAllIds: () => labels.map((l) => l.id),
+  });
 
   const handleAdd = () => {
     setEditLabel(undefined);
@@ -117,6 +124,7 @@ export default function LabelSection() {
       <BulkActions
         selectedCount={selectedCount}
         clearSelection={clearSelection}
+        selectAll={selectAll}
       >
         <TooltipButton
           size="sm"

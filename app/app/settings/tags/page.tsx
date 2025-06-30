@@ -29,8 +29,15 @@ export default function Page() {
   const [bulkCategoryDialogOpen, setBulkCategoryDialogOpen] = useState(false);
   const [selectedTag, setSelectedTag] = useState<TagType | null>(null);
 
-  const { selected, selectedCount, clearSelection, toggleSelection } =
-    useSelection();
+  const {
+    selected,
+    selectedCount,
+    clearSelection,
+    toggleSelection,
+    selectAll,
+  } = useSelection({
+    getAllIds: () => tags.map((t) => t.id),
+  });
 
   const toggleSelect = (tag: TagType) => {
     toggleSelection(tag.id);
@@ -93,6 +100,7 @@ export default function Page() {
       <BulkActions
         selectedCount={selectedCount}
         clearSelection={clearSelection}
+        selectAll={selectAll}
       >
         <TooltipButton
           tooltip="Delete"
