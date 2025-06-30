@@ -49,12 +49,12 @@ export default function MergeCategoriesDialog({
   }, [open]);
 
   // Client-side validation
-  const validateMerge = () => {
+  const validateMerge = (targetValue: string) => {
     if (selected.length < 2) {
       return "Please select at least 2 categories to merge";
     }
 
-    if (!target) {
+    if (!targetValue) {
       return "Please select a target category";
     }
 
@@ -72,7 +72,7 @@ export default function MergeCategoriesDialog({
     }
 
     // Check if target category is transfer
-    const targetCategory = categories.find((c) => c.id === target);
+    const targetCategory = categories.find((c) => c.id === targetValue);
     if (targetCategory?.type === "transfer") {
       return "Cannot use a transfer category as the target";
     }
@@ -98,16 +98,18 @@ export default function MergeCategoriesDialog({
   };
 
   const mutation = useMutation({
-    mutationFn: async () => {
-      if (!target) return;
-      const error = validateMerge();
+    mutationFn: async (targetValue: string) => {
+      if (!targetValue) return;
+
+      // Use targetValue instead of target from closure
+      const error = validateMerge(targetValue);
       if (error) {
         setValidationError(error);
         return;
       }
       setValidationError(null);
 
-      await mergeCategories(target, selected);
+      await mergeCategories(targetValue, selected);
     },
     onSuccess: () => {
       queryClient.invalidateQueries();
@@ -123,7 +125,9 @@ export default function MergeCategoriesDialog({
   });
 
   const confirmMerge = () => {
-    mutation.mutate();
+    if (target) {
+      mutation.mutate(target);
+    }
   };
 
   return (
@@ -147,6 +151,7 @@ export default function MergeCategoriesDialog({
             </Alert>
           )}
           <CategoryCombobox
+            selectionType="combobox"
             type={type || undefined}
             value={target}
             onChange={setTarget}

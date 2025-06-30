@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Combine, Plus, Trash2 } from "lucide-react";
+import { Combine, Plus, SquaresUnite, Trash2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
@@ -186,7 +186,7 @@ export default function Page() {
           onClick={() => setMergeDialogOpen(true)}
           disabled={selectedCount < 2 || !selectedType}
         >
-          <Combine className="size-4" />
+          <SquaresUnite className="size-4" />
         </TooltipButton>
       </BulkActions>
     </>
