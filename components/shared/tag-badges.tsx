@@ -4,9 +4,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Badge } from "../ui/badge";
 import LinkTransferButton from "./link-transfer-button";
 
-import { useTags } from "@/contexts/settings-context";
+import { useLabels, useTags } from "@/contexts/settings-context";
 import { cn } from "@/lib/utils";
 import { TransactionList } from "@/utils/supabase/types";
+import Color from "./color";
 
 interface TagBadgesProps {
   transaction: TransactionList;
@@ -17,10 +18,17 @@ const TagBadges = ({ transaction, className }: TagBadgesProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [, tagMap] = useTags();
+  const [, labelMap] = useLabels();
 
   const handleTagClick = (tagId: string) => {
     const params = new URLSearchParams(searchParams);
     params.set("tag", tagId);
+    router.push(`/app/transactions?${params.toString()}`);
+  };
+
+  const handleLabelClick = (labelId: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("label", labelId);
     router.push(`/app/transactions?${params.toString()}`);
   };
 
@@ -31,6 +39,14 @@ const TagBadges = ({ transaction, className }: TagBadgesProps) => {
         className,
       )}
     >
+      {!!transaction.label_id && labelMap.get(transaction.label_id)?.color && (
+        <Color
+          size="sm"
+          onClick={() => handleLabelClick(transaction.label_id)}
+          color={labelMap.get(transaction.label_id)?.color}
+          className="mx-2 size-1.5"
+        />
+      )}
       {transaction.tag_ids?.map((tagId: string, index) => {
         const tag = tagMap.get(tagId);
         if (!tag) return null;
