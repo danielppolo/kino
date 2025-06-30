@@ -7,6 +7,7 @@ import SelectableRow from "./selectable-row";
 import { LazyIcon } from "../ui/icon";
 import { Category } from "@/utils/supabase/types";
 import { Text } from "../ui/typography";
+import { SquareArrowOutUpRight } from "lucide-react";
 
 interface CategoryRowProps {
   category: Category;

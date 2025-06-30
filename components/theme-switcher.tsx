@@ -30,9 +30,12 @@ const ThemeSwitcher = ({
 }: ThemeSwitcherProps) => {
   const { theme, setTheme } = useTheme();
 
+  const getNextTheme = () => {
+    return theme === "light" ? "dark" : theme === "dark" ? "system" : "light";
+  };
+
   const cycleTheme = () => {
-    const nextTheme =
-      theme === "light" ? "dark" : theme === "dark" ? "system" : "light";
+    const nextTheme = getNextTheme();
     setTheme(nextTheme);
     if (showToast) {
       toast.info(`${nextTheme} theme`);
@@ -40,13 +43,19 @@ const ThemeSwitcher = ({
   };
 
   const getThemeIcon = () => {
-    if (theme === "light") {
+    const nextTheme = getNextTheme();
+    if (nextTheme === "light") {
       return <Sun key="light" className="size-4" />;
-    } else if (theme === "dark") {
+    } else if (nextTheme === "dark") {
       return <Moon key="dark" className="size-4" />;
     } else {
       return <Laptop key="system" className="size-4" />;
     }
+  };
+
+  const getThemeLabel = () => {
+    const nextTheme = getNextTheme();
+    return nextTheme.charAt(0).toUpperCase() + nextTheme.slice(1);
   };
 
   return (
@@ -56,14 +65,8 @@ const ThemeSwitcher = ({
       size={size}
       className={className}
     >
-      {children ? (
-        <>
-          {getThemeIcon()}
-          {children}
-        </>
-      ) : (
-        getThemeIcon()
-      )}
+      {getThemeIcon()}
+      {getThemeLabel()}
     </Button>
   );
 };

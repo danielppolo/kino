@@ -39,17 +39,6 @@ export default function TransactionList() {
   const filters = useFilters();
   const { openForm } = useTransactionForm();
   const [bulkOpen, setBulkOpen] = useState(false);
-
-  const { selected, selectedCount, clearSelection, toggleSelection } =
-    useSelection();
-
-  const toggleSelected = useCallback(
-    (id: string) => {
-      toggleSelection(id);
-    },
-    [toggleSelection],
-  );
-
   const {
     data,
     dataUpdatedAt,
@@ -90,6 +79,24 @@ export default function TransactionList() {
       return allPages.length;
     },
   });
+
+  const {
+    selected,
+    selectedCount,
+    clearSelection,
+    toggleSelection,
+    selectAll,
+  } = useSelection({
+    getAllIds: () =>
+      data?.pages.flatMap((page) => page.data.map((t) => t.id!)) ?? [],
+  });
+
+  const toggleSelected = useCallback(
+    (id: string) => {
+      toggleSelection(id);
+    },
+    [toggleSelection],
+  );
 
   const handleTransactionClick = useCallback(
     (transaction: TransactionList) => {
@@ -229,6 +236,7 @@ export default function TransactionList() {
         <BulkActions
           selectedCount={selectedCount}
           clearSelection={clearSelection}
+          selectAll={selectAll}
         >
           <TooltipButton
             variant="ghost"

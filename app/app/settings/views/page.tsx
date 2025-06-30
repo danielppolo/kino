@@ -11,12 +11,20 @@ import { TooltipButton } from "@/components/ui/tooltip-button";
 import PageHeader from "@/components/shared/page-header";
 import { useSelection } from "@/hooks/use-selection";
 import { View } from "@/utils/supabase/types";
+import { useViews } from "@/contexts/settings-context";
 
 export default function Page() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-
-  const { selected, selectedCount, clearSelection, toggleSelection } =
-    useSelection();
+  const [views] = useViews();
+  const {
+    selected,
+    selectedCount,
+    clearSelection,
+    toggleSelection,
+    selectAll,
+  } = useSelection({
+    getAllIds: () => views.map((v) => v.id),
+  });
 
   const toggleSelect = (view: View) => {
     toggleSelection(view.id);
@@ -52,6 +60,7 @@ export default function Page() {
       <BulkActions
         selectedCount={selectedCount}
         clearSelection={clearSelection}
+        selectAll={selectAll}
       >
         <TooltipButton
           size="sm"
