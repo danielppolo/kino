@@ -1,5 +1,7 @@
+"use client";
+
 import React, { memo } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Badge } from "../ui/badge";
 import SelectableRow from "./selectable-row";
 import { LazyIcon } from "../ui/icon";
@@ -23,6 +25,7 @@ export function CategoryRow({
   onToggleSelect,
   transactionCount = 0,
 }: CategoryRowProps) {
+  const router = useRouter();
   return (
     <SelectableRow
       id={category.id}
@@ -37,14 +40,16 @@ export function CategoryRow({
       </Text>
       <div className="shrink-0">
         {!!transactionCount && (
-          <Link href={`/app/transactions?category_id=${category.id}`}>
-            <Badge
-              className="h-5 min-w-5 rounded-full px-2 font-mono text-xs font-light tabular-nums"
-              variant="outline"
-            >
-              {transactionCount}
-            </Badge>
-          </Link>
+          <Badge
+            onClick={(event) => {
+              event.stopPropagation();
+              router.push(`/app/transactions?category_id=${category.id}`);
+            }}
+            className="h-5 min-w-5 rounded-full px-2 font-mono text-xs font-light tabular-nums"
+            variant="outline"
+          >
+            {transactionCount}
+          </Badge>
         )}
       </div>
     </SelectableRow>
