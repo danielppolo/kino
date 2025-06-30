@@ -21,6 +21,7 @@ import {
   ChartLegendContent,
   ChartTooltip,
 } from "@/components/ui/chart";
+import { Money } from "@/components/ui/money";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency } from "@/contexts/settings-context";
 import { createClient } from "@/utils/supabase/client";
@@ -37,6 +38,16 @@ interface CashflowAreaChartProps {
   walletId?: string;
   from?: string;
   to?: string;
+}
+
+// Helper function for YAxis tick formatting since it can't use React components
+function formatCurrency(value: number, currency: string): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
 }
 
 // Utility function to aggregate stats by month
@@ -212,14 +223,7 @@ export function CashflowAreaChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) =>
-                new Intl.NumberFormat("en-US", {
-                  style: "currency",
-                  currency: baseCurrency,
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
-                }).format(value)
-              }
+              tickFormatter={(value) => formatCurrency(value, baseCurrency)}
             />
             <ChartTooltip
               cursor={false}
@@ -261,11 +265,12 @@ export function CashflowAreaChart({
                                 </span>
                               </div>
                               <span className="text-muted-foreground text-sm">
-                                {new Intl.NumberFormat("en-US", {
-                                  style: "currency",
-                                  currency: baseCurrency,
-                                  minimumFractionDigits: 2,
-                                }).format(item.value as number)}
+                                <Money
+                                  cents={Math.round(
+                                    (item.value as number) * 100,
+                                  )}
+                                  currency={baseCurrency}
+                                />
                               </span>
                             </div>
                           ))}

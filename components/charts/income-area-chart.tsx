@@ -18,7 +18,9 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import { Money } from "@/components/ui/money";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
+import { useCurrency } from "@/contexts/settings-context";
 import { TransactionList } from "@/utils/supabase/types";
 
 function groupTransactionsByMonth(transactions: TransactionList[]) {
@@ -52,6 +54,7 @@ interface IncomeAreaChartProps {
 }
 
 export function IncomeAreaChart({ transactions }: IncomeAreaChartProps) {
+  const { baseCurrency } = useCurrency();
   const chartData = useMemo(
     () => groupTransactionsByMonth(transactions ?? []),
     [transactions],
@@ -102,30 +105,33 @@ export function IncomeAreaChart({ transactions }: IncomeAreaChartProps) {
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) =>
-                new Intl.NumberFormat("en-US", {
-                  style: "currency",
-                  currency: "USD",
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
-                }).format(value)
-              }
+              tickFormatter={(value) => formatCurrency(value, baseCurrency)}
             />
             <ChartTooltip
               cursor={false}
               labelFormatter={(value) => format(new Date(value), "MMMM yyyy")}
-              content={
-                <ChartTooltipContent
-                  indicator="line"
-                  formatter={(value) =>
-                    new Intl.NumberFormat("en-US", {
-                      style: "currency",
-                      currency: "USD",
-                      minimumFractionDigits: 2,
-                    }).format(value as number)
-                  }
-                />
-              }
+              content={({ active, payload, label }) => {
+                if (!active || !payload?.length) return null;
+                return (
+                  <div className="bg-background rounded-lg border p-2 shadow-sm">
+                    <div className="grid gap-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium">
+                          {format(new Date(label), "MMMM yyyy")}
+                        </span>
+                        <span className="text-sm font-medium">
+                          <Money
+                            cents={Math.round(
+                              (payload[0].value as number) * 100,
+                            )}
+                            currency={baseCurrency}
+                          />
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }}
             />
             <Area
               dataKey="amount"
@@ -150,4 +156,14 @@ export function IncomeAreaChart({ transactions }: IncomeAreaChartProps) {
       </CardFooter>
     </Card>
   );
+}
+
+// Helper function for YAxis tick formatting since it can't use React components
+function formatCurrency(value: number, currency: string): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
 }

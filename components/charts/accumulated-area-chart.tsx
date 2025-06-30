@@ -21,11 +21,22 @@ import {
   ChartLegendContent,
   ChartTooltip,
 } from "@/components/ui/chart";
+import { Money } from "@/components/ui/money";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import { createClient } from "@/utils/supabase/client";
 import { getWalletMonthlyBalances } from "@/utils/supabase/queries";
 import { Wallet } from "@/utils/supabase/types";
+
+// Helper function for YAxis tick formatting since it can't use React components
+function formatCurrency(value: number, currency: string): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
 
 interface MonthlyBalance {
   month: string;
@@ -282,14 +293,7 @@ export function AccumulatedAreaChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) =>
-                new Intl.NumberFormat("en-US", {
-                  style: "currency",
-                  currency: baseCurrency,
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
-                }).format(value)
-              }
+              tickFormatter={(value) => formatCurrency(value, baseCurrency)}
             />
             <ChartTooltip
               cursor={false}
@@ -310,11 +314,10 @@ export function AccumulatedAreaChart({
                           {format(new Date(label), "MMMM yyyy")}
                         </span>
                         <span className="text-sm font-medium">
-                          {new Intl.NumberFormat("en-US", {
-                            style: "currency",
-                            currency: baseCurrency,
-                            minimumFractionDigits: 2,
-                          }).format(total)}
+                          <Money
+                            cents={Math.round(total * 100)}
+                            currency={baseCurrency}
+                          />
                         </span>
                       </div>
                       <div className="grid gap-1">
@@ -343,11 +346,12 @@ export function AccumulatedAreaChart({
                                   </span>
                                 </div>
                                 <span className="text-muted-foreground text-sm">
-                                  {new Intl.NumberFormat("en-US", {
-                                    style: "currency",
-                                    currency: baseCurrency,
-                                    minimumFractionDigits: 2,
-                                  }).format(item.value as number)}
+                                  <Money
+                                    cents={Math.round(
+                                      (item.value as number) * 100,
+                                    )}
+                                    currency={baseCurrency}
+                                  />
                                 </span>
                               </div>
                             );
