@@ -15,10 +15,10 @@ import {
   CommandList,
 } from "../ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Money } from "../ui/money";
 
 import { linkTransfers } from "@/actions/link-transfers";
 import { useWallets } from "@/contexts/settings-context";
-import { formatCents } from "@/utils/format-cents";
 import { createClient } from "@/utils/supabase/client";
 import { Transaction, TransactionList } from "@/utils/supabase/types";
 
@@ -97,12 +97,16 @@ const LinkTransferButton: React.FC<LinkTransferButtonProps> = ({
       transaction.amount_cents,
       transactionWallet?.currency,
     ],
-    queryFn: () =>
-      fetchTransferOptions(
-        selectedCurrency!,
+    queryFn: () => {
+      if (!selectedCurrency) {
+        throw new Error("No currency selected");
+      }
+      return fetchTransferOptions(
+        selectedCurrency,
         transaction,
         transactionWallet?.currency,
-      ),
+      );
+    },
     enabled: !!selectedCurrency,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
@@ -119,10 +123,7 @@ const LinkTransferButton: React.FC<LinkTransferButtonProps> = ({
   const createCounterTransaction = async (counterTransactionId: string) => {
     if (!transaction.id) return;
 
-    const { error } = await linkTransfers(
-      transaction.id!,
-      counterTransactionId,
-    );
+    const { error } = await linkTransfers(transaction.id, counterTransactionId);
     if (error) {
       return toast.error(error.message);
     }
@@ -194,7 +195,12 @@ const LinkTransferButton: React.FC<LinkTransferButtonProps> = ({
                           }
                         }}
                       >
-                        {`${walletMap.get(t.wallet_id)?.name} ${formatCents(t.amount_cents)}`}
+                        <span>{walletMap.get(t.wallet_id)?.name}</span>
+                        <Money
+                          cents={t.amount_cents}
+                          currency={t.currency}
+                          as="span"
+                        />
                       </CommandItem>
                     ))}
             </CommandGroup>

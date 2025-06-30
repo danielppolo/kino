@@ -28,7 +28,7 @@ import {
   ChartContainer,
   ChartTooltip,
 } from "@/components/ui/chart";
-import { formatCents } from "@/utils/format-cents";
+import { Money } from "@/components/ui/money";
 import { createClient } from "@/utils/supabase/client";
 import { getMonthlyLabelStats } from "@/utils/supabase/queries";
 
@@ -397,9 +397,10 @@ export default function LabelAreaChart({
                                 {entry.name}
                               </span>
                             </div>
-                            <span className="text-sm">
-                              {formatCents(Number(entry.value) || 0)}
-                            </span>
+                            <Money
+                              cents={Number(entry.value) || 0}
+                              className="text-sm"
+                            />
                           </div>
                         ))}
                       </div>
@@ -433,7 +434,7 @@ export default function LabelAreaChart({
       <CardFooter>
         <div className="flex w-full flex-col gap-3 text-sm">
           <div className="flex items-center gap-2 leading-none font-medium">
-            Total: {formatCents(total)} | {labelCount} labels
+            Total: <Money cents={total} /> | {labelCount} labels
           </div>
 
           {labelTotals.length > 0 && (
@@ -456,7 +457,7 @@ export default function LabelAreaChart({
                           <span className="text-sm">{label.name}</span>
                         </div>
                         <span className="text-sm font-medium">
-                          {formatCents(label.total)}
+                          <Money cents={label.total} />
                         </span>
                       </TransactionLink>
                     ))}

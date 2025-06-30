@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BookmarkPlus, Folder, FolderPlus, Pin } from "lucide-react";
+import { FolderPlus } from "lucide-react";
 
 import SaveViewDialog from "./save-view-dialog";
 import { TooltipButton } from "@/components/ui/tooltip-button";
@@ -17,7 +17,7 @@ export default function SaveViewButton() {
         tooltip="Save current view"
         onClick={() => setOpen(true)}
       >
-        <Folder className="h-4 w-4" />
+        <FolderPlus className="h-4 w-4" />
       </TooltipButton>
       <SaveViewDialog open={open} onOpenChange={setOpen} />
     </>

@@ -19,9 +19,9 @@ import {
   SidebarMenuItem,
   SidebarMenuAction,
 } from "@/components/ui/sidebar";
+import { Money } from "@/components/ui/money";
 import { useTotalBalance } from "@/hooks/use-total-balance";
 import { useViews } from "@/contexts/settings-context";
-import { formatCents } from "@/utils/format-cents";
 import { deleteViews } from "@/utils/supabase/mutations";
 
 export function TransactionsSidebar() {
@@ -107,12 +107,13 @@ export function TransactionsSidebar() {
                       to={toDate}
                     >
                       <span className="flex-1">{wallet.name}</span>
-                      <span className="text-muted-foreground text-xs">
-                        {formatCents(
-                          wallet.balance_cents ?? 0,
-                          wallet.currency,
-                        )}
-                      </span>
+
+                      <Money
+                        cents={wallet.balance_cents ?? 0}
+                        currency={wallet.currency}
+                        as="span"
+                        className="text-muted-foreground text-xs"
+                      />
                     </TransactionLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

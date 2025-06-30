@@ -9,8 +9,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { Money } from "@/components/ui/money";
 import { useTotalBalance } from "@/hooks/use-total-balance";
-import { formatCents } from "@/utils/format-cents";
 
 export function SidebarHeaderMenu() {
   const { totalBalance, baseCurrency } = useTotalBalance();
@@ -27,9 +27,12 @@ export function SidebarHeaderMenu() {
             <>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="font-display truncate">cuatrocientosdos</span>
-                <span className="truncate text-xs">
-                  {formatCents(totalBalance, baseCurrency)}
-                </span>
+                <Money
+                  cents={totalBalance}
+                  currency={baseCurrency}
+                  as="span"
+                  className="truncate text-xs"
+                />
               </div>
             </>
           </TransactionLink>

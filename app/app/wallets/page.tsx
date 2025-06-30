@@ -6,8 +6,8 @@ import Container from "@/components/shared/container";
 import TopBar from "@/components/shared/top-bar";
 import Wallet from "@/components/shared/wallet";
 import { Subtitle, Title } from "@/components/ui/typography";
+import { Money } from "@/components/ui/money";
 import { useWallets } from "@/contexts/settings-context";
-import { formatCents } from "@/utils/format-cents";
 
 // Force dynamic rendering since this page uses user-specific data
 export const dynamic = "force-dynamic";
@@ -42,9 +42,11 @@ export default function WalletsPage() {
           <div key={currency} className="mb-8">
             <div className="mb-2 flex items-center justify-between">
               <Subtitle>{currency}</Subtitle>
-              <Subtitle className="text-right">
-                {formatCents(totalCents, currency)}
-              </Subtitle>
+              <Money
+                cents={totalCents}
+                currency={currency}
+                className="text-right"
+              />
             </div>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
               {wallets.map((wallet) => (

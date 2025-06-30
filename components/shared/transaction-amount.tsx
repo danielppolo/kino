@@ -1,8 +1,6 @@
 import React from "react";
 
-import { Text } from "../ui/typography";
-
-import { formatCents } from "@/utils/format-cents";
+import { Money } from "../ui/money";
 
 interface TransactionAmountProps {
   amount: number;
@@ -16,13 +14,13 @@ const TransactionAmount: React.FC<TransactionAmountProps> = ({
   className,
 }) => {
   return (
-    <Text
+    <Money
       as="span"
+      cents={amount}
+      currency={currency}
       destructive={amount < 0}
       className={amount > 0 ? "text-emerald-600" : "undefined"}
-    >
-      {formatCents(amount)} {currency}
-    </Text>
+    />
   );
 };
 
