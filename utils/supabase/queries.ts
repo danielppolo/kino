@@ -17,16 +17,22 @@ export interface Filters {
   transfer_id?: string | undefined;
   description?: string | undefined;
   id?: string | undefined;
+  sort?: string | undefined;
+  sortOrder?: string | undefined;
 }
 
 export const listTransactions = async (
   client: TypedSupabaseClient,
   params?: Filters & { page?: number; pageSize?: number },
 ) => {
-  let query = client
-    .from("transaction_list")
-    .select("*", { count: "exact" })
-    .order("date", { ascending: false });
+  let query = client.from("transaction_list").select("*", { count: "exact" });
+
+  // Apply sorting
+  const sortField = params?.sort || "date";
+  const sortOrder = params?.sortOrder || "desc";
+  const ascending = sortOrder === "asc";
+
+  query = query.order(sortField, { ascending });
 
   // Date range filtering
   if (params?.from && params?.to) {
@@ -557,7 +563,6 @@ export const getTransactionTotal = async (
       p_id: params?.id || null,
     },
   );
-
   if (error) {
     // Fallback to the old method if the RPC function doesn't exist yet
     let fallbackQuery = client
@@ -658,6 +663,7 @@ export const getTransactionTotal = async (
 
   // Convert totals to base currency if conversion rates are provided
   let total = 0;
+  console.log(params);
   if (params?.conversionRates && params?.baseCurrency) {
     total = ((data as any[]) || []).reduce((sum: number, row: any) => {
       const convertedAmount = convertCurrency(

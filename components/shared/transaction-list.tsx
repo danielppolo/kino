@@ -127,26 +127,37 @@ export default function TransactionList() {
     downloadCSV(csvContent, filename);
   }, [data?.pages, selected]);
 
-  // Group transactions by date
+  // Group transactions by date or handle flat list for amount sorting
   const groupedTransactions = useMemo(() => {
-    const groups: { [key: string]: TransactionList[] } = {};
     const seenIds = new Set<string>();
+    const allTransactions: TransactionList[] = [];
 
     data?.pages.forEach((page: TransactionPage) => {
       page.data.forEach((transaction: TransactionList) => {
         // Skip if we've already seen this transaction
         if (seenIds.has(transaction.id!)) return;
         seenIds.add(transaction.id!);
-
-        const date = transaction.date!;
-        if (!groups[date]) {
-          groups[date] = [];
-        }
-        groups[date].push(transaction);
+        allTransactions.push(transaction);
       });
     });
+
+    // If sorting by amount, return as flat list without date grouping
+    if (filters.sort === "amount_cents") {
+      return [["", allTransactions] as [string, TransactionList[]]];
+    }
+
+    // Group by date for date sorting
+    const groups: { [key: string]: TransactionList[] } = {};
+    allTransactions.forEach((transaction: TransactionList) => {
+      const date = transaction.date!;
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(transaction);
+    });
+
     return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
-  }, [data?.pages]);
+  }, [data?.pages, filters.sort]);
 
   // Virtualization Setup
   const parentRef = useRef<HTMLDivElement>(null);
@@ -154,9 +165,12 @@ export default function TransactionList() {
   const rowVirtualizer = useVirtualizer({
     count: groupedTransactions.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: (index) =>
-      dayHeaderHeight +
-      groupedTransactions[index][1].length * transactionRowHeight,
+    estimateSize: (index) => {
+      const transactions = groupedTransactions[index][1];
+      const headerHeight =
+        filters.sort === "amount_cents" ? 0 : dayHeaderHeight;
+      return headerHeight + transactions.length * transactionRowHeight;
+    },
     overscan: 5,
   });
 
@@ -225,7 +239,7 @@ export default function TransactionList() {
                   transform: `translateY(${virtualRow.start}px)`,
                 }}
               >
-                <DayHeader date={date} />
+                {filters.sort !== "amount_cents" && <DayHeader date={date} />}
                 {dateTransactions.map((transaction) => (
                   <TransactionRow
                     key={`${transaction.id}-${transaction.amount_cents}-${transaction.description ?? ""}-${transaction.tag_ids?.join(",") ?? ""}-${transaction.category_id}-${transaction.label_id}`}

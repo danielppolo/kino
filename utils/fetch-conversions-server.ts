@@ -9,8 +9,8 @@ export interface CurrencyConversion {
 }
 
 export async function fetchConversion(
-  sourceCurrency: string,
   targetCurrency: string,
+  sourceCurrency: string,
 ): Promise<CurrencyConversion> {
   if (sourceCurrency === targetCurrency) {
     return {
@@ -46,8 +46,10 @@ export async function fetchConversion(
   }
 
   // Fetch fresh data from API
+  const url = `https://api.currencyapi.com/v3/latest?apikey=${process.env.CURRENCY_API_TOKEN}&base_currency=${targetCurrency}&currencies=${sourceCurrency}`;
+  console.log(url);
   const response = await fetch(
-    `https://api.currencyapi.com/v3/latest?apikey=${process.env.CURRENCY_API_TOKEN}&currencies=${targetCurrency}`,
+    `https://api.currencyapi.com/v3/latest?apikey=${process.env.CURRENCY_API_TOKEN}&base_currency=${targetCurrency}&currencies=${sourceCurrency}`,
   );
 
   if (!response.ok) {
@@ -55,7 +57,7 @@ export async function fetchConversion(
   }
 
   const data = await response.json();
-  const rate = data.data[targetCurrency]?.value;
+  const rate = data.data[sourceCurrency]?.value;
 
   if (!rate) {
     throw new Error("Invalid currency data received");
@@ -70,13 +72,15 @@ export async function fetchConversion(
         target_currency: targetCurrency,
         rate: rate,
         updated_at: new Date().toISOString(),
+        date: new Date().toISOString(),
       },
       {
-        onConflict: "source_currency,target_currency",
+        onConflict: "source_currency,target_currency,date",
       },
     );
 
   if (upsertError) {
+    console.log(upsertError);
     throw new Error("Failed to update cache");
   }
 
