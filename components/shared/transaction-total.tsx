@@ -2,16 +2,16 @@
 
 import { useQuery } from "@tanstack/react-query";
 
+import { Badge } from "../ui/badge";
+
 import { Money } from "@/components/ui/money";
-import { useWallets, useCurrency } from "@/contexts/settings-context";
+import { useCurrency } from "@/contexts/settings-context";
 import useFilters from "@/hooks/use-filters";
 import { createClient } from "@/utils/supabase/client";
-import { getTransactionTotal } from "@/utils/supabase/queries";
-import { Badge } from "../ui/badge";
+import { type Filters, getTransactionTotal } from "@/utils/supabase/queries";
 
 export default function TransactionTotal() {
   const filters = useFilters();
-  const [wallets] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
 
   // Check if there are any active filters (excluding wallet_id which is always present)
@@ -33,7 +33,10 @@ export default function TransactionTotal() {
     queryFn: async () => {
       const supabase = createClient();
       // Convert empty strings to undefined for the query
-      const queryFilters = {
+      const queryFilters: Filters & {
+        conversionRates?: Record<string, { rate: number } | any>;
+        baseCurrency?: string;
+      } = {
         wallet_id: (filters as any).wallet_id || undefined,
         from: (filters as any).from || undefined,
         to: (filters as any).to || undefined,
