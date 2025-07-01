@@ -1,25 +1,26 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Edit, Pencil, TentTree } from "lucide-react";
+import { Download, Pencil, TentTree } from "lucide-react";
 
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
+import { TooltipButton } from "../ui/tooltip-button";
 import { Subtitle, Text } from "../ui/typography";
+import { BulkActions } from "./bulk-actions";
+import BulkTransactionEditForm from "./bulk-transaction-edit-form";
 import DayHeader, { DayHeaderLoading } from "./day-header";
 import TransactionRow, { TransactionRowLoading } from "./transaction-row";
-import BulkTransactionEditForm from "./bulk-transaction-edit-form";
-import { TooltipButton } from "../ui/tooltip-button";
-import { BulkActions } from "./bulk-actions";
 
 import { useTransactionForm } from "@/contexts/transaction-form-context";
 import useFilters from "@/hooks/use-filters";
 import { useSelection } from "@/hooks/use-selection";
 import { PAGE_SIZE } from "@/utils/constants";
+import { convertTransactionsToCSV, downloadCSV } from "@/utils/csv-export";
 import { createClient } from "@/utils/supabase/client";
 import { listTransactions } from "@/utils/supabase/queries";
-import { type TransactionList } from "@/utils/supabase/types";
+import { type Transaction, type TransactionList } from "@/utils/supabase/types";
 
 interface TransactionPage {
   data: TransactionList[];
@@ -107,11 +108,24 @@ export default function TransactionList() {
       openForm({
         type: transaction.type!,
         walletId: transaction.wallet_id!,
-        initialData: transaction as any,
+        initialData: transaction as Transaction,
       });
     },
     [openForm, selectedCount, toggleSelection],
   );
+
+  const handleDownload = useCallback(() => {
+    const selectedTransactions =
+      data?.pages
+        .flatMap((page) => page.data)
+        .filter((t) => selected.includes(t.id!)) ?? [];
+
+    if (selectedTransactions.length === 0) return;
+
+    const csvContent = convertTransactionsToCSV(selectedTransactions);
+    const filename = `transactions-${new Date().toISOString().split("T")[0]}.csv`;
+    downloadCSV(csvContent, filename);
+  }, [data?.pages, selected]);
 
   // Group transactions by date
   const groupedTransactions = useMemo(() => {
@@ -238,6 +252,14 @@ export default function TransactionList() {
           clearSelection={clearSelection}
           selectAll={selectAll}
         >
+          <TooltipButton
+            tooltip="Download selected as CSV"
+            variant="ghost"
+            size="sm"
+            onClick={handleDownload}
+          >
+            <Download className="size-4" />
+          </TooltipButton>
           <TooltipButton
             variant="ghost"
             size="sm"
