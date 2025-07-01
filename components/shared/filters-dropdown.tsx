@@ -7,7 +7,6 @@ import DateRangeFilter from "@/app/app/(transactions)/transactions/(components)/
 import DescriptionFilter from "@/app/app/(transactions)/transactions/(components)/description-filter";
 import LabelFilter from "@/app/app/(transactions)/transactions/(components)/label-filter";
 import TagFilter from "@/app/app/(transactions)/transactions/(components)/tag-filter";
-import { TooltipButton } from "@/components/ui/tooltip-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { TooltipButton } from "@/components/ui/tooltip-button";
 
 export function FiltersDropdown() {
   return (
