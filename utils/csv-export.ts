@@ -1,4 +1,3 @@
-import { formatCents } from "@/utils/format-cents";
 import { TransactionList } from "@/utils/supabase/types";
 
 export function convertTransactionsToCSV(
@@ -28,9 +27,7 @@ export function convertTransactionsToCSV(
     transaction.date || "",
     transaction.type || "",
     transaction.description || "",
-    transaction.amount_cents
-      ? formatCents(transaction.amount_cents, transaction.currency || "USD")
-      : "",
+    (transaction.amount_cents ?? 0) / 100,
     transaction.currency || "",
     transaction.category_id || "",
     transaction.label_id || "",
