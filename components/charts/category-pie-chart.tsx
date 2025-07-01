@@ -10,12 +10,16 @@ import {
 } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 import { createClient } from "@/utils/supabase/client";
 import { getCategoryPieChartData } from "@/utils/supabase/queries";
+import { useCurrency, useWallets } from "@/contexts/settings-context";
+import { aggregateByKeyWithCurrencyConversion } from "@/utils/currency-conversion";
+import { Money } from "@/components/ui/money";
 
 interface CategoryPieChartProps {
-  walletId: string;
+  walletId?: string;
   from?: string;
   to?: string;
   type: "income" | "expense" | "net";
@@ -47,6 +51,9 @@ export default function CategoryPieChart({
   type,
   title = "Category Distribution",
 }: CategoryPieChartProps) {
+  const { conversionRates, baseCurrency } = useCurrency();
+  const [, walletMap] = useWallets();
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["category-pie-chart", walletId, from, to, type],
     queryFn: async () => {
@@ -59,24 +66,61 @@ export default function CategoryPieChart({
       });
 
       if (error) throw error;
-
-      // Transform data for pie chart
-      return (
-        data?.map((item, index) => ({
-          name: item.categories?.name || "Unknown",
-          value:
-            type === "income"
-              ? item.income_cents
-              : type === "expense"
-                ? Math.abs(item.outcome_cents)
-                : Math.abs(item.net_cents),
-          color: COLORS[index % COLORS.length],
-          icon: item.categories?.icon,
-          transactionCount: item.transaction_count,
-        })) || []
-      );
+      return data;
     },
   });
+
+  // Transform data with currency conversion
+  const transformedData = useMemo(() => {
+    if (!data || data.length === 0) return [];
+
+    // Convert the data to the format expected by the aggregation function
+    const dataWithAmounts = data.map((item) => {
+      const amount_cents =
+        type === "income"
+          ? item.income_cents
+          : type === "expense"
+            ? Math.abs(item.outcome_cents)
+            : Math.abs(item.net_cents);
+
+      return {
+        ...item,
+        amount_cents,
+        category_id: item.categories?.id,
+      };
+    });
+
+    // Aggregate by category with currency conversion
+    const aggregated = aggregateByKeyWithCurrencyConversion(
+      dataWithAmounts,
+      "category_id",
+      conversionRates,
+      baseCurrency,
+      walletMap,
+    );
+
+    // Transform to pie chart format
+    const result = Object.entries(aggregated).map(
+      ([categoryId, data], index) => {
+        const categoryItem = data.items[0]; // Get category info from first item
+        const categoryName = categoryItem.categories?.name || "Unknown";
+
+        return {
+          name: categoryName,
+          value: data.total,
+          color: COLORS[index % COLORS.length],
+          icon: categoryItem.categories?.icon,
+          transactionCount: data.items.reduce(
+            (sum, item) => sum + (item.transaction_count || 0),
+            0,
+          ),
+        };
+      },
+    );
+
+    result.sort((a, b) => b.value - a.value);
+    return result;
+  }, [data, type, conversionRates, baseCurrency, walletMap]);
 
   if (isLoading) {
     return (
@@ -92,7 +136,7 @@ export default function CategoryPieChart({
     );
   }
 
-  if (!data || data.length === 0) {
+  if (!transformedData || transformedData.length === 0) {
     return (
       <div className="flex h-64 items-center justify-center text-gray-500">
         No data available for this period
@@ -100,15 +144,15 @@ export default function CategoryPieChart({
     );
   }
 
-  const total = data.reduce((sum, item) => sum + item.value, 0);
+  const total = transformedData.reduce((sum, item) => sum + item.value, 0);
 
   return (
     <div className="h-64 w-full">
-      <h3 className="mb-4 text-lg font-semibold">{title}</h3>
+      {title && <h3 className="mb-4 text-lg font-semibold">{title}</h3>}
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
-            data={data}
+            data={transformedData}
             cx="50%"
             cy="50%"
             labelLine={false}
@@ -119,21 +163,47 @@ export default function CategoryPieChart({
             fill="#8884d8"
             dataKey="value"
           >
-            {data.map((entry, index) => (
+            {transformedData.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.color} />
             ))}
           </Pie>
           <Tooltip
-            formatter={(value: number) => [
-              `$${(value / 100).toFixed(2)}`,
-              "Amount",
-            ]}
+            content={({ active, payload }) => {
+              if (!active || !payload?.length) return null;
+              const data = payload[0].payload;
+              return (
+                <div className="bg-background rounded-lg border p-2 shadow-sm">
+                  <div className="grid gap-2">
+                    <p className="text-sm font-medium">{data.name}</p>
+                    <div className="grid gap-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-muted-foreground text-sm">
+                          Amount:
+                        </span>
+                        <Money
+                          cents={data.value}
+                          currency={baseCurrency}
+                          className="text-sm"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-muted-foreground text-sm">
+                          Transactions:
+                        </span>
+                        <span className="text-sm">{data.transactionCount}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }}
           />
           <Legend />
         </PieChart>
       </ResponsiveContainer>
       <div className="mt-4 text-sm text-gray-600">
-        Total: ${(total / 100).toFixed(2)} | {data.length} categories
+        Total: <Money cents={total} currency={baseCurrency} /> |{" "}
+        {transformedData.length} categories
       </div>
     </div>
   );

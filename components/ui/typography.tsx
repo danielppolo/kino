@@ -93,7 +93,7 @@ export function Text({
     <Component
       {...props}
       className={cn(
-        "text-foreground text-lg leading-7 md:text-sm",
+        "text-foreground text-base leading-7 md:text-sm",
         small && "text-base md:text-sm",
         muted && "text-muted-foreground",
         destructive && "text-foreground",
