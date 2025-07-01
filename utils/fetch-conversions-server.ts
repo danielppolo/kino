@@ -11,6 +11,7 @@ export interface CurrencyConversion {
 export async function fetchConversion(
   targetCurrency: string,
   sourceCurrency: string,
+  date?: string,
 ): Promise<CurrencyConversion> {
   if (sourceCurrency === targetCurrency) {
     return {
@@ -46,11 +47,18 @@ export async function fetchConversion(
   }
 
   // Fetch fresh data from API
-  const url = `https://api.currencyapi.com/v3/latest?apikey=${process.env.CURRENCY_API_TOKEN}&base_currency=${targetCurrency}&currencies=${sourceCurrency}`;
-  console.log(url);
-  const response = await fetch(
-    `https://api.currencyapi.com/v3/latest?apikey=${process.env.CURRENCY_API_TOKEN}&base_currency=${targetCurrency}&currencies=${sourceCurrency}`,
+  const url = new URL(
+    `https://api.currencyapi.com/v3/${date ? "historical" : "latest"}`,
   );
+  url.searchParams.set("apikey", process.env.CURRENCY_API_TOKEN!);
+  url.searchParams.set("base_currency", targetCurrency);
+  url.searchParams.set("currencies", sourceCurrency);
+
+  if (date) {
+    url.searchParams.set("date", date);
+  }
+
+  const response = await fetch(url);
 
   if (!response.ok) {
     throw new Error("Failed to fetch currency data");
@@ -91,16 +99,25 @@ export async function fetchConversion(
   };
 }
 
-export async function fetchAllConversions(
-  currencies: string[],
-  baseCurrency: string,
-) {
+export async function fetchAllConversions({
+  currencies,
+  baseCurrency,
+  date,
+}: {
+  currencies: string[];
+  baseCurrency: string;
+  date?: string;
+}) {
   const conversions: Record<string, CurrencyConversion> = {};
 
   await Promise.all(
     currencies.map(async (currency) => {
       if (currency !== baseCurrency) {
-        conversions[currency] = await fetchConversion(currency, baseCurrency);
+        conversions[currency] = await fetchConversion(
+          currency,
+          baseCurrency,
+          date,
+        );
       }
     }),
   );
