@@ -1,6 +1,10 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 
 import { TypedSupabaseClient } from "@/utils/supabase/types";
+import {
+  convertCurrency,
+  CurrencyConversion,
+} from "@/utils/currency-conversion";
 
 export interface Filters {
   label_id?: string | undefined;
@@ -298,20 +302,19 @@ export const getMonthlyLabelStats = async (
 export const getCategoryPieChartData = async (
   client: TypedSupabaseClient,
   params: {
-    walletId: string;
+    walletId?: string;
     from?: string;
     to?: string;
     type: "income" | "expense" | "net";
   },
 ) => {
-  let query = client
-    .from("monthly_category_stats")
-    .select(
-      `
+  let query = client.from("monthly_category_stats").select(
+    `
       income_cents,
       outcome_cents,
       net_cents,
       transaction_count,
+      wallet_id,
       categories (
         id,
         name,
@@ -319,8 +322,12 @@ export const getCategoryPieChartData = async (
         type
       )
     `,
-    )
-    .eq("wallet_id", params.walletId);
+  );
+
+  // Filter by wallet if specified
+  if (params.walletId) {
+    query = query.eq("wallet_id", params.walletId);
+  }
 
   // Filter by date range if specified
   if (params.from) {
@@ -346,28 +353,31 @@ export const getCategoryPieChartData = async (
 export const getLabelPieChartData = async (
   client: TypedSupabaseClient,
   params: {
-    walletId: string;
+    walletId?: string;
     from?: string;
     to?: string;
     type: "income" | "expense" | "net";
   },
 ) => {
-  let query = client
-    .from("monthly_label_stats")
-    .select(
-      `
+  let query = client.from("monthly_label_stats").select(
+    `
       income_cents,
       outcome_cents,
       net_cents,
       transaction_count,
+      wallet_id,
       labels (
         id,
         name,
         color
       )
     `,
-    )
-    .eq("wallet_id", params.walletId);
+  );
+
+  // Filter by wallet if specified
+  if (params.walletId) {
+    query = query.eq("wallet_id", params.walletId);
+  }
 
   // Filter by date range if specified
   if (params.from) {
@@ -521,4 +531,154 @@ export const listRecurringTransactions = async (
 
   const { data, error } = await query;
   return { data, error };
+};
+
+export const getTransactionTotal = async (
+  client: TypedSupabaseClient,
+  params?: Filters & {
+    conversionRates?: Record<string, { rate: number } | CurrencyConversion>;
+    baseCurrency?: string;
+  },
+) => {
+  // Use the database function to calculate totals efficiently
+  // This avoids the 1000 record limit by using SQL aggregation directly
+  const { data, error } = await (client as any).rpc(
+    "get_transaction_total_by_currency",
+    {
+      p_wallet_id: params?.wallet_id || null,
+      p_from_date: params?.from || null,
+      p_to_date: params?.to || null,
+      p_label_id: params?.label_id || null,
+      p_category_id: params?.category_id || null,
+      p_tag: params?.tag || null,
+      p_type: params?.type || null,
+      p_transfer_id: params?.transfer_id || null,
+      p_description: params?.description || null,
+      p_id: params?.id || null,
+    },
+  );
+
+  if (error) {
+    // Fallback to the old method if the RPC function doesn't exist yet
+    let fallbackQuery = client
+      .from("transaction_list")
+      .select("currency, amount_cents", { count: "exact" });
+
+    // Date range filtering
+    if (params?.from && params?.to) {
+      fallbackQuery = fallbackQuery
+        .gte("date", params.from)
+        .lte("date", params.to);
+    }
+
+    // Filter by label_id if available
+    if (params?.label_id) {
+      fallbackQuery = fallbackQuery.eq("label_id", params.label_id);
+    }
+
+    // Filter by category_id if available
+    if (params?.category_id) {
+      fallbackQuery = fallbackQuery.eq("category_id", params.category_id);
+    }
+
+    // Filter by tag if available
+    if (params?.tag) {
+      fallbackQuery = fallbackQuery.contains("tag_ids", [params.tag]);
+    }
+
+    // Filter by type if available
+    if (params?.type) {
+      fallbackQuery = fallbackQuery.eq("type", params.type);
+    }
+
+    // Filter by wallet_id if available
+    if (params?.wallet_id) {
+      fallbackQuery = fallbackQuery.eq("wallet_id", params.wallet_id);
+    }
+
+    // Filter by transfer_id if available
+    if (params?.transfer_id) {
+      fallbackQuery = fallbackQuery.eq("transfer_id", params.transfer_id);
+    }
+
+    // Filter by description if available
+    if (params?.description) {
+      fallbackQuery = fallbackQuery.ilike(
+        "description",
+        `%${params.description}%`,
+      );
+    }
+
+    // Filter by id if available
+    if (params?.id) {
+      fallbackQuery = fallbackQuery.eq("id", params.id);
+    }
+
+    const fallbackResult = await fallbackQuery;
+
+    if (fallbackResult.error) {
+      return { data: null, error: fallbackResult.error, count: 0 };
+    }
+
+    // Group by currency and calculate totals
+    const currencyTotals = (fallbackResult.data || []).reduce(
+      (acc: Record<string, number>, transaction) => {
+        const currency = transaction.currency || "USD";
+        acc[currency] = (acc[currency] || 0) + (transaction.amount_cents || 0);
+        return acc;
+      },
+      {},
+    );
+
+    // Convert to base currency if conversion rates are provided
+    let total = 0;
+    if (params?.conversionRates && params?.baseCurrency) {
+      total = Object.entries(currencyTotals).reduce(
+        (sum, [currency, amount]) => {
+          const convertedAmount = convertCurrency(
+            amount,
+            currency,
+            params.baseCurrency!,
+            params.conversionRates!,
+          );
+          return sum + convertedAmount;
+        },
+        0,
+      );
+    } else {
+      // Calculate total across all currencies without conversion
+      total = Object.values(currencyTotals).reduce(
+        (sum: number, amount: number) => sum + amount,
+        0,
+      );
+    }
+
+    return { data: total, error: null, count: fallbackResult.count || 0 };
+  }
+
+  // Convert totals to base currency if conversion rates are provided
+  let total = 0;
+  if (params?.conversionRates && params?.baseCurrency) {
+    total = ((data as any[]) || []).reduce((sum: number, row: any) => {
+      const convertedAmount = convertCurrency(
+        row.total_cents || 0,
+        row.currency,
+        params.baseCurrency!,
+        params.conversionRates!,
+      );
+      return sum + convertedAmount;
+    }, 0);
+  } else {
+    // Calculate total across all currencies without conversion
+    total = ((data as any[]) || []).reduce((sum: number, row: any) => {
+      return sum + (row.total_cents || 0);
+    }, 0);
+  }
+
+  // Get total transaction count
+  const count = ((data as any[]) || []).reduce((sum: number, row: any) => {
+    return sum + (row.transaction_count || 0);
+  }, 0);
+
+  return { data: total, error: null, count };
 };

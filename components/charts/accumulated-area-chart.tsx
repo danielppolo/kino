@@ -27,6 +27,7 @@ import { useCurrency, useWallets } from "@/contexts/settings-context";
 import { createClient } from "@/utils/supabase/client";
 import { getWalletMonthlyBalances } from "@/utils/supabase/queries";
 import { Wallet } from "@/utils/supabase/types";
+import { convertToBaseCurrency } from "@/utils/currency-conversion";
 
 // Helper function for YAxis tick formatting since it can't use React components
 function formatCurrency(value: number, currency: string): string {
@@ -62,23 +63,27 @@ function calculateAccumulatedTotal(
   walletMap: Map<string, Wallet>,
   walletId?: string,
 ): ChartDataPoint[] {
-  console.log(monthlyBalances);
-  // Group by month and wallet, converting to base currency
-  const groupedByMonthAndWallet = monthlyBalances.reduce(
-    (acc, { month, balance_cents, wallet_id }) => {
+  // Convert all balances to base currency
+  const convertedBalances = convertToBaseCurrency(
+    monthlyBalances.map((balance) => ({
+      amount_cents: balance.balance_cents,
+      wallet_id: balance.wallet_id,
+      month: balance.month,
+    })),
+    conversionRates,
+    baseCurrency,
+    walletMap,
+  );
+
+  // Group by month and wallet
+  const groupedByMonthAndWallet = convertedBalances.reduce(
+    (acc, { month, amount_cents, wallet_id }) => {
       if (!acc[month]) {
         acc[month] = {};
       }
-      const wallet = walletMap.get(wallet_id);
-      if (!wallet) return acc;
-
-      const rate =
-        wallet.currency === baseCurrency
-          ? 1
-          : (conversionRates[wallet.currency]?.rate ?? 1);
-      const balanceInBaseCurrency = Math.round(balance_cents * rate);
-      acc[month][wallet_id] =
-        (acc[month][wallet_id] || 0) + balanceInBaseCurrency;
+      if (wallet_id) {
+        acc[month][wallet_id] = (acc[month][wallet_id] || 0) + amount_cents;
+      }
       return acc;
     },
     {} as Record<string, Record<string, number>>,
@@ -235,7 +240,6 @@ export function AccumulatedAreaChart({
       </Card>
     );
   }
-  console.log(chartData);
   if (!chartData || chartData.length === 0) {
     return (
       <Card>

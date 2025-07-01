@@ -36,7 +36,6 @@ export default function MergeTagsDialog({
 
   const mutation = useMutation({
     mutationFn: async () => {
-      console.log(target, selected);
       if (!target) return;
       await mergeTags(target, selected);
     },
@@ -74,7 +73,6 @@ export default function MergeTagsDialog({
             value={target}
             onChange={(value) => {
               setTarget(value);
-              console.log(value);
             }}
             placeholder="Target tag"
             className="relative w-full"
