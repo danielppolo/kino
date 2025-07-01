@@ -31,7 +31,10 @@ export default async function Layout({ children }: LayoutProps) {
   const currencies = Array.from(new Set(wallets.map((w) => w.currency)));
 
   // Fetch conversion rates on the server
-  const conversionRates = await fetchAllConversions(currencies, baseCurrency);
+  const conversionRates = await fetchAllConversions({
+    baseCurrency,
+    currencies,
+  });
 
   return (
     <Providers>
