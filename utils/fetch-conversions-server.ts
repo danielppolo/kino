@@ -76,8 +76,8 @@ export async function fetchConversion(
     .from("currency_conversions")
     .upsert(
       {
-        source_currency: sourceCurrency,
-        target_currency: targetCurrency,
+        source_currency: targetCurrency,
+        target_currency: sourceCurrency,
         rate: rate,
         updated_at: new Date().toISOString(),
         date: new Date().toISOString(),
