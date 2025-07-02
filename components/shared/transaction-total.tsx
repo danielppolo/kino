@@ -2,17 +2,17 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { Badge } from "../ui/badge";
-
 import { Money } from "@/components/ui/money";
 import { useCurrency } from "@/contexts/settings-context";
 import useFilters from "@/hooks/use-filters";
 import { createClient } from "@/utils/supabase/client";
-import { type Filters, getTransactionTotal } from "@/utils/supabase/queries";
+import { getTransactionTotalBase } from "@/utils/supabase/queries";
+import { Badge } from "../ui/badge";
+import { Filters } from "@/contexts/filter-context";
 
 export default function TransactionTotal() {
   const filters = useFilters();
-  const { conversionRates, baseCurrency } = useCurrency();
+  const { baseCurrency } = useCurrency();
 
   // Check if there are any active filters (excluding wallet_id which is always present)
   const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
@@ -29,7 +29,7 @@ export default function TransactionTotal() {
   });
 
   const { data: total } = useQuery({
-    queryKey: ["transaction-total", filters, conversionRates, baseCurrency],
+    queryKey: ["transaction-total", filters],
     queryFn: async () => {
       const supabase = createClient();
       // Convert empty strings to undefined for the query
@@ -47,10 +47,8 @@ export default function TransactionTotal() {
         transfer_id: (filters as any).transfer_id || undefined,
         description: (filters as any).description || undefined,
         id: (filters as any).id || undefined,
-        conversionRates,
-        baseCurrency,
       };
-      const result = await getTransactionTotal(supabase, queryFilters);
+      const result = await getTransactionTotalBase(supabase, queryFilters);
       if (result.error) {
         throw result.error;
       }

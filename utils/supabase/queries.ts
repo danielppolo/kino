@@ -688,3 +688,27 @@ export const getTransactionTotal = async (
 
   return { data: total, error: null, count };
 };
+
+export const getTransactionTotalBase = async (
+  client: TypedSupabaseClient,
+  params?: Filters,
+) => {
+  const { data, error } = await (client as any).rpc("get_transaction_total", {
+    p_wallet_id: params?.wallet_id || null,
+    p_from_date: params?.from || null,
+    p_to_date: params?.to || null,
+    p_label_id: params?.label_id || null,
+    p_category_id: params?.category_id || null,
+    p_tag: params?.tag || null,
+    p_type: params?.type || null,
+    p_transfer_id: params?.transfer_id || null,
+    p_description: params?.description || null,
+    p_id: params?.id || null,
+  });
+
+  if (error) {
+    return { data: null, error } as const;
+  }
+
+  return { data: data as number, error: null } as const;
+};

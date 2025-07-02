@@ -443,8 +443,10 @@ export type Database = {
       transactions: {
         Row: {
           amount_cents: number
+          base_amount_cents: number | null
           category_id: string | null
           created_at: string | null
+          conversion_rate_to_base: string | null
           currency: string
           date: string
           description: string | null
@@ -458,8 +460,10 @@ export type Database = {
         }
         Insert: {
           amount_cents: number
+          base_amount_cents?: number | null
           category_id?: string | null
           created_at?: string | null
+          conversion_rate_to_base?: string | null
           currency: string
           date: string
           description?: string | null
@@ -473,8 +477,10 @@ export type Database = {
         }
         Update: {
           amount_cents?: number
+          base_amount_cents?: number | null
           category_id?: string | null
           created_at?: string | null
+          conversion_rate_to_base?: string | null
           currency?: string
           date?: string
           description?: string | null

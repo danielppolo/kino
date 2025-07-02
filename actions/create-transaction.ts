@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { createClient } from "@/utils/supabase/client";
+import { fetchConversion } from "@/utils/fetch-conversion";
 
 const TransactionSchema = z.object({
   id: z.string().uuid().optional(),
@@ -25,18 +26,34 @@ export const createTransaction = async (transaction: Transaction) => {
   }
   const supabase = await createClient();
 
-  const { amount, type, id, ...rest } = validatedData.data;
+  const { amount, type, id, currency, ...rest } = validatedData.data;
+
+  // Fetch user base currency preference
+  const { data: pref } = await supabase
+    .from("user_preferences")
+    .select("base_currency")
+    .maybeSingle();
+  const baseCurrency = pref?.base_currency || "USD";
+
+  // Fetch conversion rate to base currency
+  const conversion = await fetchConversion(currency, baseCurrency);
+  const rate = conversion.rate;
+
+  const signedAmount =
+    type === "expense" ? -Math.round(amount * 100) : Math.round(amount * 100);
+  const baseAmount = Math.round((amount * 100) * rate);
+  const signedBaseAmount = type === "expense" ? -baseAmount : baseAmount;
 
   const { error, data } = await supabase
     .from("transactions")
     .upsert({
       id,
       ...rest,
+      currency,
       type,
-      amount_cents:
-        type === "expense"
-          ? Math.round(-amount * 100)
-          : Math.round(amount * 100),
+      amount_cents: signedAmount,
+      base_amount_cents: signedBaseAmount,
+      conversion_rate_to_base: rate.toString(),
     })
     .select();
 

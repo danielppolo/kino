@@ -80,7 +80,7 @@ export async function fetchConversion(
         target_currency: sourceCurrency,
         rate: rate,
         updated_at: new Date().toISOString(),
-        date: new Date().toISOString(),
+        date: date ?? new Date().toISOString(),
       },
       {
         onConflict: "source_currency,target_currency,date",
