@@ -24,6 +24,7 @@ export function TransactionLink({
   children,
   className,
   preserveSearchParams = true,
+  ...props
 }: TransactionLinkProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -38,7 +39,7 @@ export function TransactionLink({
   });
 
   return (
-    <Link href={href} className={className}>
+    <Link href={href} className={className} {...props}>
       {children}
     </Link>
   );
