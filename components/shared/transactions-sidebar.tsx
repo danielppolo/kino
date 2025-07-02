@@ -2,7 +2,7 @@
 
 import { endOfMonth, format, startOfMonth } from "date-fns";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -26,6 +26,8 @@ import { deleteViews } from "@/utils/supabase/mutations";
 
 export function TransactionsSidebar() {
   const searchParams = useSearchParams();
+  const { walletId } = useParams();
+  const pathname = usePathname();
   const { walletsByCurrency } = useTotalBalance();
   const [views] = useViews();
   const queryClient = useQueryClient();
@@ -97,10 +99,7 @@ export function TransactionsSidebar() {
             <SidebarMenu>
               {currencyWallets.map((wallet) => (
                 <SidebarMenuItem key={wallet.id}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={searchParams.get("walletId") === wallet.id}
-                  >
+                  <SidebarMenuButton asChild isActive={walletId === wallet.id}>
                     <TransactionLink
                       walletId={wallet.id}
                       from={fromDate}
