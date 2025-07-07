@@ -52,6 +52,7 @@ const CsvTransactionUploader = ({
   const [, labelsMap] = useLabels("name");
   const [open, setOpen] = useState(false);
   const [csvData, setCsvData] = useState<Row[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [options, setOptions] = useState({
     missingCategory: "new",
     missingLabel: "new",
@@ -107,6 +108,7 @@ const CsvTransactionUploader = ({
   };
 
   const handleSubmit = async () => {
+    setIsSubmitting(true);
     const transactions = csvData.map((row) => ({
       amount: row.amount
         ? row.type === "expense"
@@ -134,10 +136,13 @@ const CsvTransactionUploader = ({
 
     if (error) {
       console.error(error);
-      return toast.error("Failed to import transactions");
+      toast.error("Failed to import transactions");
+      setIsSubmitting(false);
+      return;
     }
     toast.success("Transactions imported successfully");
     setOpen(false);
+    setIsSubmitting(false);
   };
 
   const handleClose = () => {
@@ -173,7 +178,9 @@ const CsvTransactionUploader = ({
           <TransactionListPreview transactions={csvDisplayData} />
           <DialogFooter>
             <form action={handleSubmit}>
-              <SubmitButton>Submit Transactions</SubmitButton>
+              <SubmitButton isLoading={isSubmitting}>
+                Submit Transactions
+              </SubmitButton>
             </form>
           </DialogFooter>
         </DialogContent>

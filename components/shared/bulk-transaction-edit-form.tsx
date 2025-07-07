@@ -67,6 +67,8 @@ export default function BulkTransactionEditForm({
     },
   });
 
+  const isLoading = mutation.isPending;
+
   const defaultValues: FormValues = {
     category_id: "",
     label_id: "",
@@ -86,6 +88,7 @@ export default function BulkTransactionEditForm({
         await mutation.mutateAsync(values);
         return { error: undefined };
       }}
+      isLoading={isLoading}
     >
       {commonType && (
         <FormField

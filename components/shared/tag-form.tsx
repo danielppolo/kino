@@ -73,6 +73,11 @@ const TagForm = ({ tag, onSuccess, open, onOpenChange }: TagFormProps) => {
     },
   });
 
+  const isLoading =
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    deleteMutation.isPending;
+
   const defaultValues: TagFormValues = { title: "", group: "" };
 
   const handleSubmit = (values: TagFormValues) => {
@@ -128,6 +133,7 @@ const TagForm = ({ tag, onSuccess, open, onOpenChange }: TagFormProps) => {
       defaultValues={defaultValues}
       onSubmit={handleSubmit}
       onDelete={handleDelete}
+      isLoading={isLoading}
     >
       <FormField
         name="title"

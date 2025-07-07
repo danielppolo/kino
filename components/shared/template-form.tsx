@@ -96,6 +96,11 @@ const TemplateForm = ({
     },
   });
 
+  const isLoading =
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    deleteMutation.isPending;
+
   const defaultValues: TemplateFormValues = {
     id: undefined,
     name: "",
@@ -192,6 +197,7 @@ const TemplateForm = ({
       defaultValues={defaultValues}
       onSubmit={handleSubmit}
       onDelete={handleDelete}
+      isLoading={isLoading}
     >
       <FormField
         name="name"
