@@ -132,6 +132,7 @@ const ExpenseIncomeForm = ({
         resetValues: {
           ...defaultValues,
           date: prevDate,
+          amount: undefined,
         },
       };
     }
