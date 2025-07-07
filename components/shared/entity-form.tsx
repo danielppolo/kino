@@ -63,18 +63,9 @@ export function EntityForm<T extends FieldValues>({
     toast.success(isEdit ? "Updated successfully!" : "Created successfully!");
 
     if (addAnother) {
-      // Reset form but keep the date field if it exists
-      const dateValue = values.date;
-      const tagsValue = values.tags;
-      const categoryValue = values.category_id;
-      const labelValue = values.label_id;
+      // Reset form but keep only the date field
       form.reset({
         ...defaultValues,
-        tags: tagsValue,
-        category_id: categoryValue,
-        label_id: labelValue,
-        date: dateValue,
-        amount: undefined,
       } as T);
       return;
     }
