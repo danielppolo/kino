@@ -102,6 +102,11 @@ const CategoryForm = ({
     },
   });
 
+  const isLoading =
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    deleteMutation.isPending;
+
   const handleSubmit = (values: CategoryFormValues) => {
     return new Promise<{ error?: string }>((resolve) => {
       if (category) {
@@ -155,6 +160,7 @@ const CategoryForm = ({
       defaultValues={defaultValues}
       onSubmit={handleSubmit}
       onDelete={handleDelete}
+      isLoading={isLoading}
     >
       <div className="flex gap-4">
         {/* <div className="flex-1">

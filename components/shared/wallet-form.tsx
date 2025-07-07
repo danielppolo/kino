@@ -88,7 +88,7 @@ const WalletForm = ({ onSuccess }: WalletFormProps) => {
           )}
         />
 
-        <SubmitButton>Add wallet</SubmitButton>
+        <SubmitButton isLoading={mutation.isPending}>Add wallet</SubmitButton>
       </form>
     </Form>
   );

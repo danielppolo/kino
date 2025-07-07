@@ -88,6 +88,8 @@ const LabelForm = ({
     },
   });
 
+  const isLoading = createMutation.isPending || updateMutation.isPending;
+
   const onSubmit = (values: LabelFormValues) => {
     if (isEdit) {
       updateMutation.mutate(values);
@@ -161,8 +163,12 @@ const LabelForm = ({
               )}
             />
           </div>
-          <Button type="submit" size="sm" className="w-full">
-            {isEdit ? "Save Changes" : "Save"}
+          <Button type="submit" size="sm" className="w-full" disabled={isLoading}>
+            {isLoading
+              ? "Saving..."
+              : isEdit
+                ? "Save Changes"
+                : "Save"}
           </Button>
         </form>
       </Form>

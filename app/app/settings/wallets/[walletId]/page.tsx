@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { format } from "date-fns";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
@@ -22,6 +22,7 @@ export default function Page() {
   const [, walletsMap] = useWallets();
   const wallet = walletsMap.get(params.walletId as string);
   const formRef = useRef<HTMLFormElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const queryClient = useQueryClient();
 
   const visibilityMutation = useMutation({
@@ -47,12 +48,14 @@ export default function Page() {
   });
 
   const handleExport = async () => {
+    setIsExporting(true);
     const { error, data } = await exportTransactions({
       wallet_id: params.walletId as string,
     });
 
     if (error) {
       toast.error("Error exporting transactions");
+      setIsExporting(false);
       return;
     }
 
@@ -70,6 +73,7 @@ export default function Page() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     formRef.current?.reset();
+    setIsExporting(false);
   };
 
   const handleVisibilityToggle = async (checked: boolean) => {
@@ -128,7 +132,7 @@ export default function Page() {
           <div>
             <Subtitle>Export</Subtitle>
             <form action={handleExport} ref={formRef}>
-              <SubmitButton>Export</SubmitButton>
+              <SubmitButton isLoading={isExporting}>Export</SubmitButton>
             </form>
           </div>
         </CardContent>
