@@ -26,6 +26,8 @@ interface EntityFormProps<T extends FieldValues> {
   onDelete?: (entity: T) => Promise<{ error?: string }>;
   children: React.ReactNode;
   isLoading?: boolean;
+  customTitle?: string;
+  submitLabel?: string;
 }
 
 export function EntityForm<T extends FieldValues>({
@@ -42,6 +44,8 @@ export function EntityForm<T extends FieldValues>({
   onDelete,
   children,
   isLoading,
+  customTitle,
+  submitLabel,
 }: EntityFormProps<T>) {
   const isEdit = !!entity;
   const form = useForm<T>({
@@ -86,7 +90,7 @@ export function EntityForm<T extends FieldValues>({
 
   return (
     <DrawerDialog
-      title={isEdit ? `Edit ${title}` : `Add ${title}`}
+      title={customTitle || isEdit ? `Edit ${title}` : `Add ${title}`}
       open={open}
       onOpenChange={onOpenChange}
     >
@@ -125,7 +129,7 @@ export function EntityForm<T extends FieldValues>({
                 </Button>
               )}
               <Button type="submit" size="sm" disabled={isLoading}>
-                {isEdit ? "Update" : "Create"}
+                {submitLabel || (isEdit ? "Update" : "Create")}
               </Button>
             </div>
           </div>

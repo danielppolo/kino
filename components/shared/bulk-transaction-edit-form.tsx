@@ -80,6 +80,8 @@ export default function BulkTransactionEditForm({
       open={open}
       onOpenChange={onOpenChange}
       defaultValues={defaultValues}
+      customTitle="Edit Transactions"
+      submitLabel="Update"
       onSubmit={async (values) => {
         await mutation.mutateAsync(values);
         return { error: undefined };
@@ -93,6 +95,7 @@ export default function BulkTransactionEditForm({
               <FormControl>
                 <CategoryCombobox
                   {...field}
+                  selectionType="combobox"
                   type={commonType}
                   className="w-full"
                 />

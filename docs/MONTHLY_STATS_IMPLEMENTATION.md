@@ -224,6 +224,15 @@ CREATE INDEX monthly_label_stats_wallet_label_idx ON monthly_label_stats(wallet_
 2. `20250623134255_create_monthly_label_stats.sql` - Creates label stats table and triggers
 3. `20250623134503_backfill_monthly_category_label_stats.sql` - Populates tables with existing data
 
+## Scheduled Backfill Job
+
+Monthly stats and balances are normally created when transactions occur. To
+ensure wallets without activity still get records for the new month, a cron job
+runs on the first day of every month. It calls the `backfill_wallet_monthly_balances`
+and `backfill_monthly_stats_with_transfers` functions via the
+`/api/cron/monthly-backfill` route. The schedule is defined in `vercel.json` as
+`0 0 1 * *`.
+
 ## Demo Page
 
 A demo page is available at `/app/charts` that shows how to use the pie chart components with the new data structure.

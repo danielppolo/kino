@@ -3,6 +3,10 @@
         {
             "path": "/api/cron/daily-conversions",
             "schedule": "1 0 * * *"
+        },
+        {
+            "path": "/api/cron/monthly-backfill",
+            "schedule": "0 0 1 * *"
         }
     ]
 }
