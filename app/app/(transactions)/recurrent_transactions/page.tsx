@@ -43,7 +43,6 @@ export default function Page() {
       </div>
       <RecurringTransactionsSection onEdit={handleEdit} />
       <RecurringTransactionForm
-        walletId=""
         recurring={editItem || undefined}
         open={open}
         onOpenChange={setOpen}

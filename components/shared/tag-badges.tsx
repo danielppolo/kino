@@ -2,12 +2,12 @@ import React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { Badge } from "../ui/badge";
+import Color from "./color";
 import LinkTransferButton from "./link-transfer-button";
 
 import { useLabels, useTags } from "@/contexts/settings-context";
 import { cn } from "@/lib/utils";
 import { TransactionList } from "@/utils/supabase/types";
-import Color from "./color";
 
 interface TagBadgesProps {
   transaction: TransactionList;

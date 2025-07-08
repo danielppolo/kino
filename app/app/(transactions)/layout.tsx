@@ -1,7 +1,6 @@
 import React from "react";
 
 import ChartToggle from "./(components)/chart-toggle";
-import RecurringToggle from "./(components)/recurring-toggle";
 import MonthPagination from "./transactions/(components)/month-pagination";
 
 import { AddTransactionDropdown } from "@/components/shared/add-transaction-dropdown";
@@ -31,7 +30,6 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
             </div>
             <div className="flex items-center gap-2">
               <TransactionTotal />
-              <RecurringToggle />
               <SaveViewButton />
               <ChartToggle />
               <SortDropdown />

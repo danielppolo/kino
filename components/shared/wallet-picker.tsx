@@ -1,78 +1,99 @@
 "use client";
 
-import React, { forwardRef, useState } from "react";
-import { ChevronsUpDown } from "lucide-react";
+import React from "react";
 
-import { Button } from "../ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "../ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-
+import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 import { useWallets } from "@/contexts/settings-context";
+import { Wallet } from "@/utils/supabase/types";
 
 interface WalletPickerProps {
   value?: string;
   currency?: string;
   exclude?: string;
   onChange?: (id: string) => void;
+  size?: "sm" | "default" | "lg";
+  variant?: "ghost" | "outline" | "default" | "secondary" | "destructive";
+  placeholder?: string;
+  className?: string;
+  icon?: React.ReactNode;
 }
 
-const WalletPicker = forwardRef<HTMLButtonElement, WalletPickerProps>(
-  ({ onChange, value, currency, exclude }) => {
-    const [open, setOpen] = useState(false);
-    const [wallets, walletMap] = useWallets();
-    const filteredWallets = wallets
-      .filter((wallet) => {
-        if (exclude && wallet.id === exclude) return false;
-        return !currency || wallet.currency === currency;
-      })
-      .sort((a, b) => a.name.localeCompare(b.name));
-    return (
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between"
-          >
-            {value ? walletMap.get(value)?.name : "Select wallet..."}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[200px] p-0">
-          <Command>
-            <CommandInput placeholder="Search wallet..." />
-            <CommandList>
-              <CommandEmpty>No wallet found.</CommandEmpty>
-              <CommandGroup>
-                {filteredWallets?.map((wallet) => (
-                  <CommandItem
-                    key={wallet.id}
-                    value={wallet.id}
-                    onSelect={() => {
-                      onChange?.(wallet.id === value ? "" : wallet.id);
-                      setOpen(false);
-                    }}
-                  >
-                    {wallet.name}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
-    );
-  },
-);
+const WalletPicker = ({
+  onChange,
+  value,
+  currency,
+  exclude,
+  size = "default",
+  variant = "outline",
+  placeholder = "Select wallet...",
+  className,
+  icon,
+}: WalletPickerProps) => {
+  const [wallets] = useWallets();
 
-WalletPicker.displayName = "WalletPicker";
+  const filteredWallets = wallets
+    .filter((wallet) => {
+      if (exclude && wallet.id === exclude) return false;
+      return !currency || wallet.currency === currency;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const options: ComboboxOption[] = filteredWallets.map((wallet) => ({
+    value: wallet.id,
+    label: wallet.name,
+    keywords: [wallet.name.toLowerCase(), wallet.currency ?? ""],
+  }));
+
+  const walletMapMemo = React.useMemo(() => {
+    const map = new Map<string, Wallet>();
+    wallets.forEach((w) => map.set(w.id, w));
+    return map;
+  }, [wallets]);
+
+  return (
+    <Combobox
+      variant={variant}
+      size={size}
+      icon={icon}
+      options={options}
+      value={value ?? ""}
+      onChange={onChange ?? (() => {})}
+      placeholder={placeholder}
+      className={className}
+      renderValue={(option) => {
+        const wallet = option && walletMapMemo.get(option.value);
+        if (wallet) {
+          return (
+            <span className="flex items-center gap-2">
+              <span>{wallet.name}</span>
+              {wallet.currency && (
+                <span className="text-muted-foreground text-xs">
+                  ({wallet.currency})
+                </span>
+              )}
+            </span>
+          );
+        }
+        return placeholder;
+      }}
+      renderOption={(option) => {
+        const wallet = walletMapMemo.get(option.value);
+        if (wallet) {
+          return (
+            <span className="flex items-center gap-2">
+              <span>{wallet.name}</span>
+              {wallet.currency && (
+                <span className="text-muted-foreground text-xs">
+                  ({wallet.currency})
+                </span>
+              )}
+            </span>
+          );
+        }
+        return option.label;
+      }}
+    />
+  );
+};
 
 export default WalletPicker;

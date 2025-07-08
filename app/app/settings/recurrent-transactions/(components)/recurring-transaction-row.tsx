@@ -1,0 +1,50 @@
+"use client";
+
+import TransactionAmount from "@/components/shared/transaction-amount";
+import TransactionDescription from "@/components/shared/transaction-description";
+import { Badge } from "@/components/ui/badge";
+import Row from "@/components/ui/row";
+import { useWallets } from "@/contexts/settings-context";
+import { RecurringTransaction } from "@/utils/supabase/types";
+
+interface RecurringTransactionRowProps {
+  transaction: RecurringTransaction;
+  onClick: () => void;
+}
+
+export default function RecurringTransactionRow({
+  transaction,
+  onClick,
+}: RecurringTransactionRowProps) {
+  const [, walletMap] = useWallets();
+  return (
+    <Row onClick={onClick}>
+      <div className="shrink grow truncate">
+        <TransactionDescription transaction={transaction as any} />
+      </div>
+      <div className="shrink-0">
+        <div className="relative hidden flex-wrap items-center gap-1 md:flex">
+          <Badge
+            variant="outline"
+            className="bg-background cursor-pointer text-xs"
+          >
+            {transaction.interval_type}
+          </Badge>
+          <Badge
+            variant="outline"
+            className="bg-background cursor-pointer text-xs"
+          >
+            {walletMap.get(transaction.wallet_id)?.name}
+          </Badge>
+        </div>
+      </div>
+      <div className="shrink-0">
+        <TransactionAmount
+          className="text-right"
+          amount={transaction.amount_cents!}
+          currency={transaction.currency!}
+        />
+      </div>
+    </Row>
+  );
+}

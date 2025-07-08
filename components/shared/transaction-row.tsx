@@ -1,9 +1,9 @@
 import React, { memo } from "react";
 
+import SelectableRow from "./selectable-row";
 import TagBadges from "./tag-badges";
 import TransactionAmount from "./transaction-amount";
 import TransactionDescription from "./transaction-description";
-import SelectableRow from "./selectable-row";
 
 import { TransactionList } from "@/utils/supabase/types";
 

@@ -200,10 +200,11 @@ export const getMonthlyCategoryStats = async (
     type?: "income" | "expense" | "net";
   },
 ) => {
-  let query = client
-    .from("monthly_category_stats")
-    .select(
-      `
+  const buildQuery = () => {
+    let query = client
+      .from("monthly_category_stats")
+      .select(
+        `
       *,
       categories (
         id,
@@ -212,37 +213,62 @@ export const getMonthlyCategoryStats = async (
         type
       )
     `,
-    )
-    .order("month", { ascending: true });
+      )
+      .order("month", { ascending: true });
 
-  if (params.walletId) {
-    query = query.eq("wallet_id", params.walletId);
-  }
-
-  if (params.categoryId) {
-    query = query.eq("category_id", params.categoryId);
-  }
-
-  if (params.from) {
-    query = query.gte("month", params.from);
-  }
-
-  if (params.to) {
-    query = query.lte("month", params.to);
-  }
-
-  // Filter by type if specified
-  if (params.type) {
-    if (params.type === "income") {
-      query = query.gt("income_cents", 0);
-    } else if (params.type === "expense") {
-      query = query.lt("outcome_cents", 0);
-    } else if (params.type === "net") {
-      query = query.neq("net_cents", 0);
+    if (params.walletId) {
+      query = query.eq("wallet_id", params.walletId);
     }
+
+    if (params.categoryId) {
+      query = query.eq("category_id", params.categoryId);
+    }
+
+    if (params.from) {
+      query = query.gte("month", params.from);
+    }
+
+    if (params.to) {
+      query = query.lte("month", params.to);
+    }
+
+    if (params.type) {
+      if (params.type === "income") {
+        query = query.gt("income_cents", 0);
+      } else if (params.type === "expense") {
+        query = query.lt("outcome_cents", 0);
+      } else if (params.type === "net") {
+        query = query.neq("net_cents", 0);
+      }
+    }
+
+    return query;
+  };
+
+  const pageSize = 1000;
+  let fromIndex = 0;
+  let allData: any[] = [];
+
+  while (true) {
+    const { data, error } = await buildQuery().range(
+      fromIndex,
+      fromIndex + pageSize - 1,
+    );
+
+    if (error) {
+      return { data: null, error } as const;
+    }
+
+    allData = allData.concat(data ?? []);
+
+    if (!data || data.length < pageSize) {
+      break;
+    }
+
+    fromIndex += pageSize;
   }
 
-  return query;
+  return { data: allData, error: null } as const;
 };
 
 // Monthly Label Stats Queries
@@ -256,10 +282,11 @@ export const getMonthlyLabelStats = async (
     type?: "income" | "expense" | "net";
   },
 ) => {
-  let query = client
-    .from("monthly_label_stats")
-    .select(
-      `
+  const buildQuery = () => {
+    let query = client
+      .from("monthly_label_stats")
+      .select(
+        `
       *,
       labels (
         id,
@@ -267,37 +294,62 @@ export const getMonthlyLabelStats = async (
         color
       )
     `,
-    )
-    .order("month", { ascending: true });
+      )
+      .order("month", { ascending: true });
 
-  if (params.walletId) {
-    query = query.eq("wallet_id", params.walletId);
-  }
-
-  if (params.labelId) {
-    query = query.eq("label_id", params.labelId);
-  }
-
-  if (params.from) {
-    query = query.gte("month", params.from);
-  }
-
-  if (params.to) {
-    query = query.lte("month", params.to);
-  }
-
-  // Filter by type if specified
-  if (params.type) {
-    if (params.type === "income") {
-      query = query.gt("income_cents", 0);
-    } else if (params.type === "expense") {
-      query = query.lt("outcome_cents", 0);
-    } else if (params.type === "net") {
-      query = query.neq("net_cents", 0);
+    if (params.walletId) {
+      query = query.eq("wallet_id", params.walletId);
     }
+
+    if (params.labelId) {
+      query = query.eq("label_id", params.labelId);
+    }
+
+    if (params.from) {
+      query = query.gte("month", params.from);
+    }
+
+    if (params.to) {
+      query = query.lte("month", params.to);
+    }
+
+    if (params.type) {
+      if (params.type === "income") {
+        query = query.gt("income_cents", 0);
+      } else if (params.type === "expense") {
+        query = query.lt("outcome_cents", 0);
+      } else if (params.type === "net") {
+        query = query.neq("net_cents", 0);
+      }
+    }
+
+    return query;
+  };
+
+  const pageSize = 1000;
+  let fromIndex = 0;
+  let allData: any[] = [];
+
+  while (true) {
+    const { data, error } = await buildQuery().range(
+      fromIndex,
+      fromIndex + pageSize - 1,
+    );
+
+    if (error) {
+      return { data: null, error } as const;
+    }
+
+    allData = allData.concat(data ?? []);
+
+    if (!data || data.length < pageSize) {
+      break;
+    }
+
+    fromIndex += pageSize;
   }
 
-  return query;
+  return { data: allData, error: null } as const;
 };
 
 // Get category pie chart data for a specific month or date range
@@ -520,15 +572,29 @@ export const getTagTransactionCounts = async (
 
 export const listRecurringTransactions = async (
   client: TypedSupabaseClient,
-  params?: { walletId?: string },
+  params?: { walletId?: string; type?: "income" | "expense" },
 ) => {
   let query = client
     .from("recurring_transactions")
-    .select("*")
+    .select(
+      `
+      *,
+      categories (
+        id,
+        name,
+        type,
+        icon
+      )
+    `,
+    )
     .order("start_date", { ascending: false });
 
   if (params?.walletId) {
     query = query.eq("wallet_id", params.walletId);
+  }
+
+  if (params?.type) {
+    query = query.eq("type", params.type);
   }
 
   const { data, error } = await query;

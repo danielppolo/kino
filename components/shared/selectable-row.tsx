@@ -1,5 +1,8 @@
 import React, { memo } from "react";
+
 import { Checkbox } from "../ui/checkbox";
+import Row from "../ui/row";
+
 import { cn } from "@/lib/utils";
 
 interface SelectableRowProps {
@@ -22,13 +25,9 @@ export function SelectableRow({
   className = "",
 }: SelectableRowProps) {
   return (
-    <div
+    <Row
       id={id}
-      className={cn(
-        "group hover:bg-accent/50 relative flex h-10 cursor-pointer items-center gap-2 px-4 transition-all duration-200 ease-in-out",
-        selected && "pl-10",
-        className,
-      )}
+      className={cn(selected && "pl-10", className)}
       onClick={onClick}
     >
       <div
@@ -43,7 +42,7 @@ export function SelectableRow({
         <Checkbox checked={selected} aria-label="Select" />
       </div>
       {children}
-    </div>
+    </Row>
   );
 }
 
