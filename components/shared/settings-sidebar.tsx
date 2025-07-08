@@ -81,6 +81,16 @@ const SettingsSidebar: React.FC = () => {
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
+                isActive={pathname === "/app/settings/recurrent-transactions"}
+              >
+                <Link href="/app/settings/recurrent-transactions">
+                  Recurring Transactions
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
                 isActive={pathname === "/app/settings/profile"}
               >
                 <Link href="/app/settings/profile">Profile</Link>

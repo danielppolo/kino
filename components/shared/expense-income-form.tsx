@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { format } from "date-fns";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -10,8 +10,6 @@ import { AmountInput } from "./amount-input";
 import { DescriptionInput } from "./description-input";
 import LabelCombobox from "./label-combobox";
 import TagMultiSelect from "./tag-multi-select";
-import TemplateCombobox from "./template-combobox";
-import { useFormContext } from "react-hook-form";
 
 import { createTransaction } from "@/actions/create-transaction";
 import CategoryCombobox from "@/components/shared/category-combobox";
@@ -22,10 +20,10 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import { useTags, useWallets, useTemplates } from "@/contexts/settings-context";
+import { useTags, useWallets } from "@/contexts/settings-context";
 import useFilters from "@/hooks/use-filters";
 import { deleteTransaction } from "@/utils/supabase/mutations";
-import { Transaction, TransactionTemplate } from "@/utils/supabase/types";
+import { Transaction } from "@/utils/supabase/types";
 
 interface TransactionPage {
   data: Transaction[];
@@ -251,12 +249,11 @@ const ExpenseIncomeForm = ({
 
       <FormField
         name="tags"
-        render={({ field: { onChange, ...field } }) => (
+        render={({ field }) => (
           <FormItem>
             <FormControl>
               <TagMultiSelect
                 {...field}
-                onChange={onChange}
                 options={availableTags}
                 className="w-full"
               />

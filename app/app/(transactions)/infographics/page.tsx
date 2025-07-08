@@ -3,7 +3,6 @@ import React from "react";
 import { AccumulatedAreaChart } from "@/components/charts/accumulated-area-chart";
 import { CashflowAreaChart } from "@/components/charts/cashflow-area-chart";
 import LabelAreaChart from "@/components/charts/label-area-chart";
-import CategoryPieChart from "@/components/charts/category-pie-chart";
 import LabelPieChart from "@/components/charts/label-pie-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Filters } from "@/utils/supabase/queries";

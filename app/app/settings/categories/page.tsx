@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Combine, Plus, SquaresUnite, Trash2 } from "lucide-react";
+import { Plus, SquaresUnite, Trash2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
@@ -9,15 +9,14 @@ import CategorySection from "./(components)/category-section";
 import DeleteCategoriesDialog from "./(components)/delete-categories-dialog";
 import MergeCategoriesDialog from "./(components)/merge-categories-dialog";
 
-import CategoryForm from "@/components/shared/category-form";
 import { BulkActions } from "@/components/shared/bulk-actions";
-import { TooltipButton } from "@/components/ui/tooltip-button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Title } from "@/components/ui/typography";
-import { useCategories } from "@/contexts/settings-context";
-import { Category } from "@/utils/supabase/types";
+import CategoryForm from "@/components/shared/category-form";
 import PageHeader from "@/components/shared/page-header";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TooltipButton } from "@/components/ui/tooltip-button";
+import { useCategories } from "@/contexts/settings-context";
 import { useSelection } from "@/hooks/use-selection";
+import { Category } from "@/utils/supabase/types";
 
 export default function Page() {
   const [categories] = useCategories();

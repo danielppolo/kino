@@ -451,6 +451,7 @@ export const createRecurringTransaction = async (data: {
   interval_type: string;
   start_date: string;
   end_date?: string | null;
+  tags?: string[] | null;
 }) => {
   const supabase = await createClient();
   const { data: result, error } = await supabase
@@ -464,6 +465,7 @@ export const createRecurringTransaction = async (data: {
 export const updateRecurringTransaction = async (
   id: string,
   data: {
+    wallet_id?: string;
     category_id?: string;
     label_id?: string | null;
     amount_cents?: number;
@@ -472,6 +474,7 @@ export const updateRecurringTransaction = async (
     interval_type?: string;
     start_date?: string;
     end_date?: string | null;
+    tags?: string[] | null;
   },
 ) => {
   const supabase = await createClient();

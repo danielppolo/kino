@@ -26,4 +26,11 @@ export interface RecurringTransaction {
   start_date: string;
   end_date?: string | null;
   next_run_date?: string | null;
+  tags?: string[] | null;
+  categories?: {
+    id: string;
+    name: string;
+    type: string;
+    icon: string;
+  } | null;
 }
