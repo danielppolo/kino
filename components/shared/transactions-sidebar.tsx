@@ -1,33 +1,33 @@
 "use client";
 
 import { endOfMonth, format, startOfMonth } from "date-fns";
+import { X } from "lucide-react";
 import Link from "next/link";
-import { useParams, usePathname, useSearchParams } from "next/navigation";
-import { Trash2, X } from "lucide-react";
+import { useParams, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { SidebarWrapper } from "./sidebar-wrapper";
 import { TransactionLink } from "./transaction-link";
 
+import { Money } from "@/components/ui/money";
 import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuAction,
 } from "@/components/ui/sidebar";
-import { Money } from "@/components/ui/money";
-import { useTotalBalance } from "@/hooks/use-total-balance";
 import { useViews } from "@/contexts/settings-context";
+import { useTotalBalance } from "@/hooks/use-total-balance";
 import { deleteViews } from "@/utils/supabase/mutations";
 
 export function TransactionsSidebar() {
   const searchParams = useSearchParams();
   const { walletId } = useParams();
-  const pathname = usePathname();
   const { walletsByCurrency } = useTotalBalance();
   const [views] = useViews();
   const queryClient = useQueryClient();

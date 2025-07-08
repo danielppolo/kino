@@ -52,5 +52,5 @@ export function buildTransactionUrl({
       ? `/app/transactions/${walletId}`
       : "/app/transactions";
 
-  return queryString ? `${baseUrl}?${queryString}` : baseUrl;
+  return baseUrl;
 }
