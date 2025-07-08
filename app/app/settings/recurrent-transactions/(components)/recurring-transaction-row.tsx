@@ -1,5 +1,7 @@
 "use client";
 
+import { format } from "date-fns";
+
 import TransactionAmount from "@/components/shared/transaction-amount";
 import TransactionDescription from "@/components/shared/transaction-description";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +26,14 @@ export default function RecurringTransactionRow({
       </div>
       <div className="shrink-0">
         <div className="relative hidden flex-wrap items-center gap-1 md:flex">
+          <Badge
+            variant="outline"
+            className="bg-background cursor-pointer text-xs"
+          >
+            {transaction.next_run_date
+              ? format(new Date(transaction.next_run_date), "MMM d")
+              : format(new Date(transaction.start_date), "MMM d")}
+          </Badge>
           <Badge
             variant="outline"
             className="bg-background cursor-pointer text-xs"
