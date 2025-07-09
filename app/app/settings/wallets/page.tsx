@@ -1,22 +1,24 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { format } from "date-fns";
-import { Eye, EyeOff, Download } from "lucide-react";
-import { toast } from "sonner";
+import { Download, Eye, EyeOff } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
+
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import WalletsSection from "./(components)/wallets-section";
+
+import { exportTransactions } from "@/actions/export-transactions";
 import AddWalletButton from "@/components/shared/add-wallet-button";
 import { BulkActions } from "@/components/shared/bulk-actions";
 import PageHeader from "@/components/shared/page-header";
-import { TooltipButton } from "@/components/ui/tooltip-button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TooltipButton } from "@/components/ui/tooltip-button";
 import { useWallets } from "@/contexts/settings-context";
 import { useSelection } from "@/hooks/use-selection";
 import { createClient } from "@/utils/supabase/client";
-import { exportTransactions } from "@/actions/export-transactions";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function Page() {
   const [wallets, walletsMap] = useWallets();
@@ -92,6 +94,7 @@ export default function Page() {
       );
       clearSelection();
     } catch (err) {
+      console.error("Error updating wallets:", err);
       toast.error("Error updating wallets");
     }
   };

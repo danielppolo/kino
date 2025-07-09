@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import React from "react";
 
 import { Checkbox } from "../ui/checkbox";
 import Row from "../ui/row";
@@ -56,10 +56,4 @@ export function SelectableRowLoading() {
   );
 }
 
-export default memo(
-  SelectableRow,
-  (prevProps, nextProps) =>
-    prevProps.id === nextProps.id &&
-    prevProps.selected === nextProps.selected &&
-    prevProps.selectionMode === nextProps.selectionMode,
-);
+export default SelectableRow;
