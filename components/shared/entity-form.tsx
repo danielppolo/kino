@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { DrawerDialog } from "@/components/ui/drawer-dialog";
 import { Form } from "@/components/ui/form";
 import TemplateSelect from "./template-select";
+import { SubmitButton } from "../submit-button";
 
 interface EntityFormProps<T extends FieldValues> {
   title: string;
@@ -128,9 +129,14 @@ export function EntityForm<T extends FieldValues>({
                   <Trash className="size-4" />
                 </Button>
               )}
-              <Button type="submit" size="sm" disabled={isLoading}>
+              <SubmitButton
+                type="submit"
+                size="sm"
+                disabled={isLoading}
+                isLoading={isLoading}
+              >
                 {submitLabel || (isEdit ? "Update" : "Create")}
-              </Button>
+              </SubmitButton>
             </div>
           </div>
         </form>

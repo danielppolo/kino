@@ -16,10 +16,12 @@ import { cn } from "@/lib/utils";
 function DaterPicker({
   value,
   variant = "outline",
+  className,
   onChange,
 }: Omit<React.HTMLAttributes<HTMLInputElement>, "onChange"> & {
   value?: string;
   variant?: "outline" | "ghost";
+  className?: string;
   onChange: (date?: string) => void;
 }) {
   const [open, setOpen] = React.useState(false);
@@ -35,7 +37,11 @@ function DaterPicker({
       <PopoverTrigger asChild>
         <Button
           variant={variant}
-          className={cn("text-left font-normal", "text-muted-foreground")}
+          className={cn(
+            "text-left font-normal",
+            "text-muted-foreground",
+            className,
+          )}
         >
           {date ? format(date, "PP") : <span>Pick a date</span>}
           {variant === "outline" && <CalendarIcon className="ml-2 h-4 w-4" />}
