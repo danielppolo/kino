@@ -16,7 +16,7 @@ import EmptyState from "@/components/shared/empty-state";
 
 interface TagsSectionProps {
   selected: string[];
-  onToggle: (tag: Tag) => void;
+  onToggle: (tag: Tag, shiftKey: boolean) => void;
   onEdit: (tag: Tag) => void;
   onTransactionCountsLoaded?: (counts: Map<string, number>) => void;
 }
@@ -73,8 +73,8 @@ export default function TagsSection({
             key={tag.id}
             id={`${tag.id}-${transactionCount}`}
             selected={isSelected}
-            onToggleSelect={() => onToggle(tag)}
-            onClick={() => onEdit(tag)}
+            onToggleSelect={(e) => onToggle(tag, e.shiftKey)}
+            onClick={(e) => onEdit(tag)}
           >
             <div className="flex flex-1 items-center justify-between">
               <div className="flex flex-1 items-center gap-4">

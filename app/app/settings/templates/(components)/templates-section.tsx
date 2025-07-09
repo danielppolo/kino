@@ -34,6 +34,6 @@ export default function TemplatesSection({
   }
 
   return filteredTemplates.map((tpl) => (
-    <TemplateRow key={tpl.id} template={tpl} onClick={() => onEdit(tpl)} />
+    <TemplateRow key={tpl.id} template={tpl} onClick={(e) => onEdit(tpl)} />
   ));
 }

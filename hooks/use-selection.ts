@@ -7,36 +7,55 @@ interface UseSelectionOptions {
 
 export function useSelection(options: UseSelectionOptions = {}) {
   const [selected, setSelected] = useState<string[]>([]);
+  const [lastSelected, setLastSelected] = useState<string | null>(null);
   const { onSelectionChange, getAllIds } = options;
 
   const clearSelection = useCallback(() => {
     setSelected([]);
+    setLastSelected(null);
   }, []);
 
   const selectAll = useCallback(() => {
     if (getAllIds) {
       const allIds = getAllIds();
       setSelected(allIds);
+      setLastSelected(allIds[allIds.length - 1] || null);
       onSelectionChange?.(allIds);
     }
   }, [getAllIds, onSelectionChange]);
 
   const toggleSelection = useCallback(
-    (id: string) => {
+    (id: string, shiftKey = false) => {
       setSelected((prev) => {
+        let newSelection = prev;
+
+        if (shiftKey && lastSelected && getAllIds) {
+          const ids = getAllIds();
+          const start = ids.indexOf(lastSelected);
+          const end = ids.indexOf(id);
+          if (start !== -1 && end !== -1) {
+            const [from, to] = start < end ? [start, end] : [end, start];
+            const range = ids.slice(from, to + 1);
+            const set = new Set(prev);
+            range.forEach((r) => set.add(r));
+            newSelection = Array.from(set);
+            onSelectionChange?.(newSelection);
+            return newSelection;
+          }
+        }
+
         const exists = prev.includes(id);
         if (exists) {
-          const newSelection = prev.filter((itemId) => itemId !== id);
-          onSelectionChange?.(newSelection);
-          return newSelection;
+          newSelection = prev.filter((itemId) => itemId !== id);
         } else {
-          const newSelection = [...prev, id];
-          onSelectionChange?.(newSelection);
-          return newSelection;
+          newSelection = [...prev, id];
         }
+        onSelectionChange?.(newSelection);
+        return newSelection;
       });
+      setLastSelected(id);
     },
-    [onSelectionChange],
+    [onSelectionChange, getAllIds, lastSelected],
   );
 
   const addToSelection = useCallback(
@@ -47,6 +66,7 @@ export function useSelection(options: UseSelectionOptions = {}) {
         onSelectionChange?.(newSelection);
         return newSelection;
       });
+      setLastSelected(id);
     },
     [onSelectionChange],
   );
@@ -58,6 +78,7 @@ export function useSelection(options: UseSelectionOptions = {}) {
         onSelectionChange?.(newSelection);
         return newSelection;
       });
+      setLastSelected(null);
     },
     [onSelectionChange],
   );
@@ -65,6 +86,7 @@ export function useSelection(options: UseSelectionOptions = {}) {
   const setSelection = useCallback(
     (ids: string[]) => {
       setSelected(ids);
+      setLastSelected(ids[ids.length - 1] || null);
       onSelectionChange?.(ids);
     },
     [onSelectionChange],

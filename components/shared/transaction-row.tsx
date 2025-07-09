@@ -9,10 +9,10 @@ import { TransactionList } from "@/utils/supabase/types";
 
 interface TransactionRowProps {
   transaction: TransactionList;
-  onClick?: () => void;
+  onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
   selected?: boolean;
   selectionMode?: boolean;
-  onToggleSelect?: () => void;
+  onToggleSelect?: (event: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 export function TransactionRow({
