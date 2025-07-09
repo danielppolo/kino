@@ -1,0 +1,59 @@
+"use client";
+
+import React, { memo } from "react";
+import { Eye, EyeOff } from "lucide-react";
+
+import SelectableRow from "./selectable-row";
+import { Badge } from "../ui/badge";
+import { Wallet } from "@/utils/supabase/types";
+import { Text } from "../ui/typography";
+
+interface WalletRowProps {
+  wallet: Wallet;
+  onClick?: () => void;
+  selected?: boolean;
+  selectionMode?: boolean;
+  onToggleSelect?: () => void;
+}
+
+export function WalletRow({
+  wallet,
+  onClick,
+  selected = false,
+  selectionMode = false,
+  onToggleSelect,
+}: WalletRowProps) {
+  return (
+    <SelectableRow
+      id={wallet.id}
+      onClick={onClick}
+      selected={selected}
+      selectionMode={selectionMode}
+      onToggleSelect={onToggleSelect}
+    >
+      <div className="flex flex-1 items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Text className="truncate">{wallet.name}</Text>
+          {wallet.currency && (
+            <Badge variant="outline" className="shrink-0">
+              {wallet.currency}
+            </Badge>
+          )}
+        </div>
+        {wallet.visible ? (
+          <Eye className="text-muted-foreground size-4" />
+        ) : (
+          <EyeOff className="text-muted-foreground size-4" />
+        )}
+      </div>
+    </SelectableRow>
+  );
+}
+
+export default memo(
+  WalletRow,
+  (prevProps, nextProps) =>
+    prevProps.wallet.id === nextProps.wallet.id &&
+    prevProps.selected === nextProps.selected &&
+    prevProps.selectionMode === nextProps.selectionMode,
+);

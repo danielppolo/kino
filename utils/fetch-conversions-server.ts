@@ -9,8 +9,8 @@ export interface CurrencyConversion {
 }
 
 export async function fetchConversion(
-  targetCurrency: string,
   sourceCurrency: string,
+  targetCurrency: string,
   date?: string,
 ): Promise<CurrencyConversion> {
   if (sourceCurrency === targetCurrency) {
@@ -29,7 +29,10 @@ export async function fetchConversion(
     .select("*")
     .eq("source_currency", sourceCurrency)
     .eq("target_currency", targetCurrency)
+    .eq("date", date ?? new Date().toISOString().split("T")[0])
     .single();
+
+  console.log(cachedRate);
 
   if (!cacheError && cachedRate) {
     const now = new Date();
@@ -58,45 +61,63 @@ export async function fetchConversion(
     url.searchParams.set("date", date);
   }
 
-  const response = await fetch(url);
+  try {
+    const response = await fetch(url);
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch currency data");
+    if (!response.ok) {
+      throw new Error("Failed to fetch currency data");
+    }
+
+    const data = await response.json();
+    const rate = data.data[sourceCurrency]?.value;
+
+    if (!rate) {
+      throw new Error("Invalid currency data received");
+    }
+
+    // Update or insert the new rate
+    const { error: upsertError } = await supabase
+      .from("currency_conversions")
+      .upsert(
+        {
+          source_currency: targetCurrency,
+          target_currency: sourceCurrency,
+          rate: rate,
+          updated_at: new Date().toISOString(),
+          date: date ?? new Date().toISOString(),
+        },
+        {
+          onConflict: "source_currency,target_currency,date",
+        },
+      );
+
+    if (upsertError) {
+      console.log(upsertError);
+      throw new Error("Failed to update cache");
+    }
+
+    return {
+      rate,
+      lastUpdated: new Date().toISOString(),
+      source: "api",
+    };
+  } catch (error) {
+    // If API fails, try to use cached value even if it's older than 24 hours
+    if (cachedRate) {
+      console.warn(
+        `API failed, using cached rate for ${sourceCurrency}->${targetCurrency}:`,
+        error,
+      );
+      return {
+        rate: cachedRate.rate,
+        lastUpdated: cachedRate.updated_at,
+        source: "cache",
+      };
+    }
+
+    // If no cached value exists, re-throw the error
+    throw error;
   }
-
-  const data = await response.json();
-  const rate = data.data[sourceCurrency]?.value;
-
-  if (!rate) {
-    throw new Error("Invalid currency data received");
-  }
-
-  // Update or insert the new rate
-  const { error: upsertError } = await supabase
-    .from("currency_conversions")
-    .upsert(
-      {
-        source_currency: targetCurrency,
-        target_currency: sourceCurrency,
-        rate: rate,
-        updated_at: new Date().toISOString(),
-        date: date ?? new Date().toISOString(),
-      },
-      {
-        onConflict: "source_currency,target_currency,date",
-      },
-    );
-
-  if (upsertError) {
-    console.log(upsertError);
-    throw new Error("Failed to update cache");
-  }
-
-  return {
-    rate,
-    lastUpdated: new Date().toISOString(),
-    source: "api",
-  };
 }
 
 export async function fetchAllConversions({
