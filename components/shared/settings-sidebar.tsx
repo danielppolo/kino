@@ -33,6 +33,24 @@ const SettingsSidebar: React.FC = () => {
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
+                isActive={pathname === "/app/settings/wallets"}
+              >
+                <Link href="/app/settings/wallets"> Wallets</Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === "/app/settings/recurrent-transactions"}
+              >
+                <Link href="/app/settings/recurrent-transactions">
+                  Periodic transactions
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
                 isActive={pathname === "/app/settings/categories"}
               >
                 <Link href="/app/settings/categories">Categories</Link>
@@ -68,24 +86,6 @@ const SettingsSidebar: React.FC = () => {
                 isActive={pathname === "/app/settings/templates"}
               >
                 <Link href="/app/settings/templates">Templates</Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === "/app/settings/recurrent-transactions"}
-              >
-                <Link href="/app/settings/recurrent-transactions">
-                  Recurring Transactions
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === "/app/settings/wallets"}
-              >
-                <Link href="/app/settings/wallets"> Wallets</Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
