@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 
+import EmptyState from "@/components/shared/empty-state";
 import TemplateRow from "@/components/shared/template-row";
 import { useTemplates } from "@/contexts/settings-context";
 import { TransactionTemplate } from "@/utils/supabase/types";
@@ -23,11 +24,16 @@ export default function TemplatesSection({
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [templates, type]);
 
-  return (
-    <div className="divide-y">
-      {filteredTemplates.map((tpl) => (
-        <TemplateRow key={tpl.id} template={tpl} onClick={() => onEdit(tpl)} />
-      ))}
-    </div>
-  );
+  if (filteredTemplates.length === 0) {
+    return (
+      <EmptyState
+        title="No templates found"
+        description="Please try again or add a new template."
+      />
+    );
+  }
+
+  return filteredTemplates.map((tpl) => (
+    <TemplateRow key={tpl.id} template={tpl} onClick={() => onEdit(tpl)} />
+  ));
 }

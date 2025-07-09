@@ -12,6 +12,7 @@ import { createClient } from "@/utils/supabase/client";
 import { getTagTransactionCounts } from "@/utils/supabase/queries";
 import { Tag } from "@/utils/supabase/types";
 import { Text } from "@/components/ui/typography";
+import EmptyState from "@/components/shared/empty-state";
 
 interface TagsSectionProps {
   selected: string[];
@@ -56,6 +57,10 @@ export default function TagsSection({
       onTransactionCountsLoaded(transactionCountsData);
     }
   }, [transactionCountsData, onTransactionCountsLoaded]);
+
+  if (tags.length === 0) {
+    return <EmptyState />;
+  }
 
   return (
     <div className="space-y-1">

@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import CategoryRow from "@/components/shared/category-row";
+import EmptyState from "@/components/shared/empty-state";
 import { useCategories } from "@/contexts/settings-context";
 import { createClient } from "@/utils/supabase/client";
 import { getCategoryTransactionCounts } from "@/utils/supabase/queries";
@@ -50,23 +51,28 @@ export default function CategorySection({
     },
   });
 
-  return (
-    <div className="divide-y">
-      {filteredCategories?.map((category) => {
-        const isSelected = selected.includes(category.id);
-        const transactionCount = transactionCountsData?.get(category.id) || 0;
-        return (
-          <CategoryRow
-            key={`${category.id}-${transactionCount}`}
-            category={category}
-            onClick={() => onEdit(category)}
-            selected={isSelected}
-            selectionMode={selected.length > 0}
-            onToggleSelect={() => onToggle(category)}
-            transactionCount={transactionCount}
-          />
-        );
-      })}
-    </div>
-  );
+  if (filteredCategories.length === 0) {
+    return (
+      <EmptyState
+        title="No categories found"
+        description="Please try again or add a new category."
+      />
+    );
+  }
+
+  return filteredCategories.map((category) => {
+    const isSelected = selected.includes(category.id);
+    const transactionCount = transactionCountsData?.get(category.id) || 0;
+    return (
+      <CategoryRow
+        key={`${category.id}-${transactionCount}`}
+        category={category}
+        onClick={() => onEdit(category)}
+        selected={isSelected}
+        selectionMode={selected.length > 0}
+        onToggleSelect={() => onToggle(category)}
+        transactionCount={transactionCount}
+      />
+    );
+  });
 }

@@ -210,7 +210,12 @@ export default function TransactionList() {
 
   // Show empty state when no transactions
   if (!groupedTransactions.length) {
-    return <EmptyState />;
+    return (
+      <EmptyState
+        title="No transactions found"
+        description="Please try again or add a new transaction."
+      />
+    );
   }
 
   return (

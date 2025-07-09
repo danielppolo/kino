@@ -3,17 +3,18 @@
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
-import LabelRow from "@/components/shared/label-row";
-import LabelForm from "@/components/shared/label-form";
 import DeleteLabelsDialog from "./delete-labels-dialog";
+
 import { BulkActions } from "@/components/shared/bulk-actions";
+import EmptyState from "@/components/shared/empty-state";
+import LabelForm from "@/components/shared/label-form";
+import LabelRow from "@/components/shared/label-row";
+import PageHeader from "@/components/shared/page-header";
 import { TooltipButton } from "@/components/ui/tooltip-button";
-import { Text, Title } from "@/components/ui/typography";
 import { useLabels } from "@/contexts/settings-context";
 import { useSelection } from "@/hooks/use-selection";
 import { COLORS } from "@/utils/constants";
 import { Database } from "@/utils/supabase/database.types";
-import PageHeader from "@/components/shared/page-header";
 
 export default function LabelSection() {
   const [open, setOpen] = useState(false);
@@ -76,6 +77,15 @@ export default function LabelSection() {
     return a.name.localeCompare(b.name);
   });
 
+  if (sortedLabels.length === 0) {
+    return (
+      <EmptyState
+        title="No labels found"
+        description="Please try again or add a new label."
+      />
+    );
+  }
+
   return (
     <>
       <PageHeader className="justify-end">
@@ -90,21 +100,19 @@ export default function LabelSection() {
       </PageHeader>
 
       <div style={{ height: "calc(100vh - 44px)", overflow: "auto" }}>
-        <div className="divide-y">
-          {sortedLabels?.map((label) => {
-            const isSelected = selected.includes(label.id);
-            return (
-              <LabelRow
-                key={label.id}
-                label={label}
-                onClick={() => handleEdit(label)}
-                selected={isSelected}
-                selectionMode={selectedCount > 0}
-                onToggleSelect={() => toggleSelect(label)}
-              />
-            );
-          })}
-        </div>
+        {sortedLabels?.map((label) => {
+          const isSelected = selected.includes(label.id);
+          return (
+            <LabelRow
+              key={label.id}
+              label={label}
+              onClick={() => handleEdit(label)}
+              selected={isSelected}
+              selectionMode={selectedCount > 0}
+              onToggleSelect={() => toggleSelect(label)}
+            />
+          );
+        })}
       </div>
 
       <LabelForm
