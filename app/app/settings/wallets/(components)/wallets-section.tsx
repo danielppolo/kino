@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
+
+import WalletForm from "@/components/shared/wallet-form";
 import WalletRow from "@/components/shared/wallet-row";
+import { DrawerDialog } from "@/components/ui/drawer-dialog";
 import { useWallets } from "@/contexts/settings-context";
 import { Wallet } from "@/utils/supabase/types";
-import { DrawerDialog } from "@/components/ui/drawer-dialog";
-import WalletForm from "@/components/shared/wallet-form";
 
 interface WalletsSectionProps {
   selected: string[];

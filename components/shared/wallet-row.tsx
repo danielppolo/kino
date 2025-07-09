@@ -1,13 +1,13 @@
 "use client";
 
-import React, { memo } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import React from "react";
 
-import SelectableRow from "./selectable-row";
-import { Badge } from "../ui/badge";
-import { Wallet } from "@/utils/supabase/types";
 import { Text } from "../ui/typography";
 import UNAMDonation from "../UNAMDonation";
+import SelectableRow from "./selectable-row";
+import ToggleWalletVisibility from "./toggle-wallet-visibility";
+
+import { Wallet } from "@/utils/supabase/types";
 
 interface WalletRowProps {
   wallet: Wallet;
@@ -38,21 +38,11 @@ export function WalletRow({
           {wallet.id === "c357aa5c-ad41-4c41-8d67-bf5516117187" && (
             <UNAMDonation walletId={wallet.id} />
           )}
-          {wallet.visible ? (
-            <Eye className="text-muted-foreground size-4" />
-          ) : (
-            <EyeOff className="text-muted-foreground size-4" />
-          )}
+          <ToggleWalletVisibility wallet={wallet} />
         </div>
       </div>
     </SelectableRow>
   );
 }
 
-export default memo(
-  WalletRow,
-  (prevProps, nextProps) =>
-    prevProps.wallet.id === nextProps.wallet.id &&
-    prevProps.selected === nextProps.selected &&
-    prevProps.selectionMode === nextProps.selectionMode,
-);
+export default WalletRow;
