@@ -10,15 +10,20 @@ import WalletForm from "@/components/shared/wallet-form";
 interface WalletsSectionProps {
   selected: string[];
   onToggle: (wallet: Wallet) => void;
+  wallets?: Wallet[];
 }
 
 export default function WalletsSection({
   selected,
   onToggle,
+  wallets: propWallets,
 }: WalletsSectionProps) {
-  const [wallets] = useWallets();
+  const [allWallets] = useWallets();
   const [open, setOpen] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
+
+  // Use provided wallets or fall back to all wallets
+  const wallets = propWallets || allWallets;
 
   const handleRowClick = (wallet: Wallet) => {
     setSelectedWallet(wallet);
