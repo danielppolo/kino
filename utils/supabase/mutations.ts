@@ -451,6 +451,7 @@ export const createRecurringTransaction = async (data: {
   interval_type: string;
   start_date: string;
   end_date?: string | null;
+  type: "income" | "expense";
   tags?: string[] | null;
 }) => {
   const supabase = await createClient();
