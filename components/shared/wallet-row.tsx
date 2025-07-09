@@ -32,14 +32,7 @@ export function WalletRow({
       onToggleSelect={onToggleSelect}
     >
       <div className="flex flex-1 items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Text className="truncate">{wallet.name}</Text>
-          {wallet.currency && (
-            <Badge variant="outline" className="shrink-0">
-              {wallet.currency}
-            </Badge>
-          )}
-        </div>
+        <Text className="truncate">{wallet.name}</Text>
         {wallet.visible ? (
           <Eye className="text-muted-foreground size-4" />
         ) : (
