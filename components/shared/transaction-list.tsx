@@ -6,12 +6,13 @@ import { Download, Pencil } from "lucide-react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
+import { RowLoading } from "../ui/row";
 import { TooltipButton } from "../ui/tooltip-button";
 import { BulkActions } from "./bulk-actions";
 import BulkTransactionEditForm from "./bulk-transaction-edit-form";
 import DayHeader, { DayHeaderLoading } from "./day-header";
 import EmptyState from "./empty-state";
-import TransactionRow, { TransactionRowLoading } from "./transaction-row";
+import TransactionRow from "./transaction-row";
 
 import { useTransactionForm } from "@/contexts/transaction-form-context";
 import useFilters from "@/hooks/use-filters";
@@ -257,7 +258,7 @@ export default function TransactionList() {
       </div>
       {isFetchingNextPage && (
         <div className="flex justify-center p-4">
-          <TransactionRowLoading />
+          <RowLoading />
         </div>
       )}
       {selectedCount > 0 && (
@@ -310,7 +311,7 @@ export const TransactionListLoading = () => {
     >
       <DayHeaderLoading />
       {Array.from({ length: 20 }).map((_, index) => (
-        <TransactionRowLoading key={index} />
+        <RowLoading key={index} />
       ))}
     </div>
   );
