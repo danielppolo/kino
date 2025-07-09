@@ -18,26 +18,31 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Database } from "@/utils/supabase/database.types";
-import { createWallet } from "@/utils/supabase/mutations";
+import { createWallet, updateWallet } from "@/utils/supabase/mutations";
+import { Wallet } from "@/utils/supabase/types";
 
 interface WalletFormProps {
   onSuccess: () => void;
+  wallet?: Wallet; // Optional wallet for editing mode
 }
 
 type WalletFormValues = Database["public"]["Tables"]["wallets"]["Insert"];
 
-const WalletForm = ({ onSuccess }: WalletFormProps) => {
+const WalletForm = ({ onSuccess, wallet }: WalletFormProps) => {
+  const isEditing = !!wallet;
+
   const form = useForm<WalletFormValues>({
     defaultValues: {
-      currency: "MXN",
+      name: wallet?.name || "",
+      currency: wallet?.currency || "MXN",
     },
   });
 
   const queryClient = useQueryClient();
 
-  const mutation = useMutation({
-    mutationFn: async (wallet: WalletFormValues) => {
-      return await createWallet(wallet);
+  const createMutation = useMutation({
+    mutationFn: async (walletData: WalletFormValues) => {
+      return await createWallet(walletData);
     },
     onSuccess: () => {
       toast.success("Wallet added!");
@@ -53,9 +58,38 @@ const WalletForm = ({ onSuccess }: WalletFormProps) => {
     },
   });
 
-  const onSubmit = (wallet: WalletFormValues) => {
-    mutation.mutate(wallet);
+  const updateMutation = useMutation({
+    mutationFn: async (walletData: WalletFormValues) => {
+      if (!wallet?.id) throw new Error("Wallet ID is required for updates");
+      return await updateWallet({
+        id: wallet.id,
+        name: walletData.name,
+        currency: walletData.currency,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Wallet updated!");
+      queryClient.invalidateQueries({ queryKey: ["wallets"] });
+      onSuccess();
+    },
+    onError(error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.error("Failed to update wallet");
+    },
+  });
+
+  const onSubmit = (walletData: WalletFormValues) => {
+    if (isEditing) {
+      updateMutation.mutate(walletData);
+    } else {
+      createMutation.mutate(walletData);
+    }
   };
+
+  const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
     <Form {...form}>
@@ -65,7 +99,6 @@ const WalletForm = ({ onSuccess }: WalletFormProps) => {
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Wallet</FormLabel>
               <FormControl>
                 <Input type="text" placeholder="Enter name" {...field} />
               </FormControl>
@@ -79,16 +112,22 @@ const WalletForm = ({ onSuccess }: WalletFormProps) => {
           name="currency"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Currency</FormLabel>
               <FormControl>
-                <CurrencyPicker onChange={field.onChange} value={field.value} />
+                <CurrencyPicker
+                  onChange={field.onChange}
+                  value={field.value}
+                  disabled={isEditing}
+                  className="w-full"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <SubmitButton isLoading={mutation.isPending}>Add wallet</SubmitButton>
+        <SubmitButton isLoading={isPending} className="w-full">
+          {isEditing ? "Update wallet" : "Add wallet"}
+        </SubmitButton>
       </form>
     </Form>
   );

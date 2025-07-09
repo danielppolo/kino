@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useRef } from "react";
+import React, { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Papa from "papaparse";
 import { toast } from "sonner";
@@ -19,7 +19,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Money } from "@/components/ui/money";
 import { useCategories, useLabels } from "@/contexts/settings-context";
 
 interface SerializedRow {
