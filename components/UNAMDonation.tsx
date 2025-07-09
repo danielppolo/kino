@@ -37,7 +37,7 @@ export default function UNAMDonation() {
   return (
     <Badge
       variant="secondary"
-      className="gap-2 bg-blue-500 text-white dark:bg-blue-600"
+      className="text-background gap-2 bg-blue-500 dark:bg-blue-600"
     >
       Donated <Money cents={donationAmount} currency="USD" />
     </Badge>
