@@ -28,7 +28,12 @@ export default function RecurringTransactionsSection({ type, onEdit }: Props) {
   });
 
   if (!data || data.length === 0) {
-    return <EmptyState />;
+    return (
+      <EmptyState
+        title="No transactions found"
+        description="Please try again or add a new transaction."
+      />
+    );
   }
 
   // Sort by next_run_date || start_date
@@ -38,15 +43,11 @@ export default function RecurringTransactionsSection({ type, onEdit }: Props) {
     return new Date(dateA).getTime() - new Date(dateB).getTime();
   });
 
-  return (
-    <div className="divide-y">
-      {sortedData.map((transaction) => (
-        <RecurringTransactionRow
-          key={transaction.id}
-          transaction={transaction}
-          onClick={() => onEdit(transaction)}
-        />
-      ))}
-    </div>
-  );
+  return sortedData.map((transaction) => (
+    <RecurringTransactionRow
+      key={transaction.id}
+      transaction={transaction}
+      onClick={() => onEdit(transaction)}
+    />
+  ));
 }

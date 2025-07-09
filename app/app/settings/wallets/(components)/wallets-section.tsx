@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 
+import EmptyState from "@/components/shared/empty-state";
 import WalletForm from "@/components/shared/wallet-form";
 import WalletRow from "@/components/shared/wallet-row";
 import { DrawerDialog } from "@/components/ui/drawer-dialog";
@@ -36,23 +37,30 @@ export default function WalletsSection({
     setSelectedWallet(null);
   };
 
+  if (wallets.length === 0) {
+    return (
+      <EmptyState
+        title="No wallets found"
+        description="Please try again or add a new wallet."
+      />
+    );
+  }
+
   return (
     <>
-      <div className="divide-y">
-        {wallets.map((wallet) => {
-          const isSelected = selected.includes(wallet.id);
-          return (
-            <WalletRow
-              key={wallet.id}
-              wallet={wallet}
-              selected={isSelected}
-              selectionMode={selected.length > 0}
-              onToggleSelect={() => onToggle(wallet)}
-              onClick={() => handleRowClick(wallet)}
-            />
-          );
-        })}
-      </div>
+      {wallets.map((wallet) => {
+        const isSelected = selected.includes(wallet.id);
+        return (
+          <WalletRow
+            key={wallet.id}
+            wallet={wallet}
+            selected={isSelected}
+            selectionMode={selected.length > 0}
+            onToggleSelect={() => onToggle(wallet)}
+            onClick={() => handleRowClick(wallet)}
+          />
+        );
+      })}
 
       <DrawerDialog
         open={open}
