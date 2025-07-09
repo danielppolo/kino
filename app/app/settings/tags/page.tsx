@@ -39,8 +39,8 @@ export default function Page() {
     getAllIds: () => tags.map((t) => t.id),
   });
 
-  const toggleSelect = (tag: TagType) => {
-    toggleSelection(tag.id);
+  const toggleSelect = (tag: TagType, shiftKey = false) => {
+    toggleSelection(tag.id, shiftKey);
   };
 
   const handleAdd = () => {

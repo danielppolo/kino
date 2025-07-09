@@ -11,10 +11,10 @@ import { Wallet } from "@/utils/supabase/types";
 
 interface WalletRowProps {
   wallet: Wallet;
-  onClick?: () => void;
+  onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
   selected?: boolean;
   selectionMode?: boolean;
-  onToggleSelect?: () => void;
+  onToggleSelect?: (event: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 export function WalletRow({

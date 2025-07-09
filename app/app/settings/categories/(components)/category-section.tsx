@@ -12,7 +12,7 @@ import { Category } from "@/utils/supabase/types";
 interface CategoriesProps {
   type: "income" | "expense";
   selected: string[];
-  onToggle: (category: Category) => void;
+  onToggle: (category: Category, shiftKey: boolean) => void;
   onEdit: (category: Category) => void;
 }
 
@@ -67,10 +67,10 @@ export default function CategorySection({
       <CategoryRow
         key={`${category.id}-${transactionCount}`}
         category={category}
-        onClick={() => onEdit(category)}
+        onClick={(e) => onEdit(category)}
         selected={isSelected}
         selectionMode={selected.length > 0}
-        onToggleSelect={() => onToggle(category)}
+        onToggleSelect={(e) => onToggle(category, e.shiftKey)}
         transactionCount={transactionCount}
       />
     );

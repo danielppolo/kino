@@ -7,10 +7,10 @@ import { cn } from "@/lib/utils";
 
 interface SelectableRowProps {
   id: string;
-  onClick?: () => void;
+  onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
   selected?: boolean;
   selectionMode?: boolean;
-  onToggleSelect?: () => void;
+  onToggleSelect?: (event: React.MouseEvent<HTMLDivElement>) => void;
   children: React.ReactNode;
   className?: string;
 }
@@ -36,7 +36,7 @@ export function SelectableRow({
         }`}
         onClick={(e) => {
           e.stopPropagation();
-          onToggleSelect?.();
+          onToggleSelect?.(e);
         }}
       >
         <Checkbox checked={selected} aria-label="Select" />
