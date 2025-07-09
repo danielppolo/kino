@@ -31,9 +31,16 @@ export default function RecurringTransactionsSection({ type, onEdit }: Props) {
     return <EmptyState />;
   }
 
+  // Sort by next_run_date || start_date
+  const sortedData = [...data].sort((a, b) => {
+    const dateA = a.next_run_date || a.start_date;
+    const dateB = b.next_run_date || b.start_date;
+    return new Date(dateA).getTime() - new Date(dateB).getTime();
+  });
+
   return (
     <div className="divide-y">
-      {data.map((transaction) => (
+      {sortedData.map((transaction) => (
         <RecurringTransactionRow
           key={transaction.id}
           transaction={transaction}
