@@ -11,7 +11,7 @@ import { Wallet } from "@/utils/supabase/types";
 
 interface WalletsSectionProps {
   selected: string[];
-  onToggle: (wallet: Wallet) => void;
+  onToggle: (wallet: Wallet, shiftKey: boolean) => void;
   wallets?: Wallet[];
 }
 
@@ -56,8 +56,8 @@ export default function WalletsSection({
             wallet={wallet}
             selected={isSelected}
             selectionMode={selected.length > 0}
-            onToggleSelect={() => onToggle(wallet)}
-            onClick={() => handleRowClick(wallet)}
+            onToggleSelect={(e) => onToggle(wallet, e.shiftKey)}
+            onClick={(e) => handleRowClick(wallet)}
           />
         );
       })}

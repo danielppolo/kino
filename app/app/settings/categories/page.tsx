@@ -52,7 +52,7 @@ export default function Page() {
       ? (selectedCategories[0].type as "income" | "expense")
       : null;
 
-  const toggleSelect = (category: Category) => {
+  const toggleSelect = (category: Category, shiftKey = false) => {
     // Prevent selecting transfer categories for any bulk operations
     if (category.type === "transfer") {
       toast.error("Transfer categories cannot be selected for bulk operations");
@@ -64,7 +64,7 @@ export default function Page() {
       return;
     }
 
-    toggleSelection(category.id);
+    toggleSelection(category.id, shiftKey);
   };
 
   const handleAdd = () => {

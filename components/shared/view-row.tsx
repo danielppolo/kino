@@ -5,10 +5,10 @@ import { Text } from "../ui/typography";
 
 interface ViewRowProps {
   view: View;
-  onClick?: () => void;
+  onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
   selected?: boolean;
   selectionMode?: boolean;
-  onToggleSelect?: () => void;
+  onToggleSelect?: (event: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 export function ViewRow({

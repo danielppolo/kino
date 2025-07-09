@@ -71,8 +71,8 @@ export default function Page() {
     },
   });
 
-  const toggleSelect = (wallet: { id: string }) => {
-    toggleSelection(wallet.id);
+  const toggleSelect = (wallet: { id: string }, shiftKey = false) => {
+    toggleSelection(wallet.id, shiftKey);
   };
 
   const handleToggleVisibility = async () => {

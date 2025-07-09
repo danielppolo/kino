@@ -94,16 +94,16 @@ export default function TransactionList() {
   });
 
   const toggleSelected = useCallback(
-    (id: string) => {
-      toggleSelection(id);
+    (id: string, shiftKey = false) => {
+      toggleSelection(id, shiftKey);
     },
     [toggleSelection],
   );
 
   const handleTransactionClick = useCallback(
-    (transaction: TransactionList) => {
+    (event: React.MouseEvent, transaction: TransactionList) => {
       if (selectedCount > 0) {
-        toggleSelection(transaction.id!);
+        toggleSelection(transaction.id!, event.shiftKey);
         return;
       }
       openForm({
@@ -250,10 +250,10 @@ export default function TransactionList() {
                   <TransactionRow
                     key={`${transaction.id}-${transaction.amount_cents}-${transaction.description ?? ""}-${transaction.tag_ids?.join(",") ?? ""}-${transaction.category_id}-${transaction.label_id}`}
                     transaction={transaction}
-                    onClick={() => handleTransactionClick(transaction)}
+                    onClick={(e) => handleTransactionClick(e, transaction)}
                     selected={selected.includes(transaction.id!)}
                     selectionMode={selectedCount > 0}
-                    onToggleSelect={() => toggleSelected(transaction.id!)}
+                    onToggleSelect={(e) => toggleSelected(transaction.id!, e.shiftKey)}
                   />
                 ))}
               </div>

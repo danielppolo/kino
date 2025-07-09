@@ -26,8 +26,8 @@ export default function Page() {
     getAllIds: () => views.map((v) => v.id),
   });
 
-  const toggleSelect = (view: View) => {
-    toggleSelection(view.id);
+  const toggleSelect = (view: View, shiftKey = false) => {
+    toggleSelection(view.id, shiftKey);
   };
 
   const handleDeleteSuccess = () => {
