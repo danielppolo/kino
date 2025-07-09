@@ -15,6 +15,7 @@ import {
 import { updateTransactions } from "@/actions/update-transactions";
 import { useTags } from "@/contexts/settings-context";
 import { TransactionList } from "@/utils/supabase/types";
+import { toast } from "sonner";
 
 interface BulkTransactionEditFormProps {
   open: boolean;
@@ -59,11 +60,17 @@ export default function BulkTransactionEditForm({
         date: values.date || undefined,
         tags: values.tags.length ? values.tags : undefined,
       });
+      if (result.error) throw new Error(result.error);
+
       return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      toast.success("Transactions updated");
       onSuccess?.();
+    },
+    onError: (error) => {
+      toast.error(error.message);
     },
   });
 
@@ -78,11 +85,11 @@ export default function BulkTransactionEditForm({
 
   return (
     <EntityForm
-      title="Edit Transactions"
+      title="transactions"
       open={open}
       onOpenChange={onOpenChange}
       defaultValues={defaultValues}
-      customTitle="Edit Transactions"
+      customTitle="Edit transactions"
       submitLabel="Update"
       onSubmit={async (values) => {
         await mutation.mutateAsync(values);
@@ -124,7 +131,7 @@ export default function BulkTransactionEditForm({
         render={({ field }) => (
           <FormItem>
             <FormControl>
-              <DatePicker {...field} />
+              <DatePicker {...field} className="w-full" />
             </FormControl>
             <FormMessage />
           </FormItem>
