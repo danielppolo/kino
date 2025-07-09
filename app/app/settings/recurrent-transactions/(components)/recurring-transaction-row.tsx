@@ -33,8 +33,11 @@ export default function RecurringTransactionRow({
           >
             <CalendarFold className="size-3" />
             {transaction.next_run_date
-              ? format(new Date(transaction.next_run_date), "MMM d")
-              : format(new Date(transaction.start_date), "MMM d")}
+              ? format(
+                  new Date(`${transaction.next_run_date}T00:00:00`),
+                  "MMM d",
+                )
+              : format(new Date(`${transaction.start_date}T00:00:00`), "MMM d")}
           </Badge>
           <Badge
             variant="outline"
