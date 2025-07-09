@@ -47,16 +47,6 @@ export function TransactionRow({
   );
 }
 
-export function TransactionRowLoading() {
-  return (
-    <div className="flex h-10 items-center gap-2 px-4">
-      <div className="bg-muted h-4 w-4 animate-pulse rounded-full" />
-      <div className="bg-muted h-4 w-24 animate-pulse rounded" />
-      <div className="bg-muted h-4 w-32 animate-pulse rounded" />
-    </div>
-  );
-}
-
 export default memo(
   TransactionRow,
   (prevProps, nextProps) =>
