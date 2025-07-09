@@ -7,6 +7,7 @@ import SelectableRow from "./selectable-row";
 import { Badge } from "../ui/badge";
 import { Wallet } from "@/utils/supabase/types";
 import { Text } from "../ui/typography";
+import UNAMDonation from "../UNAMDonation";
 
 interface WalletRowProps {
   wallet: Wallet;
@@ -33,11 +34,16 @@ export function WalletRow({
     >
       <div className="flex flex-1 items-center justify-between">
         <Text className="truncate">{wallet.name}</Text>
-        {wallet.visible ? (
-          <Eye className="text-muted-foreground size-4" />
-        ) : (
-          <EyeOff className="text-muted-foreground size-4" />
-        )}
+        <div className="flex items-center gap-2">
+          {wallet.id === "c357aa5c-ad41-4c41-8d67-bf5516117187" && (
+            <UNAMDonation walletId={wallet.id} />
+          )}
+          {wallet.visible ? (
+            <Eye className="text-muted-foreground size-4" />
+          ) : (
+            <EyeOff className="text-muted-foreground size-4" />
+          )}
+        </div>
       </div>
     </SelectableRow>
   );
