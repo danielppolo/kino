@@ -56,8 +56,9 @@ export default function LabelSection() {
 
   const toggleSelect = (
     label: Database["public"]["Tables"]["labels"]["Row"],
+    shiftKey = false,
   ) => {
-    toggleSelection(label.id);
+    toggleSelection(label.id, shiftKey);
   };
 
   const sortedLabels = [...labels].sort((a, b) => {
@@ -106,10 +107,10 @@ export default function LabelSection() {
             <LabelRow
               key={label.id}
               label={label}
-              onClick={() => handleEdit(label)}
+              onClick={(e) => handleEdit(label)}
               selected={isSelected}
               selectionMode={selectedCount > 0}
-              onToggleSelect={() => toggleSelect(label)}
+              onToggleSelect={(e) => toggleSelect(label, e.shiftKey)}
             />
           );
         })}

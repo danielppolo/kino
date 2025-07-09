@@ -9,7 +9,7 @@ import { View } from "@/utils/supabase/types";
 
 interface ViewsSectionProps {
   selected: string[];
-  onToggle: (view: View) => void;
+  onToggle: (view: View, shiftKey: boolean) => void;
 }
 
 export default function ViewsSection({
@@ -34,10 +34,10 @@ export default function ViewsSection({
       <ViewRow
         key={view.id}
         view={view}
-        onClick={() => router.push(`/app/transactions?${view.query_params}`)}
+        onClick={(e) => router.push(`/app/transactions?${view.query_params}`)}
         selected={isSelected}
         selectionMode={selected.length > 0}
-        onToggleSelect={() => onToggle(view)}
+        onToggleSelect={(e) => onToggle(view, e.shiftKey)}
       />
     );
   });

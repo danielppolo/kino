@@ -11,10 +11,10 @@ import { SquareArrowOutUpRight } from "lucide-react";
 
 interface CategoryRowProps {
   category: Category;
-  onClick?: () => void;
+  onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
   selected?: boolean;
   selectionMode?: boolean;
-  onToggleSelect?: () => void;
+  onToggleSelect?: (event: React.MouseEvent<HTMLDivElement>) => void;
   transactionCount?: number;
 }
 

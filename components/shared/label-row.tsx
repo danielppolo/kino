@@ -6,10 +6,10 @@ import { Text } from "../ui/typography";
 
 interface LabelRowProps {
   label: LabelType;
-  onClick?: () => void;
+  onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
   selected?: boolean;
   selectionMode?: boolean;
-  onToggleSelect?: () => void;
+  onToggleSelect?: (event: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 export function LabelRow({
