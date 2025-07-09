@@ -7,10 +7,9 @@ import { Money } from "./ui/money";
 
 import { createClient } from "@/utils/supabase/client";
 import { getTotalExpenses } from "@/utils/supabase/queries";
+import { Text } from "./ui/typography";
 
-export default function UNAMDonation() {
-  const walletId = "c357aa5c-ad41-4c41-8d67-bf5516117187";
-
+export default function UNAMDonation({ walletId }: { walletId: string }) {
   const {
     data: totalExpenses,
     isLoading,
@@ -35,11 +34,14 @@ export default function UNAMDonation() {
   }
 
   return (
-    <Badge
-      variant="secondary"
-      className="gap-2 bg-blue-500 text-white dark:bg-blue-600"
-    >
-      Donated <Money cents={donationAmount} currency="USD" />
+    <Badge variant="secondary" className="h-6 gap-1 text-white">
+      <Text className="!text-[12px]">Donated</Text>
+      <Money
+        small
+        cents={donationAmount}
+        currency="USD"
+        className="!text-[12px]"
+      />
     </Badge>
   );
 }
