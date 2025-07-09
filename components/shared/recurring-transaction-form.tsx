@@ -37,7 +37,7 @@ import { RecurringTransaction } from "@/utils/supabase/types";
 interface RecurringTransactionFormProps {
   walletId?: string;
   recurring?: RecurringTransaction;
-  type?: "income" | "expense";
+  type: "income" | "expense";
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   onSuccess?: () => void;
@@ -96,6 +96,7 @@ const RecurringTransactionForm = ({
         currency: selectedWallet.currency,
         description: values.description,
         interval_type: values.interval_type,
+        type,
         start_date: values.start_date,
         end_date: values.end_date,
         tags: values.tags,
