@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import Row from "@/components/ui/row";
 import { useWallets } from "@/contexts/settings-context";
 import { RecurringTransaction } from "@/utils/supabase/types";
+import { CalendarFold, RefreshCcw } from "lucide-react";
 
 interface RecurringTransactionRowProps {
   transaction: RecurringTransaction;
@@ -28,16 +29,21 @@ export default function RecurringTransactionRow({
         <div className="relative hidden flex-wrap items-center gap-1 md:flex">
           <Badge
             variant="outline"
-            className="bg-background cursor-pointer text-xs"
+            className="bg-background cursor-pointer gap-1 text-xs"
           >
+            <CalendarFold className="size-3" />
             {transaction.next_run_date
-              ? format(new Date(transaction.next_run_date), "MMM d")
-              : format(new Date(transaction.start_date), "MMM d")}
+              ? format(
+                  new Date(`${transaction.next_run_date}T00:00:00`),
+                  "MMM d",
+                )
+              : format(new Date(`${transaction.start_date}T00:00:00`), "MMM d")}
           </Badge>
           <Badge
             variant="outline"
-            className="bg-background cursor-pointer text-xs"
+            className="bg-background cursor-pointer gap-1 text-xs"
           >
+            <RefreshCcw className="size-3" />
             {transaction.interval_type}
           </Badge>
           <Badge

@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronsUpDown, LogOut, Settings, Eye, EyeOff } from "lucide-react";
+import {
+  ChevronsUpDown,
+  LogOut,
+  Settings,
+  Eye,
+  EyeOff,
+  User,
+} from "lucide-react";
 import Link from "next/link";
 
 import { signOutAction } from "@/app/actions";
@@ -14,6 +21,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DrawerDialog } from "@/components/ui/drawer-dialog";
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -22,6 +30,7 @@ import {
 } from "@/components/ui/sidebar";
 import { createClient } from "@/utils/supabase/client";
 import { useSettings } from "@/contexts/settings-context";
+import { UpdateProfileForm } from "@/components/shared/update-profile-form";
 
 export function NavUser() {
   const { isMobile } = useSidebar();
@@ -31,6 +40,7 @@ export function NavUser() {
     email: string;
     avatar: string;
   } | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -57,85 +67,106 @@ export function NavUser() {
   if (!user) return null;
 
   return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            >
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">
-                  {user.name.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user.name}</span>
-                <span className="truncate text-xs">{user.email}</span>
-              </div>
-              <ChevronsUpDown className="ml-auto size-4" />
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-            side={isMobile ? "bottom" : "right"}
-            align="end"
-            sideOffset={4}
-          >
-            <DropdownMenuLabel className="p-0 font-normal">
-              <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
+    <>
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <SidebarMenuButton
+                size="lg"
+                className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              >
+                {/* <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage src={user.avatar} alt={user.name} />
                   <AvatarFallback className="rounded-lg">
                     {user.name.charAt(0)}
                   </AvatarFallback>
-                </Avatar>
+                </Avatar> */}
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.name}</span>
-                  <span className="truncate text-xs">{user.email}</span>
+                  {/* <span className="truncate text-xs">{user.email}</span> */}
                 </div>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuItem className="gap-2 p-2" asChild>
-              <Link href="/app/settings">
-                <Settings className="size-4" />
-                Settings
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="gap-2 p-2">
-              <ThemeSwitcher
-                variant="ghost"
-                size="sm"
-                className="h-auto w-full justify-start gap-2 p-0"
-                showToast={false}
-              >
-                Theme
-              </ThemeSwitcher>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="gap-2 p-2"
-              onClick={toggleMoneyVisibility}
+                <ChevronsUpDown className="ml-auto size-4" />
+              </SidebarMenuButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+              side={isMobile ? "bottom" : "right"}
+              align="end"
+              sideOffset={4}
             >
-              {moneyVisible ? (
-                <EyeOff className="size-4" />
-              ) : (
-                <Eye className="size-4" />
-              )}
-              {moneyVisible ? "Hide" : "Show"} Money
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <form action={signOutAction} className="w-full">
-                <button className="flex w-full items-center gap-2 bg-transparent">
-                  <LogOut className="size-4" />
-                  Logout
-                </button>
-              </form>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuItem>
-    </SidebarMenu>
+              <DropdownMenuLabel className="p-0 font-normal">
+                <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                  <Avatar className="h-8 w-8 rounded-lg">
+                    <AvatarImage src={user.avatar} alt={user.name} />
+                    <AvatarFallback className="rounded-lg">
+                      {user.name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-medium">{user.name}</span>
+                    <span className="truncate text-xs">{user.email}</span>
+                  </div>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuItem
+                className="gap-2 p-2"
+                onClick={() => setProfileOpen(true)}
+              >
+                <User className="size-4" />
+                Edit Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem className="gap-2 p-2" asChild>
+                <Link href="/app/settings/wallets">
+                  <Settings className="size-4" />
+                  Settings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="gap-2 p-2">
+                <ThemeSwitcher
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto w-full justify-start gap-2 p-0"
+                  showToast={false}
+                >
+                  Theme
+                </ThemeSwitcher>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="gap-2 p-2"
+                onClick={toggleMoneyVisibility}
+              >
+                {moneyVisible ? (
+                  <EyeOff className="size-4" />
+                ) : (
+                  <Eye className="size-4" />
+                )}
+                {moneyVisible ? "Hide" : "Show"} Money
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <form action={signOutAction} className="w-full">
+                  <button className="flex w-full items-center gap-2 bg-transparent">
+                    <LogOut className="size-4" />
+                    Logout
+                  </button>
+                </form>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </SidebarMenuItem>
+      </SidebarMenu>
+
+      <DrawerDialog
+        open={profileOpen}
+        onOpenChange={setProfileOpen}
+        title="Edit Profile"
+        description="Update your profile information"
+      >
+        <UpdateProfileForm
+          initialDisplayName={user.name}
+          onSuccess={() => setProfileOpen(false)}
+        />
+      </DrawerDialog>
+    </>
   );
 }

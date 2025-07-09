@@ -33,9 +33,19 @@ const SettingsSidebar: React.FC = () => {
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === "/app/settings"}
+                isActive={pathname === "/app/settings/wallets"}
               >
-                <Link href="/app/settings">General</Link>
+                <Link href="/app/settings/wallets"> Wallets</Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === "/app/settings/recurrent-transactions"}
+              >
+                <Link href="/app/settings/recurrent-transactions">
+                  Periodic transactions
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
@@ -78,45 +88,6 @@ const SettingsSidebar: React.FC = () => {
                 <Link href="/app/settings/templates">Templates</Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === "/app/settings/recurrent-transactions"}
-              >
-                <Link href="/app/settings/recurrent-transactions">
-                  Recurring Transactions
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === "/app/settings/profile"}
-              >
-                <Link href="/app/settings/profile">Profile</Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
-
-      {/* Wallets Section */}
-      <SidebarGroup>
-        <SidebarGroupLabel>Wallets</SidebarGroupLabel>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            {sortedWallets?.map((wallet) => (
-              <SidebarMenuItem key={wallet.id}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === `/app/settings/wallets/${wallet.id}`}
-                >
-                  <Link href={`/app/settings/wallets/${wallet.id}`}>
-                    {wallet.name}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>

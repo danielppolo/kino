@@ -23,10 +23,17 @@ const currencies = ["MXN", "USD", "EUR", "GBP"];
 
 interface CurrencyPickerProps {
   value?: string;
+  disabled?: boolean;
+  className?: string;
   onChange: (value: string) => void;
 }
 
-const CurrencyPicker = ({ value, onChange }: CurrencyPickerProps) => {
+const CurrencyPicker = ({
+  value,
+  disabled = false,
+  className,
+  onChange,
+}: CurrencyPickerProps) => {
   const [open, setOpen] = useState(false);
 
   return (
@@ -36,7 +43,8 @@ const CurrencyPicker = ({ value, onChange }: CurrencyPickerProps) => {
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-[200px] justify-between"
+          className={cn("w-[200px] justify-between", className)}
+          disabled={disabled}
         >
           {value || "Select currency..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />

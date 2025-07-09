@@ -18,11 +18,15 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
+interface UpdateProfileFormProps {
+  initialDisplayName: string;
+  onSuccess?: () => void;
+}
+
 export function UpdateProfileForm({
   initialDisplayName,
-}: {
-  initialDisplayName: string;
-}) {
+  onSuccess,
+}: UpdateProfileFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const supabase = createClient();
 
@@ -49,6 +53,7 @@ export function UpdateProfileForm({
       }
 
       toast.success("Profile updated successfully");
+      onSuccess?.();
     } catch (error) {
       toast.error("Failed to update profile");
       console.error("Error updating profile:", error);
@@ -60,7 +65,6 @@ export function UpdateProfileForm({
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="displayName">Display Name</Label>
         <Input
           id="displayName"
           {...register("displayName")}
@@ -70,7 +74,7 @@ export function UpdateProfileForm({
           <p className="text-sm text-red-500">{errors.displayName.message}</p>
         )}
       </div>
-      <Button type="submit" disabled={isLoading}>
+      <Button type="submit" disabled={isLoading} className="w-full">
         {isLoading ? "Updating..." : "Update Profile"}
       </Button>
     </form>
