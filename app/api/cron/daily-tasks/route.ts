@@ -80,11 +80,11 @@ export async function POST(request: NextRequest) {
             : { data: null };
           const baseCurrency = pref?.base_currency;
 
-          const conversion = await fetchConversion(
-            r.currency,
-            baseCurrency,
-            dateStr,
-          );
+          const conversion = await fetchConversion({
+            sourceCurrency: r.currency,
+            targetCurrency: baseCurrency,
+            date: dateStr,
+          });
           const rate = conversion.rate;
 
           await supabase.from("transactions").insert({

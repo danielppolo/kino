@@ -8,11 +8,16 @@ export interface CurrencyConversion {
   source: "cache" | "api" | "direct";
 }
 
-export async function fetchConversion(
-  sourceCurrency: string,
-  targetCurrency: string,
-  date?: string,
-): Promise<CurrencyConversion> {
+export async function fetchConversion({
+  sourceCurrency,
+  targetCurrency,
+  date,
+}: {
+  sourceCurrency: string;
+  // Usually the base currency
+  targetCurrency: string;
+  date?: string;
+}): Promise<CurrencyConversion> {
   if (sourceCurrency === targetCurrency) {
     return {
       rate: 1,
@@ -65,6 +70,7 @@ export async function fetchConversion(
     const response = await fetch(url);
 
     if (!response.ok) {
+      console.log(await response.json());
       throw new Error("Failed to fetch currency data");
     }
 
@@ -134,11 +140,11 @@ export async function fetchAllConversions({
   await Promise.all(
     currencies.map(async (currency) => {
       if (currency !== baseCurrency) {
-        conversions[currency] = await fetchConversion(
-          currency,
-          baseCurrency,
+        conversions[currency] = await fetchConversion({
+          sourceCurrency: currency,
+          targetCurrency: baseCurrency,
           date,
-        );
+        });
       }
     }),
   );
