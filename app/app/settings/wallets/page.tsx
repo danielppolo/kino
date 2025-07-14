@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { format } from "date-fns";
 import { Download, Eye, EyeOff } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,7 +13,6 @@ import { exportTransactions } from "@/actions/export-transactions";
 import AddWalletButton from "@/components/shared/add-wallet-button";
 import { BulkActions } from "@/components/shared/bulk-actions";
 import PageHeader from "@/components/shared/page-header";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipButton } from "@/components/ui/tooltip-button";
 import { useWallets } from "@/contexts/settings-context";
 import { useSelection } from "@/hooks/use-selection";
@@ -24,22 +22,6 @@ export default function Page() {
   const [wallets, walletsMap] = useWallets();
   const [isExporting, setIsExporting] = useState(false);
   const queryClient = useQueryClient();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  // Group wallets by currency
-  const walletsByCurrency = useMemo(() => {
-    return wallets.reduce(
-      (acc, wallet) => {
-        if (!acc[wallet.currency]) acc[wallet.currency] = [];
-        acc[wallet.currency].push(wallet);
-        return acc;
-      },
-      {} as Record<string, typeof wallets>,
-    );
-  }, [wallets]);
-
-  const currencies = Object.keys(walletsByCurrency);
 
   const {
     selected,
@@ -127,44 +109,15 @@ export default function Page() {
     clearSelection();
   };
 
-  const handleTabChange = (value: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("currency", value);
-    router.push(`/app/settings/wallets?${params.toString()}`);
-  };
-
-  const currentCurrency = searchParams.get("currency") || currencies[0] || "";
-
   return (
     <>
-      <Tabs
-        onValueChange={handleTabChange}
-        defaultValue={currentCurrency}
-        value={currentCurrency}
-      >
-        <PageHeader className="justify-between">
-          <TabsList>
-            {currencies.map((currency) => (
-              <TabsTrigger key={currency} value={currency}>
-                {currency}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          <AddWalletButton />
-        </PageHeader>
+      <PageHeader className="justify-end">
+        <AddWalletButton />
+      </PageHeader>
 
-        <div style={{ height: "calc(100vh - 44px)", overflow: "auto" }}>
-          {currencies.map((currency) => (
-            <TabsContent key={currency} value={currency}>
-              <WalletsSection
-                selected={selected}
-                onToggle={toggleSelect}
-                wallets={walletsByCurrency[currency]}
-              />
-            </TabsContent>
-          ))}
-        </div>
-      </Tabs>
+      <div style={{ height: "calc(100vh - 44px)", overflow: "auto" }}>
+        <WalletsSection selected={selected} onToggle={toggleSelect} />
+      </div>
 
       <BulkActions
         selectedCount={selectedCount}

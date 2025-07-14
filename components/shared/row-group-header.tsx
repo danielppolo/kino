@@ -5,11 +5,11 @@ import { Text } from "../ui/typography";
 
 import { DAY_HEADER_HEIGHT } from "@/utils/constants";
 
-interface DayHeaderProps {
-  date: string;
+interface RowGroupHeaderProps {
+  title: string;
 }
 
-const DayHeader: React.FC<DayHeaderProps> = ({ date }) => {
+const RowGroupHeader: React.FC<RowGroupHeaderProps> = ({ title }) => {
   return (
     <div
       className="bg-muted/40 border-muted flex items-center justify-between border-t px-4"
@@ -18,13 +18,13 @@ const DayHeader: React.FC<DayHeaderProps> = ({ date }) => {
       }}
     >
       <Text muted small>
-        {format(parse(date, "yyyy-MM-dd", new Date()), "PP")}
+        {title}
       </Text>
     </div>
   );
 };
 
-export const DayHeaderLoading: React.FC = () => {
+export const RowGroupHeaderLoading: React.FC = () => {
   return (
     <div className="bg-muted/40 flex h-8 items-center justify-between px-4">
       <div className="bg-muted h-4 w-24 animate-pulse rounded-md" />
@@ -32,4 +32,4 @@ export const DayHeaderLoading: React.FC = () => {
   );
 };
 
-export default memo(DayHeader);
+export default memo(RowGroupHeader);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 
 import { useQuery } from "@tanstack/react-query";
@@ -13,6 +13,7 @@ import { getTagTransactionCounts } from "@/utils/supabase/queries";
 import { Tag } from "@/utils/supabase/types";
 import { Text } from "@/components/ui/typography";
 import EmptyState from "@/components/shared/empty-state";
+import RowGroupHeader from "@/components/shared/row-group-header";
 
 interface TagsSectionProps {
   selected: string[];
@@ -58,48 +59,84 @@ export default function TagsSection({
     }
   }, [transactionCountsData, onTransactionCountsLoaded]);
 
+  // Group tags by their group property
+  const groupedTags = useMemo(() => {
+    const groups: Record<string, Tag[]> = {};
+
+    tags.forEach((tag) => {
+      const group = tag.group || "";
+      if (!groups[group]) {
+        groups[group] = [];
+      }
+      groups[group].push(tag);
+    });
+
+    // Sort tags within each group by title
+    Object.values(groups).forEach((groupTags) => {
+      groupTags.sort((a, b) => a.title.localeCompare(b.title));
+    });
+
+    // Sort groups alphabetically
+    const sortedGroups: Record<string, Tag[]> = {};
+    Object.keys(groups)
+      .sort((a, b) => a.localeCompare(b))
+      .forEach((groupName) => {
+        sortedGroups[groupName] = groups[groupName];
+      });
+
+    return sortedGroups;
+  }, [tags]);
+
   if (tags.length === 0) {
-    return <EmptyState />;
+    return (
+      <EmptyState title="No tags" description="Create a tag to get started" />
+    );
   }
 
   return (
     <div className="space-y-1">
-      {tags.map((tag) => {
-        const isSelected = selected.includes(tag.id);
-        const transactionCount = transactionCountsData?.get(tag.id) || 0;
+      {Object.entries(groupedTags).map(([groupName, groupTags]) => (
+        <div key={groupName}>
+          <RowGroupHeader
+            title={groupName.charAt(0).toUpperCase() + groupName.slice(1)}
+          />
+          {groupTags.map((tag) => {
+            const isSelected = selected.includes(tag.id);
+            const transactionCount = transactionCountsData?.get(tag.id) || 0;
 
-        return (
-          <SelectableRow
-            key={tag.id}
-            id={`${tag.id}-${transactionCount}`}
-            selected={isSelected}
-            onToggleSelect={(e) => onToggle(tag, e.shiftKey)}
-            onClick={(e) => onEdit(tag)}
-          >
-            <div className="flex flex-1 items-center justify-between">
-              <div className="flex flex-1 items-center gap-4">
-                <Text>{tag.title}</Text>
-                <Text className="text-muted-foreground">{tag.group}</Text>
-              </div>
+            return (
+              <SelectableRow
+                key={tag.id}
+                id={`${tag.id}-${transactionCount}`}
+                selected={isSelected}
+                onToggleSelect={(e) => onToggle(tag, e.shiftKey)}
+                onClick={(e) => onEdit(tag)}
+              >
+                <div className="flex flex-1 items-center justify-between">
+                  <div className="flex flex-1 items-center gap-4">
+                    <Text>{tag.title}</Text>
+                  </div>
 
-              <div className="flex items-center gap-2">
-                {!!transactionCount && (
-                  <Badge
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/app/transactions?tag=${tag.id}`);
-                    }}
-                    className="h-5 min-w-5 cursor-pointer rounded-full px-2 font-mono text-xs font-light tabular-nums"
-                    variant="outline"
-                  >
-                    {transactionCount}
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </SelectableRow>
-        );
-      })}
+                  <div className="flex items-center gap-2">
+                    {!!transactionCount && (
+                      <Badge
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/app/transactions?tag=${tag.id}`);
+                        }}
+                        className="h-5 min-w-5 cursor-pointer rounded-full px-2 font-mono text-xs font-light tabular-nums"
+                        variant="outline"
+                      >
+                        {transactionCount}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </SelectableRow>
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 }

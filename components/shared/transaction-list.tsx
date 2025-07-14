@@ -10,7 +10,7 @@ import { RowLoading } from "../ui/row";
 import { TooltipButton } from "../ui/tooltip-button";
 import { BulkActions } from "./bulk-actions";
 import BulkTransactionEditForm from "./bulk-transaction-edit-form";
-import DayHeader, { DayHeaderLoading } from "./day-header";
+import RowGroupHeader, { RowGroupHeaderLoading } from "./row-group-header";
 import EmptyState from "./empty-state";
 import TransactionRow from "./transaction-row";
 
@@ -245,7 +245,9 @@ export default function TransactionList() {
                   transform: `translateY(${virtualRow.start}px)`,
                 }}
               >
-                {filters.sort !== "amount_cents" && <DayHeader date={date} />}
+                {filters.sort !== "amount_cents" && (
+                  <RowGroupHeader title={date} />
+                )}
                 {dateTransactions.map((transaction) => (
                   <TransactionRow
                     key={`${transaction.id}-${transaction.amount_cents}-${transaction.description ?? ""}-${transaction.tag_ids?.join(",") ?? ""}-${transaction.category_id}-${transaction.label_id}`}
@@ -253,7 +255,9 @@ export default function TransactionList() {
                     onClick={(e) => handleTransactionClick(e, transaction)}
                     selected={selected.includes(transaction.id!)}
                     selectionMode={selectedCount > 0}
-                    onToggleSelect={(e) => toggleSelected(transaction.id!, e.shiftKey)}
+                    onToggleSelect={(e) =>
+                      toggleSelected(transaction.id!, e.shiftKey)
+                    }
                   />
                 ))}
               </div>
@@ -314,7 +318,7 @@ export const TransactionListLoading = () => {
       style={{ height: "calc(100vh - 44px - 44px)", overflow: "auto" }}
       className="relative w-full divide-y overflow-hidden"
     >
-      <DayHeaderLoading />
+      <RowGroupHeaderLoading />
       {Array.from({ length: 20 }).map((_, index) => (
         <RowLoading key={index} />
       ))}
