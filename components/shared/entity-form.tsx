@@ -5,13 +5,13 @@ import { DefaultValues, FieldValues, useForm } from "react-hook-form";
 import { Trash } from "lucide-react";
 import { toast } from "sonner";
 
+import { SubmitButton } from "../submit-button";
 import { Switch } from "../ui/switch";
+import TemplateSelect from "./template-select";
 
 import { Button } from "@/components/ui/button";
 import { DrawerDialog } from "@/components/ui/drawer-dialog";
 import { Form } from "@/components/ui/form";
-import TemplateSelect from "./template-select";
-import { SubmitButton } from "../submit-button";
 
 interface EntityFormProps<T extends FieldValues> {
   title: string;
@@ -23,7 +23,9 @@ interface EntityFormProps<T extends FieldValues> {
   onOpenChange?: (open: boolean) => void;
   onSuccess?: () => void;
   defaultValues: DefaultValues<T>;
-  onSubmit: (values: T) => Promise<{ error?: string }>;
+  onSubmit: (
+    values: T,
+  ) => Promise<{ error?: string; resetValues?: T; setFocus?: string }>;
   onDelete?: (entity: T) => Promise<{ error?: string }>;
   children: React.ReactNode;
   isLoading?: boolean;
@@ -47,6 +49,7 @@ export function EntityForm<T extends FieldValues>({
   isLoading,
   customTitle,
   submitLabel,
+  setFocus,
 }: EntityFormProps<T>) {
   const isEdit = !!entity;
   const form = useForm<T>({
@@ -61,20 +64,17 @@ export function EntityForm<T extends FieldValues>({
   }, [entity, open]);
 
   const handleSubmit = async (values: T) => {
-    const { error } = await onSubmit(values);
+    const { error, resetValues } = await onSubmit(values);
     if (error) {
       return toast.error(error);
     }
-    toast.success(isEdit ? "Updated successfully!" : "Created successfully!");
 
-    if (addAnother) {
-      // Reset form but keep only the date field
-      form.reset({
-        ...defaultValues,
-      } as T);
+    toast.success(isEdit ? "Updated successfully!" : "Created successfully!");
+    if (addAnother && resetValues) {
+      form.reset(resetValues);
+      if (setFocus) form.setFocus(setFocus);
       return;
     }
-
     onSuccess?.();
   };
 
