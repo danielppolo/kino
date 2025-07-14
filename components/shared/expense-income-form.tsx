@@ -39,7 +39,7 @@ interface InfiniteTransactionData {
 interface ExpenseIncomeFormProps {
   walletId: string;
   date?: string;
-  type: "income" | "expense" | "transfer";
+  type: "income" | "expense";
   onSuccess?: () => void;
   initialData?: Transaction;
   open?: boolean;
@@ -108,14 +108,14 @@ const ExpenseIncomeForm = ({
   });
 
   const defaultValues: ExpenseIncomeFormValues = {
-    type,
+    type: type as "income" | "expense",
     wallet_id: walletId,
     date: date,
-    currency: walletMap.get(walletId)?.currency,
+    currency: walletMap.get(walletId)?.currency ?? "USD",
     description: "",
     category_id: "",
     label_id: "",
-    amount: initialData ? Math.abs(initialData.amount_cents) / 100 : undefined,
+    amount: initialData ? Math.abs(initialData.amount_cents) / 100 : "",
     tags: initialData?.tag_ids ?? [],
   };
 
@@ -125,13 +125,15 @@ const ExpenseIncomeForm = ({
     if (addAnother) {
       // Reset all fields except date
       const prevDate = values.date;
+
       return {
         error: undefined,
         resetValues: {
           ...defaultValues,
           date: prevDate,
-          amount: undefined,
+          amount: "",
         },
+        setFocus: "amount",
       };
     }
 
@@ -158,7 +160,7 @@ const ExpenseIncomeForm = ({
   ): ExpenseIncomeFormValues => ({
     id: transaction.id,
     amount: Math.abs(transaction.amount_cents) / 100,
-    type: transaction.type,
+    type: transaction.type as "income" | "expense",
     date: transaction.date,
     description: transaction.description ?? undefined,
     category_id: transaction.category_id ?? "",
@@ -171,7 +173,7 @@ const ExpenseIncomeForm = ({
   return (
     <EntityForm
       title={type}
-      type={type}
+      type={type as "expense" | "income"}
       entity={initialData ? convertToFormValues(initialData) : undefined}
       open={open}
       onOpenChange={onOpenChange}
@@ -185,7 +187,6 @@ const ExpenseIncomeForm = ({
     >
       <FormField
         name="amount"
-        defaultValue={null}
         render={({ field }) => (
           <FormItem>
             <FormControl>
@@ -202,7 +203,12 @@ const ExpenseIncomeForm = ({
           render={({ field }) => (
             <FormItem>
               <FormControl>
-                <CategoryCombobox {...field} type={type} className="w-full" />
+                <CategoryCombobox
+                  {...field}
+                  type={type}
+                  selectionType="combobox"
+                  className="w-full"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
