@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { format } from "date-fns";
 import { Download, Pencil } from "lucide-react";
 
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -10,8 +11,8 @@ import { RowLoading } from "../ui/row";
 import { TooltipButton } from "../ui/tooltip-button";
 import { BulkActions } from "./bulk-actions";
 import BulkTransactionEditForm from "./bulk-transaction-edit-form";
-import RowGroupHeader, { RowGroupHeaderLoading } from "./row-group-header";
 import EmptyState from "./empty-state";
+import RowGroupHeader, { RowGroupHeaderLoading } from "./row-group-header";
 import TransactionRow from "./transaction-row";
 
 import { useTransactionForm } from "@/contexts/transaction-form-context";
@@ -246,7 +247,9 @@ export default function TransactionList() {
                 }}
               >
                 {filters.sort !== "amount_cents" && (
-                  <RowGroupHeader title={date} />
+                  <RowGroupHeader
+                    title={format(new Date(`${date}T00:00:00`), "PP")}
+                  />
                 )}
                 {dateTransactions.map((transaction) => (
                   <TransactionRow

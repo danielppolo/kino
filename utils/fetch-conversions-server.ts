@@ -37,8 +37,6 @@ export async function fetchConversion({
     .eq("date", date ?? new Date().toISOString().split("T")[0])
     .single();
 
-  console.log(cachedRate);
-
   if (!cacheError && cachedRate) {
     const now = new Date();
     const lastUpdated = new Date(cachedRate.updated_at);
@@ -70,7 +68,6 @@ export async function fetchConversion({
     const response = await fetch(url);
 
     if (!response.ok) {
-      console.log(await response.json());
       throw new Error("Failed to fetch currency data");
     }
 
@@ -98,7 +95,6 @@ export async function fetchConversion({
       );
 
     if (upsertError) {
-      console.log(upsertError);
       throw new Error("Failed to update cache");
     }
 

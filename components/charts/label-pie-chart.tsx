@@ -1,23 +1,21 @@
 "use client";
 
+import { useMemo } from "react";
 import { Pie, PieChart } from "recharts";
 import { Cell } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
 
-import { createClient } from "@/utils/supabase/client";
-import { getLabelPieChartData } from "@/utils/supabase/queries";
-import { Money } from "@/components/ui/money";
-import { useCurrency, useWallets } from "@/contexts/settings-context";
-import { aggregateByKeyWithCurrencyConversion } from "@/utils/currency-conversion";
 import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
-  ChartTooltipContent,
 } from "@/components/ui/chart";
-import { Title } from "../ui/typography";
+import { Money } from "@/components/ui/money";
+import { useCurrency, useWallets } from "@/contexts/settings-context";
+import { aggregateByKeyWithCurrencyConversion } from "@/utils/currency-conversion";
+import { createClient } from "@/utils/supabase/client";
+import { getLabelPieChartData } from "@/utils/supabase/queries";
 
 interface LabelPieChartProps {
   walletId?: string;
@@ -77,8 +75,6 @@ export default function LabelPieChart({
       baseCurrency,
       walletMap,
     );
-
-    console.log(aggregated);
 
     // Transform to pie chart format
     const result = Object.entries(aggregated).map(([labelId, data]) => {
