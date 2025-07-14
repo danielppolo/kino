@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 
 import EmptyState from "@/components/shared/empty-state";
 import WalletForm from "@/components/shared/wallet-form";
 import WalletRow from "@/components/shared/wallet-row";
+import RowGroupHeader from "@/components/shared/row-group-header";
 import { DrawerDialog } from "@/components/ui/drawer-dialog";
 import { useWallets } from "@/contexts/settings-context";
 import { Wallet } from "@/utils/supabase/types";
@@ -27,6 +28,34 @@ export default function WalletsSection({
   // Use provided wallets or fall back to all wallets
   const wallets = propWallets || allWallets;
 
+  // Group wallets by currency
+  const groupedWallets = useMemo(() => {
+    const groups: Record<string, Wallet[]> = {};
+
+    wallets.forEach((wallet) => {
+      const currency = wallet.currency || "Unknown";
+      if (!groups[currency]) {
+        groups[currency] = [];
+      }
+      groups[currency].push(wallet);
+    });
+
+    // Sort wallets within each group by name
+    Object.values(groups).forEach((groupWallets) => {
+      groupWallets.sort((a, b) => a.name.localeCompare(b.name));
+    });
+
+    // Sort groups alphabetically
+    const sortedGroups: Record<string, Wallet[]> = {};
+    Object.keys(groups)
+      .sort((a, b) => a.localeCompare(b))
+      .forEach((currency) => {
+        sortedGroups[currency] = groups[currency];
+      });
+
+    return sortedGroups;
+  }, [wallets]);
+
   const handleRowClick = (wallet: Wallet) => {
     setSelectedWallet(wallet);
     setOpen(true);
@@ -48,19 +77,26 @@ export default function WalletsSection({
 
   return (
     <>
-      {wallets.map((wallet) => {
-        const isSelected = selected.includes(wallet.id);
-        return (
-          <WalletRow
-            key={wallet.id}
-            wallet={wallet}
-            selected={isSelected}
-            selectionMode={selected.length > 0}
-            onToggleSelect={(e) => onToggle(wallet, e.shiftKey)}
-            onClick={(e) => handleRowClick(wallet)}
-          />
-        );
-      })}
+      <div className="space-y-1">
+        {Object.entries(groupedWallets).map(([currency, groupWallets]) => (
+          <div key={currency}>
+            <RowGroupHeader title={currency} />
+            {groupWallets.map((wallet) => {
+              const isSelected = selected.includes(wallet.id);
+              return (
+                <WalletRow
+                  key={wallet.id}
+                  wallet={wallet}
+                  selected={isSelected}
+                  selectionMode={selected.length > 0}
+                  onToggleSelect={(e) => onToggle(wallet, e.shiftKey)}
+                  onClick={(e) => handleRowClick(wallet)}
+                />
+              );
+            })}
+          </div>
+        ))}
+      </div>
 
       <DrawerDialog
         open={open}
