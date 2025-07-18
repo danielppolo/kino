@@ -238,7 +238,7 @@ const TransferForm = ({
                   <FormControl>
                     <WalletPicker
                       currency={currency}
-                      exclude={field.value}
+                      className="w-full"
                       {...field}
                     />
                   </FormControl>
@@ -256,7 +256,7 @@ const TransferForm = ({
                   <FormControl>
                     <WalletPicker
                       currency={currency}
-                      exclude={field.value}
+                      className="w-full"
                       {...field}
                     />
                   </FormControl>
