@@ -153,7 +153,7 @@ const TagMultiSelect = React.forwardRef<HTMLButtonElement, TagMultiSelectProps>(
       if (!title) return;
       const newTag = await createMutation.mutateAsync(title);
       if (newTag) {
-        onChange([...value, newTag.title]);
+        onChange([...value, newTag.id]);
       }
       setOpen(false);
       setQuery("");
