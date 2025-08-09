@@ -4,6 +4,7 @@ import { useState } from "react";
 import { format } from "date-fns";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { v4 as randomUUID } from "uuid";
 
 import DaterPicker from "../ui/date-picker";
 import { AmountInput } from "./amount-input";
@@ -23,7 +24,7 @@ import {
 import { useTags, useWallets } from "@/contexts/settings-context";
 import useFilters from "@/hooks/use-filters";
 import { deleteTransaction } from "@/utils/supabase/mutations";
-import { Transaction } from "@/utils/supabase/types";
+import { Transaction, TransactionList } from "@/utils/supabase/types";
 
 interface TransactionPage {
   data: Transaction[];
@@ -74,13 +75,113 @@ const ExpenseIncomeForm = ({
   const [addAnother, setAddAnother] = useState(false);
   const queryClient = useQueryClient();
 
-  const { mutate, isPending } = useMutation<
+  const { mutateAsync, isPending } = useMutation<
     { data: Transaction[] },
     Error,
-    ExpenseIncomeFormValues
+    ExpenseIncomeFormValues,
+    {
+      previousData?: InfiniteTransactionData;
+      optimisticTransaction: TransactionList;
+    }
   >({
     mutationFn: createTransaction,
-    onSuccess: () => {
+    onMutate: async (newTransaction) => {
+      await queryClient.cancelQueries({
+        queryKey: ["transactions", filters],
+      });
+
+      const previousData = queryClient.getQueryData<InfiniteTransactionData>([
+        "transactions",
+        filters,
+      ]);
+
+      const optimisticTransaction: TransactionList = {
+        id: randomUUID(),
+        wallet_id: newTransaction.wallet_id,
+        category_id: newTransaction.category_id,
+        label_id: newTransaction.label_id,
+        amount_cents:
+          newTransaction.type === "expense"
+            ? -Math.round(newTransaction.amount * 100)
+            : Math.round(newTransaction.amount * 100),
+        currency: newTransaction.currency,
+        description: newTransaction.description,
+        date: newTransaction.date,
+        type: newTransaction.type,
+        tag_ids: newTransaction.tags,
+      };
+
+      queryClient.setQueryData<InfiniteTransactionData>(
+        ["transactions", filters],
+        (old) => {
+          if (!old) {
+            return {
+              pages: [
+                {
+                  data: [optimisticTransaction],
+                  error: null,
+                  count: 1,
+                },
+              ],
+              pageParams: [0],
+            };
+          }
+
+          return {
+            ...old,
+            pages: old.pages.map((page, index) =>
+              index === 0
+                ? { ...page, data: [optimisticTransaction, ...page.data] }
+                : page,
+            ),
+          };
+        },
+      );
+
+      return { previousData, optimisticTransaction };
+    },
+    onError: (_err, _newTransaction, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData([
+          "transactions",
+          filters,
+        ], context.previousData);
+      }
+    },
+    onSuccess: (data, _variables, context) => {
+      const saved = data?.data?.[0];
+      if (!saved || !context?.optimisticTransaction) return;
+
+      const updatedTransaction: TransactionList = {
+        id: saved.id,
+        wallet_id: saved.wallet_id,
+        category_id: saved.category_id,
+        label_id: saved.label_id ?? undefined,
+        amount_cents: saved.amount_cents,
+        currency: saved.currency,
+        description: saved.description ?? undefined,
+        date: saved.date,
+        type: saved.type,
+        tag_ids: saved.tag_ids ?? undefined,
+      };
+
+      queryClient.setQueryData<InfiniteTransactionData>(
+        ["transactions", filters],
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              data: page.data.map((t) =>
+                t.id === context.optimisticTransaction.id ? updatedTransaction : t,
+              ),
+            })),
+          };
+        },
+      );
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: ["transactions", filters],
       });
@@ -120,7 +221,16 @@ const ExpenseIncomeForm = ({
   };
 
   const handleSubmit = async (values: ExpenseIncomeFormValues) => {
-    await mutate(values);
+    try {
+      await mutateAsync(values);
+    } catch (error) {
+      return {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to create transaction",
+      };
+    }
 
     if (addAnother) {
       // Reset all fields except date
