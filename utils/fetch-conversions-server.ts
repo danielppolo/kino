@@ -52,21 +52,22 @@ export async function fetchConversion({
     }
   }
 
+  const today = new Date().toISOString().split("T")[0];
+  const validatedDate = date && date !== today ? date : null;
   // Fetch fresh data from API
   const url = new URL(
-    `https://api.currencyapi.com/v3/${date ? "historical" : "latest"}`,
+    `https://api.currencyapi.com/v3/${validatedDate ? "historical" : "latest"}`,
   );
   url.searchParams.set("apikey", process.env.CURRENCY_API_TOKEN!);
   url.searchParams.set("base_currency", targetCurrency);
   url.searchParams.set("currencies", sourceCurrency);
 
-  if (date) {
-    url.searchParams.set("date", date);
+  if (validatedDate) {
+    url.searchParams.set("date", validatedDate);
   }
 
   try {
     const response = await fetch(url);
-
     if (!response.ok) {
       throw new Error("Failed to fetch currency data");
     }
@@ -137,8 +138,8 @@ export async function fetchAllConversions({
     currencies.map(async (currency) => {
       if (currency !== baseCurrency) {
         conversions[currency] = await fetchConversion({
-          sourceCurrency: currency,
-          targetCurrency: baseCurrency,
+          sourceCurrency: baseCurrency,
+          targetCurrency: currency,
           date,
         });
       }
