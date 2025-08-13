@@ -33,14 +33,17 @@ export const createTransaction = async (transaction: Transaction) => {
     .from("user_preferences")
     .select("base_currency")
     .maybeSingle();
-  const baseCurrency = pref?.base_currency || "USD";
+  const baseCurrency = pref?.base_currency;
 
-  // Fetch conversion rate to base currency
-  const conversion = await fetchConversion({
-    sourceCurrency: currency,
-    targetCurrency: baseCurrency,
-  });
-  const rate = conversion.rate;
+  // Fetch conversion rate to base currency only when needed
+  let rate = 1;
+  if (baseCurrency && currency !== baseCurrency) {
+    const conversion = await fetchConversion({
+      sourceCurrency: currency,
+      targetCurrency: baseCurrency,
+    });
+    rate = conversion.rate;
+  }
 
   const signedAmount =
     type === "expense" ? -Math.round(amount * 100) : Math.round(amount * 100);
