@@ -39,8 +39,8 @@ export const createTransaction = async (transaction: Transaction) => {
   let rate = 1;
   if (baseCurrency && currency !== baseCurrency) {
     const conversion = await fetchConversion({
-      sourceCurrency: currency,
-      targetCurrency: baseCurrency,
+      sourceCurrency: baseCurrency,
+      targetCurrency: currency,
     });
     rate = conversion.rate;
   }
