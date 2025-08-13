@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -72,20 +73,8 @@ const ExpenseIncomeForm = ({
   const filters = useFilters();
   const [availableTags] = useTags();
   const [addAnother, setAddAnother] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
-
-  const { mutate, isPending } = useMutation<
-    { data: Transaction[] },
-    Error,
-    ExpenseIncomeFormValues
-  >({
-    mutationFn: createTransaction,
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["transactions", filters],
-      });
-    },
-  });
 
   const deleteMutation = useMutation({
     mutationFn: deleteTransaction,
@@ -115,29 +104,50 @@ const ExpenseIncomeForm = ({
     description: "",
     category_id: "",
     label_id: "",
-    amount: initialData ? Math.abs(initialData.amount_cents) / 100 : "",
+    amount: initialData ? Math.abs(initialData.amount_cents) / 100 : 0,
     tags: initialData?.tag_ids ?? [],
   };
 
   const handleSubmit = async (values: ExpenseIncomeFormValues) => {
-    await mutate(values);
+    setIsSubmitting(true);
+    try {
+      const result = await createTransaction(values);
 
-    if (addAnother) {
-      // Reset all fields except date
-      const prevDate = values.date;
+      if (result.success) {
+        // Invalidate queries to refresh the data
+        queryClient.invalidateQueries({
+          queryKey: ["transactions", filters],
+        });
 
-      return {
-        error: undefined,
-        resetValues: {
-          ...defaultValues,
-          date: prevDate,
-          amount: "",
-        },
-        setFocus: "amount",
-      };
+        if (addAnother) {
+          // Reset all fields except date
+          const prevDate = values.date;
+
+          return {
+            error: undefined,
+            resetValues: {
+              ...defaultValues,
+              date: prevDate,
+              amount: 0,
+            },
+            setFocus: "amount",
+          };
+        }
+
+        onSuccess?.();
+        return { error: undefined };
+      } else {
+        toast.error(result.error || "Failed to create transaction");
+        return { error: result.error || "Failed to create transaction" };
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unexpected error";
+      toast.error(errorMessage);
+      return { error: errorMessage };
+    } finally {
+      setIsSubmitting(false);
     }
-
-    return { error: undefined };
   };
 
   const handleDelete = async () => {
@@ -183,7 +193,7 @@ const ExpenseIncomeForm = ({
       onDelete={handleDelete}
       addAnother={addAnother}
       setAddAnother={setAddAnother}
-      isLoading={isPending || deleteMutation.isPending}
+      isLoading={isSubmitting || deleteMutation.isPending}
     >
       <FormField
         name="amount"
@@ -264,7 +274,6 @@ const ExpenseIncomeForm = ({
                 className="w-full"
               />
             </FormControl>
-            <FormMessage />
           </FormItem>
         )}
       />
