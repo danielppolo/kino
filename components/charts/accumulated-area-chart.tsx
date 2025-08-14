@@ -372,9 +372,9 @@ export function AccumulatedAreaChart({
                 dataKey={wallet.id}
                 name={wallet.name}
                 type="monotone"
-                fill={chartConfig[wallet.id].color}
+                fill={`var(--color-${wallet.id})`}
                 fillOpacity={0.1}
-                stroke={chartConfig[wallet.id].color}
+                stroke={`var(--color-${wallet.id})`}
                 stackId="a"
               />
             ))}
