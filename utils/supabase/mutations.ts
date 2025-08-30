@@ -305,11 +305,20 @@ export const updateTransfer = async (
     throw new Error("Invalid transfer: expected exactly 2 transactions");
   }
 
-  // Update each transaction with the correct amount sign based on category
+  // Update each transaction with the correct amount sign based on direction
+  // categories (sender or receiver)
   const updates = transactions.map((transaction) => {
     const isOutgoing =
       transaction.category_id ===
       process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_OUT_ID;
+    const isIncoming =
+      transaction.category_id ===
+      process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_IN_ID;
+
+    if (!isOutgoing && !isIncoming) {
+      throw new Error("Invalid transfer category");
+    }
+
     return supabase
       .from("transactions")
       .update({
