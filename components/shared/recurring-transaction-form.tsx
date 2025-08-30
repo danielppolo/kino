@@ -92,7 +92,8 @@ const RecurringTransactionForm = ({
         wallet_id: values.wallet_id,
         category_id: values.category_id,
         label_id: values.label_id,
-        amount_cents: Math.round(values.amount * 100),
+        amount_cents:
+          Math.round(values.amount * 100) * (type === "expense" ? -1 : 1),
         currency: selectedWallet.currency,
         description: values.description,
         interval_type: values.interval_type,
