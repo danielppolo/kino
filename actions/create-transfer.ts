@@ -23,18 +23,19 @@ export async function createTransferTransaction(
 ) {
   const supabase = await createClient();
   const transferId = uuidv4();
+  const normalized = Math.abs(amount);
   const transactionsToInsert = [
     {
       ...sourceTransaction,
       wallet_id: senderWalletId,
-      amount_cents: -amount * 100,
+      amount_cents: normalized * 100 * -1,
       transfer_id: transferId,
       category_id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID,
     },
     {
       ...sourceTransaction,
       wallet_id: receiverWalletId,
-      amount_cents: amount * 100,
+      amount_cents: normalized * 100,
       transfer_id: transferId,
       category_id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID,
     } as const,

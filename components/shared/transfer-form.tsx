@@ -110,9 +110,11 @@ const TransferForm = ({
   };
 
   const handleSubmit = async (data: TransferFormValues) => {
+    const normalizedData = { ...data, amount: Math.abs(data.amount) };
+
     if (isEdit) {
       try {
-        await updateMutation.mutateAsync(data);
+        await updateMutation.mutateAsync(normalizedData);
         return { error: undefined };
       } catch (error) {
         return {
@@ -122,11 +124,11 @@ const TransferForm = ({
     }
 
     try {
-      await createMutation.mutateAsync(data);
+      await createMutation.mutateAsync(normalizedData);
 
       if (addAnother) {
         // Reset all fields except date
-        const prevDate = data.date;
+        const prevDate = normalizedData.date;
         return {
           error: undefined,
           resetValues: {
@@ -187,7 +189,10 @@ const TransferForm = ({
     >
       <FormField
         name="amount"
-        rules={{ required: "Amount is required" }}
+        rules={{
+          required: "Amount is required",
+          min: { value: 0.01, message: "Amount must be positive" },
+        }}
         render={({ field }) => (
           <FormItem>
             <FormLabel>Amount</FormLabel>
