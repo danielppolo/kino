@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { createTransaction } from "@/actions/create-transaction";
 import { fetchAllConversions } from "@/utils/fetch-conversions-server";
-import { fetchConversion } from "@/utils/fetch-conversions-server";
 import { calculateNextRunDate } from "@/utils/recurring-transaction";
 import { createClient } from "@/utils/supabase/server";
 
@@ -64,41 +64,16 @@ async function handle(request: NextRequest) {
         while (current <= today && (!endDate || current <= endDate)) {
           const dateStr = current.toISOString().split("T")[0];
 
-          // Fetch base currency for wallet owner
-          const { data: userWallet } = await supabase
-            .from("user_wallets")
-            .select("user_id")
-            .eq("wallet_id", r.wallet_id)
-            .maybeSingle();
-          const userId = userWallet?.user_id;
-          const { data: pref } = userId
-            ? await supabase
-                .from("user_preferences")
-                .select("base_currency")
-                .eq("user_id", userId)
-                .maybeSingle()
-            : { data: null };
-          const baseCurrency = pref?.base_currency;
-
-          const conversion = await fetchConversion({
-            sourceCurrency: r.currency,
-            targetCurrency: baseCurrency,
-            date: dateStr,
-          });
-          const rate = conversion.rate;
-
-          await supabase.from("transactions").insert({
-            wallet_id: r.wallet_id,
-            category_id: r.category_id,
-            label_id: r.label_id,
-            description: r.description,
-            amount_cents: r.amount_cents,
-            currency: r.currency,
+          await createTransaction({
+            amount: r.amount_cents / 100,
             type: r.type,
             date: dateStr,
+            description: r.description,
+            category_id: r.category_id,
+            label_id: r.label_id,
+            wallet_id: r.wallet_id,
+            currency: r.currency,
             tags: r.tags,
-            base_amount_cents: Math.round(r.amount_cents * rate),
-            conversion_rate_to_base: rate.toString(),
           });
 
           // Update next_run_date for next iteration
