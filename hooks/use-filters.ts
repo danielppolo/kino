@@ -10,6 +10,15 @@ type Filters = {
   search: string;
   sort: string;
   sortOrder: string;
+  from: string;
+  to: string;
+  label_id: string;
+  category_id: string;
+  transfer_id: string;
+  tag: string;
+  type: string;
+  description: string;
+  id: string;
 };
 
 function useFilters(): Filters {

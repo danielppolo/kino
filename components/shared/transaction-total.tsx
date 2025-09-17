@@ -1,14 +1,22 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
+
 import { useQuery } from "@tanstack/react-query";
 
+import { Badge } from "../ui/badge";
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Money } from "@/components/ui/money";
 import { useCurrency } from "@/contexts/settings-context";
 import useFilters from "@/hooks/use-filters";
 import { createClient } from "@/utils/supabase/client";
-import { getTransactionTotalBase } from "@/utils/supabase/queries";
-import { Badge } from "../ui/badge";
-import { Filters } from "@/contexts/filter-context";
+import { getCashflowBreakdown } from "@/utils/supabase/queries";
 
 export default function TransactionTotal() {
   const filters = useFilters();
@@ -28,27 +36,24 @@ export default function TransactionTotal() {
     return value && value.toString().trim() !== "";
   });
 
-  const { data: total } = useQuery({
-    queryKey: ["transaction-total", filters],
+  const { data: cashflowData } = useQuery({
+    queryKey: ["cashflow-breakdown", filters],
     queryFn: async () => {
       const supabase = createClient();
       // Convert empty strings to undefined for the query
-      const queryFilters: Filters & {
-        conversionRates?: Record<string, { rate: number } | any>;
-        baseCurrency?: string;
-      } = {
-        wallet_id: (filters as any).wallet_id || undefined,
-        from: (filters as any).from || undefined,
-        to: (filters as any).to || undefined,
-        label_id: (filters as any).label_id || undefined,
-        category_id: (filters as any).category_id || undefined,
-        tag: (filters as any).tag || undefined,
-        type: (filters as any).type || undefined,
-        transfer_id: (filters as any).transfer_id || undefined,
-        description: (filters as any).description || undefined,
-        id: (filters as any).id || undefined,
+      const queryFilters = {
+        wallet_id: filters.wallet_id || undefined,
+        from: filters.from || undefined,
+        to: filters.to || undefined,
+        label_id: filters.label_id || undefined,
+        category_id: filters.category_id || undefined,
+        tag: filters.tag || undefined,
+        type: filters.type || undefined,
+        transfer_id: filters.transfer_id || undefined,
+        description: filters.description || undefined,
+        id: filters.id || undefined,
       };
-      const result = await getTransactionTotalBase(supabase, queryFilters);
+      const result = await getCashflowBreakdown(supabase, queryFilters);
       if (result.error) {
         throw result.error;
       }
@@ -58,13 +63,50 @@ export default function TransactionTotal() {
   });
 
   // Don't show anything if there are no active filters
-  if (!hasActiveFilters || !total) {
+  if (!hasActiveFilters || !cashflowData) {
     return null;
   }
 
   return (
-    <Badge variant="outline" className="h-6">
-      <Money cents={total || 0} currency={baseCurrency} />
-    </Badge>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Badge variant="outline" className="hover:bg-accent h-6 cursor-pointer">
+          <Money
+            cents={cashflowData.total_cashflow || 0}
+            currency={baseCurrency}
+          />
+          <ChevronDown className="ml-1 h-3 w-3" />
+        </Badge>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem className="cursor-default">
+          <div className="flex flex-col">
+            <span className="text-muted-foreground text-xs">Cashflow</span>
+            <Money
+              cents={cashflowData.total_cashflow || 0}
+              currency={baseCurrency}
+            />
+          </div>
+        </DropdownMenuItem>
+        <DropdownMenuItem className="cursor-default">
+          <div className="flex flex-col">
+            <span className="text-muted-foreground text-xs">Expenses</span>
+            <Money
+              cents={cashflowData.total_expenses || 0}
+              currency={baseCurrency}
+            />
+          </div>
+        </DropdownMenuItem>
+        <DropdownMenuItem className="cursor-default">
+          <div className="flex flex-col">
+            <span className="text-muted-foreground text-xs">Incomes</span>
+            <Money
+              cents={cashflowData.total_incomes || 0}
+              currency={baseCurrency}
+            />
+          </div>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
