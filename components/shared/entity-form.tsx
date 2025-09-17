@@ -31,6 +31,8 @@ interface EntityFormProps<T extends FieldValues> {
   isLoading?: boolean;
   customTitle?: string;
   submitLabel?: string;
+  isDeleting?: boolean;
+  setFocus?: string;
 }
 
 export function EntityForm<T extends FieldValues>({
@@ -50,6 +52,7 @@ export function EntityForm<T extends FieldValues>({
   customTitle,
   submitLabel,
   setFocus,
+  isDeleting,
 }: EntityFormProps<T>) {
   const isEdit = !!entity;
   const form = useForm<T>({
@@ -124,7 +127,7 @@ export function EntityForm<T extends FieldValues>({
                   variant="outline"
                   size="sm"
                   onClick={handleDelete}
-                  disabled={isLoading}
+                  disabled={isDeleting}
                 >
                   <Trash className="size-4" />
                 </Button>

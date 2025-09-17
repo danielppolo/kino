@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { DateRange } from "react-day-picker";
 import { format, sub } from "date-fns";
+import { CalendarRange } from "lucide-react";
 
 import { DrawerPopover } from "../ui/drawer-popover";
 import { ToggleGroup, ToggleGroupItem } from "./toggle-group";
@@ -10,7 +11,6 @@ import { ToggleGroup, ToggleGroupItem } from "./toggle-group";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { CalendarRange } from "lucide-react";
 
 export function DateRangePicker({
   variant = "outline",

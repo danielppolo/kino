@@ -73,7 +73,6 @@ const ExpenseIncomeForm = ({
   const filters = useFilters();
   const [availableTags] = useTags();
   const [addAnother, setAddAnother] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
 
   const { mutateAsync, isPending } = useMutation<
@@ -279,7 +278,8 @@ const ExpenseIncomeForm = ({
       onDelete={handleDelete}
       addAnother={addAnother}
       setAddAnother={setAddAnother}
-      isLoading={isSubmitting || deleteMutation.isPending}
+      isLoading={isPending}
+      isDeleting={deleteMutation.isPending}
     >
       <FormField
         name="amount"
