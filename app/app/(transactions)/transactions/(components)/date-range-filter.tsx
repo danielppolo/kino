@@ -1,5 +1,5 @@
 "use client";
-
+import { format } from "date-fns";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -21,12 +21,12 @@ const DateRangeFilter = () => {
   const setDateRange = ({ from, to }: DateRange) => {
     const params = new URLSearchParams(searchParams.toString());
     if (from) {
-      params.set("from", from.toISOString());
+      params.set("from", format(from, "yyyy-MM-dd"));
     } else {
       params.delete("from");
     }
     if (to) {
-      params.set("to", to.toISOString());
+      params.set("to", format(to, "yyyy-MM-dd"));
     } else {
       params.delete("to");
     }

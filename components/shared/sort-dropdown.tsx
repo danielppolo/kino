@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { TooltipButton } from "@/components/ui/tooltip-button";
 
-type SortField = "date" | "amount_cents";
+type SortField = "date" | "base_amount_cents";
 type SortOrder = "asc" | "desc";
 
 export function SortDropdown() {
@@ -58,9 +58,9 @@ export function SortDropdown() {
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={() => updateSort("amount_cents", "desc")}
+          onClick={() => updateSort("base_amount_cents", "desc")}
           className={
-            currentSort === "amount_cents" && currentOrder === "desc"
+            currentSort === "base_amount_cents" && currentOrder === "desc"
               ? "bg-accent"
               : ""
           }
@@ -69,9 +69,9 @@ export function SortDropdown() {
           Amount (Highest first)
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={() => updateSort("amount_cents", "asc")}
+          onClick={() => updateSort("base_amount_cents", "asc")}
           className={
-            currentSort === "amount_cents" && currentOrder === "asc"
+            currentSort === "base_amount_cents" && currentOrder === "asc"
               ? "bg-accent"
               : ""
           }

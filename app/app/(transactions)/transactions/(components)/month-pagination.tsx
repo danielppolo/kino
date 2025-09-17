@@ -7,7 +7,6 @@ import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 
-import { TooltipButton } from "@/components/ui/tooltip-button";
 import {
   Command,
   CommandEmpty,
@@ -21,13 +20,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { TooltipButton } from "@/components/ui/tooltip-button";
 import { Text } from "@/components/ui/typography";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 function MonthPagination() {
@@ -188,6 +182,20 @@ function MonthPagination() {
     to.getMonth() === 11 &&
     to.getDate() === 31 &&
     from.getFullYear() === to.getFullYear();
+
+  if (
+    from.getFullYear() !== to.getFullYear() ||
+    from.getMonth() !== to.getMonth()
+  ) {
+    // Format: dd MMM -> dd MMM
+    const fromStr = `${format(from, "MMM dd")}`;
+    const toStr = `${format(to, "MMM dd")}`;
+    return (
+      <Text>
+        {fromStr} &rarr; {toStr}
+      </Text>
+    );
+  }
 
   return (
     <div className="flex h-full w-full items-center">
