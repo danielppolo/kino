@@ -1,6 +1,9 @@
 import React from "react";
+import { toast } from "sonner";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+import { Label } from "../ui/label";
 
 import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -8,8 +11,6 @@ import { useCategories } from "@/contexts/settings-context";
 import { ICONS } from "@/utils/constants";
 import { Database } from "@/utils/supabase/database.types";
 import { createCategory } from "@/utils/supabase/mutations";
-import { toast } from "sonner";
-import { Label } from "../ui/label";
 
 interface CategoryComboboxProps {
   selectionType: "combobox" | "checkbox";
