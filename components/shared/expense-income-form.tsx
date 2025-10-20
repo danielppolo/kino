@@ -225,6 +225,9 @@ const ExpenseIncomeForm = ({
   const handleSubmit = async (values: ExpenseIncomeFormValues) => {
     try {
       await mutateAsync(values);
+      return {
+        error: undefined,
+      };
     } catch (error) {
       return {
         error:

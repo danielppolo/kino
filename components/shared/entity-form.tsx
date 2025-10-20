@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { DefaultValues, FieldValues, useForm } from "react-hook-form";
+import { DefaultValues, FieldValues, Path, useForm } from "react-hook-form";
 import { Trash } from "lucide-react";
 import { toast } from "sonner";
 
@@ -32,7 +32,7 @@ interface EntityFormProps<T extends FieldValues> {
   customTitle?: string;
   submitLabel?: string;
   isDeleting?: boolean;
-  setFocus?: string;
+  setFocus?: Path<T>;
 }
 
 export function EntityForm<T extends FieldValues>({
@@ -73,8 +73,8 @@ export function EntityForm<T extends FieldValues>({
     }
 
     toast.success(isEdit ? "Updated successfully!" : "Created successfully!");
-    if (addAnother && resetValues) {
-      form.reset(resetValues);
+    if (addAnother) {
+      if (resetValues) form.reset(resetValues);
       if (setFocus) form.setFocus(setFocus);
       return;
     }
