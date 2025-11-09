@@ -32,8 +32,8 @@ export async function fetchConversion({
   const { data: cachedRate, error: cacheError } = await supabase
     .from("currency_conversions")
     .select("*")
-    .eq("source_currency", sourceCurrency)
-    .eq("target_currency", targetCurrency)
+    .eq("source_currency", targetCurrency)
+    .eq("target_currency", sourceCurrency)
     .eq("date", date ?? new Date().toISOString().split("T")[0])
     .single();
 
