@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
+import { useFormContext } from "react-hook-form";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -169,6 +170,39 @@ const TransferForm = ({
     }
   };
 
+  // Component to handle wallet field changes with constraint enforcement
+  const WalletFieldWithConstraint = ({
+    field,
+    otherFieldName,
+    currency: fieldCurrency,
+  }: {
+    field: {
+      value: string;
+      onChange: (value: string) => void;
+    };
+    otherFieldName: "sender_wallet_id" | "receiver_wallet_id";
+    currency: string;
+  }) => {
+    const { setValue } = useFormContext<TransferFormValues>();
+
+    const handleChange = (value: string) => {
+      field.onChange(value);
+      // If the changed field is not the walletId prop, set the other field to walletId
+      if (value !== walletId) {
+        setValue(otherFieldName, walletId);
+      }
+    };
+
+    return (
+      <WalletPicker
+        currency={fieldCurrency}
+        className="w-full"
+        value={field.value}
+        onChange={handleChange}
+      />
+    );
+  };
+
   return (
     <EntityForm
       title="Transfer"
@@ -241,10 +275,10 @@ const TransferForm = ({
                 <FormItem className="flex-1">
                   <FormLabel>Sender Wallet</FormLabel>
                   <FormControl>
-                    <WalletPicker
+                    <WalletFieldWithConstraint
+                      field={field}
+                      otherFieldName="receiver_wallet_id"
                       currency={currency}
-                      className="w-full"
-                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -259,10 +293,10 @@ const TransferForm = ({
                 <FormItem className="flex-1">
                   <FormLabel>Receiver Wallet</FormLabel>
                   <FormControl>
-                    <WalletPicker
+                    <WalletFieldWithConstraint
+                      field={field}
+                      otherFieldName="sender_wallet_id"
                       currency={currency}
-                      className="w-full"
-                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
