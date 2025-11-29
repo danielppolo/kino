@@ -125,7 +125,7 @@ export function EntityForm<T extends FieldValues>({
         >
           {children}
           <div className="flex justify-between gap-4">
-            <div className="flex justify-end gap-4">
+            <div className="flex justify-end gap-2">
               {type && <TemplateSelect type={type} />}
               {isEdit && onRepeat && (
                 <Button
