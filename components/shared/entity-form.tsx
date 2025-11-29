@@ -33,7 +33,6 @@ interface EntityFormProps<T extends FieldValues> {
   submitLabel?: string;
   isDeleting?: boolean;
   setFocus?: Path<T>;
-  repeatLabel?: string;
   onRepeat?: (
     values: T,
   ) => Promise<{ error?: string; resetValues?: T; setFocus?: string }>;
@@ -58,7 +57,6 @@ export function EntityForm<T extends FieldValues>({
   submitLabel,
   setFocus,
   isDeleting,
-  repeatLabel,
   onRepeat,
   isRepeating,
 }: EntityFormProps<T>) {

@@ -305,7 +305,6 @@ const ExpenseIncomeForm = ({
       isDeleting={deleteMutation.isPending}
       onRepeat={initialData ? handleRepeat : undefined}
       isRepeating={isPending}
-      repeatLabel="Repeat today"
     >
       <FormField
         name="amount"
