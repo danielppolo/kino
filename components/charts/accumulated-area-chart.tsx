@@ -24,94 +24,14 @@ import {
 import { Money } from "@/components/ui/money";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
+import { calculateMonthlyTotals, formatCurrency } from "@/utils/chart-helpers";
 import { createClient } from "@/utils/supabase/client";
 import { getWalletMonthlyBalances } from "@/utils/supabase/queries";
-import { Wallet } from "@/utils/supabase/types";
-import { convertToBaseCurrency } from "@/utils/currency-conversion";
-
-// Helper function for YAxis tick formatting since it can't use React components
-function formatCurrency(value: number, currency: string): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-interface MonthlyBalance {
-  month: string;
-  balance_cents: number;
-  wallet_id: string;
-}
-
-interface ChartDataPoint {
-  month: string;
-  [walletId: string]: number | string;
-}
 
 interface AccumulatedAreaChartProps {
   walletId?: string;
   from?: string;
   to?: string;
-}
-
-function calculateAccumulatedTotal(
-  monthlyBalances: MonthlyBalance[],
-  conversionRates: Record<string, { rate: number }>,
-  baseCurrency: string,
-  walletMap: Map<string, Wallet>,
-  walletId?: string,
-): ChartDataPoint[] {
-  // Convert all balances to base currency
-  const convertedBalances = convertToBaseCurrency(
-    monthlyBalances.map((balance) => ({
-      amount_cents: balance.balance_cents,
-      wallet_id: balance.wallet_id,
-      month: balance.month,
-    })),
-    conversionRates,
-    baseCurrency,
-    walletMap,
-  );
-
-  // Group by month and wallet
-  const groupedByMonthAndWallet = convertedBalances.reduce(
-    (acc, { month, amount_cents, wallet_id }) => {
-      if (!acc[month]) {
-        acc[month] = {};
-      }
-      if (wallet_id) {
-        acc[month][wallet_id] = (acc[month][wallet_id] || 0) + amount_cents;
-      }
-      return acc;
-    },
-    {} as Record<string, Record<string, number>>,
-  );
-
-  // Convert to array and sort by month
-  const chartData: ChartDataPoint[] = Object.entries(groupedByMonthAndWallet)
-    .map(([month, balances]) => ({
-      month,
-      ...Object.entries(balances).reduce(
-        (acc, [walletId, balance_cents]) => ({
-          ...acc,
-          [walletId]: balance_cents / 100,
-        }),
-        {} as Record<string, number>,
-      ),
-    }))
-    .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
-
-  // If filtering by a specific wallet, ensure all data points have that wallet's data
-  if (walletId) {
-    return chartData.map((dataPoint) => ({
-      ...dataPoint,
-      [walletId]: dataPoint[walletId] || 0,
-    }));
-  }
-
-  return chartData;
 }
 
 export function AccumulatedAreaChart({
@@ -143,7 +63,7 @@ export function AccumulatedAreaChart({
 
   const chartData = useMemo(
     () =>
-      calculateAccumulatedTotal(
+      calculateMonthlyTotals(
         monthlyBalances ?? [],
         conversionRates,
         baseCurrency,
