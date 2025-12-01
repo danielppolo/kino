@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { DefaultValues, FieldValues, Path, useForm } from "react-hook-form";
-import { Trash } from "lucide-react";
+import { Repeat2, Trash } from "lucide-react";
 import { toast } from "sonner";
 
 import { SubmitButton } from "../submit-button";
@@ -33,6 +33,10 @@ interface EntityFormProps<T extends FieldValues> {
   submitLabel?: string;
   isDeleting?: boolean;
   setFocus?: Path<T>;
+  onRepeat?: (
+    values: T,
+  ) => Promise<{ error?: string; resetValues?: T; setFocus?: string }>;
+  isRepeating?: boolean;
 }
 
 export function EntityForm<T extends FieldValues>({
@@ -53,6 +57,8 @@ export function EntityForm<T extends FieldValues>({
   submitLabel,
   setFocus,
   isDeleting,
+  onRepeat,
+  isRepeating,
 }: EntityFormProps<T>) {
   const isEdit = !!entity;
   const form = useForm<T>({
@@ -92,6 +98,18 @@ export function EntityForm<T extends FieldValues>({
     onSuccess?.();
   };
 
+  const handleRepeat = async () => {
+    if (!onRepeat) return;
+
+    const { error } = await onRepeat(form.getValues());
+    if (error) {
+      return toast.error(error);
+    }
+
+    toast.success("Repeated successfully!");
+    onSuccess?.();
+  };
+
   return (
     <DrawerDialog
       title={customTitle || isEdit ? `Edit ${title}` : `Add ${title}`}
@@ -105,8 +123,19 @@ export function EntityForm<T extends FieldValues>({
         >
           {children}
           <div className="flex justify-between gap-4">
-            <div className="flex justify-end gap-4">
+            <div className="flex justify-end gap-2">
               {type && <TemplateSelect type={type} />}
+              {isEdit && onRepeat && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRepeat}
+                  disabled={isRepeating}
+                >
+                  <Repeat2 className="size-4" />
+                </Button>
+              )}
             </div>
             <div className="flex justify-end gap-4">
               {!isEdit && (

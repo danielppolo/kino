@@ -2,6 +2,7 @@ import React from "react";
 
 import { AccumulatedAreaChart } from "@/components/charts/accumulated-area-chart";
 import { CashflowAreaChart } from "@/components/charts/cashflow-area-chart";
+import { ForecastLineChart } from "@/components/charts/forecast-line-chart";
 import LabelAreaChart from "@/components/charts/label-area-chart";
 import LabelPieChart from "@/components/charts/label-pie-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +19,9 @@ async function InfographicsPage({ searchParams }: PageParams) {
 
   return (
     <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="md:col-span-2 lg:col-span-4">
+        <ForecastLineChart from={filters.from} to={filters.to} />
+      </div>
       <div className="md:col-span-2 lg:col-span-4">
         <AccumulatedAreaChart from={filters.from} to={filters.to} />
       </div>
