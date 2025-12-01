@@ -268,6 +268,26 @@ const ExpenseIncomeForm = ({
     tags: transaction.tag_ids ?? undefined,
   });
 
+  const handleRepeat = async (values: ExpenseIncomeFormValues) => {
+    const { id: _id, ...rest } = values;
+    const repeatValues: ExpenseIncomeFormValues = {
+      ...rest,
+      date: format(Date.now(), "yyyy-MM-dd"),
+    };
+
+    try {
+      await mutateAsync(repeatValues);
+      return { error: undefined };
+    } catch (error) {
+      return {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to create transaction",
+      };
+    }
+  };
+
   return (
     <EntityForm
       title={type}
@@ -283,6 +303,8 @@ const ExpenseIncomeForm = ({
       setAddAnother={setAddAnother}
       isLoading={isPending}
       isDeleting={deleteMutation.isPending}
+      onRepeat={initialData ? handleRepeat : undefined}
+      isRepeating={isPending}
     >
       <FormField
         name="amount"
