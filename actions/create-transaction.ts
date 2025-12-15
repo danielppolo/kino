@@ -1,7 +1,10 @@
 import { z } from "zod";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { fetchConversion } from "@/utils/fetch-conversions-server";
 import { createClient } from "@/utils/supabase/client";
+import type { Database } from "@/utils/supabase/database.types";
 
 const TransactionSchema = z.object({
   id: z.string().uuid().optional(),
@@ -18,7 +21,10 @@ const TransactionSchema = z.object({
 
 type Transaction = z.infer<typeof TransactionSchema>;
 
-export const createTransaction = async (transaction: Transaction) => {
+export const createTransaction = async (
+  transaction: Transaction,
+  supabaseClient?: SupabaseClient<Database>,
+) => {
   try {
     const validatedData = TransactionSchema.safeParse(transaction);
 
@@ -30,15 +36,68 @@ export const createTransaction = async (transaction: Transaction) => {
       };
     }
 
-    const supabase = await createClient();
+    const supabase = supabaseClient || (await createClient());
 
-    const { amount, type, id, currency, date, ...rest } = validatedData.data;
+    const { amount, type, id, currency, date, wallet_id, ...rest } =
+      validatedData.data;
 
     // Fetch user base currency preference
-    const { data: pref, error: prefError } = await supabase
-      .from("user_preferences")
-      .select("base_currency")
-      .maybeSingle();
+    // If using service role client, get user_id from wallet via user_wallets
+    // Prefer an editor user if available
+    let userId: string | null = null;
+    if (supabaseClient) {
+      // Using service role client, need to get user_id from wallet
+      // Prefer an editor user, fallback to any user
+      const { data: userWallet, error: userWalletError } = await supabase
+        .from("user_wallets")
+        .select("user_id")
+        .eq("wallet_id", wallet_id)
+        .eq("role", "editor")
+        .limit(1)
+        .maybeSingle();
+
+      if (userWalletError) {
+        return {
+          success: false,
+          error: `Failed to fetch user wallet: ${userWalletError.message}`,
+          data: null,
+        };
+      }
+
+      // If no editor found, try any user
+      if (!userWallet) {
+        const { data: anyUserWallet, error: anyUserWalletError } =
+          await supabase
+            .from("user_wallets")
+            .select("user_id")
+            .eq("wallet_id", wallet_id)
+            .limit(1)
+            .maybeSingle();
+
+        if (anyUserWalletError) {
+          return {
+            success: false,
+            error: `Failed to fetch user wallet: ${anyUserWalletError.message}`,
+            data: null,
+          };
+        }
+
+        userId = anyUserWallet?.user_id || null;
+      } else {
+        userId = userWallet.user_id;
+      }
+    }
+
+    const { data: pref, error: prefError } = userId
+      ? await supabase
+          .from("user_preferences")
+          .select("base_currency")
+          .eq("user_id", userId)
+          .maybeSingle()
+      : await supabase
+          .from("user_preferences")
+          .select("base_currency")
+          .maybeSingle();
 
     if (prefError) {
       return {
@@ -79,6 +138,7 @@ export const createTransaction = async (transaction: Transaction) => {
       .upsert({
         id,
         ...rest,
+        wallet_id,
         currency,
         type,
         date,
