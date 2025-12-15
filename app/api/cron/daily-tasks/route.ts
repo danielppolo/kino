@@ -5,6 +5,7 @@ import { fetchAllConversions } from "@/utils/fetch-conversions-server";
 import { calculateNextRunDate } from "@/utils/recurring-transaction";
 import { createClient } from "@/utils/supabase/server";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function handle(request: NextRequest) {
   // Protect from calls not being a cron job
   if (
@@ -14,8 +15,8 @@ async function handle(request: NextRequest) {
   }
 
   const results = {
-    dailyConversions: null as any,
-    runRecurring: null as any,
+    dailyConversions: null as unknown,
+    runRecurring: null as unknown,
     errors: [] as string[],
   };
 
@@ -64,17 +65,24 @@ async function handle(request: NextRequest) {
         while (current <= today && (!endDate || current <= endDate)) {
           const dateStr = current.toISOString().split("T")[0];
 
-          await createTransaction({
-            amount: r.amount_cents / 100,
-            type: r.type,
-            date: dateStr,
-            description: r.description,
-            category_id: r.category_id,
-            label_id: r.label_id,
-            wallet_id: r.wallet_id,
-            currency: r.currency,
-            tags: r.tags,
-          });
+          const result = await createTransaction(
+            {
+              amount: r.amount_cents / 100,
+              type: r.type,
+              date: dateStr,
+              description: r.description,
+              category_id: r.category_id,
+              label_id: r.label_id,
+              wallet_id: r.wallet_id,
+              currency: r.currency,
+              tags: r.tags,
+            },
+            supabase,
+          );
+
+          if (!result.success) {
+            throw new Error(result.error ?? "Failed to create transaction");
+          }
 
           // Update next_run_date for next iteration
           current = calculateNextRunDate(current, r.interval_type);
