@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
+import { useFormContext } from "react-hook-form";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -76,8 +77,9 @@ const TransferForm = ({
 
   const updateMutation = useMutation({
     mutationFn: async (values: TransferFormValues) => {
-      if (!initialData?.transfer_id) throw new Error("No transfer ID provided");
-      await updateTransfer(initialData.transfer_id, {
+      const transferId = (initialData as any)?.transfer_id;
+      if (!transferId) throw new Error("No transfer ID provided");
+      await updateTransfer(transferId, {
         description: values.description ?? undefined,
         amount_cents: values.amount * 100,
       });
@@ -90,8 +92,9 @@ const TransferForm = ({
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      if (!initialData?.transfer_id) throw new Error("No transfer ID provided");
-      await deleteTransfer(initialData.transfer_id);
+      const transferId = (initialData as any)?.transfer_id;
+      if (!transferId) throw new Error("No transfer ID provided");
+      await deleteTransfer(transferId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries();
@@ -102,11 +105,15 @@ const TransferForm = ({
   const defaultValues: TransferFormValues = {
     type: initialData?.type ?? type,
     sender_wallet_id: initialData?.wallet_id ?? walletId,
-    receiver_wallet_id: initialData?.transfer_id ?? "",
+    receiver_wallet_id: "",
     date: initialData?.date ?? date,
     currency: initialData?.currency ?? currency,
     description: initialData?.description ?? undefined,
-    amount: initialData ? initialData.amount_cents / 100 : undefined,
+    amount: initialData ? Math.abs(initialData.amount_cents) / 100 : 0,
+    category_id:
+      initialData?.category_id ??
+      process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID!,
+    label_id: initialData?.label_id ?? "",
   };
 
   const handleSubmit = async (data: TransferFormValues) => {
@@ -127,13 +134,20 @@ const TransferForm = ({
       await createMutation.mutateAsync(normalizedData);
 
       if (addAnother) {
-        // Reset all fields except date
+        // Reset all fields except date, using fresh default values
         const prevDate = normalizedData.date;
         return {
           error: undefined,
           resetValues: {
-            ...defaultValues,
+            type: type,
+            sender_wallet_id: walletId,
+            receiver_wallet_id: "",
             date: prevDate,
+            currency: currency,
+            description: undefined,
+            amount: 0,
+            category_id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID!,
+            label_id: "",
           },
         };
       }
@@ -151,11 +165,13 @@ const TransferForm = ({
   ): TransferFormValues => ({
     type: transaction.type,
     sender_wallet_id: transaction.wallet_id,
-    receiver_wallet_id: transaction.transfer_id ?? "",
+    receiver_wallet_id: (transaction as any).transfer_wallet_id ?? "",
     date: transaction.date,
     currency: transaction.currency,
     description: transaction.description ?? undefined,
-    amount: transaction.amount_cents / 100,
+    amount: Math.abs(transaction.amount_cents) / 100,
+    category_id: transaction.category_id,
+    label_id: transaction.label_id ?? "",
   });
 
   const handleDelete = async () => {
@@ -167,6 +183,39 @@ const TransferForm = ({
         error: error instanceof Error ? error.message : "Unknown error",
       };
     }
+  };
+
+  // Component to handle wallet field changes with constraint enforcement
+  const WalletFieldWithConstraint = ({
+    field,
+    otherFieldName,
+    currency: fieldCurrency,
+  }: {
+    field: {
+      value: string;
+      onChange: (value: string) => void;
+    };
+    otherFieldName: "sender_wallet_id" | "receiver_wallet_id";
+    currency: string;
+  }) => {
+    const { setValue } = useFormContext<TransferFormValues>();
+
+    const handleChange = (value: string) => {
+      field.onChange(value);
+      // If the changed field is not the walletId prop, set the other field to walletId
+      if (value !== walletId) {
+        setValue(otherFieldName, walletId);
+      }
+    };
+
+    return (
+      <WalletPicker
+        currency={fieldCurrency}
+        className="w-full"
+        value={field.value}
+        onChange={handleChange}
+      />
+    );
   };
 
   return (
@@ -241,10 +290,10 @@ const TransferForm = ({
                 <FormItem className="flex-1">
                   <FormLabel>Sender Wallet</FormLabel>
                   <FormControl>
-                    <WalletPicker
+                    <WalletFieldWithConstraint
+                      field={field}
+                      otherFieldName="receiver_wallet_id"
                       currency={currency}
-                      className="w-full"
-                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -259,10 +308,10 @@ const TransferForm = ({
                 <FormItem className="flex-1">
                   <FormLabel>Receiver Wallet</FormLabel>
                   <FormControl>
-                    <WalletPicker
+                    <WalletFieldWithConstraint
+                      field={field}
+                      otherFieldName="sender_wallet_id"
                       currency={currency}
-                      className="w-full"
-                      {...field}
                     />
                   </FormControl>
                   <FormMessage />

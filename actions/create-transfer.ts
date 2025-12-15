@@ -1,5 +1,6 @@
 "use server";
 
+import { omitBy } from "lodash";
 import { revalidatePath } from "next/cache";
 import { v4 as uuidv4 } from "uuid";
 
@@ -13,6 +14,9 @@ type SourceTransaction = Omit<
   amount: number;
 };
 
+const isEmpty = (value: any) =>
+  value === "" || value === null || value === undefined;
+
 export async function createTransferTransaction(
   {
     amount,
@@ -21,24 +25,37 @@ export async function createTransferTransaction(
   senderWalletId: string,
   receiverWalletId: string,
 ) {
+  if (senderWalletId === receiverWalletId) {
+    return {
+      error: "Sender and receiver wallets must be different",
+      data: null,
+    };
+  }
+
   const supabase = await createClient();
   const transferId = uuidv4();
   const normalized = Math.abs(amount);
   const transactionsToInsert = [
-    {
-      ...sourceTransaction,
-      wallet_id: senderWalletId,
-      amount_cents: normalized * 100 * -1,
-      transfer_id: transferId,
-      category_id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID,
-    },
-    {
-      ...sourceTransaction,
-      wallet_id: receiverWalletId,
-      amount_cents: normalized * 100,
-      transfer_id: transferId,
-      category_id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID,
-    } as const,
+    omitBy(
+      {
+        ...sourceTransaction,
+        wallet_id: senderWalletId,
+        amount_cents: Math.round(normalized * 100) * -1,
+        transfer_id: transferId,
+        category_id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID,
+      },
+      isEmpty,
+    ),
+    omitBy(
+      {
+        ...sourceTransaction,
+        wallet_id: receiverWalletId,
+        amount_cents: Math.round(normalized * 100),
+        transfer_id: transferId,
+        category_id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID,
+      },
+      isEmpty,
+    ),
   ];
 
   const { data, error } = await supabase
