@@ -1,23 +1,16 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-
-import TagCombobox from "@/components/shared/tag-combobox";
 import { Tag } from "lucide-react";
 
+import TagCombobox from "@/components/shared/tag-combobox";
+import { useTransactionQueryState } from "@/hooks/use-transaction-query";
+
 const TagFilter = () => {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const tag = searchParams.get("tag") ?? undefined;
+  const [filters, setFilters] = useTransactionQueryState();
+  const tag = filters.tag || undefined;
 
   const setTag = (value: string | undefined) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (value) {
-      params.set("tag", value);
-    } else {
-      params.delete("tag");
-    }
-    router.push(`/app/transactions?${params.toString()}`);
+    setFilters({ tag: value ?? null });
   };
 
   const handleTagChange = (value: string) => {
