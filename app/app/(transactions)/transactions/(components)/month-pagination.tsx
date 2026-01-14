@@ -3,9 +3,6 @@
 import { useEffect, useState } from "react";
 import { DateRange } from "react-day-picker";
 import { add, endOfMonth, format, parse, startOfMonth, sub } from "date-fns";
-import { usePathname } from "next/navigation";
-import { useRouter } from "next/navigation";
-import { useSearchParams } from "next/navigation";
 
 import {
   Command,
@@ -22,37 +19,26 @@ import {
 } from "@/components/ui/popover";
 import { TooltipButton } from "@/components/ui/tooltip-button";
 import { Text } from "@/components/ui/typography";
+import { useTransactionQueryState } from "@/hooks/use-transaction-query";
 import { cn } from "@/lib/utils";
 
 function MonthPagination() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const fromParam = searchParams.get("from");
-  const toParam = searchParams.get("to");
+  const [filters, setFilters] = useTransactionQueryState();
+  const fromParam = filters.from;
+  const toParam = filters.to;
 
   // Parse dates using the yyyy-MM-dd format
-  const from = fromParam
-    ? parse(fromParam, "yyyy-MM-dd", new Date())
-    : undefined;
+  const from = fromParam ? parse(fromParam, "yyyy-MM-dd", new Date()) : undefined;
   const to = toParam ? parse(toParam, "yyyy-MM-dd", new Date()) : undefined;
 
   const [monthPopoverOpen, setMonthPopoverOpen] = useState(false);
   const [yearPopoverOpen, setYearPopoverOpen] = useState(false);
 
   const setDateRange = ({ from, to }: DateRange) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (from) {
-      params.set("from", format(from, "yyyy-MM-dd"));
-    } else {
-      params.delete("from");
-    }
-    if (to) {
-      params.set("to", format(to, "yyyy-MM-dd"));
-    } else {
-      params.delete("to");
-    }
-    router.push(`${pathname}?${params.toString()}`);
+    setFilters({
+      from: from ? format(from, "yyyy-MM-dd") : null,
+      to: to ? format(to, "yyyy-MM-dd") : null,
+    });
   };
 
   const months = [

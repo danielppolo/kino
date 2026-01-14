@@ -1,11 +1,12 @@
 import React from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 import { Badge } from "../ui/badge";
 import Color from "./color";
 import LinkTransferButton from "./link-transfer-button";
 
 import { useLabels, useTags } from "@/contexts/settings-context";
+import { useTransactionQueryState } from "@/hooks/use-transaction-query";
 import { cn } from "@/lib/utils";
 import { TransactionList } from "@/utils/supabase/types";
 
@@ -16,20 +17,16 @@ interface TagBadgesProps {
 
 const TagBadges = ({ transaction, className }: TagBadgesProps) => {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const [, setFilters] = useTransactionQueryState();
   const [, tagMap] = useTags();
   const [, labelMap] = useLabels();
 
   const handleTagClick = (tagId: string) => {
-    const params = new URLSearchParams(searchParams);
-    params.set("tag", tagId);
-    router.push(`/app/transactions?${params.toString()}`);
+    setFilters({ tag: tagId });
   };
 
   const handleLabelClick = (labelId: string) => {
-    const params = new URLSearchParams(searchParams);
-    params.set("label", labelId);
-    router.push(`/app/transactions?${params.toString()}`);
+    setFilters({ label_id: labelId });
   };
 
   return (
