@@ -1,7 +1,6 @@
 "use client";
 
 import { ArrowUpDown, Calendar, DollarSign } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
 
 import {
   DropdownMenu,
@@ -11,23 +10,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TooltipButton } from "@/components/ui/tooltip-button";
+import { useTransactionQueryState } from "@/hooks/use-transaction-query";
 
 type SortField = "date" | "base_amount_cents";
 type SortOrder = "asc" | "desc";
 
 export function SortDropdown() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const [filters, setFilters] = useTransactionQueryState();
 
-  const currentSort = (searchParams.get("sort") as SortField) || "date";
-  const currentOrder = (searchParams.get("sortOrder") as SortOrder) || "desc";
+  const currentSort = (filters.sort as SortField) || "date";
+  const currentOrder = (filters.sortOrder as SortOrder) || "desc";
 
   const updateSort = (field: SortField, order: SortOrder) => {
-    const params = new URLSearchParams(searchParams);
-    params.set("sort", field);
-    params.set("sortOrder", order);
-    params.delete("page"); // Reset to first page when sorting changes
-    router.push(`?${params.toString()}`);
+    setFilters({
+      sort: field,
+      sortOrder: order,
+      page: null,
+    });
   };
 
   return (
@@ -60,7 +59,8 @@ export function SortDropdown() {
         <DropdownMenuItem
           onClick={() => updateSort("base_amount_cents", "desc")}
           className={
-            currentSort === "base_amount_cents" && currentOrder === "desc"
+            currentSort === "base_amount_cents" &&
+            currentOrder === "desc"
               ? "bg-accent"
               : ""
           }
