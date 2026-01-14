@@ -1,7 +1,7 @@
 import { useMemo } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 
-import { PAGE_SIZE } from "@/utils/constants";
+import { useTransactionQueryState } from "@/hooks/use-transaction-query";
 
 type Filters = {
   wallet_id: string;
@@ -23,27 +23,15 @@ type Filters = {
 
 function useFilters(): Filters {
   const params = useParams();
-  const searchParams = useSearchParams();
-  const filters = useMemo(() => {
-    return {
+  const [filters] = useTransactionQueryState();
+
+  return useMemo(
+    () => ({
       wallet_id: params.walletId as string,
-      page: Number(searchParams.get("page")) || 0,
-      pageSize: Number(searchParams.get("pageSize")) || PAGE_SIZE,
-      search: searchParams.get("search") || "",
-      sort: searchParams.get("sort") || "",
-      sortOrder: searchParams.get("sortOrder") || "",
-      from: searchParams.get("from") || "",
-      to: searchParams.get("to") || "",
-      label_id: searchParams.get("label_id") || "",
-      category_id: searchParams.get("category_id") || "",
-      transfer_id: searchParams.get("transfer_id") || "",
-      tag: searchParams.get("tag") || "",
-      type: searchParams.get("type") || "",
-      description: searchParams.get("description") || "",
-      id: searchParams.get("id") || "",
-    };
-  }, [params.walletId, searchParams]);
-  return filters;
+      ...filters,
+    }),
+    [filters, params.walletId],
+  );
 }
 
 export default useFilters;

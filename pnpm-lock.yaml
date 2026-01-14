@@ -128,6 +128,9 @@ importers:
       next-themes:
         specifier: ^0.3.0
         version: 0.3.0(react-dom@18.2.0(react@18.3.1))(react@18.3.1)
+      nuqs:
+        specifier: ^1.17.0
+        version: 1.20.0(next@15.1.9(react-dom@18.2.0(react@18.3.1))(react@18.3.1))
       papaparse:
         specifier: ^5.4.1
         version: 5.4.1
@@ -2435,6 +2438,9 @@ packages:
     resolution: {integrity: sha512-umcy022ILvb5/3Djuu8LWeqUa8D68JaBzlttKeMWen48SjabqS3iY5w/vzeMzMUNhLDifyhbOwKDSznB1vvrwg==}
     engines: {node: '>= 18'}
 
+  mitt@3.0.1:
+    resolution: {integrity: sha512-vKivATfr97l2/QBCYAkXYDbrIWPM2IIKEl7YPhjCvKlG3kE2gm+uBo6nEXK3M5/Ffh/FLpKExzOQ3JJoJGFKBw==}
+
   mkdirp@3.0.1:
     resolution: {integrity: sha512-+NsyUUAZDmo6YVHzL/stxSu3t9YS1iljliy3BSDrXJ/dkn1KYdmtZODGGjLcc9XLgVVpH4KshHB8XmZgMhaBXg==}
     engines: {node: '>=10'}
@@ -2489,6 +2495,11 @@ packages:
   npm-normalize-package-bin@4.0.0:
     resolution: {integrity: sha512-TZKxPvItzai9kN9H/TkmCtx/ZN/hvr3vUycjlfmH0ootY9yFBzNOpiXAdIn1Iteqsvk4lQn6B5PTrt+n6h8k/w==}
     engines: {node: ^18.17.0 || >=20.5.0}
+
+  nuqs@1.20.0:
+    resolution: {integrity: sha512-nGVfv7eWMNxAzOJ9n8ARTo6ObqeEr1ETYZ+dIMCg/VfGUoZoPrqyTOndIvQIgUzK3pIC41mTXg10JJxh9ziEhw==}
+    peerDependencies:
+      next: '>=13.4 <14.0.2 || ^14.0.3'
 
   object-assign@4.1.1:
     resolution: {integrity: sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==}
@@ -5534,6 +5545,8 @@ snapshots:
       minipass: 7.1.2
       rimraf: 5.0.10
 
+  mitt@3.0.1: {}
+
   mkdirp@3.0.1: {}
 
   ms@2.1.3: {}
@@ -5581,6 +5594,11 @@ snapshots:
       formdata-polyfill: 4.0.10
 
   npm-normalize-package-bin@4.0.0: {}
+
+  nuqs@1.20.0(next@15.1.9(react-dom@18.2.0(react@18.3.1))(react@18.3.1)):
+    dependencies:
+      mitt: 3.0.1
+      next: 15.1.9(react-dom@18.2.0(react@18.3.1))(react@18.3.1)
 
   object-assign@4.1.1: {}
 

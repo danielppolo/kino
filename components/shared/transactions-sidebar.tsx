@@ -3,7 +3,7 @@
 import { endOfMonth, format, startOfMonth } from "date-fns";
 import { X } from "lucide-react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -23,10 +23,11 @@ import {
 } from "@/components/ui/sidebar";
 import { useViews } from "@/contexts/settings-context";
 import { useTotalBalance } from "@/hooks/use-total-balance";
+import { useTransactionQueryState } from "@/hooks/use-transaction-query";
 import { deleteViews } from "@/utils/supabase/mutations";
 
 export function TransactionsSidebar() {
-  const searchParams = useSearchParams();
+  const [filters] = useTransactionQueryState();
   const { walletId } = useParams();
   const { walletsByCurrency } = useTotalBalance();
   const [views] = useViews();
@@ -38,8 +39,8 @@ export function TransactionsSidebar() {
   const defaultToDate = format(endOfMonth(now), "yyyy-MM-dd");
 
   // Use existing search params if they exist, otherwise use current month
-  const fromDate = searchParams.get("from") || defaultFromDate;
-  const toDate = searchParams.get("to") || defaultToDate;
+  const fromDate = filters.from || defaultFromDate;
+  const toDate = filters.to || defaultToDate;
 
   const deleteMutation = useMutation({
     mutationFn: async (viewId: string) => {

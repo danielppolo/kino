@@ -1,23 +1,16 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-
-import CategoryCombobox from "@/components/shared/category-combobox";
 import { Cone } from "lucide-react";
 
+import CategoryCombobox from "@/components/shared/category-combobox";
+import { useTransactionQueryState } from "@/hooks/use-transaction-query";
+
 const CategoryFilter = () => {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const categoryId = searchParams.get("category_id") ?? undefined;
+  const [filters, setFilters] = useTransactionQueryState();
+  const categoryId = filters.category_id || undefined;
 
   const setCategoryId = (id: string | undefined) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (id) {
-      params.set("category_id", id);
-    } else {
-      params.delete("category_id");
-    }
-    router.push(`/app/transactions?${params.toString()}`);
+    setFilters({ category_id: id ?? null });
   };
 
   const handleCategoryChange = (id: string) => {
