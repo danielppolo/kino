@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Search, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -11,22 +10,26 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useTransactionQueryState } from "@/hooks/use-transaction-query";
 
 const DescriptionFilter = () => {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const description = searchParams.get("description") ?? undefined;
+  const [filters, setFilters] = useTransactionQueryState();
+  const description = filters.description || undefined;
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState(description || "");
 
-  const setDescription = (value: string | undefined) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (value && value.trim()) {
-      params.set("description", value.trim());
-    } else {
-      params.delete("description");
+  useEffect(() => {
+    if (!open) {
+      setInputValue(description || "");
     }
-    router.push(`/app/transactions?${params.toString()}`);
+  }, [description, open]);
+
+  const setDescription = (value: string | undefined) => {
+    if (value && value.trim()) {
+      setFilters({ description: value.trim() });
+    } else {
+      setFilters({ description: null });
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {

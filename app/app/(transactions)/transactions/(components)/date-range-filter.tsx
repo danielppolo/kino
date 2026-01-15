@@ -1,8 +1,8 @@
 "use client";
 import { format } from "date-fns";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { useTransactionQueryState } from "@/hooks/use-transaction-query";
 
 interface DateRange {
   from: Date | undefined;
@@ -10,27 +10,15 @@ interface DateRange {
 }
 
 const DateRangeFilter = () => {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const fromParam = searchParams.get("from");
-  const toParam = searchParams.get("to");
-  const from = fromParam ? new Date(fromParam) : undefined;
-  const to = toParam ? new Date(toParam) : undefined;
+  const [filters, setFilters] = useTransactionQueryState();
+  const from = filters.from ? new Date(filters.from) : undefined;
+  const to = filters.to ? new Date(filters.to) : undefined;
 
   const setDateRange = ({ from, to }: DateRange) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (from) {
-      params.set("from", format(from, "yyyy-MM-dd"));
-    } else {
-      params.delete("from");
-    }
-    if (to) {
-      params.set("to", format(to, "yyyy-MM-dd"));
-    } else {
-      params.delete("to");
-    }
-    router.push(`${pathname}?${params.toString()}`);
+    setFilters({
+      from: from ? format(from, "yyyy-MM-dd") : null,
+      to: to ? format(to, "yyyy-MM-dd") : null,
+    });
   };
 
   return (
