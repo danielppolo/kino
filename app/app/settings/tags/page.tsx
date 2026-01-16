@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Combine, Plus, Trash2, SquaresUnite } from "lucide-react";
 
 import BulkCategoryChangeDialog from "./(components)/bulk-category-change-dialog";
@@ -9,14 +9,14 @@ import MergeTagsDialog from "./(components)/merge-tags-dialog";
 import TagsSection from "./(components)/tags-section";
 
 import { BulkActions } from "@/components/shared/bulk-actions";
-import TagForm from "@/components/shared/tag-form";
 import PageHeader from "@/components/shared/page-header";
+import TagForm from "@/components/shared/tag-form";
 import { Button } from "@/components/ui/button";
-import { Title } from "@/components/ui/typography";
-import { useTags } from "@/contexts/settings-context";
-import { Tag as TagType } from "@/utils/supabase/types";
 import { TooltipButton } from "@/components/ui/tooltip-button";
+import { useTags } from "@/contexts/settings-context";
 import { useSelection } from "@/hooks/use-selection";
+import { canUseGlobalShortcuts } from "@/utils/keyboard-shortcuts";
+import { Tag as TagType } from "@/utils/supabase/types";
 
 export default function Page() {
   const [tags] = useTags();
@@ -82,6 +82,36 @@ export default function Page() {
     (tag) => (transactionCounts.get(tag.id) || 0) > 0,
   );
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!canUseGlobalShortcuts()) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (selectedCount === 0) return;
+
+      if (event.key.toLowerCase() === "d") {
+        event.preventDefault();
+        setDeleteDialogOpen(true);
+      }
+
+      if (event.key.toLowerCase() === "m" && selectedCount >= 2) {
+        event.preventDefault();
+        setMergeDialogOpen(true);
+      }
+
+      if (
+        event.key.toLowerCase() === "c" &&
+        hasSelectedWithTransactions &&
+        selectedTags.length === 1
+      ) {
+        event.preventDefault();
+        setBulkCategoryDialogOpen(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [hasSelectedWithTransactions, selectedCount, selectedTags.length]);
+
   return (
     <div>
       <PageHeader className="justify-end">
@@ -95,6 +125,7 @@ export default function Page() {
         onToggle={toggleSelect}
         onEdit={handleEdit}
         onTransactionCountsLoaded={handleTransactionCountsLoaded}
+        selectAll={selectAll}
       />
 
       <BulkActions
@@ -103,7 +134,7 @@ export default function Page() {
         selectAll={selectAll}
       >
         <TooltipButton
-          tooltip="Delete"
+          tooltip="Delete (D)"
           size="sm"
           variant="ghost"
           onClick={() => setDeleteDialogOpen(true)}
@@ -111,7 +142,7 @@ export default function Page() {
           <Trash2 className="size-4" />
         </TooltipButton>
         <TooltipButton
-          tooltip="Merge"
+          tooltip="Merge (M)"
           size="sm"
           variant="ghost"
           onClick={() => setMergeDialogOpen(true)}
@@ -121,7 +152,7 @@ export default function Page() {
         </TooltipButton>
         {hasSelectedWithTransactions && (
           <TooltipButton
-            tooltip="Merge to category"
+            tooltip="Merge to category (C)"
             size="sm"
             variant="ghost"
             disabled={selectedTags.length > 1}

@@ -15,6 +15,7 @@ interface WalletRowProps {
   selected?: boolean;
   selectionMode?: boolean;
   onToggleSelect?: (event: React.MouseEvent<HTMLDivElement>) => void;
+  active?: boolean;
 }
 
 export function WalletRow({
@@ -23,6 +24,7 @@ export function WalletRow({
   selected = false,
   selectionMode = false,
   onToggleSelect,
+  active = false,
 }: WalletRowProps) {
   return (
     <SelectableRow
@@ -31,6 +33,7 @@ export function WalletRow({
       selected={selected}
       selectionMode={selectionMode}
       onToggleSelect={onToggleSelect}
+      active={active}
     >
       <div className="flex flex-1 items-center justify-between">
         <Text className="truncate">{wallet.name}</Text>

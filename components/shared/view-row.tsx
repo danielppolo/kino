@@ -9,6 +9,7 @@ interface ViewRowProps {
   selected?: boolean;
   selectionMode?: boolean;
   onToggleSelect?: (event: React.MouseEvent<HTMLDivElement>) => void;
+  active?: boolean;
 }
 
 export function ViewRow({
@@ -17,6 +18,7 @@ export function ViewRow({
   selected = false,
   selectionMode = false,
   onToggleSelect,
+  active = false,
 }: ViewRowProps) {
   return (
     <SelectableRow
@@ -25,6 +27,7 @@ export function ViewRow({
       selected={selected}
       selectionMode={selectionMode}
       onToggleSelect={onToggleSelect}
+      active={active}
     >
       <Text className="shrink grow truncate">{view.name}</Text>
     </SelectableRow>
@@ -45,5 +48,6 @@ export default memo(
   (prevProps, nextProps) =>
     prevProps.view.id === nextProps.view.id &&
     prevProps.selected === nextProps.selected &&
-    prevProps.selectionMode === nextProps.selectionMode,
+    prevProps.selectionMode === nextProps.selectionMode &&
+    prevProps.active === nextProps.active,
 );

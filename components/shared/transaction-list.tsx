@@ -271,9 +271,18 @@ export default function TransactionList() {
       if (!flatTransactions.length) return;
 
       if (event.metaKey && !event.ctrlKey && !event.altKey) {
-        if (event.key.toLowerCase() === "a") {
+        const key = event.key.toLowerCase();
+        if (key === "a") {
           event.preventDefault();
           selectAll();
+        }
+        if (selectedCount > 0 && key === "e") {
+          event.preventDefault();
+          setBulkOpen(true);
+        }
+        if (selectedCount > 0 && key === "d") {
+          event.preventDefault();
+          handleDownload();
         }
         return;
       }
@@ -317,9 +326,11 @@ export default function TransactionList() {
     activeIndex,
     flatTransactions,
     formOpen,
+    handleDownload,
     openForm,
     scrollToTransactionIndex,
     selectAll,
+    selectedCount,
     toggleSelection,
   ]);
 
@@ -413,7 +424,7 @@ export default function TransactionList() {
           selectAll={selectAll}
         >
           <TooltipButton
-            tooltip="Download selected as CSV"
+            tooltip="Download selected as CSV (⌘D)"
             variant="ghost"
             size="sm"
             onClick={handleDownload}
@@ -423,7 +434,7 @@ export default function TransactionList() {
           <TooltipButton
             variant="ghost"
             size="sm"
-            tooltip="Edit selected transactions"
+            tooltip="Edit selected transactions (⌘E)"
             onClick={() => setBulkOpen(true)}
           >
             <Pencil className="size-4" />
