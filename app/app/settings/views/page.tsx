@@ -1,17 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Trash2 } from "lucide-react";
 
 import DeleteViewsDialog from "./(components)/delete-views-dialog";
 import ViewsSection from "./(components)/views-section";
 
 import { BulkActions } from "@/components/shared/bulk-actions";
-import { TooltipButton } from "@/components/ui/tooltip-button";
 import PageHeader from "@/components/shared/page-header";
-import { useSelection } from "@/hooks/use-selection";
-import { View } from "@/utils/supabase/types";
+import { TooltipButton } from "@/components/ui/tooltip-button";
 import { useViews } from "@/contexts/settings-context";
+import { useSelection } from "@/hooks/use-selection";
+import { canUseGlobalShortcuts } from "@/utils/keyboard-shortcuts";
+import { View } from "@/utils/supabase/types";
 
 export default function Page() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -35,6 +36,22 @@ export default function Page() {
     clearSelection();
   };
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!canUseGlobalShortcuts()) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (selectedCount === 0) return;
+
+      if (event.key.toLowerCase() === "d") {
+        event.preventDefault();
+        setDeleteDialogOpen(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedCount]);
+
   return (
     <>
       <PageHeader>
@@ -47,7 +64,11 @@ export default function Page() {
       </PageHeader>
 
       <div style={{ height: "calc(100vh - 44px)", overflow: "auto" }}>
-        <ViewsSection selected={selected} onToggle={toggleSelect} />
+        <ViewsSection
+          selected={selected}
+          onToggle={toggleSelect}
+          selectAll={selectAll}
+        />
       </div>
 
       <DeleteViewsDialog
@@ -65,7 +86,7 @@ export default function Page() {
         <TooltipButton
           size="sm"
           variant="ghost"
-          tooltip="Delete selected views"
+          tooltip="Delete selected views (D)"
           onClick={() => setDeleteDialogOpen(true)}
           disabled={selectedCount === 0}
         >

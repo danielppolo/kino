@@ -39,12 +39,11 @@ export default function Page() {
     router.push(`/app/settings/recurrent-transactions?${params.toString()}`);
   };
 
+  const activeType = searchParams.get("type") || "expense";
+
   return (
     <>
-      <Tabs
-        onValueChange={handleTabChange}
-        defaultValue={searchParams.get("type") || "expense"}
-      >
+      <Tabs onValueChange={handleTabChange} defaultValue={activeType}>
         <PageHeader>
           <div className="flex items-center gap-4">
             <TabsList>
@@ -65,11 +64,19 @@ export default function Page() {
         </PageHeader>
         <div style={{ height: "calc(100vh - 44px)", overflow: "auto" }}>
           <TabsContent value="income">
-            <RecurringTransactionsSection type="income" onEdit={handleEdit} />
+            <RecurringTransactionsSection
+              type="income"
+              onEdit={handleEdit}
+              isActive={activeType === "income"}
+            />
           </TabsContent>
 
           <TabsContent value="expense">
-            <RecurringTransactionsSection type="expense" onEdit={handleEdit} />
+            <RecurringTransactionsSection
+              type="expense"
+              onEdit={handleEdit}
+              isActive={activeType === "expense"}
+            />
           </TabsContent>
         </div>
       </Tabs>

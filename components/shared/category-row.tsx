@@ -16,6 +16,7 @@ interface CategoryRowProps {
   selectionMode?: boolean;
   onToggleSelect?: (event: React.MouseEvent<HTMLDivElement>) => void;
   transactionCount?: number;
+  active?: boolean;
 }
 
 export function CategoryRow({
@@ -25,6 +26,7 @@ export function CategoryRow({
   selectionMode = false,
   onToggleSelect,
   transactionCount = 0,
+  active = false,
 }: CategoryRowProps) {
   const router = useRouter();
   return (
@@ -34,6 +36,7 @@ export function CategoryRow({
       selected={selected}
       selectionMode={selectionMode}
       onToggleSelect={onToggleSelect}
+      active={active}
     >
       <Text className="shrink-0 truncate">{category.name}</Text>
       <Text className="text-muted-foreground shrink-0 grow text-xs">
@@ -74,5 +77,6 @@ export default memo(
     prevProps.category.id === nextProps.category.id &&
     prevProps.selected === nextProps.selected &&
     prevProps.selectionMode === nextProps.selectionMode &&
-    prevProps.transactionCount === nextProps.transactionCount,
+    prevProps.transactionCount === nextProps.transactionCount &&
+    prevProps.active === nextProps.active,
 );

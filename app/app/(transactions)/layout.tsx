@@ -9,6 +9,7 @@ import PageHeader from "@/components/shared/page-header";
 import SaveViewButton from "@/components/shared/save-view-button";
 import { SortDropdown } from "@/components/shared/sort-dropdown";
 import TransactionForm from "@/components/shared/transaction-form";
+import TransactionShortcuts from "@/components/shared/transaction-shortcuts";
 import TransactionTotal from "@/components/shared/transaction-total";
 import { TransactionsSidebar } from "@/components/shared/transactions-sidebar";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
@@ -42,6 +43,7 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
         </main>
       </SidebarInset>
       <TransactionForm />
+      <TransactionShortcuts />
     </TransactionFormProvider>
   );
 };

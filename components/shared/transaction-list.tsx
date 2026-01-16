@@ -20,6 +20,7 @@ import useFilters from "@/hooks/use-filters";
 import { useSelection } from "@/hooks/use-selection";
 import { PAGE_SIZE } from "@/utils/constants";
 import { convertTransactionsToCSV, downloadCSV } from "@/utils/csv-export";
+import { canUseGlobalShortcuts } from "@/utils/keyboard-shortcuts";
 import { createClient } from "@/utils/supabase/client";
 import { listTransactions } from "@/utils/supabase/queries";
 import { type Transaction, type TransactionList } from "@/utils/supabase/types";
@@ -40,8 +41,9 @@ const transactionRowHeight = 40;
 
 export default function TransactionList() {
   const filters = useFilters();
-  const { openForm } = useTransactionForm();
+  const { open: formOpen, openForm } = useTransactionForm();
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const {
     data,
     dataUpdatedAt,
@@ -161,6 +163,35 @@ export default function TransactionList() {
     return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
   }, [data?.pages, filters.sort]);
 
+  const flatTransactions = useMemo(
+    () => groupedTransactions.flatMap(([, transactions]) => transactions),
+    [groupedTransactions],
+  );
+
+  const transactionIndexById = useMemo(() => {
+    return new Map(
+      flatTransactions.map((transaction, index) => [transaction.id!, index]),
+    );
+  }, [flatTransactions]);
+
+  const transactionPositions = useMemo(() => {
+    const positions: { id: string; top: number }[] = [];
+    let offset = 0;
+    groupedTransactions.forEach(([, transactions]) => {
+      const headerHeight =
+        filters.sort === "amount_cents" ? 0 : dayHeaderHeight;
+      const transactionStart = offset + headerHeight;
+      transactions.forEach((transaction, index) => {
+        positions.push({
+          id: transaction.id!,
+          top: transactionStart + index * transactionRowHeight,
+        });
+      });
+      offset += headerHeight + transactions.length * transactionRowHeight;
+    });
+    return positions;
+  }, [filters.sort, groupedTransactions]);
+
   // Virtualization Setup
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -200,6 +231,108 @@ export default function TransactionList() {
   useEffect(() => {
     rowVirtualizer.measure();
   }, [rowVirtualizer, dataUpdatedAt, selectedCount]);
+
+  const scrollToTransactionIndex = useCallback(
+    (index: number) => {
+      const container = parentRef.current;
+      if (!container) return;
+      const target = transactionPositions[index];
+      if (!target) return;
+      const targetTop = target.top;
+      const targetBottom = targetTop + transactionRowHeight;
+      if (targetTop < container.scrollTop) {
+        container.scrollTop = targetTop;
+        return;
+      }
+      if (targetBottom > container.scrollTop + container.clientHeight) {
+        container.scrollTop = targetBottom - container.clientHeight;
+      }
+    },
+    [transactionPositions],
+  );
+
+  useEffect(() => {
+    if (!flatTransactions.length) {
+      setActiveIndex(-1);
+      return;
+    }
+    setActiveIndex((prev) => {
+      if (prev < 0) return 0;
+      if (prev >= flatTransactions.length) {
+        return flatTransactions.length - 1;
+      }
+      return prev;
+    });
+  }, [flatTransactions.length]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!canUseGlobalShortcuts({ formOpen })) return;
+      if (!flatTransactions.length) return;
+
+      if (event.metaKey && !event.ctrlKey && !event.altKey) {
+        const key = event.key.toLowerCase();
+        if (key === "a") {
+          event.preventDefault();
+          selectAll();
+        }
+        if (selectedCount > 0 && key === "e") {
+          event.preventDefault();
+          setBulkOpen(true);
+        }
+        if (selectedCount > 0 && key === "d") {
+          event.preventDefault();
+          handleDownload();
+        }
+        return;
+      }
+
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        setActiveIndex((prev) => {
+          const nextIndex =
+            event.key === "ArrowDown"
+              ? Math.min(prev + 1, flatTransactions.length - 1)
+              : Math.max(prev - 1, 0);
+          scrollToTransactionIndex(nextIndex);
+          return nextIndex;
+        });
+        return;
+      }
+
+      if (event.key === "Enter") {
+        const activeTransaction = flatTransactions[activeIndex];
+        if (!activeTransaction) return;
+        event.preventDefault();
+        openForm({
+          type: activeTransaction.type!,
+          walletId: activeTransaction.wallet_id!,
+          initialData: activeTransaction as Transaction,
+        });
+        return;
+      }
+
+      if (event.key === " " || event.code === "Space") {
+        const activeTransaction = flatTransactions[activeIndex];
+        if (!activeTransaction) return;
+        event.preventDefault();
+        toggleSelection(activeTransaction.id!);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    activeIndex,
+    flatTransactions,
+    formOpen,
+    handleDownload,
+    openForm,
+    scrollToTransactionIndex,
+    selectAll,
+    selectedCount,
+    toggleSelection,
+  ]);
 
   if (status === "error") {
     return <div>Error loading transactions</div>;
@@ -251,18 +384,29 @@ export default function TransactionList() {
                     title={format(new Date(`${date}T00:00:00`), "PP")}
                   />
                 )}
-                {dateTransactions.map((transaction) => (
-                  <TransactionRow
-                    key={`${transaction.id}-${transaction.amount_cents}-${transaction.description ?? ""}-${transaction.tag_ids?.join(",") ?? ""}-${transaction.category_id}-${transaction.label_id}`}
-                    transaction={transaction}
-                    onClick={(e) => handleTransactionClick(e, transaction)}
-                    selected={selected.includes(transaction.id!)}
-                    selectionMode={selectedCount > 0}
-                    onToggleSelect={(e) =>
-                      toggleSelected(transaction.id!, e.shiftKey)
-                    }
-                  />
-                ))}
+                {dateTransactions.map((transaction) => {
+                  const transactionIndex = transactionIndexById.get(
+                    transaction.id!,
+                  );
+                  return (
+                    <TransactionRow
+                      key={`${transaction.id}-${transaction.amount_cents}-${transaction.description ?? ""}-${transaction.tag_ids?.join(",") ?? ""}-${transaction.category_id}-${transaction.label_id}`}
+                      transaction={transaction}
+                      onClick={(e) => {
+                        if (typeof transactionIndex === "number") {
+                          setActiveIndex(transactionIndex);
+                        }
+                        handleTransactionClick(e, transaction);
+                      }}
+                      selected={selected.includes(transaction.id!)}
+                      selectionMode={selectedCount > 0}
+                      active={transactionIndex === activeIndex}
+                      onToggleSelect={(e) =>
+                        toggleSelected(transaction.id!, e.shiftKey)
+                      }
+                    />
+                  );
+                })}
               </div>
             );
           })}
@@ -280,7 +424,7 @@ export default function TransactionList() {
           selectAll={selectAll}
         >
           <TooltipButton
-            tooltip="Download selected as CSV"
+            tooltip="Download selected as CSV (⌘D)"
             variant="ghost"
             size="sm"
             onClick={handleDownload}
@@ -290,7 +434,7 @@ export default function TransactionList() {
           <TooltipButton
             variant="ghost"
             size="sm"
-            tooltip="Edit selected transactions"
+            tooltip="Edit selected transactions (⌘E)"
             onClick={() => setBulkOpen(true)}
           >
             <Pencil className="size-4" />
