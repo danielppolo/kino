@@ -270,6 +270,14 @@ export default function TransactionList() {
       if (!canUseGlobalShortcuts({ formOpen })) return;
       if (!flatTransactions.length) return;
 
+      if (event.metaKey && !event.ctrlKey && !event.altKey) {
+        if (event.key.toLowerCase() === "a") {
+          event.preventDefault();
+          selectAll();
+        }
+        return;
+      }
+
       if (event.key === "ArrowDown" || event.key === "ArrowUp") {
         event.preventDefault();
         setActiveIndex((prev) => {
@@ -280,6 +288,7 @@ export default function TransactionList() {
           scrollToTransactionIndex(nextIndex);
           return nextIndex;
         });
+        return;
       }
 
       if (event.key === "Enter") {
@@ -291,6 +300,14 @@ export default function TransactionList() {
           walletId: activeTransaction.wallet_id!,
           initialData: activeTransaction as Transaction,
         });
+        return;
+      }
+
+      if (event.key === " " || event.code === "Space") {
+        const activeTransaction = flatTransactions[activeIndex];
+        if (!activeTransaction) return;
+        event.preventDefault();
+        toggleSelection(activeTransaction.id!);
       }
     };
 
@@ -302,6 +319,8 @@ export default function TransactionList() {
     formOpen,
     openForm,
     scrollToTransactionIndex,
+    selectAll,
+    toggleSelection,
   ]);
 
   if (status === "error") {
