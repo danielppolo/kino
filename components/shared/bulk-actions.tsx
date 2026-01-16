@@ -1,7 +1,7 @@
 import React from "react";
-import { TooltipButton } from "../ui/tooltip-button";
 import { CopyCheck, X } from "lucide-react";
-import { Button } from "../ui/button";
+
+import { TooltipButton } from "../ui/tooltip-button";
 
 interface BulkActionsProps {
   selectedCount: number;
