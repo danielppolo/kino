@@ -11,6 +11,7 @@ interface SelectableRowProps {
   selected?: boolean;
   selectionMode?: boolean;
   onToggleSelect?: (event: React.MouseEvent<HTMLDivElement>) => void;
+  active?: boolean;
   children: React.ReactNode;
   className?: string;
 }
@@ -21,13 +22,18 @@ export function SelectableRow({
   selected = false,
   selectionMode = false,
   onToggleSelect,
+  active = false,
   children,
   className = "",
 }: SelectableRowProps) {
   return (
     <Row
       id={id}
-      className={cn(selected && "pl-10", className)}
+      className={cn(
+        selected && "pl-10",
+        active && "bg-accent/50",
+        className,
+      )}
       onClick={onClick}
     >
       <div

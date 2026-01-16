@@ -13,6 +13,7 @@ interface TransactionRowProps {
   selected?: boolean;
   selectionMode?: boolean;
   onToggleSelect?: (event: React.MouseEvent<HTMLDivElement>) => void;
+  active?: boolean;
 }
 
 export function TransactionRow({
@@ -21,6 +22,7 @@ export function TransactionRow({
   selected = false,
   selectionMode = false,
   onToggleSelect,
+  active = false,
 }: TransactionRowProps) {
   return (
     <SelectableRow
@@ -29,6 +31,7 @@ export function TransactionRow({
       selected={selected}
       selectionMode={selectionMode}
       onToggleSelect={onToggleSelect}
+      active={active}
     >
       <div className="shrink grow truncate">
         <TransactionDescription transaction={transaction as any} />
@@ -52,5 +55,6 @@ export default memo(
   (prevProps, nextProps) =>
     prevProps.transaction.id === nextProps.transaction.id &&
     prevProps.selected === nextProps.selected &&
-    prevProps.selectionMode === nextProps.selectionMode,
+    prevProps.selectionMode === nextProps.selectionMode &&
+    prevProps.active === nextProps.active,
 );
