@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useMemo, useState } from "react";
 
 import EmptyState from "@/components/shared/empty-state";
 import WalletForm from "@/components/shared/wallet-form";
@@ -8,18 +8,21 @@ import WalletRow from "@/components/shared/wallet-row";
 import RowGroupHeader from "@/components/shared/row-group-header";
 import { DrawerDialog } from "@/components/ui/drawer-dialog";
 import { useWallets } from "@/contexts/settings-context";
+import { useKeyboardListNavigation } from "@/hooks/use-keyboard-list-navigation";
 import { Wallet } from "@/utils/supabase/types";
 
 interface WalletsSectionProps {
   selected: string[];
   onToggle: (wallet: Wallet, shiftKey: boolean) => void;
   wallets?: Wallet[];
+  selectAll: () => void;
 }
 
 export default function WalletsSection({
   selected,
   onToggle,
   wallets: propWallets,
+  selectAll,
 }: WalletsSectionProps) {
   const [allWallets] = useWallets();
   const [open, setOpen] = useState(false);
@@ -66,6 +69,19 @@ export default function WalletsSection({
     setSelectedWallet(null);
   };
 
+  const orderedWallets = useMemo(
+    () => Object.values(groupedWallets).flatMap((group) => group),
+    [groupedWallets],
+  );
+
+  const { activeId, setActiveId } = useKeyboardListNavigation({
+    items: orderedWallets,
+    getItemId: (wallet) => wallet.id,
+    onEnter: handleRowClick,
+    onSpace: (wallet) => onToggle(wallet, false),
+    onSelectAll: selectAll,
+  });
+
   if (wallets.length === 0) {
     return (
       <EmptyState
@@ -90,7 +106,11 @@ export default function WalletsSection({
                   selected={isSelected}
                   selectionMode={selected.length > 0}
                   onToggleSelect={(e) => onToggle(wallet, e.shiftKey)}
-                  onClick={(e) => handleRowClick(wallet)}
+                  onClick={() => {
+                    setActiveId(wallet.id);
+                    handleRowClick(wallet);
+                  }}
+                  active={wallet.id === activeId}
                 />
               );
             })}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
 import DeleteLabelsDialog from "./delete-labels-dialog";
@@ -12,7 +12,9 @@ import LabelRow from "@/components/shared/label-row";
 import PageHeader from "@/components/shared/page-header";
 import { TooltipButton } from "@/components/ui/tooltip-button";
 import { useLabels } from "@/contexts/settings-context";
+import { useKeyboardListNavigation } from "@/hooks/use-keyboard-list-navigation";
 import { useSelection } from "@/hooks/use-selection";
+import { canUseGlobalShortcuts } from "@/utils/keyboard-shortcuts";
 import { COLORS } from "@/utils/constants";
 import { Database } from "@/utils/supabase/database.types";
 
@@ -54,6 +56,22 @@ export default function LabelSection() {
     clearSelection();
   };
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!canUseGlobalShortcuts()) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (selectedCount === 0) return;
+
+      if (event.key.toLowerCase() === "d") {
+        event.preventDefault();
+        setDeleteDialogOpen(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedCount]);
+
   const toggleSelect = (
     label: Database["public"]["Tables"]["labels"]["Row"],
     shiftKey = false,
@@ -76,6 +94,14 @@ export default function LabelSection() {
 
     // If neither color is found, sort alphabetically by name as fallback
     return a.name.localeCompare(b.name);
+  });
+
+  const { activeId, setActiveId } = useKeyboardListNavigation({
+    items: sortedLabels,
+    getItemId: (label) => label.id,
+    onEnter: handleEdit,
+    onSpace: (label) => toggleSelection(label.id),
+    onSelectAll: selectAll,
   });
 
   if (sortedLabels.length === 0) {
@@ -107,10 +133,14 @@ export default function LabelSection() {
             <LabelRow
               key={label.id}
               label={label}
-              onClick={(e) => handleEdit(label)}
+              onClick={() => {
+                setActiveId(label.id);
+                handleEdit(label);
+              }}
               selected={isSelected}
               selectionMode={selectedCount > 0}
               onToggleSelect={(e) => toggleSelect(label, e.shiftKey)}
+              active={label.id === activeId}
             />
           );
         })}
@@ -138,7 +168,7 @@ export default function LabelSection() {
         <TooltipButton
           size="sm"
           variant="ghost"
-          tooltip="Delete selected labels"
+          tooltip="Delete selected labels (D)"
           onClick={() => setDeleteDialogOpen(true)}
           disabled={selectedCount === 0}
         >

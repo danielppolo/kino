@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import CategoryRow from "@/components/shared/category-row";
 import EmptyState from "@/components/shared/empty-state";
 import { useCategories } from "@/contexts/settings-context";
+import { useKeyboardListNavigation } from "@/hooks/use-keyboard-list-navigation";
 import { createClient } from "@/utils/supabase/client";
 import { getCategoryTransactionCounts } from "@/utils/supabase/queries";
 import { Category } from "@/utils/supabase/types";
@@ -14,6 +15,8 @@ interface CategoriesProps {
   selected: string[];
   onToggle: (category: Category, shiftKey: boolean) => void;
   onEdit: (category: Category) => void;
+  selectAll: () => void;
+  isActive: boolean;
 }
 
 export default function CategorySection({
@@ -21,6 +24,8 @@ export default function CategorySection({
   selected,
   onToggle,
   onEdit,
+  selectAll,
+  isActive,
 }: CategoriesProps) {
   const [categories] = useCategories();
 
@@ -51,6 +56,15 @@ export default function CategorySection({
     },
   });
 
+  const { activeId, setActiveId } = useKeyboardListNavigation({
+    items: filteredCategories,
+    getItemId: (category) => category.id,
+    onEnter: onEdit,
+    onSpace: (category) => onToggle(category, false),
+    onSelectAll: selectAll,
+    enabled: isActive,
+  });
+
   if (filteredCategories.length === 0) {
     return (
       <EmptyState
@@ -67,11 +81,15 @@ export default function CategorySection({
       <CategoryRow
         key={`${category.id}-${transactionCount}`}
         category={category}
-        onClick={(e) => onEdit(category)}
+        onClick={() => {
+          setActiveId(category.id);
+          onEdit(category);
+        }}
         selected={isSelected}
         selectionMode={selected.length > 0}
         onToggleSelect={(e) => onToggle(category, e.shiftKey)}
         transactionCount={transactionCount}
+        active={category.id === activeId}
       />
     );
   });

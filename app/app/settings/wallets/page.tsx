@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { Download, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
@@ -16,6 +16,7 @@ import PageHeader from "@/components/shared/page-header";
 import { TooltipButton } from "@/components/ui/tooltip-button";
 import { useWallets } from "@/contexts/settings-context";
 import { useSelection } from "@/hooks/use-selection";
+import { canUseGlobalShortcuts } from "@/utils/keyboard-shortcuts";
 import { createClient } from "@/utils/supabase/client";
 
 export default function Page() {
@@ -109,6 +110,37 @@ export default function Page() {
     clearSelection();
   };
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!canUseGlobalShortcuts()) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (selectedCount === 0) return;
+
+      if (event.key.toLowerCase() === "v") {
+        event.preventDefault();
+        if (!visibilityMutation.isPending) {
+          handleToggleVisibility();
+        }
+      }
+
+      if (event.key.toLowerCase() === "e") {
+        event.preventDefault();
+        if (!isExporting) {
+          handleExport();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    handleExport,
+    handleToggleVisibility,
+    isExporting,
+    selectedCount,
+    visibilityMutation.isPending,
+  ]);
+
   return (
     <>
       <PageHeader className="justify-end">
@@ -116,7 +148,11 @@ export default function Page() {
       </PageHeader>
 
       <div style={{ height: "calc(100vh - 44px)", overflow: "auto" }}>
-        <WalletsSection selected={selected} onToggle={toggleSelect} />
+        <WalletsSection
+          selected={selected}
+          onToggle={toggleSelect}
+          selectAll={selectAll}
+        />
       </div>
 
       <BulkActions
@@ -127,7 +163,7 @@ export default function Page() {
         <TooltipButton
           size="sm"
           variant="ghost"
-          tooltip="Toggle visibility"
+          tooltip="Toggle visibility (V)"
           onClick={handleToggleVisibility}
           disabled={visibilityMutation.isPending}
         >
@@ -148,7 +184,7 @@ export default function Page() {
         <TooltipButton
           size="sm"
           variant="ghost"
-          tooltip="Export transactions"
+          tooltip="Export transactions (E)"
           onClick={handleExport}
           disabled={isExporting}
         >

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, SquaresUnite, Trash2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipButton } from "@/components/ui/tooltip-button";
 import { useCategories } from "@/contexts/settings-context";
 import { useSelection } from "@/hooks/use-selection";
+import { canUseGlobalShortcuts } from "@/utils/keyboard-shortcuts";
 import { Category } from "@/utils/supabase/types";
 
 export default function Page() {
@@ -28,6 +29,11 @@ export default function Page() {
   );
   const router = useRouter();
   const searchParams = useSearchParams();
+  const activeType = searchParams.get("type") || "expense";
+  const visibleCategories = useMemo(
+    () => categories.filter((category) => category.type === activeType),
+    [activeType, categories],
+  );
 
   const {
     selected,
@@ -36,7 +42,7 @@ export default function Page() {
     toggleSelection,
     selectAll,
   } = useSelection({
-    getAllIds: () => categories.map((c) => c.id),
+    getAllIds: () => visibleCategories.map((category) => category.id),
   });
 
   const selectedCategories = useMemo(
@@ -98,12 +104,33 @@ export default function Page() {
     router.push(`/app/settings/categories?${params.toString()}`);
   };
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!canUseGlobalShortcuts()) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (selectedCount === 0) return;
+
+      if (event.key.toLowerCase() === "d") {
+        event.preventDefault();
+        setDeleteDialogOpen(true);
+      }
+      if (
+        event.key.toLowerCase() === "m" &&
+        selectedCount >= 2 &&
+        selectedType
+      ) {
+        event.preventDefault();
+        setMergeDialogOpen(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedCount, selectedType]);
+
   return (
     <>
-      <Tabs
-        onValueChange={handleTabChange}
-        defaultValue={searchParams.get("type") || "expense"}
-      >
+      <Tabs onValueChange={handleTabChange} defaultValue={activeType}>
         <PageHeader>
           <div className="flex items-center gap-4">
             <TabsList>
@@ -129,6 +156,8 @@ export default function Page() {
               selected={selected}
               onToggle={toggleSelect}
               onEdit={handleEdit}
+              selectAll={selectAll}
+              isActive={activeType === "income"}
             />
           </TabsContent>
 
@@ -138,6 +167,8 @@ export default function Page() {
               selected={selected}
               onToggle={toggleSelect}
               onEdit={handleEdit}
+              selectAll={selectAll}
+              isActive={activeType === "expense"}
             />
           </TabsContent>
         </div>
@@ -172,7 +203,7 @@ export default function Page() {
         <TooltipButton
           size="sm"
           variant="ghost"
-          tooltip="Delete selected categories"
+          tooltip="Delete selected categories (D)"
           onClick={() => setDeleteDialogOpen(true)}
           disabled={selectedCount === 0}
         >
@@ -181,7 +212,7 @@ export default function Page() {
         <TooltipButton
           size="sm"
           variant="ghost"
-          tooltip="Merge selected categories"
+          tooltip="Merge selected categories (M)"
           onClick={() => setMergeDialogOpen(true)}
           disabled={selectedCount < 2 || !selectedType}
         >

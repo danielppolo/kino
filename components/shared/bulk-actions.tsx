@@ -23,7 +23,7 @@ export function BulkActions({
       <div className="bg-background flex gap-2 rounded-xl border p-2 shadow">
         {children}
         <TooltipButton
-          tooltip="Select all"
+          tooltip="Select all (⌘A)"
           variant="ghost"
           size="sm"
           onClick={selectAll}
@@ -33,7 +33,7 @@ export function BulkActions({
         <TooltipButton
           size="sm"
           variant="ghost"
-          tooltip="Clear selection"
+          tooltip="Clear selection (Esc)"
           onClick={clearSelection}
         >
           <X className="size-4" />

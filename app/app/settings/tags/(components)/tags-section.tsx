@@ -14,12 +14,14 @@ import { Tag } from "@/utils/supabase/types";
 import { Text } from "@/components/ui/typography";
 import EmptyState from "@/components/shared/empty-state";
 import RowGroupHeader from "@/components/shared/row-group-header";
+import { useKeyboardListNavigation } from "@/hooks/use-keyboard-list-navigation";
 
 interface TagsSectionProps {
   selected: string[];
   onToggle: (tag: Tag, shiftKey: boolean) => void;
   onEdit: (tag: Tag) => void;
   onTransactionCountsLoaded?: (counts: Map<string, number>) => void;
+  selectAll: () => void;
 }
 
 export default function TagsSection({
@@ -27,6 +29,7 @@ export default function TagsSection({
   onToggle,
   onEdit,
   onTransactionCountsLoaded,
+  selectAll,
 }: TagsSectionProps) {
   const router = useRouter();
   const [tags] = useTags();
@@ -87,6 +90,19 @@ export default function TagsSection({
     return sortedGroups;
   }, [tags]);
 
+  const orderedTags = useMemo(
+    () => Object.values(groupedTags).flatMap((groupTags) => groupTags),
+    [groupedTags],
+  );
+
+  const { activeId, setActiveId } = useKeyboardListNavigation({
+    items: orderedTags,
+    getItemId: (tag) => tag.id,
+    onEnter: onEdit,
+    onSpace: (tag) => onToggle(tag, false),
+    onSelectAll: selectAll,
+  });
+
   if (tags.length === 0) {
     return (
       <EmptyState title="No tags" description="Create a tag to get started" />
@@ -110,7 +126,11 @@ export default function TagsSection({
                 id={`${tag.id}-${transactionCount}`}
                 selected={isSelected}
                 onToggleSelect={(e) => onToggle(tag, e.shiftKey)}
-                onClick={(e) => onEdit(tag)}
+                onClick={() => {
+                  setActiveId(tag.id);
+                  onEdit(tag);
+                }}
+                active={tag.id === activeId}
               >
                 <div className="flex flex-1 items-center justify-between">
                   <div className="flex flex-1 items-center gap-4">
