@@ -3,6 +3,7 @@
 import { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 import { buildTransactionUrl } from "@/utils/build-transaction-url";
 
@@ -14,6 +15,7 @@ interface TransactionLinkProps {
   children: ReactNode;
   className?: string;
   preserveSearchParams?: boolean;
+  shortcut?: number;
 }
 
 export function TransactionLink({
@@ -24,6 +26,7 @@ export function TransactionLink({
   children,
   className,
   preserveSearchParams = true,
+  shortcut,
   ...props
 }: TransactionLinkProps) {
   const pathname = usePathname();
@@ -39,7 +42,7 @@ export function TransactionLink({
   });
 
   return (
-    <Link href={href} className={className} {...props}>
+    <Link href={href} className={cn("group/wallet-link", className)} {...props}>
       {children}
     </Link>
   );
