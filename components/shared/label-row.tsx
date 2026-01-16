@@ -10,6 +10,7 @@ interface LabelRowProps {
   selected?: boolean;
   selectionMode?: boolean;
   onToggleSelect?: (event: React.MouseEvent<HTMLDivElement>) => void;
+  active?: boolean;
 }
 
 export function LabelRow({
@@ -18,6 +19,7 @@ export function LabelRow({
   selected = false,
   selectionMode = false,
   onToggleSelect,
+  active = false,
 }: LabelRowProps) {
   return (
     <SelectableRow
@@ -26,6 +28,7 @@ export function LabelRow({
       selected={selected}
       selectionMode={selectionMode}
       onToggleSelect={onToggleSelect}
+      active={active}
     >
       <div className="shrink-0">
         <Color size="sm" color={label.color} />
@@ -50,5 +53,6 @@ export default memo(
   (prevProps, nextProps) =>
     prevProps.label.id === nextProps.label.id &&
     prevProps.selected === nextProps.selected &&
-    prevProps.selectionMode === nextProps.selectionMode,
+    prevProps.selectionMode === nextProps.selectionMode &&
+    prevProps.active === nextProps.active,
 );

@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import RecurringTransactionRow from "./recurring-transaction-row";
 
 import EmptyState from "@/components/shared/empty-state";
+import { useKeyboardListNavigation } from "@/hooks/use-keyboard-list-navigation";
 import { createClient } from "@/utils/supabase/client";
 import { listRecurringTransactions } from "@/utils/supabase/queries";
 import { RecurringTransaction } from "@/utils/supabase/types";
@@ -12,9 +13,14 @@ import { RecurringTransaction } from "@/utils/supabase/types";
 interface Props {
   type: "income" | "expense";
   onEdit: (t: RecurringTransaction) => void;
+  isActive: boolean;
 }
 
-export default function RecurringTransactionsSection({ type, onEdit }: Props) {
+export default function RecurringTransactionsSection({
+  type,
+  onEdit,
+  isActive,
+}: Props) {
   const { data } = useQuery({
     queryKey: ["recurring-transactions", type],
     queryFn: async () => {
@@ -43,11 +49,22 @@ export default function RecurringTransactionsSection({ type, onEdit }: Props) {
     return new Date(dateA).getTime() - new Date(dateB).getTime();
   });
 
+  const { activeId, setActiveId } = useKeyboardListNavigation({
+    items: sortedData,
+    getItemId: (transaction) => transaction.id,
+    onEnter: onEdit,
+    enabled: isActive,
+  });
+
   return sortedData.map((transaction) => (
     <RecurringTransactionRow
       key={transaction.id}
       transaction={transaction}
-      onClick={() => onEdit(transaction)}
+      onClick={() => {
+        setActiveId(transaction.id);
+        onEdit(transaction);
+      }}
+      active={transaction.id === activeId}
     />
   ));
 }

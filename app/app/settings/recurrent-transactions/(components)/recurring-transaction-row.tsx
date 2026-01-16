@@ -13,15 +13,17 @@ import { CalendarFold, RefreshCcw } from "lucide-react";
 interface RecurringTransactionRowProps {
   transaction: RecurringTransaction;
   onClick: () => void;
+  active?: boolean;
 }
 
 export default function RecurringTransactionRow({
   transaction,
   onClick,
+  active = false,
 }: RecurringTransactionRowProps) {
   const [, walletMap] = useWallets();
   return (
-    <Row onClick={onClick}>
+    <Row onClick={onClick} className={active ? "bg-accent/50" : undefined}>
       <div className="shrink grow truncate">
         <TransactionDescription transaction={transaction as any} />
       </div>

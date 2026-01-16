@@ -1,9 +1,15 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
 import { endOfMonth, format, startOfMonth } from "date-fns";
 import { X } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import {
+  useParams,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 import { toast } from "sonner";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -21,17 +27,24 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useTransactionForm } from "@/contexts/transaction-form-context";
 import { useViews } from "@/contexts/settings-context";
 import { useTotalBalance } from "@/hooks/use-total-balance";
 import { useTransactionQueryState } from "@/hooks/use-transaction-query";
+import { buildTransactionUrl } from "@/utils/build-transaction-url";
+import { canUseGlobalShortcuts } from "@/utils/keyboard-shortcuts";
 import { deleteViews } from "@/utils/supabase/mutations";
 
 export function TransactionsSidebar() {
   const [filters] = useTransactionQueryState();
   const { walletId } = useParams();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const { walletsByCurrency } = useTotalBalance();
   const [views] = useViews();
   const queryClient = useQueryClient();
+  const { open: formOpen } = useTransactionForm();
 
   // Get current month's start and end dates as fallback
   const now = new Date();
@@ -59,6 +72,45 @@ export function TransactionsSidebar() {
   const handleDeleteClick = (viewId: string) => {
     deleteMutation.mutate(viewId);
   };
+
+  const walletShortcutTargets = useMemo(
+    () =>
+      Object.entries(walletsByCurrency).flatMap(
+        ([, currencyWallets]) => currencyWallets,
+      ),
+    [walletsByCurrency],
+  );
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!canUseGlobalShortcuts({ formOpen })) return;
+      if (!event.metaKey || event.ctrlKey || event.altKey) return;
+      const index = Number(event.key) - 1;
+      if (!Number.isInteger(index) || index < 0) return;
+      const target = walletShortcutTargets[index];
+      if (!target) return;
+      event.preventDefault();
+      const href = buildTransactionUrl({
+        walletId: target.id,
+        from: fromDate,
+        to: toDate,
+        searchParams,
+        pathname,
+      });
+      router.push(href);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    formOpen,
+    fromDate,
+    pathname,
+    router,
+    searchParams,
+    toDate,
+    walletShortcutTargets,
+  ]);
 
   return (
     <SidebarWrapper>

@@ -5,8 +5,6 @@ import { Plus } from "lucide-react";
 import { useParams } from "next/navigation";
 
 import CsvTransactionUploader from "@/app/app/settings/wallets/[walletId]/(components)/import-transactions";
-import { TooltipButton } from "@/components/ui/tooltip-button";
-import { CommandShortcut } from "@/components/ui/command";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +12,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Kbd } from "@/components/ui/kbd";
+import { TooltipButton } from "@/components/ui/tooltip-button";
 import { useTransactionForm } from "@/contexts/transaction-form-context";
 
 export function AddTransactionDropdown() {
@@ -42,21 +42,21 @@ export function AddTransactionDropdown() {
               onClick={() => openForm({ type: "expense", walletId })}
             >
               Expense
-              <CommandShortcut>E</CommandShortcut>
+              <Kbd>E</Kbd>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="justify-between"
               onClick={() => openForm({ type: "income", walletId })}
             >
               Income
-              <CommandShortcut>I</CommandShortcut>
+              <Kbd>I</Kbd>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="justify-between"
               onClick={() => openForm({ type: "transfer", walletId })}
             >
               Transfer
-              <CommandShortcut>T</CommandShortcut>
+              <Kbd>T</Kbd>
             </DropdownMenuItem>
 
             <DropdownMenuItem
