@@ -655,3 +655,215 @@ export const getCashflowBreakdown = async (
     error: null,
   } as const;
 };
+
+// Bills queries
+export const listBills = async (
+  client: TypedSupabaseClient,
+  params?: { walletId?: string },
+) => {
+  let query = client
+    .from("bills")
+    .select("*")
+    .order("due_date", { ascending: true });
+
+  if (params?.walletId) {
+    query = query.eq("wallet_id", params.walletId);
+  }
+
+  return query;
+};
+
+export const getBillWithPayments = async (
+  client: TypedSupabaseClient,
+  billId: string,
+) => {
+  // Get the bill
+  const { data: bill, error: billError } = await client
+    .from("bills")
+    .select("*")
+    .eq("id", billId)
+    .single();
+
+  if (billError) {
+    return { data: null, error: billError };
+  }
+
+  // Get the payments with transaction details
+  const { data: payments, error: paymentsError } = await client
+    .from("bill_payments")
+    .select(
+      `
+      id,
+      transaction_id,
+      transactions:transaction_id (
+        id,
+        wallet_id,
+        category_id,
+        label_id,
+        amount_cents,
+        currency,
+        description,
+        date,
+        type
+      )
+    `,
+    )
+    .eq("bill_id", billId);
+
+  if (paymentsError) {
+    return { data: null, error: paymentsError };
+  }
+
+  // Calculate paid amount (sum of absolute values of expense transactions)
+  const paidAmountCents = (payments ?? []).reduce((sum, payment) => {
+    const transaction = payment.transactions as any;
+    if (transaction) {
+      return sum + Math.abs(transaction.amount_cents || 0);
+    }
+    return sum;
+  }, 0);
+
+  const paymentPercentage =
+    bill.amount_cents > 0
+      ? Math.min(100, Math.round((paidAmountCents / bill.amount_cents) * 100))
+      : 0;
+
+  return {
+    data: {
+      ...bill,
+      payments: (payments ?? []).map((p) => ({
+        id: p.id,
+        transaction: p.transactions,
+      })),
+      paid_amount_cents: paidAmountCents,
+      payment_percentage: paymentPercentage,
+    },
+    error: null,
+  };
+};
+
+export const listBillsWithPayments = async (
+  client: TypedSupabaseClient,
+  params?: { walletId?: string },
+) => {
+  // Get all bills
+  let billsQuery = client
+    .from("bills")
+    .select("*")
+    .order("due_date", { ascending: true });
+
+  if (params?.walletId) {
+    billsQuery = billsQuery.eq("wallet_id", params.walletId);
+  }
+
+  const { data: bills, error: billsError } = await billsQuery;
+
+  if (billsError) {
+    return { data: null, error: billsError };
+  }
+
+  if (!bills || bills.length === 0) {
+    return { data: [], error: null };
+  }
+
+  // Get all payments for these bills
+  const billIds = bills.map((b) => b.id);
+  const { data: payments, error: paymentsError } = await client
+    .from("bill_payments")
+    .select(
+      `
+      id,
+      bill_id,
+      transaction_id,
+      transactions:transaction_id (
+        id,
+        wallet_id,
+        category_id,
+        label_id,
+        amount_cents,
+        currency,
+        description,
+        date,
+        type
+      )
+    `,
+    )
+    .in("bill_id", billIds);
+
+  if (paymentsError) {
+    return { data: null, error: paymentsError };
+  }
+
+  // Group payments by bill_id
+  const paymentsByBill = (payments ?? []).reduce(
+    (acc, payment) => {
+      if (!acc[payment.bill_id]) {
+        acc[payment.bill_id] = [];
+      }
+      acc[payment.bill_id].push(payment);
+      return acc;
+    },
+    {} as Record<string, typeof payments>,
+  );
+
+  // Build result with payment info
+  const result = bills.map((bill) => {
+    const billPayments = paymentsByBill[bill.id] ?? [];
+    const paidAmountCents = billPayments.reduce((sum, payment) => {
+      const transaction = payment.transactions as any;
+      if (transaction) {
+        return sum + Math.abs(transaction.amount_cents || 0);
+      }
+      return sum;
+    }, 0);
+
+    const paymentPercentage =
+      bill.amount_cents > 0
+        ? Math.min(100, Math.round((paidAmountCents / bill.amount_cents) * 100))
+        : 0;
+
+    return {
+      ...bill,
+      payments: billPayments.map((p) => ({
+        id: p.id,
+        transaction: p.transactions,
+      })),
+      paid_amount_cents: paidAmountCents,
+      payment_percentage: paymentPercentage,
+    };
+  });
+
+  return { data: result, error: null };
+};
+
+export const getBillsForTransaction = async (
+  client: TypedSupabaseClient,
+  transactionId: string,
+) => {
+  const { data, error } = await client
+    .from("bill_payments")
+    .select(
+      `
+      id,
+      bill_id,
+      bills:bill_id (
+        id,
+        wallet_id,
+        description,
+        amount_cents,
+        currency,
+        due_date
+      )
+    `,
+    )
+    .eq("transaction_id", transactionId);
+
+  if (error) {
+    return { data: null, error };
+  }
+
+  return {
+    data: (data ?? []).map((p) => p.bills).filter(Boolean),
+    error: null,
+  };
+};
