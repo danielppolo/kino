@@ -2,7 +2,7 @@
 
 import React, { useMemo } from "react";
 import { format } from "date-fns";
-import { Receipt } from "lucide-react";
+import { ReceiptText } from "lucide-react";
 
 import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 import { useBills, useWallets } from "@/contexts/settings-context";
@@ -54,7 +54,10 @@ const BillCombobox = ({
       });
 
     // Add "None" option at the beginning
-    return [{ value: "", label: "None", keywords: ["none", "clear"] }, ...billOptions];
+    return [
+      { value: "", label: "None", keywords: ["none", "clear"] },
+      ...billOptions,
+    ];
   }, [filteredBills, walletMap]);
 
   const billMap = useMemo(() => {
@@ -74,7 +77,7 @@ const BillCombobox = ({
     <Combobox
       variant={variant}
       size={size}
-      icon={<Receipt className="size-4" />}
+      icon={<ReceiptText className="size-4" />}
       options={options}
       value={value ?? ""}
       onChange={onChange}
@@ -88,7 +91,7 @@ const BillCombobox = ({
         if (bill) {
           return (
             <span className="flex items-center gap-2">
-              <Receipt className="text-muted-foreground size-4" />
+              <ReceiptText className="text-muted-foreground size-4" />
               <span className="truncate">{bill.description}</span>
             </span>
           );
@@ -97,9 +100,7 @@ const BillCombobox = ({
       }}
       renderOption={(option) => {
         if (option.value === "") {
-          return (
-            <span className="text-muted-foreground">None</span>
-          );
+          return <span className="text-muted-foreground">None</span>;
         }
         const bill = billMap.get(option.value);
         if (bill) {
@@ -107,7 +108,7 @@ const BillCombobox = ({
           return (
             <span className="flex w-full items-center justify-between gap-2">
               <span className="flex items-center gap-2">
-                <Receipt className="text-muted-foreground size-4" />
+                <ReceiptText className="text-muted-foreground size-4" />
                 <span>{bill.description}</span>
               </span>
               <span className="text-muted-foreground text-xs">
@@ -123,4 +124,3 @@ const BillCombobox = ({
 };
 
 export default BillCombobox;
-
