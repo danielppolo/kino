@@ -109,6 +109,15 @@ export const listTransactionTemplates = async (client: TypedSupabaseClient) => {
   return client.from("transaction_templates").select("*");
 };
 
+type WalletMonthlyBalance = {
+  balance_cents: number;
+  created_at: string;
+  id: string;
+  month: string;
+  updated_at: string;
+  wallet_id: string;
+};
+
 export const getWalletMonthlyBalances = async (
   client: TypedSupabaseClient,
   params: {
@@ -117,23 +126,55 @@ export const getWalletMonthlyBalances = async (
     to?: string;
   },
 ) => {
-  let query = client
-    .from("wallet_monthly_balances")
-    .select("*")
-    .order("month", { ascending: true });
+  const PAGE_SIZE = 1000;
+  let allData: WalletMonthlyBalance[] = [];
+  let page = 0;
+  let hasMore = true;
 
-  if (params.walletId) {
-    query = query.eq("wallet_id", params.walletId);
+  while (hasMore) {
+    let query = client
+      .from("wallet_monthly_balances")
+      .select("*")
+      .order("month", { ascending: true })
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+    if (params.walletId) {
+      query = query.eq("wallet_id", params.walletId);
+    }
+
+    if (params.from) {
+      query = query.gte("month", params.from);
+    }
+    if (params.to) {
+      query = query.lte("month", params.to);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      return { data: null, error };
+    }
+
+    if (data) {
+      allData = [...allData, ...data];
+    }
+
+    hasMore = data?.length === PAGE_SIZE;
+    page++;
   }
 
-  if (params.from) {
-    query = query.gte("month", params.from);
-  }
-  if (params.to) {
-    query = query.lte("month", params.to);
-  }
+  return { data: allData, error: null };
+};
 
-  return query;
+type MonthlyStats = {
+  created_at: string;
+  id: string;
+  income_cents: number;
+  month: string;
+  net_cents: number;
+  outcome_cents: number;
+  updated_at: string;
+  wallet_id: string | null;
 };
 
 export async function getMonthlyStats(
@@ -148,24 +189,45 @@ export async function getMonthlyStats(
     to?: string;
   } = {},
 ) {
-  let query = supabase
-    .from("monthly_stats")
-    .select("*")
-    .order("month", { ascending: true });
+  const PAGE_SIZE = 1000;
+  let allData: MonthlyStats[] = [];
+  let page = 0;
+  let hasMore = true;
 
-  if (walletId) {
-    query = query.eq("wallet_id", walletId);
+  while (hasMore) {
+    let query = supabase
+      .from("monthly_stats")
+      .select("*")
+      .order("month", { ascending: true })
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+    if (walletId) {
+      query = query.eq("wallet_id", walletId);
+    }
+
+    if (from) {
+      query = query.gte("month", from);
+    }
+
+    if (to) {
+      query = query.lte("month", to);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      return { data: null, error };
+    }
+
+    if (data) {
+      allData = [...allData, ...data];
+    }
+
+    hasMore = data?.length === PAGE_SIZE;
+    page++;
   }
 
-  if (from) {
-    query = query.gte("month", from);
-  }
-
-  if (to) {
-    query = query.lte("month", to);
-  }
-
-  return query;
+  return { data: allData, error: null };
 }
 
 export const getTotalExpenses = async (
