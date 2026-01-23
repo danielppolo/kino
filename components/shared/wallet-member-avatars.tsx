@@ -2,7 +2,18 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarGroup,
+  AvatarGroupCount,
+} from "@/components/ui/avatar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { createClient } from "@/utils/supabase/client";
 import { getWalletMembers } from "@/utils/supabase/queries";
 
@@ -10,6 +21,7 @@ interface WalletMemberAvatarsProps {
   walletId: string;
   maxAvatars?: number;
   size?: "sm" | "md" | "lg";
+  showTooltip?: boolean;
 }
 
 type WalletMember = {
@@ -25,6 +37,7 @@ export default function WalletMemberAvatars({
   walletId,
   maxAvatars = 3,
   size = "sm",
+  showTooltip = true,
 }: WalletMemberAvatarsProps) {
   const { data: membersData, isLoading } = useQuery({
     queryKey: ["wallet-members", walletId],
@@ -34,7 +47,15 @@ export default function WalletMemberAvatars({
     },
   });
 
-  const members: WalletMember[] = membersData?.data || [];
+  const members: WalletMember[] =
+    membersData?.data?.map((m) => ({
+      id: m.id,
+      user_id: m.user_id,
+      wallet_id: m.wallet_id,
+      role: m.role as "owner" | "editor" | "reader",
+      email: m.email,
+      created_at: m.created_at,
+    })) || [];
 
   if (isLoading || members.length === 0) {
     return null;
@@ -58,27 +79,46 @@ export default function WalletMemberAvatars({
     lg: "h-8 w-8 text-sm",
   };
 
-  return (
-    <div className="flex items-center -space-x-2">
+  const avatarGroup = (
+    <AvatarGroup>
       {displayedMembers.map((member) => (
-        <Avatar
-          key={member.id}
-          className={`${sizeClasses[size]} border-background border-2`}
-          title={member.email || "Unknown user"}
-        >
+        <Avatar key={member.id} className={`${sizeClasses[size]} border-2 border-background`}>
           <AvatarFallback className={sizeClasses[size]}>
             {getInitials(member.email)}
           </AvatarFallback>
         </Avatar>
       ))}
       {remainingCount > 0 && (
-        <div
-          className={`${sizeClasses[size]} border-background bg-muted text-muted-foreground flex items-center justify-center rounded-full border-2`}
-          title={`${remainingCount} more member${remainingCount > 1 ? "s" : ""}`}
-        >
+        <AvatarGroupCount className={sizeClasses[size]}>
           +{remainingCount}
-        </div>
+        </AvatarGroupCount>
       )}
-    </div>
+    </AvatarGroup>
+  );
+
+  if (!showTooltip) {
+    return avatarGroup;
+  }
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div>{avatarGroup}</div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <div className="space-y-1">
+            <p className="font-semibold">All members:</p>
+            <ul className="list-inside space-y-0.5 text-sm">
+              {members.map((member) => (
+                <li key={member.id}>
+                  {member.email || "Unknown"} ({member.role})
+                </li>
+              ))}
+            </ul>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

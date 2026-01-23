@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import {
+  Avatar,
+  AvatarFallback,
+} from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,6 +27,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import WalletMemberAvatars from "@/components/shared/wallet-member-avatars";
 import { createClient } from "@/utils/supabase/client";
 import {
   addWalletMember,
@@ -76,9 +87,18 @@ export default function WalletMembersSection({
     },
   });
 
-  console.log(membersData);
-
-  const members: WalletMember[] = membersData?.data || [];
+  const members: WalletMember[] = useMemo(
+    () =>
+      membersData?.data?.map((m) => ({
+        id: m.id,
+        user_id: m.user_id,
+        wallet_id: m.wallet_id,
+        role: m.role as "owner" | "editor" | "reader",
+        email: m.email,
+        created_at: m.created_at,
+      })) || [],
+    [membersData?.data],
+  );
 
   // Check if current user is owner
   useEffect(() => {
@@ -191,10 +211,17 @@ export default function WalletMembersSection({
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="mb-2 text-lg font-semibold">Wallet Members</h3>
-        <p className="text-muted-foreground mb-4 text-sm">
-          Manage who has access to this wallet and their permissions.
-        </p>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h3 className="mb-2 text-lg font-semibold">Wallet Members</h3>
+            <p className="text-muted-foreground text-sm">
+              Manage who has access to this wallet and their permissions.
+            </p>
+          </div>
+          {members.length > 0 && (
+            <WalletMemberAvatars walletId={walletId} size="lg" showTooltip={true} />
+          )}
+        </div>
       </div>
 
       {isOwner && (
@@ -258,16 +285,44 @@ export default function WalletMembersSection({
                 </TableCell>
               </TableRow>
             ) : (
-              members.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell className="font-medium">
-                    {member.email || "Unknown"}
-                    {member.user_id === currentUserId && (
-                      <span className="text-muted-foreground ml-2 text-xs">
-                        (You)
-                      </span>
-                    )}
-                  </TableCell>
+              members.map((member) => {
+                const getInitials = (email: string | null) => {
+                  if (!email) return "?";
+                  const parts = email.split("@")[0].split(/[._-]/);
+                  if (parts.length >= 2) {
+                    return (parts[0][0] + parts[1][0]).toUpperCase();
+                  }
+                  return email.substring(0, 2).toUpperCase();
+                };
+
+                return (
+                  <TableRow key={member.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Avatar className="h-8 w-8">
+                                <AvatarFallback>
+                                  {getInitials(member.email)}
+                                </AvatarFallback>
+                              </Avatar>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{member.email || "Unknown"}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <div className="font-medium">
+                          {member.email || "Unknown"}
+                          {member.user_id === currentUserId && (
+                            <span className="text-muted-foreground ml-2 text-xs">
+                              (You)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
                   <TableCell>
                     {isOwner ? (
                       <Select
@@ -316,8 +371,9 @@ export default function WalletMembersSection({
                       </Button>
                     </TableCell>
                   )}
-                </TableRow>
-              ))
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
