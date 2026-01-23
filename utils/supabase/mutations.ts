@@ -419,6 +419,26 @@ export const mergeTags = async (targetId: string, ids: string[]) => {
   if (deleteError) throw new Error(deleteError.message);
 };
 
+export const mergeLabels = async (targetId: string, ids: string[]) => {
+  const supabase = await createClient();
+  const idsToMerge = ids.filter((id) => id !== targetId);
+  if (idsToMerge.length === 0) return;
+
+  // Update all transactions with the merged labels to use the target label
+  const { error: updateError } = await supabase
+    .from("transactions")
+    .update({ label_id: targetId })
+    .in("label_id", idsToMerge);
+  if (updateError) throw new Error(updateError.message);
+
+  // Delete the merged labels
+  const { error: deleteError } = await supabase
+    .from("labels")
+    .delete()
+    .in("id", idsToMerge);
+  if (deleteError) throw new Error(deleteError.message);
+};
+
 export const updateTransactionCategoriesByTag = async (
   tagId: string,
   newCategoryId: string,
@@ -602,4 +622,63 @@ export const setTransactionBills = async (
       .insert(insertData);
     if (insertError) throw new Error(insertError.message);
   }
+};
+
+// User wallet member management functions
+export const addWalletMember = async (
+  walletId: string,
+  email: string,
+  role: "editor" | "reader",
+) => {
+  const supabase = await createClient();
+
+  // Look up user by email
+  const { data: userData, error: lookupError } = await supabase.rpc(
+    "get_user_id_by_email",
+    { user_email: email },
+  );
+
+  if (lookupError) throw new Error(lookupError.message);
+  if (!userData || userData.length === 0) {
+    throw new Error(`User with email ${email} not found`);
+  }
+
+  const userId = userData[0].user_id;
+
+  // Add user to wallet
+  const { data, error } = await supabase
+    .from("user_wallets")
+    .insert({
+      wallet_id: walletId,
+      user_id: userId,
+      role,
+    })
+    .select();
+
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+export const updateWalletMemberRole = async (
+  id: string,
+  role: "owner" | "editor" | "reader",
+) => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("user_wallets")
+    .update({ role })
+    .eq("id", id)
+    .select();
+
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+export const removeWalletMember = async (id: string) => {
+  const supabase = await createClient();
+
+  const { error } = await supabase.from("user_wallets").delete().eq("id", id);
+
+  if (error) throw new Error(error.message);
 };

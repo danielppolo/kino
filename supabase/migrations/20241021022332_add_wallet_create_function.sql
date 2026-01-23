@@ -14,7 +14,7 @@ BEGIN
 
   -- Insert the user-wallet relation in user_wallets
   INSERT INTO user_wallets (user_id, wallet_id, role)
-  VALUES (auth.uid(), wallet_id, 'editor');  -- Fix the string literal here
+  VALUES (auth.uid(), wallet_id, 'owner');
 
   -- Return the wallet_id
   RETURN QUERY SELECT wallet_id;
