@@ -2,9 +2,10 @@
 
 import React, { memo } from "react";
 import { format } from "date-fns";
-import { Receipt, RefreshCcw } from "lucide-react";
+import { ReceiptText, RefreshCcw } from "lucide-react";
 
 import SelectableRow from "./selectable-row";
+
 import { Badge } from "@/components/ui/badge";
 import { Money } from "@/components/ui/money";
 import { Text } from "@/components/ui/typography";
@@ -40,7 +41,7 @@ export function BillRow({
       active={active}
     >
       <div className="shrink-0">
-        <Receipt className="text-muted-foreground size-4" />
+        <ReceiptText className="text-muted-foreground size-4" />
       </div>
       <Text className="shrink grow truncate">{bill.description}</Text>
       {bill.is_recurring && bill.interval_type && (
@@ -52,11 +53,7 @@ export function BillRow({
           {bill.interval_type}
         </Badge>
       )}
-      <Text
-        muted
-        small
-        className={isOverdue ? "text-destructive" : undefined}
-      >
+      <Text muted small className={isOverdue ? "text-destructive" : undefined}>
         {format(dueDate, "MMM d, yyyy")}
       </Text>
       <Money
@@ -87,4 +84,3 @@ export default memo(
     prevProps.selectionMode === nextProps.selectionMode &&
     prevProps.active === nextProps.active,
 );
-

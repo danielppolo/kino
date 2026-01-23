@@ -1,6 +1,6 @@
 "use client";
 
-import { Receipt } from "lucide-react";
+import { ReceiptText } from "lucide-react";
 import {
   useParams,
   usePathname,
@@ -42,10 +42,9 @@ function BillsToggle() {
         }
       }}
     >
-      <Receipt className="size-4" />
+      <ReceiptText className="size-4" />
     </TooltipToggle>
   );
 }
 
 export default BillsToggle;
-
