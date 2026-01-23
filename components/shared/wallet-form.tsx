@@ -8,10 +8,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Textarea } from "../ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import Color from "./color";
 import CurrencyPicker from "./currency-picker";
 
+import { SubmitButton } from "@/components/submit-button";
 import {
   Form,
   FormControl,
@@ -19,7 +21,6 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import { SubmitButton } from "@/components/submit-button";
 import { COLORS } from "@/utils/constants";
 import { Database } from "@/utils/supabase/database.types";
 import { createWallet, updateWallet } from "@/utils/supabase/mutations";
@@ -40,6 +41,7 @@ const WalletForm = ({ onSuccess, wallet }: WalletFormProps) => {
       name: wallet?.name || "",
       currency: wallet?.currency || "MXN",
       color: wallet?.color || COLORS[0],
+      notes: wallet?.notes || "",
     },
   });
 
@@ -71,6 +73,7 @@ const WalletForm = ({ onSuccess, wallet }: WalletFormProps) => {
         name: walletData.name,
         currency: walletData.currency,
         color: walletData.color,
+        notes: walletData.notes,
       });
     },
     onSuccess: () => {
@@ -162,6 +165,23 @@ const WalletForm = ({ onSuccess, wallet }: WalletFormProps) => {
                   value={field.value}
                   disabled={isEditing}
                   className="w-full"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="notes"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <Textarea
+                  placeholder="Notes (optional)"
+                  {...field}
+                  value={field.value ?? ""}
                 />
               </FormControl>
               <FormMessage />

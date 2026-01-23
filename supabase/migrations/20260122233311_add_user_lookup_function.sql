@@ -7,7 +7,7 @@ SECURITY DEFINER
 AS $$
 BEGIN
   RETURN QUERY
-  SELECT au.id, au.email
+  SELECT au.id, au.email::text
   FROM auth.users au
   WHERE au.email = user_email
   LIMIT 1;
