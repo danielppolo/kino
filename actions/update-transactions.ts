@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+
 import { createClient } from "@/utils/supabase/server";
 
 export interface BulkTransactionUpdate {
@@ -8,6 +9,17 @@ export interface BulkTransactionUpdate {
   label_id?: string | null;
   date?: string;
   tags?: string[];
+}
+
+const BATCH_SIZE = 20;
+
+// Helper to chunk array into batches
+function chunk<T>(arr: T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    result.push(arr.slice(i, i + size));
+  }
+  return result;
 }
 
 export const updateTransactions = async (
@@ -21,32 +33,44 @@ export const updateTransactions = async (
   }
 
   const updatePayload: Record<string, unknown> = {};
-  if (updates.category_id !== undefined) updatePayload.category_id = updates.category_id;
+  if (updates.category_id !== undefined)
+    updatePayload.category_id = updates.category_id;
   if (updates.label_id !== undefined) updatePayload.label_id = updates.label_id;
   if (updates.date !== undefined) updatePayload.date = updates.date;
 
-  if (Object.keys(updatePayload).length) {
-    const { error } = await supabase
-      .from("transactions")
-      .update(updatePayload)
-      .in("id", ids);
-    if (error) return { error: error.message };
-  }
+  // Process in batches of 20
+  const batches = chunk(ids, BATCH_SIZE);
 
-  if (updates.tags !== undefined) {
-    const { error: delError } = await supabase
-      .from("transaction_tags")
-      .delete()
-      .in("transaction_id", ids);
-    if (delError) return { error: delError.message };
-    if (updates.tags.length) {
-      const rows = ids.flatMap((id) =>
-        updates.tags!.map((tagId) => ({ transaction_id: id, tag_id: tagId })),
-      );
-      const { error: insertError } = await supabase
+  // Process each batch sequentially
+  for (const batchIds of batches) {
+    // Update transaction fields for this batch
+    if (Object.keys(updatePayload).length) {
+      const { error } = await supabase
+        .from("transactions")
+        .update(updatePayload)
+        .in("id", batchIds);
+      if (error) return { error: error.message };
+    }
+
+    // Handle tags for this batch
+    if (updates.tags !== undefined) {
+      // Delete existing tags for this batch
+      const { error: delError } = await supabase
         .from("transaction_tags")
-        .upsert(rows);
-      if (insertError) return { error: insertError.message };
+        .delete()
+        .in("transaction_id", batchIds);
+      if (delError) return { error: delError.message };
+
+      // Insert new tags for this batch
+      if (updates.tags.length) {
+        const rows = batchIds.flatMap((id) =>
+          updates.tags!.map((tagId) => ({ transaction_id: id, tag_id: tagId })),
+        );
+        const { error: insertError } = await supabase
+          .from("transaction_tags")
+          .upsert(rows);
+        if (insertError) return { error: insertError.message };
+      }
     }
   }
 
