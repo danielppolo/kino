@@ -1,6 +1,17 @@
 import { createClient } from "./client";
 import { Database } from "./database.types";
 
+const BATCH_SIZE = 20;
+
+// Helper to chunk array into batches
+function chunk<T>(arr: T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    result.push(arr.slice(i, i + size));
+  }
+  return result;
+}
+
 export const createWallet = async ({
   name,
   currency,
@@ -367,11 +378,27 @@ export const mergeCategories = async (targetId: string, ids: string[]) => {
     );
   }
 
-  const { error } = await supabase
+  // Fetch all transaction IDs that need updating
+  const { data: transactions, error: fetchTransactionsError } = await supabase
     .from("transactions")
-    .update({ category_id: targetId })
+    .select("id")
     .in("category_id", idsToMerge);
-  if (error) throw new Error(error.message);
+
+  if (fetchTransactionsError) throw new Error(fetchTransactionsError.message);
+
+  // Batch transaction updates
+  if (transactions && transactions.length > 0) {
+    const transactionIds = transactions.map((t) => t.id);
+    const batches = chunk(transactionIds, BATCH_SIZE);
+
+    for (const batchIds of batches) {
+      const { error } = await supabase
+        .from("transactions")
+        .update({ category_id: targetId })
+        .in("id", batchIds);
+      if (error) throw new Error(error.message);
+    }
+  }
 
   const { error: deleteError } = await supabase
     .from("categories")
@@ -395,22 +422,44 @@ export const mergeTags = async (targetId: string, ids: string[]) => {
     new Set(rows?.map((r) => r.transaction_id) || []),
   );
 
+  // Batch upsert transaction_tags
   if (transactionIds.length > 0) {
-    const insertRows = transactionIds.map((transaction_id) => ({
-      transaction_id,
-      tag_id: targetId,
-    }));
-    const { error: insertError } = await supabase
-      .from("transaction_tags")
-      .upsert(insertRows);
-    if (insertError) throw new Error(insertError.message);
+    const batches = chunk(transactionIds, BATCH_SIZE);
+
+    for (const batchTransactionIds of batches) {
+      const insertRows = batchTransactionIds.map((transaction_id) => ({
+        transaction_id,
+        tag_id: targetId,
+      }));
+      const { error: insertError } = await supabase
+        .from("transaction_tags")
+        .upsert(insertRows);
+      if (insertError) throw new Error(insertError.message);
+    }
   }
 
-  const { error: deleteLinkError } = await supabase
-    .from("transaction_tags")
-    .delete()
-    .in("tag_id", idsToMerge);
-  if (deleteLinkError) throw new Error(deleteLinkError.message);
+  // Batch delete transaction_tags
+  // We already have transactionIds from the fetch above, so we can use those
+  if (transactionIds.length > 0) {
+    const batches = chunk(transactionIds, BATCH_SIZE);
+
+    for (const batchTransactionIds of batches) {
+      const { error: deleteLinkError } = await supabase
+        .from("transaction_tags")
+        .delete()
+        .in("transaction_id", batchTransactionIds)
+        .in("tag_id", idsToMerge);
+      if (deleteLinkError) throw new Error(deleteLinkError.message);
+    }
+  } else {
+    // If no transactions, still need to delete any remaining transaction_tags
+    // (though this should be rare)
+    const { error: deleteLinkError } = await supabase
+      .from("transaction_tags")
+      .delete()
+      .in("tag_id", idsToMerge);
+    if (deleteLinkError) throw new Error(deleteLinkError.message);
+  }
 
   const { error: deleteError } = await supabase
     .from("tags")
@@ -424,12 +473,27 @@ export const mergeLabels = async (targetId: string, ids: string[]) => {
   const idsToMerge = ids.filter((id) => id !== targetId);
   if (idsToMerge.length === 0) return;
 
-  // Update all transactions with the merged labels to use the target label
-  const { error: updateError } = await supabase
+  // Fetch all transaction IDs that need updating
+  const { data: transactions, error: fetchTransactionsError } = await supabase
     .from("transactions")
-    .update({ label_id: targetId })
+    .select("id")
     .in("label_id", idsToMerge);
-  if (updateError) throw new Error(updateError.message);
+
+  if (fetchTransactionsError) throw new Error(fetchTransactionsError.message);
+
+  // Batch transaction updates
+  if (transactions && transactions.length > 0) {
+    const transactionIds = transactions.map((t) => t.id);
+    const batches = chunk(transactionIds, BATCH_SIZE);
+
+    for (const batchIds of batches) {
+      const { error: updateError } = await supabase
+        .from("transactions")
+        .update({ label_id: targetId })
+        .in("id", batchIds);
+      if (updateError) throw new Error(updateError.message);
+    }
+  }
 
   // Delete the merged labels
   const { error: deleteError } = await supabase
