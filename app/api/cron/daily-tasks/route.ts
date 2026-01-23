@@ -17,6 +17,7 @@ async function handle(request: NextRequest) {
   const results = {
     dailyConversions: null as unknown,
     runRecurring: null as unknown,
+    runRecurringBills: null as unknown,
     errors: [] as string[],
   };
 
@@ -101,6 +102,73 @@ async function handle(request: NextRequest) {
     } catch (error) {
       console.error("Run recurring error:", error);
       results.errors.push(`Run recurring failed: ${error}`);
+    }
+
+    // Task 3: Process Recurring Bills
+    try {
+      const supabase = await createClient();
+
+      // Fetch all recurring bills where due_date <= today
+      const today = new Date().toISOString().split("T")[0];
+      const { data: recurringBills, error: billsError } = await supabase
+        .from("bills")
+        .select("*")
+        .eq("is_recurring", true)
+        .lte("due_date", today);
+
+      if (billsError) {
+        throw new Error(billsError.message);
+      }
+
+      let billsCreated = 0;
+      for (const bill of recurringBills || []) {
+        if (!bill.interval_type) continue;
+
+        // Calculate the next due date
+        const currentDueDate = new Date(bill.due_date);
+        const nextDueDate = calculateNextRunDate(
+          currentDueDate,
+          bill.interval_type,
+        );
+        const nextDueDateStr = nextDueDate.toISOString().split("T")[0];
+
+        // Create a new bill instance for the next period
+        const { error: insertError } = await supabase.from("bills").insert({
+          wallet_id: bill.wallet_id,
+          description: bill.description,
+          amount_cents: bill.amount_cents,
+          currency: bill.currency,
+          due_date: nextDueDateStr,
+          is_recurring: false, // The generated instance is not recurring
+          recurring_bill_id: bill.id, // Link to the parent recurring bill
+        });
+
+        if (insertError) {
+          console.error(`Failed to create bill instance: ${insertError.message}`);
+          continue;
+        }
+
+        // Update the recurring bill's due date to the next occurrence
+        const { error: updateError } = await supabase
+          .from("bills")
+          .update({ due_date: nextDueDateStr })
+          .eq("id", bill.id);
+
+        if (updateError) {
+          console.error(`Failed to update recurring bill: ${updateError.message}`);
+        }
+
+        billsCreated++;
+      }
+
+      results.runRecurringBills = {
+        success: true,
+        billsCreated,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error("Run recurring bills error:", error);
+      results.errors.push(`Run recurring bills failed: ${error}`);
     }
 
     return NextResponse.json({

@@ -174,6 +174,64 @@ export interface Database {
           tag_ids?: string[];
         };
       };
+      bills: {
+        Row: {
+          id: string;
+          wallet_id: string;
+          description: string;
+          amount_cents: number;
+          currency: string;
+          due_date: string;
+          created_at?: string;
+          interval_type?: string | null;
+          is_recurring?: boolean;
+          recurring_bill_id?: string | null;
+        };
+        Insert: {
+          id?: string;
+          wallet_id: string;
+          description: string;
+          amount_cents: number;
+          currency: string;
+          due_date: string;
+          created_at?: string;
+          interval_type?: string | null;
+          is_recurring?: boolean;
+          recurring_bill_id?: string | null;
+        };
+        Update: {
+          id?: string;
+          wallet_id?: string;
+          description?: string;
+          amount_cents?: number;
+          currency?: string;
+          due_date?: string;
+          created_at?: string;
+          interval_type?: string | null;
+          is_recurring?: boolean;
+          recurring_bill_id?: string | null;
+        };
+      };
+      bill_payments: {
+        Row: {
+          id: string;
+          bill_id: string;
+          transaction_id: string;
+          created_at?: string;
+        };
+        Insert: {
+          id?: string;
+          bill_id: string;
+          transaction_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          bill_id?: string;
+          transaction_id?: string;
+          created_at?: string;
+        };
+      };
     };
     Views: {
       transaction_list: {

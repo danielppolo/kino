@@ -18,6 +18,7 @@ import { SidebarWrapper } from "./sidebar-wrapper";
 import { TransactionLink } from "./transaction-link";
 
 import { Money } from "@/components/ui/money";
+import { Kbd } from "@/components/ui/kbd";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -150,26 +151,46 @@ export function TransactionsSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {currencyWallets.map((wallet) => (
-                <SidebarMenuItem key={wallet.id}>
-                  <SidebarMenuButton asChild isActive={walletId === wallet.id}>
-                    <TransactionLink
-                      walletId={wallet.id}
-                      from={fromDate}
-                      to={toDate}
-                    >
-                      <span className="flex-1">{wallet.name}</span>
+              {currencyWallets.map((wallet) => {
+                const shortcutIndex = walletShortcutTargets.findIndex(
+                  (w) => w.id === wallet.id,
+                );
+                const shortcut =
+                  shortcutIndex >= 0 && shortcutIndex < 9
+                    ? shortcutIndex + 1
+                    : undefined;
 
-                      <Money
-                        cents={wallet.balance_cents ?? 0}
-                        currency={wallet.currency}
-                        as="span"
-                        className="text-muted-foreground text-xs"
-                      />
-                    </TransactionLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+                return (
+                  <SidebarMenuItem key={wallet.id}>
+                    <SidebarMenuButton asChild isActive={walletId === wallet.id}>
+                      <TransactionLink
+                        walletId={wallet.id}
+                        from={fromDate}
+                        to={toDate}
+                        shortcut={shortcut}
+                      >
+                        <span className="flex-1">{wallet.name}</span>
+
+                        <span className="relative inline-flex items-center justify-center min-w-fit">
+                          <Money
+                            cents={wallet.balance_cents ?? 0}
+                            currency={wallet.currency}
+                            as="span"
+                            className="text-muted-foreground text-xs group-hover/wallet-link:hidden"
+                          />
+                          {shortcut !== undefined && (
+                          <div className="hidden group-hover/wallet-link:inline-flex">
+                            <Kbd>
+                            ⌘ {shortcut}
+                            </Kbd>
+                          </div>
+                          )}
+                        </span>
+                      </TransactionLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
