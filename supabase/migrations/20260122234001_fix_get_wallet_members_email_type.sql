@@ -1,4 +1,18 @@
--- Fix get_wallet_members: auth.users.email is varchar(255), cast to text to match return type
+-- Fix get_wallet_members and get_user_id_by_email: auth.users.email is varchar(255), cast to text to match return type
+CREATE OR REPLACE FUNCTION get_user_id_by_email(user_email TEXT)
+RETURNS TABLE (user_id UUID, email TEXT)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT au.id, au.email::text
+  FROM auth.users au
+  WHERE au.email = user_email
+  LIMIT 1;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION get_wallet_members(wallet_uuid UUID)
 RETURNS TABLE (
   id UUID,

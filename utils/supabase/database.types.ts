@@ -741,6 +741,7 @@ export type Database = {
           currency: string
           id: string
           name: string
+          notes: string | null
           position: number | null
           visible: boolean
         }
@@ -750,6 +751,7 @@ export type Database = {
           currency: string
           id?: string
           name: string
+          notes?: string | null
           position?: number | null
           visible?: boolean
         }
@@ -759,6 +761,7 @@ export type Database = {
           currency?: string
           id?: string
           name?: string
+          notes?: string | null
           position?: number | null
           visible?: boolean
         }
@@ -884,6 +887,28 @@ export type Database = {
           currency: string
           total_cents: number
           transaction_count: number
+        }[]
+      }
+      get_user_id_by_email: {
+        Args: {
+          user_email: string
+        }
+        Returns: {
+          user_id: string
+          email: string
+        }[]
+      }
+      get_wallet_members: {
+        Args: {
+          wallet_uuid: string
+        }
+        Returns: {
+          id: string
+          user_id: string
+          wallet_id: string
+          role: string
+          email: string
+          created_at: string
         }[]
       }
       insert_wallet_and_user_wallet: {
