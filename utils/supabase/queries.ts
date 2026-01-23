@@ -867,3 +867,14 @@ export const getBillsForTransaction = async (
     error: null,
   };
 };
+
+export const getWalletMembers = async (
+  client: TypedSupabaseClient,
+  walletId: string,
+) => {
+  const { data, error } = await client.rpc("get_wallet_members", {
+    wallet_uuid: walletId,
+  });
+
+  return { data, error };
+};

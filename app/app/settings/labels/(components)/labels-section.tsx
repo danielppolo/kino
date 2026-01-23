@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Merge, Plus, Trash2 } from "lucide-react";
 
 import DeleteLabelsDialog from "./delete-labels-dialog";
+import MergeLabelsDialog from "./merge-labels-dialog";
 
 import { BulkActions } from "@/components/shared/bulk-actions";
 import EmptyState from "@/components/shared/empty-state";
@@ -21,6 +22,7 @@ import { Database } from "@/utils/supabase/database.types";
 export default function LabelSection() {
   const [open, setOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
   const [editLabel, setEditLabel] = useState<
     Database["public"]["Tables"]["labels"]["Row"] | undefined
   >(undefined);
@@ -56,6 +58,11 @@ export default function LabelSection() {
     clearSelection();
   };
 
+  const handleMergeSuccess = () => {
+    setMergeDialogOpen(false);
+    clearSelection();
+  };
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!canUseGlobalShortcuts()) return;
@@ -65,6 +72,11 @@ export default function LabelSection() {
       if (event.key.toLowerCase() === "d") {
         event.preventDefault();
         setDeleteDialogOpen(true);
+      }
+
+      if (event.key.toLowerCase() === "m" && selectedCount >= 2) {
+        event.preventDefault();
+        setMergeDialogOpen(true);
       }
     };
 
@@ -160,11 +172,27 @@ export default function LabelSection() {
         onSuccess={handleDeleteSuccess}
       />
 
+      <MergeLabelsDialog
+        open={mergeDialogOpen}
+        onOpenChange={setMergeDialogOpen}
+        selected={selected}
+        onSuccess={handleMergeSuccess}
+      />
+
       <BulkActions
         selectedCount={selectedCount}
         clearSelection={clearSelection}
         selectAll={selectAll}
       >
+        <TooltipButton
+          size="sm"
+          variant="ghost"
+          tooltip="Merge selected labels (M)"
+          onClick={() => setMergeDialogOpen(true)}
+          disabled={selectedCount < 2}
+        >
+          <Merge className="size-4" />
+        </TooltipButton>
         <TooltipButton
           size="sm"
           variant="ghost"

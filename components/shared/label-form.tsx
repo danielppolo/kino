@@ -156,19 +156,25 @@ const LabelForm = ({
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <Input type="text" placeholder="Enter name" {...field} />
+                    <Input
+                      type="text"
+                      placeholder="Enter name"
+                      className="w-full"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
           </div>
-          <Button type="submit" size="sm" className="w-full" disabled={isLoading}>
-            {isLoading
-              ? "Saving..."
-              : isEdit
-                ? "Save Changes"
-                : "Save"}
+          <Button
+            type="submit"
+            size="sm"
+            className="w-full"
+            disabled={isLoading}
+          >
+            {isLoading ? "Saving..." : isEdit ? "Save Changes" : "Save"}
           </Button>
         </form>
       </Form>
