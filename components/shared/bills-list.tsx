@@ -1,7 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
-
 import { useQuery } from "@tanstack/react-query";
 
 import BillGroupHeader, { BillGroupHeaderLoading } from "./bill-group-header";
@@ -31,18 +29,6 @@ export default function BillsList({ walletId }: BillsListProps) {
     },
   });
 
-  const sortedBills = useMemo(() => {
-    if (!bills) return [];
-    // Sort by due date, then by payment status (unpaid first)
-    return [...bills].sort((a, b) => {
-      // First sort by payment status (incomplete first)
-      if (a.payment_percentage < 100 && b.payment_percentage >= 100) return -1;
-      if (a.payment_percentage >= 100 && b.payment_percentage < 100) return 1;
-      // Then sort by due date
-      return a.due_date.localeCompare(b.due_date);
-    });
-  }, [bills]);
-
   const handleTransactionClick = (transaction: any) => {
     openForm({
       type: transaction.type,
@@ -69,7 +55,7 @@ export default function BillsList({ walletId }: BillsListProps) {
       style={{ height: "calc(100vh - 44px - 44px)", overflow: "auto" }}
       className="relative w-full divide-y overflow-hidden"
     >
-      {sortedBills.map((bill) => (
+      {bills?.map((bill) => (
         <div key={bill.id}>
           <BillGroupHeader bill={bill} />
           {bill.payments.length === 0 ? (
