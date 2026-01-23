@@ -7,6 +7,7 @@ import DateRangeFilter from "@/app/app/(transactions)/transactions/(components)/
 import DescriptionFilter from "@/app/app/(transactions)/transactions/(components)/description-filter";
 import LabelFilter from "@/app/app/(transactions)/transactions/(components)/label-filter";
 import TagFilter from "@/app/app/(transactions)/transactions/(components)/tag-filter";
+import TypeFilter from "@/app/app/(transactions)/transactions/(components)/type-filter";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +32,9 @@ export function FiltersDropdown() {
         <DropdownMenuGroup>
           <div className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors select-none data-disabled:pointer-events-none data-disabled:opacity-50">
             <DateRangeFilter />
+          </div>
+          <div className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors select-none data-disabled:pointer-events-none data-disabled:opacity-50">
+            <TypeFilter />
           </div>
           <div className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors select-none data-disabled:pointer-events-none data-disabled:opacity-50">
             <LabelFilter />
