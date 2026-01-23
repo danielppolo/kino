@@ -5,7 +5,6 @@ import { useParams } from "next/navigation";
 
 import AddWalletButton from "@/components/shared/add-wallet-button";
 import Color from "@/components/shared/color";
-import WalletMemberAvatars from "@/components/shared/wallet-member-avatars";
 import { MenuItem } from "@/components/ui/menu";
 import { useWallets } from "@/contexts/settings-context";
 
@@ -26,7 +25,6 @@ export default function WalletList() {
                 {wallet.color && <Color color={wallet.color} size="sm" />}
                 {wallet.name}
               </div>
-              <WalletMemberAvatars walletId={wallet.id} size="sm" />
             </div>
           </MenuItem>
         </Link>
