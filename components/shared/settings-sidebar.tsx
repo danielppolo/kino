@@ -8,6 +8,7 @@ import {
   Page,
   RefreshDouble,
   Reports,
+  User,
   ViewGrid,
   Wallet,
 } from "iconoir-react";
@@ -48,6 +49,17 @@ const SettingsSidebar: React.FC = () => {
                 <Link href="/app/settings/wallets">
                   <Wallet className="size-4" />
                   Wallets
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === "/app/settings/preferences"}
+              >
+                <Link href="/app/settings/preferences">
+                  <User className="size-4" />
+                  Preferences
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
