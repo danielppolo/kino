@@ -5,8 +5,11 @@ import { toast } from "sonner";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { SubmitButton } from "../submit-button";
+import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
+import Color from "./color";
 import CurrencyPicker from "./currency-picker";
 
 import {
@@ -14,9 +17,10 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { SubmitButton } from "@/components/submit-button";
+import { COLORS } from "@/utils/constants";
 import { Database } from "@/utils/supabase/database.types";
 import { createWallet, updateWallet } from "@/utils/supabase/mutations";
 import { Wallet } from "@/utils/supabase/types";
@@ -35,6 +39,7 @@ const WalletForm = ({ onSuccess, wallet }: WalletFormProps) => {
     defaultValues: {
       name: wallet?.name || "",
       currency: wallet?.currency || "MXN",
+      color: wallet?.color || COLORS[0],
     },
   });
 
@@ -65,6 +70,7 @@ const WalletForm = ({ onSuccess, wallet }: WalletFormProps) => {
         id: wallet.id,
         name: walletData.name,
         currency: walletData.currency,
+        color: walletData.color,
       });
     },
     onSuccess: () => {
@@ -94,18 +100,56 @@ const WalletForm = ({ onSuccess, wallet }: WalletFormProps) => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <Input type="text" placeholder="Enter name" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="flex gap-2">
+          <FormField
+            control={form.control}
+            name="color"
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="flex items-center justify-center"
+                      >
+                        <Color color={field.value || COLORS[0]} size="md" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full">
+                      <ToggleGroup
+                        type="single"
+                        value={field.value || COLORS[0]}
+                        onValueChange={field.onChange}
+                        className="grid grid-cols-8"
+                      >
+                        {COLORS?.map((color) => (
+                          <ToggleGroupItem key={color} value={color} size="sm">
+                            <Color color={color} size="sm" />
+                          </ToggleGroupItem>
+                        ))}
+                      </ToggleGroup>
+                    </PopoverContent>
+                  </Popover>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem className="flex-1">
+                <FormControl>
+                  <Input type="text" placeholder="Enter name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <FormField
           control={form.control}

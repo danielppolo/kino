@@ -1,5 +1,6 @@
 import React from "react";
 
+import BillsBalanceBadge from "./(components)/bills-balance-badge";
 import BillsToggle from "./(components)/bills-toggle";
 import ChartToggle from "./(components)/chart-toggle";
 import MonthPagination from "./transactions/(components)/month-pagination";
@@ -31,6 +32,7 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
               <MonthPagination />
             </div>
             <div className="flex items-center gap-2">
+              <BillsBalanceBadge />
               <TransactionTotal />
               <SaveViewButton />
               <BillsToggle />

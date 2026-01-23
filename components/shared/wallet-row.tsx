@@ -4,6 +4,7 @@ import React from "react";
 
 import { Text } from "../ui/typography";
 import UNAMDonation from "../UNAMDonation";
+import Color from "./color";
 import SelectableRow from "./selectable-row";
 import ToggleWalletVisibility from "./toggle-wallet-visibility";
 
@@ -36,7 +37,10 @@ export function WalletRow({
       active={active}
     >
       <div className="flex flex-1 items-center justify-between">
-        <Text className="truncate">{wallet.name}</Text>
+        <div className="flex items-center gap-2">
+          {wallet.color && <Color color={wallet.color} size="sm" />}
+          <Text className="truncate">{wallet.name}</Text>
+        </div>
         <div className="flex items-center gap-2">
           {wallet.id === "c357aa5c-ad41-4c41-8d67-bf5516117187" && (
             <UNAMDonation walletId={wallet.id} />
