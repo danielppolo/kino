@@ -1,6 +1,16 @@
 "use client";
 
 import React from "react";
+import {
+  Folder,
+  Hashtag,
+  Label,
+  Page,
+  RefreshDouble,
+  Reports,
+  ViewGrid,
+  Wallet,
+} from "iconoir-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -35,7 +45,10 @@ const SettingsSidebar: React.FC = () => {
                 asChild
                 isActive={pathname === "/app/settings/wallets"}
               >
-                <Link href="/app/settings/wallets"> Wallets</Link>
+                <Link href="/app/settings/wallets">
+                  <Wallet className="size-4" />
+                  Wallets
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
@@ -44,6 +57,7 @@ const SettingsSidebar: React.FC = () => {
                 isActive={pathname === "/app/settings/recurrent-transactions"}
               >
                 <Link href="/app/settings/recurrent-transactions">
+                  <RefreshDouble className="size-4" />
                   Periodic transactions
                 </Link>
               </SidebarMenuButton>
@@ -53,7 +67,10 @@ const SettingsSidebar: React.FC = () => {
                 asChild
                 isActive={pathname === "/app/settings/categories"}
               >
-                <Link href="/app/settings/categories">Categories</Link>
+                <Link href="/app/settings/categories">
+                  <Folder className="size-4" />
+                  Categories
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
@@ -61,7 +78,10 @@ const SettingsSidebar: React.FC = () => {
                 asChild
                 isActive={pathname === "/app/settings/labels"}
               >
-                <Link href="/app/settings/labels">Labels</Link>
+                <Link href="/app/settings/labels">
+                  <Label className="size-4" />
+                  Labels
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
@@ -69,7 +89,10 @@ const SettingsSidebar: React.FC = () => {
                 asChild
                 isActive={pathname === "/app/settings/tags"}
               >
-                <Link href="/app/settings/tags">Tags</Link>
+                <Link href="/app/settings/tags">
+                  <Hashtag className="size-4" />
+                  Tags
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
@@ -77,7 +100,10 @@ const SettingsSidebar: React.FC = () => {
                 asChild
                 isActive={pathname === "/app/settings/views"}
               >
-                <Link href="/app/settings/views">Views</Link>
+                <Link href="/app/settings/views">
+                  <ViewGrid className="size-4" />
+                  Views
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
@@ -85,7 +111,21 @@ const SettingsSidebar: React.FC = () => {
                 asChild
                 isActive={pathname === "/app/settings/templates"}
               >
-                <Link href="/app/settings/templates">Templates</Link>
+                <Link href="/app/settings/templates">
+                  <Page className="size-4" />
+                  Templates
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === "/app/settings/bills"}
+              >
+                <Link href="/app/settings/bills">
+                  <Reports className="size-4" />
+                  Bills
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

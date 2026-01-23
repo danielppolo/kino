@@ -8,6 +8,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import DaterPicker from "../ui/date-picker";
 import { AmountInput } from "./amount-input";
+import BillCombobox from "./bill-combobox";
 import { DescriptionInput } from "./description-input";
 import LabelCombobox from "./label-combobox";
 import TagMultiSelect from "./tag-multi-select";
@@ -23,7 +24,7 @@ import {
 } from "@/components/ui/form";
 import { useTags, useWallets } from "@/contexts/settings-context";
 import useFilters from "@/hooks/use-filters";
-import { deleteTransaction } from "@/utils/supabase/mutations";
+import { deleteTransaction, setTransactionBills } from "@/utils/supabase/mutations";
 import { Transaction, TransactionList } from "@/utils/supabase/types";
 
 interface TransactionPage {
@@ -58,6 +59,7 @@ type ExpenseIncomeFormValues = {
   wallet_id: string;
   currency: string;
   tags?: string[];
+  bill_id?: string;
 };
 
 const ExpenseIncomeForm = ({
@@ -220,11 +222,26 @@ const ExpenseIncomeForm = ({
     label_id: "",
     amount: initialData ? Math.abs(initialData.amount_cents) / 100 : 0,
     tags: initialData?.tag_ids ?? [],
+    bill_id: "",
   };
 
   const handleSubmit = async (values: ExpenseIncomeFormValues) => {
     try {
-      await mutateAsync(values);
+      const result = await mutateAsync(values);
+      const transactionId = result?.data?.[0]?.id ?? values.id;
+
+      // Link transaction to bill if bill_id is provided
+      if (transactionId && values.bill_id) {
+        await setTransactionBills(transactionId, [values.bill_id]);
+        queryClient.invalidateQueries({ queryKey: ["bills"] });
+        queryClient.invalidateQueries({ queryKey: ["bills-with-payments"] });
+      } else if (transactionId && !values.bill_id) {
+        // Clear bill link if bill_id is empty (for updates)
+        await setTransactionBills(transactionId, []);
+        queryClient.invalidateQueries({ queryKey: ["bills"] });
+        queryClient.invalidateQueries({ queryKey: ["bills-with-payments"] });
+      }
+
       return {
         error: undefined,
       };
@@ -266,6 +283,7 @@ const ExpenseIncomeForm = ({
     wallet_id: transaction.wallet_id,
     currency: transaction.currency,
     tags: transaction.tag_ids ?? undefined,
+    bill_id: "",
   });
 
   const handleRepeat = async (values: ExpenseIncomeFormValues) => {
@@ -388,6 +406,23 @@ const ExpenseIncomeForm = ({
           </FormItem>
         )}
       />
+
+      {type === "expense" && (
+        <FormField
+          name="bill_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <BillCombobox
+                  {...field}
+                  walletId={walletId}
+                  className="w-full"
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      )}
     </EntityForm>
   );
 };

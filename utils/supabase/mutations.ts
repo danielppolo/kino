@@ -505,3 +505,101 @@ export const deleteRecurringTransaction = async (id: string) => {
     .eq("id", id);
   if (error) throw new Error(error.message);
 };
+
+// Bills mutations
+export const createBill = async (
+  data: Database["public"]["Tables"]["bills"]["Insert"],
+) => {
+  const supabase = await createClient();
+
+  const { data: result, error } = await supabase
+    .from("bills")
+    .insert(data)
+    .select();
+  if (error) throw new Error(error.message);
+  return result;
+};
+
+export const updateBill = async (
+  data: Database["public"]["Tables"]["bills"]["Update"],
+) => {
+  const supabase = await createClient();
+
+  if (!data.id) {
+    throw new Error("Bill ID is required for updates");
+  }
+
+  const { data: result, error } = await supabase
+    .from("bills")
+    .update(data)
+    .eq("id", data.id)
+    .select();
+  if (error) throw new Error(error.message);
+  return result;
+};
+
+export const deleteBill = async (id: string) => {
+  const supabase = await createClient();
+  const { error } = await supabase.from("bills").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+};
+
+export const deleteBills = async (ids: string[]) => {
+  const supabase = await createClient();
+  const { error } = await supabase.from("bills").delete().in("id", ids);
+  if (error) throw new Error(error.message);
+};
+
+export const linkTransactionToBill = async (
+  billId: string,
+  transactionId: string,
+) => {
+  const supabase = await createClient();
+
+  const { data: result, error } = await supabase
+    .from("bill_payments")
+    .insert({ bill_id: billId, transaction_id: transactionId })
+    .select();
+  if (error) throw new Error(error.message);
+  return result;
+};
+
+export const unlinkTransactionFromBill = async (
+  billId: string,
+  transactionId: string,
+) => {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("bill_payments")
+    .delete()
+    .eq("bill_id", billId)
+    .eq("transaction_id", transactionId);
+  if (error) throw new Error(error.message);
+};
+
+export const setTransactionBills = async (
+  transactionId: string,
+  billIds: string[],
+) => {
+  const supabase = await createClient();
+
+  // First, remove all existing bill links for this transaction
+  const { error: deleteError } = await supabase
+    .from("bill_payments")
+    .delete()
+    .eq("transaction_id", transactionId);
+  if (deleteError) throw new Error(deleteError.message);
+
+  // Then, add new bill links
+  if (billIds.length > 0) {
+    const insertData = billIds.map((billId) => ({
+      bill_id: billId,
+      transaction_id: transactionId,
+    }));
+    const { error: insertError } = await supabase
+      .from("bill_payments")
+      .insert(insertData);
+    if (insertError) throw new Error(insertError.message);
+  }
+};
