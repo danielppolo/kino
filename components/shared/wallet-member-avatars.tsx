@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import { useQuery } from "@tanstack/react-query";
 
 import {
@@ -39,6 +41,20 @@ export default function WalletMemberAvatars({
   size = "sm",
   showTooltip = true,
 }: WalletMemberAvatarsProps) {
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Get current user
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id || null);
+    };
+    fetchCurrentUser();
+  }, []);
+
   const { data: membersData, isLoading } = useQuery({
     queryKey: ["wallet-members", walletId],
     queryFn: async () => {
@@ -47,7 +63,7 @@ export default function WalletMemberAvatars({
     },
   });
 
-  const members: WalletMember[] =
+  const allMembers: WalletMember[] =
     membersData?.data?.map((m) => ({
       id: m.id,
       user_id: m.user_id,
@@ -57,21 +73,17 @@ export default function WalletMemberAvatars({
       created_at: m.created_at,
     })) || [];
 
+  // Filter out current user from displayed avatars
+  const members = allMembers.filter(
+    (member) => member.user_id !== currentUserId,
+  );
+
   if (isLoading || members.length === 0) {
     return null;
   }
 
   const displayedMembers = members.slice(0, maxAvatars);
   const remainingCount = members.length - maxAvatars;
-
-  const getInitials = (email: string | null) => {
-    if (!email) return "?";
-    const parts = email.split("@")[0].split(/[._-]/);
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return email.substring(0, 2).toUpperCase();
-  };
 
   const sizeClasses = {
     sm: "h-5 w-5 text-xs",
@@ -82,10 +94,11 @@ export default function WalletMemberAvatars({
   const avatarGroup = (
     <AvatarGroup>
       {displayedMembers.map((member) => (
-        <Avatar key={member.id} className={`${sizeClasses[size]} border-2 border-background`}>
-          <AvatarFallback className={sizeClasses[size]}>
-            {getInitials(member.email)}
-          </AvatarFallback>
+        <Avatar
+          key={member.id}
+          className={`${sizeClasses[size]} border-background border-2`}
+        >
+          <AvatarFallback className={sizeClasses[size]} />
         </Avatar>
       ))}
       {remainingCount > 0 && (
@@ -107,15 +120,24 @@ export default function WalletMemberAvatars({
           <div>{avatarGroup}</div>
         </TooltipTrigger>
         <TooltipContent>
-          <div className="space-y-1">
-            <p className="font-semibold">All members:</p>
-            <ul className="list-inside space-y-0.5 text-sm">
-              {members.map((member) => (
-                <li key={member.id}>
-                  {member.email || "Unknown"} ({member.role})
-                </li>
-              ))}
-            </ul>
+          <div className="space-y-2">
+            {(["owner", "editor", "reader"] as const).map((role) => {
+              const roleMembers = allMembers.filter((m) => m.role === role);
+              if (roleMembers.length === 0) return null;
+
+              return (
+                <div key={role}>
+                  <div className="text-muted-foreground mb-1 text-xs font-semibold capitalize">
+                    {role}
+                  </div>
+                  <ul className="space-y-0.5 text-sm font-light">
+                    {roleMembers.map((member) => (
+                      <li key={member.id}>{member.email || "Unknown"}</li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
           </div>
         </TooltipContent>
       </Tooltip>
