@@ -746,3 +746,41 @@ export const removeWalletMember = async (id: string) => {
 
   if (error) throw new Error(error.message);
 };
+
+export const updateUserPhone = async (
+  userId: string,
+  phone: string | null,
+) => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("user_preferences")
+    .upsert({ user_id: userId, phone }, { onConflict: "user_id" })
+    .select();
+
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+export const updateUserPreferences = async (params: {
+  userId: string;
+  baseCurrency: string;
+  phone: string | null;
+}) => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("user_preferences")
+    .upsert(
+      {
+        user_id: params.userId,
+        base_currency: params.baseCurrency,
+        phone: params.phone,
+      },
+      { onConflict: "user_id" },
+    )
+    .select();
+
+  if (error) throw new Error(error.message);
+  return data;
+};
