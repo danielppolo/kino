@@ -15,6 +15,8 @@ export interface Filters {
   id?: string | undefined;
   sort?: string | undefined;
   sortOrder?: string | undefined;
+  min_amount?: string | undefined;
+  max_amount?: string | undefined;
 }
 
 export const listTransactions = async (
@@ -73,6 +75,22 @@ export const listTransactions = async (
   // Filter by id if available
   if (params?.id) {
     query = query.eq("id", params.id);
+  }
+
+  // Filter by min_amount if available (convert to cents)
+  if (params?.min_amount) {
+    const minAmountCents = Math.round(parseFloat(params.min_amount) * 100);
+    if (!isNaN(minAmountCents)) {
+      query = query.gte("amount_cents", minAmountCents);
+    }
+  }
+
+  // Filter by max_amount if available (convert to cents)
+  if (params?.max_amount) {
+    const maxAmountCents = Math.round(parseFloat(params.max_amount) * 100);
+    if (!isNaN(maxAmountCents)) {
+      query = query.lte("amount_cents", maxAmountCents);
+    }
   }
 
   const page = params?.page || 0;

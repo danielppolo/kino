@@ -17,6 +17,8 @@ export const transactionQueryState = {
   type: parseAsString.withDefault(""),
   description: parseAsString.withDefault(""),
   id: parseAsString.withDefault(""),
+  min_amount: parseAsString.withDefault(""),
+  max_amount: parseAsString.withDefault(""),
 };
 
 export function useTransactionQueryState() {

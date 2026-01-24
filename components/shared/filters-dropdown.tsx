@@ -2,6 +2,7 @@
 
 import { SlidersHorizontal } from "lucide-react";
 
+import AmountFilter from "@/app/app/(transactions)/transactions/(components)/amount-filter";
 import CategoryFilter from "@/app/app/(transactions)/transactions/(components)/category-filter";
 import DateRangeFilter from "@/app/app/(transactions)/transactions/(components)/date-range-filter";
 import DescriptionFilter from "@/app/app/(transactions)/transactions/(components)/description-filter";
@@ -35,6 +36,9 @@ export function FiltersDropdown() {
           </div>
           <div className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors select-none data-disabled:pointer-events-none data-disabled:opacity-50">
             <TypeFilter />
+          </div>
+          <div className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors select-none data-disabled:pointer-events-none data-disabled:opacity-50">
+            <AmountFilter />
           </div>
           <div className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors select-none data-disabled:pointer-events-none data-disabled:opacity-50">
             <LabelFilter />
