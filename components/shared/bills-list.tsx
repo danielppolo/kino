@@ -1,30 +1,34 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { format } from "date-fns";
 import { X } from "lucide-react";
 import { toast } from "sonner";
 
+import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { Text } from "../ui/typography";
 import BillGroupHeader, { BillGroupHeaderLoading } from "./bill-group-header";
 import EmptyState from "./empty-state";
+import TransactionAmount from "./transaction-amount";
+import TransactionDescription from "./transaction-description";
 import TransactionMultiSelect from "./transaction-multi-select";
-import TransactionRow from "./transaction-row";
 
 import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
-  AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { RowLoading } from "@/components/ui/row";
+import Row, { RowLoading } from "@/components/ui/row";
 import { useCategories } from "@/contexts/settings-context";
 import { useTransactionForm } from "@/contexts/transaction-form-context";
+import { cn } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
 import {
   linkTransactionsToBill,
@@ -52,6 +56,7 @@ export default function BillsList({ walletId }: BillsListProps) {
   const [, categoryMap] = useCategories();
   const [splitConfirmation, setSplitConfirmation] =
     useState<SplitConfirmation | null>(null);
+  const [transactionSelectKey, setTransactionSelectKey] = useState(0);
 
   const { data: bills, isLoading } = useQuery<BillWithPayments[]>({
     queryKey: ["bills-with-payments", walletId],
@@ -304,12 +309,33 @@ export default function BillsList({ walletId }: BillsListProps) {
                     className="group relative flex items-center"
                   >
                     <div className="flex-1">
-                      <TransactionRow
-                        transaction={payment.transaction as any}
+                      <Row
                         onClick={() =>
                           handleTransactionClick(payment.transaction)
                         }
-                      />
+                      >
+                        <div className="shrink grow truncate">
+                          <TransactionDescription
+                            transaction={payment.transaction as any}
+                          />
+                        </div>
+                        <div className="shrink-0">
+                          <Text muted>
+                            {format(
+                              new Date(payment.transaction.date!),
+                              "MMM d, yyyy",
+                            )}
+                          </Text>
+                          {/* <TagBadges transaction={payment.transaction as any} /> */}
+                        </div>
+                        <div className="shrink-0">
+                          <TransactionAmount
+                            className="text-right"
+                            amount={payment.transaction.amount_cents!}
+                            currency={payment.transaction.currency!}
+                          />
+                        </div>
+                      </Row>
                     </div>
                     <Button
                       variant="ghost"
@@ -333,10 +359,20 @@ export default function BillsList({ walletId }: BillsListProps) {
                   <div className="flex flex-col gap-2 px-4 py-3">
                     {availableTransactions.length > 0 ? (
                       <TransactionMultiSelect
+                        key={`${bill.id}-${transactionSelectKey}`}
                         transactions={availableTransactions as any}
                         value={[]}
                         onChange={(transactionIds) => {
-                          handleLinkTransactions(bill.id, bill, transactionIds);
+                          // Force re-render to close the popover
+                          setTransactionSelectKey((prev) => prev + 1);
+                          // Small delay to ensure popover closes before dialog shows
+                          setTimeout(() => {
+                            handleLinkTransactions(
+                              bill.id,
+                              bill,
+                              transactionIds,
+                            );
+                          }, 100);
                         }}
                         placeholder="Link transactions..."
                         className="w-full"
@@ -361,61 +397,72 @@ export default function BillsList({ walletId }: BillsListProps) {
         open={!!splitConfirmation}
         onOpenChange={(open) => !open && setSplitConfirmation(null)}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Split Transaction?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {splitConfirmation && (
-                <>
-                  The selected transaction amount (
-                  {new Intl.NumberFormat("en-US", {
-                    style: "currency",
-                    currency: bills?.find(
-                      (b) => b.id === splitConfirmation.billId,
-                    )?.currency,
-                  }).format(splitConfirmation.transactionAmount / 100)}
-                  ) is greater than the remaining bill amount (
-                  {new Intl.NumberFormat("en-US", {
-                    style: "currency",
-                    currency: bills?.find(
-                      (b) => b.id === splitConfirmation.billId,
-                    )?.currency,
-                  }).format(splitConfirmation.billRemainingAmount / 100)}
-                  ).
-                  <br />
-                  <br />
-                  The transaction will be split into two:
-                  <br />• One matching the bill amount (
-                  {new Intl.NumberFormat("en-US", {
-                    style: "currency",
-                    currency: bills?.find(
-                      (b) => b.id === splitConfirmation.billId,
-                    )?.currency,
-                  }).format(splitConfirmation.billRemainingAmount / 100)}
-                  ) and linked to this bill
-                  <br />• One with the remaining amount (
-                  {new Intl.NumberFormat("en-US", {
-                    style: "currency",
-                    currency: bills?.find(
-                      (b) => b.id === splitConfirmation.billId,
-                    )?.currency,
-                  }).format(
-                    (splitConfirmation.transactionAmount -
-                      splitConfirmation.billRemainingAmount) /
-                      100,
-                  )}
-                  )
-                </>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmSplit}>
-              Split & Link
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
+        <AlertDialogPrimitive.Portal>
+          <AlertDialogPrimitive.Overlay
+            className={cn(
+              "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-[200] bg-black/50",
+            )}
+          />
+          <AlertDialogPrimitive.Content
+            className={cn(
+              "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-[200] grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg",
+            )}
+          >
+            <AlertDialogHeader>
+              <AlertDialogTitle>Split Transaction?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {splitConfirmation && (
+                  <>
+                    The selected transaction amount (
+                    {new Intl.NumberFormat("en-US", {
+                      style: "currency",
+                      currency: bills?.find(
+                        (b) => b.id === splitConfirmation.billId,
+                      )?.currency,
+                    }).format(splitConfirmation.transactionAmount / 100)}
+                    ) is greater than the remaining bill amount (
+                    {new Intl.NumberFormat("en-US", {
+                      style: "currency",
+                      currency: bills?.find(
+                        (b) => b.id === splitConfirmation.billId,
+                      )?.currency,
+                    }).format(splitConfirmation.billRemainingAmount / 100)}
+                    ).
+                    <br />
+                    <br />
+                    The transaction will be split into two:
+                    <br />• One matching the bill amount (
+                    {new Intl.NumberFormat("en-US", {
+                      style: "currency",
+                      currency: bills?.find(
+                        (b) => b.id === splitConfirmation.billId,
+                      )?.currency,
+                    }).format(splitConfirmation.billRemainingAmount / 100)}
+                    ) and linked to this bill
+                    <br />• One with the remaining amount (
+                    {new Intl.NumberFormat("en-US", {
+                      style: "currency",
+                      currency: bills?.find(
+                        (b) => b.id === splitConfirmation.billId,
+                      )?.currency,
+                    }).format(
+                      (splitConfirmation.transactionAmount -
+                        splitConfirmation.billRemainingAmount) /
+                        100,
+                    )}
+                    )
+                  </>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmSplit}>
+                Split & Link
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogPrimitive.Content>
+        </AlertDialogPrimitive.Portal>
       </AlertDialog>
     </>
   );
