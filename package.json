@@ -9,7 +9,9 @@
     "test:run": "vitest run --config vitest.config.mjs",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
-    "supabase:types": "npx supabase gen types --lang=typescript --local > utils/supabase/database.types.ts"
+    "supabase:types": "npx supabase gen types --lang=typescript --local > utils/supabase/database.types.ts",
+    "reconcile-bills": "ts-node --project tsconfig.json scripts/reconcile-bills.ts",
+    "verify-csv-balance": "ts-node --esm --project tsconfig.json scripts/verify-csv-balance.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

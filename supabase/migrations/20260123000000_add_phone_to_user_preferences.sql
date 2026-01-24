@@ -1,7 +1,10 @@
 ALTER TABLE public.user_preferences
 ADD COLUMN IF NOT EXISTS phone TEXT;
 
-CREATE OR REPLACE FUNCTION get_wallet_members(wallet_uuid UUID)
+-- Drop the existing function first since we're changing the return type
+DROP FUNCTION IF EXISTS get_wallet_members(UUID);
+
+CREATE FUNCTION get_wallet_members(wallet_uuid UUID)
 RETURNS TABLE (
   id UUID,
   user_id UUID,

@@ -166,6 +166,7 @@ export default function Page() {
           tooltip="Toggle visibility (V)"
           onClick={handleToggleVisibility}
           disabled={visibilityMutation.isPending}
+          loading={visibilityMutation.isPending}
         >
           {(() => {
             const selectedWallets = selected
@@ -187,6 +188,7 @@ export default function Page() {
           tooltip="Export transactions (E)"
           onClick={handleExport}
           disabled={isExporting}
+          loading={isExporting}
         >
           <Download className="size-4" />
         </TooltipButton>
