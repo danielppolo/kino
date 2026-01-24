@@ -15,8 +15,10 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Switch } from "../ui/switch";
+import WalletMultiSelect from "./wallet-multi-select";
 
 import { Button } from "@/components/ui/button";
+import DaterPicker from "@/components/ui/date-picker";
 import { DrawerDialog } from "@/components/ui/drawer-dialog";
 import {
   Form,
@@ -41,6 +43,7 @@ interface BillFormProps {
 
 interface BillFormValues {
   wallet_id: string;
+  wallet_ids: string[];
   description: string;
   amount: string;
   due_date: string;
@@ -69,6 +72,7 @@ const BillForm = ({
   const form = useForm<BillFormValues>({
     defaultValues: {
       wallet_id: bill?.wallet_id ?? defaultWallet?.id ?? "",
+      wallet_ids: bill?.wallet_id ? [bill.wallet_id] : defaultWallet?.id ? [defaultWallet.id] : [],
       description: bill?.description ?? "",
       amount: bill ? (Math.abs(bill.amount_cents) / 100).toString() : "",
       due_date: bill?.due_date ?? new Date().toISOString().split("T")[0],
@@ -81,6 +85,7 @@ const BillForm = ({
     if (bill) {
       form.reset({
         wallet_id: bill.wallet_id,
+        wallet_ids: [bill.wallet_id],
         description: bill.description,
         amount: (Math.abs(bill.amount_cents) / 100).toString(),
         due_date: bill.due_date,
@@ -90,6 +95,7 @@ const BillForm = ({
     } else if (defaultWallet) {
       form.reset({
         wallet_id: defaultWallet.id,
+        wallet_ids: [defaultWallet.id],
         description: "",
         amount: "",
         due_date: new Date().toISOString().split("T")[0],
@@ -102,25 +108,45 @@ const BillForm = ({
   const isRecurring = form.watch("is_recurring");
 
   const selectedWalletId = form.watch("wallet_id");
+  const selectedWalletIds = form.watch("wallet_ids");
   const selectedWallet = wallets.find((w) => w.id === selectedWalletId);
+
+  const selectedWallets = useMemo(() => {
+    return wallets.filter((w) => selectedWalletIds?.includes(w.id));
+  }, [wallets, selectedWalletIds]);
+
+  const currenciesLabel = useMemo(() => {
+    if (isEdit && selectedWallet) {
+      return selectedWallet.currency;
+    }
+    const currencies = Array.from(new Set(selectedWallets.map((w) => w.currency)));
+    return currencies.length > 0 ? currencies.join(", ") : "";
+  }, [isEdit, selectedWallet, selectedWallets]);
 
   const createMutation = useMutation({
     mutationFn: async (values: BillFormValues) => {
-      const wallet = wallets.find((w) => w.id === values.wallet_id);
-      const data: Database["public"]["Tables"]["bills"]["Insert"] = {
-        wallet_id: values.wallet_id,
-        description: values.description,
-        amount_cents: Math.round(parseFloat(values.amount) * 100),
-        currency: wallet?.currency ?? "USD",
-        due_date: values.due_date,
-        is_recurring: values.is_recurring,
-        interval_type: values.is_recurring ? values.interval_type : null,
-      };
-      return await createBill(data);
+      const walletIds = values.wallet_ids.length > 0 ? values.wallet_ids : [values.wallet_id];
+      const results = await Promise.all(
+        walletIds.map(async (walletId) => {
+          const wallet = wallets.find((w) => w.id === walletId);
+          const data: Database["public"]["Tables"]["bills"]["Insert"] = {
+            wallet_id: walletId,
+            description: values.description,
+            amount_cents: Math.round(parseFloat(values.amount) * 100),
+            currency: wallet?.currency ?? "USD",
+            due_date: values.due_date,
+            is_recurring: values.is_recurring,
+            interval_type: values.is_recurring ? values.interval_type : null,
+          };
+          return await createBill(data);
+        })
+      );
+      return results;
     },
-    onSuccess: () => {
+    onSuccess: (results) => {
       queryClient.invalidateQueries({ queryKey: ["bills"] });
-      toast.success("Bill added successfully!");
+      const count = results.length;
+      toast.success(count === 1 ? "Bill added successfully!" : `${count} bills added successfully!`);
       onSuccess?.();
     },
     onError(error: unknown) {
@@ -182,30 +208,55 @@ const BillForm = ({
           onSubmit={form.handleSubmit(onSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormField
-            control={form.control}
-            name="wallet_id"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Wallet</FormLabel>
-                <FormControl>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select wallet" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {wallets.map((wallet) => (
-                        <SelectItem key={wallet.id} value={wallet.id}>
-                          {wallet.name} ({wallet.currency})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {isEdit ? (
+            <FormField
+              control={form.control}
+              name="wallet_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Wallet</FormLabel>
+                  <FormControl>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select wallet" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {wallets.map((wallet) => (
+                          <SelectItem key={wallet.id} value={wallet.id}>
+                            {wallet.name} ({wallet.currency})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          ) : (
+            <FormField
+              control={form.control}
+              name="wallet_ids"
+              rules={{
+                validate: (value) =>
+                  value.length > 0 || "At least one wallet is required"
+              }}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Wallets</FormLabel>
+                  <FormControl>
+                    <WalletMultiSelect
+                      value={field.value}
+                      onChange={field.onChange}
+                      options={wallets}
+                      placeholder="Select one or more wallets"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
 
           <FormField
             control={form.control}
@@ -237,7 +288,7 @@ const BillForm = ({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  Amount {selectedWallet && `(${selectedWallet.currency})`}
+                  Amount {currenciesLabel && `(${currenciesLabel})`}
                 </FormLabel>
                 <FormControl>
                   <Input
@@ -261,7 +312,12 @@ const BillForm = ({
               <FormItem>
                 <FormLabel>Due Date</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <DaterPicker
+                    value={field.value}
+                    onChange={(date) => field.onChange(date)}
+                    variant="outline"
+                    className="w-full"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
