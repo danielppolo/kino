@@ -17,8 +17,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { SidebarWrapper } from "./sidebar-wrapper";
 import { TransactionLink } from "./transaction-link";
 
-import { Money } from "@/components/ui/money";
 import { Kbd } from "@/components/ui/kbd";
+import { Money } from "@/components/ui/money";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -28,8 +28,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { useTransactionForm } from "@/contexts/transaction-form-context";
 import { useViews } from "@/contexts/settings-context";
+import { useTransactionForm } from "@/contexts/transaction-form-context";
 import { useTotalBalance } from "@/hooks/use-total-balance";
 import { useTransactionQueryState } from "@/hooks/use-transaction-query";
 import { buildTransactionUrl } from "@/utils/build-transaction-url";
@@ -161,12 +161,15 @@ export function TransactionsSidebar() {
                     : undefined;
 
                 const displayBalance = showOwedInBalance
-                  ? (wallet.balance_cents ?? 0) + (wallet.owed_cents ?? 0)
+                  ? (wallet.balance_cents ?? 0) - (wallet.owed_cents ?? 0)
                   : (wallet.balance_cents ?? 0);
 
                 return (
                   <SidebarMenuItem key={wallet.id}>
-                    <SidebarMenuButton asChild isActive={walletId === wallet.id}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={walletId === wallet.id}
+                    >
                       <TransactionLink
                         walletId={wallet.id}
                         from={fromDate}
@@ -175,7 +178,7 @@ export function TransactionsSidebar() {
                       >
                         <span className="flex-1">{wallet.name}</span>
 
-                        <span className="relative inline-flex items-center justify-center min-w-fit">
+                        <span className="relative inline-flex min-w-fit items-center justify-center">
                           <Money
                             cents={displayBalance}
                             currency={wallet.currency}
@@ -183,11 +186,9 @@ export function TransactionsSidebar() {
                             className="text-muted-foreground text-xs group-hover/wallet-link:hidden"
                           />
                           {shortcut !== undefined && (
-                          <div className="hidden group-hover/wallet-link:inline-flex">
-                            <Kbd>
-                            ⌘ {shortcut}
-                            </Kbd>
-                          </div>
+                            <div className="hidden group-hover/wallet-link:inline-flex">
+                              <Kbd>⌘ {shortcut}</Kbd>
+                            </div>
                           )}
                         </span>
                       </TransactionLink>

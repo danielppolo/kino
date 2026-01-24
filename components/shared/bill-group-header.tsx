@@ -1,7 +1,6 @@
 "use client";
 
 import React, { memo } from "react";
-import { format } from "date-fns";
 
 import { Text } from "../ui/typography";
 
@@ -30,7 +29,7 @@ const BillGroupHeader: React.FC<BillGroupHeaderProps> = ({ bill }) => {
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <Text className="truncate font-medium">{bill.description}</Text>
-            <Text muted>{format(dueDate, "MMM yyyy")}</Text>
+            <Text muted>{bill.due_date}</Text>
           </div>
         </div>
         <div className="flex items-center gap-4">

@@ -5,7 +5,11 @@ import { format } from "date-fns";
 import { Download, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 import {
@@ -118,7 +122,9 @@ export default function TransactionList() {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["wallet-owed-amounts"] });
       queryClient.invalidateQueries({ queryKey: ["bills"] });
-      toast.success(`${selected.length} transaction${selected.length > 1 ? "s" : ""} deleted`);
+      toast.success(
+        `${selected.length} transaction${selected.length > 1 ? "s" : ""} deleted`,
+      );
       clearSelection();
       setDeleteConfirmOpen(false);
     },
@@ -498,6 +504,7 @@ export default function TransactionList() {
             tooltip="Delete selected transactions (⌘⌫)"
             onClick={handleDeleteClick}
             disabled={deleteMutation.isPending}
+            loading={deleteMutation.isPending}
           >
             <Trash2 className="size-4" />
           </TooltipButton>

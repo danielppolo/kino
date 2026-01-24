@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 
 import BillsList from "./bills-list";
 
+import BillsBalanceBadge from "@/app/app/(transactions)/(components)/bills-balance-badge";
 import {
   Sheet,
   SheetContent,
@@ -29,6 +30,7 @@ export function BillsSheet({ open, onOpenChange }: BillsSheetProps) {
           <SheetTitle className="flex items-center gap-2">
             <Receipt className="size-5" />
             Bills
+            <BillsBalanceBadge alwaysShow />
           </SheetTitle>
           <SheetDescription>
             View and track your bills and payment schedules.

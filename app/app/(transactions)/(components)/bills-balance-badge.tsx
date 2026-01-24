@@ -9,14 +9,21 @@ import { useCurrency } from "@/contexts/settings-context";
 import { createClient } from "@/utils/supabase/client";
 import { listBillsWithPayments } from "@/utils/supabase/queries";
 
-export default function BillsBalanceBadge() {
+interface BillsBalanceBadgeProps {
+  alwaysShow?: boolean;
+}
+
+export default function BillsBalanceBadge({
+  alwaysShow = false,
+}: BillsBalanceBadgeProps) {
   const pathname = usePathname();
   const params = useParams();
   const { baseCurrency } = useCurrency();
   const walletId = params.walletId as string | undefined;
 
-  // Only show on bills pages
+  // Show on bills pages or when explicitly requested
   const isOnBillsPage = pathname.includes("/bills");
+  const shouldShow = alwaysShow || isOnBillsPage;
 
   const { data: bills } = useQuery({
     queryKey: ["bills-with-payments", walletId],
@@ -26,10 +33,10 @@ export default function BillsBalanceBadge() {
       if (result.error) throw result.error;
       return result.data ?? [];
     },
-    enabled: isOnBillsPage,
+    enabled: shouldShow,
   });
 
-  if (!isOnBillsPage || !bills) return null;
+  if (!shouldShow || !bills) return null;
 
   // Calculate totals
   const totalBillsCents = bills.reduce((sum, bill) => sum + bill.amount_cents, 0);
