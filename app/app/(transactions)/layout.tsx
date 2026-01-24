@@ -1,20 +1,11 @@
 import React from "react";
 
-import BillsBalanceBadge from "./(components)/bills-balance-badge";
-import BillsToggle from "./(components)/bills-toggle";
-import ChartToggle from "./(components)/chart-toggle";
-import MonthPagination from "./transactions/(components)/month-pagination";
+import { TransactionsHeader } from "./(components)/transactions-header";
 
-import { AddTransactionDropdown } from "@/components/shared/add-transaction-dropdown";
-import { FiltersDropdown } from "@/components/shared/filters-dropdown";
-import PageHeader from "@/components/shared/page-header";
-import SaveViewButton from "@/components/shared/save-view-button";
-import { SortDropdown } from "@/components/shared/sort-dropdown";
 import TransactionForm from "@/components/shared/transaction-form";
 import TransactionShortcuts from "@/components/shared/transaction-shortcuts";
-import TransactionTotal from "@/components/shared/transaction-total";
 import { TransactionsSidebar } from "@/components/shared/transactions-sidebar";
-import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarInset } from "@/components/ui/sidebar";
 import { TransactionFormProvider } from "@/contexts/transaction-form-context";
 
 interface LayoutProps {
@@ -27,22 +18,7 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
       <TransactionsSidebar />
       <SidebarInset>
         <main className="flex-1">
-          <PageHeader>
-            <div className="flex items-center gap-2">
-              <MonthPagination />
-            </div>
-            <div className="flex items-center gap-2">
-              <BillsBalanceBadge />
-              <TransactionTotal />
-              <SaveViewButton />
-              <BillsToggle />
-              <ChartToggle />
-              <SortDropdown />
-              <FiltersDropdown />
-              <AddTransactionDropdown />
-              <SidebarTrigger />
-            </div>
-          </PageHeader>
+          <TransactionsHeader />
           {children}
         </main>
       </SidebarInset>

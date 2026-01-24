@@ -65,10 +65,7 @@ export default function BillsList({ walletId }: BillsListProps) {
   }
 
   return (
-    <div
-      style={{ height: "calc(100vh - 44px - 44px)", overflow: "auto" }}
-      className="relative w-full divide-y overflow-hidden"
-    >
+    <div className="relative h-full w-full divide-y overflow-auto">
       {sortedBills.map((bill) => (
         <div key={bill.id}>
           <BillGroupHeader bill={bill} />
@@ -93,10 +90,7 @@ export default function BillsList({ walletId }: BillsListProps) {
 
 export function BillsListLoading() {
   return (
-    <div
-      style={{ height: "calc(100vh - 44px - 44px)", overflow: "auto" }}
-      className="relative w-full divide-y overflow-hidden"
-    >
+    <div className="relative h-full w-full divide-y overflow-auto">
       <BillGroupHeaderLoading />
       {Array.from({ length: 3 }).map((_, index) => (
         <RowLoading key={index} />
