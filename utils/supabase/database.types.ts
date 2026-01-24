@@ -627,6 +627,7 @@ export type Database = {
           base_currency: string
           created_at: string
           id: string
+          phone: string | null
           updated_at: string
           user_id: string
         }
@@ -634,6 +635,7 @@ export type Database = {
           base_currency?: string
           created_at?: string
           id?: string
+          phone?: string | null
           updated_at?: string
           user_id: string
         }
@@ -641,6 +643,7 @@ export type Database = {
           base_currency?: string
           created_at?: string
           id?: string
+          phone?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -908,6 +911,7 @@ export type Database = {
           wallet_id: string
           role: string
           email: string
+          phone: string | null
           created_at: string
         }[]
       }
@@ -1341,4 +1345,3 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
     ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
-

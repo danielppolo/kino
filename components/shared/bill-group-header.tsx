@@ -8,6 +8,8 @@ import { Money } from "@/components/ui/money";
 import { Progress } from "@/components/ui/progress";
 import { DAY_HEADER_HEIGHT } from "@/utils/constants";
 import { BillWithPayments } from "@/utils/supabase/types";
+import { Badge } from "../ui/badge";
+import { format } from "date-fns";
 
 interface BillGroupHeaderProps {
   bill: BillWithPayments;
@@ -29,6 +31,7 @@ const BillGroupHeader: React.FC<BillGroupHeaderProps> = ({ bill }) => {
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <Text className="truncate font-medium">{bill.description}</Text>
+            <Text muted>{format(dueDate, "MMM yyyy")}</Text>
           </div>
         </div>
         <div className="flex items-center gap-4">

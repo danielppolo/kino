@@ -940,3 +940,41 @@ export const getWalletMembers = async (
 
   return { data, error };
 };
+
+export const getUnassociatedTransactions = async (
+  client: TypedSupabaseClient,
+  params: { walletId: string; billCurrency: string },
+) => {
+  // Get all transaction IDs that are already associated with bills
+  const { data: associatedIds, error: idsError } = await client
+    .from("bill_payments")
+    .select("transaction_id");
+
+  if (idsError) {
+    return { data: null, error: idsError };
+  }
+
+  const associatedSet = new Set(
+    associatedIds?.map((p) => p.transaction_id) ?? [],
+  );
+
+  // Get all expense transactions for the wallet
+  const { data: transactions, error } = await client
+    .from("transaction_list")
+    .select("*")
+    .eq("wallet_id", params.walletId)
+    .eq("currency", params.billCurrency)
+    .eq("type", "expense")
+    .order("date", { ascending: false });
+
+  if (error) {
+    return { data: null, error };
+  }
+
+  // Filter out transactions that are already associated with bills
+  const unassociated = transactions?.filter(
+    (t) => !associatedSet.has(t.id!),
+  ) ?? [];
+
+  return { data: unassociated, error: null };
+};
