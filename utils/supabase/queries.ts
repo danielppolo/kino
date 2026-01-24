@@ -166,6 +166,83 @@ export const getWalletMonthlyBalances = async (
   return { data: allData, error: null };
 };
 
+type WalletMonthlyOwed = {
+  id: string;
+  wallet_id: string;
+  month: string;
+  owed_cents: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export const getWalletMonthlyOwed = async (
+  client: TypedSupabaseClient,
+  params: {
+    walletId?: string;
+    from?: string;
+    to?: string;
+  },
+) => {
+  const PAGE_SIZE = 1000;
+  let allData: WalletMonthlyOwed[] = [];
+  let page = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    let query = client
+      .from("wallet_monthly_owed")
+      .select("*")
+      .order("month", { ascending: true })
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+    if (params.walletId) {
+      query = query.eq("wallet_id", params.walletId);
+    }
+
+    if (params.from) {
+      query = query.gte("month", params.from);
+    }
+    if (params.to) {
+      query = query.lte("month", params.to);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      return { data: null, error };
+    }
+
+    if (data) {
+      allData = [...allData, ...data];
+    }
+
+    hasMore = data?.length === PAGE_SIZE;
+    page++;
+  }
+
+  return { data: allData, error: null };
+};
+
+export const getWalletOwed = async (
+  client: TypedSupabaseClient,
+  walletId: string,
+) => {
+  const { data: bills, error } = await listBillsWithPayments(client, {
+    walletId,
+  });
+
+  if (error) {
+    return { data: null, error };
+  }
+
+  const owedCents = (bills ?? []).reduce((sum, bill) => {
+    const remaining = bill.amount_cents - bill.paid_amount_cents;
+    return sum + Math.max(0, remaining); // No negative owed
+  }, 0);
+
+  return { data: owedCents, error: null };
+};
+
 type MonthlyStats = {
   created_at: string;
   id: string;

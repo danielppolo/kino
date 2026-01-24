@@ -43,6 +43,8 @@ interface SettingsContextType {
   baseCurrency: string;
   moneyVisible: boolean;
   toggleMoneyVisibility: () => void;
+  showOwedInBalance: boolean;
+  toggleShowOwedInBalance: () => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(
@@ -61,9 +63,14 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   initialBaseCurrency,
 }) => {
   const [moneyVisible, setMoneyVisible] = useState(true);
+  const [showOwedInBalance, setShowOwedInBalance] = useState(false);
 
   const toggleMoneyVisibility = () => {
     setMoneyVisible((prev) => !prev);
+  };
+
+  const toggleShowOwedInBalance = () => {
+    setShowOwedInBalance((prev) => !prev);
   };
 
   const { data: categories = [] } = useSuspenseQuery<Category[]>({
@@ -150,6 +157,8 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
     baseCurrency: initialBaseCurrency,
     moneyVisible,
     toggleMoneyVisibility,
+    showOwedInBalance,
+    toggleShowOwedInBalance,
   };
 
   return (

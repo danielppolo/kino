@@ -1,6 +1,7 @@
 "use client";
 
 import React, { memo } from "react";
+import { format } from "date-fns";
 
 import { Text } from "../ui/typography";
 
@@ -8,8 +9,6 @@ import { Money } from "@/components/ui/money";
 import { Progress } from "@/components/ui/progress";
 import { DAY_HEADER_HEIGHT } from "@/utils/constants";
 import { BillWithPayments } from "@/utils/supabase/types";
-import { Badge } from "../ui/badge";
-import { format } from "date-fns";
 
 interface BillGroupHeaderProps {
   bill: BillWithPayments;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import { format } from "date-fns";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
@@ -23,10 +23,17 @@ import {
 } from "@/components/ui/chart";
 import { Money } from "@/components/ui/money";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
-import { useCurrency, useWallets } from "@/contexts/settings-context";
+import {
+  useCurrency,
+  useSettings,
+  useWallets,
+} from "@/contexts/settings-context";
 import { calculateMonthlyTotals, formatCurrency } from "@/utils/chart-helpers";
 import { createClient } from "@/utils/supabase/client";
-import { getWalletMonthlyBalances } from "@/utils/supabase/queries";
+import {
+  getWalletMonthlyBalances,
+  getWalletMonthlyOwed,
+} from "@/utils/supabase/queries";
 
 interface AccumulatedAreaChartProps {
   walletId?: string;
@@ -39,6 +46,8 @@ export function AccumulatedAreaChart({
   from,
   to,
 }: AccumulatedAreaChartProps) {
+  const { showOwedInBalance } = useSettings();
+
   const {
     data: monthlyBalances,
     isLoading,
@@ -58,20 +67,111 @@ export function AccumulatedAreaChart({
     },
   });
 
+  // Fetch owed amounts (only when toggle is ON)
+  const { data: monthlyOwed } = useQuery({
+    queryKey: ["accumulated-area-chart-owed", walletId, from, to],
+    queryFn: async () => {
+      const supabase = await createClient();
+      const { data, error } = await getWalletMonthlyOwed(supabase, {
+        walletId,
+        from,
+        to,
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: showOwedInBalance,
+  });
+
   const [, walletMap] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
 
-  const chartData = useMemo(
-    () =>
-      calculateMonthlyTotals(
-        monthlyBalances ?? [],
-        conversionRates,
-        baseCurrency,
-        walletMap,
-        walletId,
-      ),
-    [monthlyBalances, conversionRates, baseCurrency, walletMap, walletId],
-  );
+  // Merge owed into balance data
+  const combinedData = useMemo(() => {
+    if (!monthlyBalances) return [];
+    if (!showOwedInBalance || !monthlyOwed) {
+      return monthlyBalances;
+    }
+
+    // Create lookup map: wallet_id-month -> owed_cents
+    const owedMap = monthlyOwed.reduce(
+      (acc, item) => {
+        acc[`${item.wallet_id}-${item.month}`] = item.owed_cents;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+
+    // Add owed_cents to each balance record
+    return monthlyBalances.map((record) => ({
+      ...record,
+      owed_cents: owedMap[`${record.wallet_id}-${record.month}`] ?? 0,
+    }));
+  }, [monthlyBalances, monthlyOwed, showOwedInBalance]);
+
+  const chartData = useMemo(() => {
+    const processed = calculateMonthlyTotals(
+      combinedData ?? [],
+      conversionRates,
+      baseCurrency,
+      walletMap,
+      walletId,
+    );
+
+    // If showing owed, create stacked data structure
+    if (!showOwedInBalance || !monthlyOwed) {
+      return processed;
+    }
+
+    return processed.map((item) => {
+      const result: any = { month: item.month };
+
+      // For each wallet in the data point, separate balance and owed
+      Object.keys(item).forEach((key) => {
+        if (key !== "month") {
+          // Find the corresponding wallet data
+          const walletData = combinedData.find(
+            (d) =>
+              walletMap.get(d.wallet_id)?.id === key && d.month === item.month,
+          );
+
+          if (walletData) {
+            const wallet = walletMap.get(walletData.wallet_id);
+            if (wallet) {
+              const rate =
+                conversionRates[wallet.currency]?.rate ?? 1;
+
+              // Base balance (excluding owed)
+              result[key] = Math.round(
+                ((walletData.balance_cents - (walletData.owed_cents ?? 0)) *
+                  rate) /
+                  100,
+              );
+
+              // Owed amount
+              result[`${key}_owed`] = Math.round(
+                ((walletData.owed_cents ?? 0) * rate) / 100,
+              );
+            }
+          } else {
+            // No wallet data found, use original value
+            result[key] = item[key];
+          }
+        }
+      });
+
+      return result;
+    });
+  }, [
+    combinedData,
+    conversionRates,
+    baseCurrency,
+    walletMap,
+    walletId,
+    showOwedInBalance,
+    monthlyOwed,
+  ]);
 
   // Get visible wallets and create chart config
   const visibleWallets = useMemo(() => {
@@ -87,7 +187,7 @@ export function AccumulatedAreaChart({
   }, [walletMap, monthlyBalances, walletId]);
 
   const chartConfig: ChartConfig = useMemo(() => {
-    return visibleWallets.reduce(
+    const config = visibleWallets.reduce(
       (acc, wallet) => ({
         ...acc,
         [wallet.id]: {
@@ -95,9 +195,23 @@ export function AccumulatedAreaChart({
           color: wallet.color,
         },
       }),
-      {},
+      {} as ChartConfig,
     );
-  }, [visibleWallets]);
+
+    // Add owed series when toggle is ON
+    if (showOwedInBalance) {
+      visibleWallets.forEach((wallet) => {
+        config[`${wallet.id}_owed`] = {
+          label: `${wallet.name} (owed)`,
+          color: wallet.color
+            ? `${wallet.color}80` // Add transparency
+            : "hsl(var(--muted))",
+        };
+      });
+    }
+
+    return config;
+  }, [visibleWallets, showOwedInBalance]);
 
   // Calculate percentage change for the total
   const calculatePercentageChange = () => {
@@ -287,16 +401,28 @@ export function AccumulatedAreaChart({
               }}
             />
             {visibleWallets.map((wallet) => (
-              <Area
-                key={wallet.id}
-                dataKey={wallet.id}
-                name={wallet.name}
-                type="monotone"
-                fill={chartConfig[wallet.id].color}
-                fillOpacity={0.1}
-                stroke={chartConfig[wallet.id].color}
-                stackId="a"
-              />
+              <React.Fragment key={wallet.id}>
+                <Area
+                  dataKey={wallet.id}
+                  name={wallet.name}
+                  type="monotone"
+                  fill={chartConfig[wallet.id].color}
+                  fillOpacity={0.1}
+                  stroke={chartConfig[wallet.id].color}
+                  stackId="a"
+                />
+                {showOwedInBalance && (
+                  <Area
+                    dataKey={`${wallet.id}_owed`}
+                    name={`${wallet.name} (owed)`}
+                    type="monotone"
+                    fill={chartConfig[`${wallet.id}_owed`]?.color || chartConfig[wallet.id].color}
+                    fillOpacity={0.3}
+                    stroke={chartConfig[`${wallet.id}_owed`]?.color || chartConfig[wallet.id].color}
+                    stackId="a"
+                  />
+                )}
+              </React.Fragment>
             ))}
             <ChartLegend content={<ChartLegendContent />} />
           </AreaChart>
