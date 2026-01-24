@@ -37,7 +37,8 @@ export function useTotalBalance() {
   const totalBalance = sortedWallets.reduce((total, wallet) => {
     const balance = wallet.balance_cents ?? 0;
     const owed = showOwedInBalance ? (owedByWallet[wallet.id] ?? 0) : 0;
-    const combined = balance + owed;
+    // Owed is negative, so we need to subtract it from the balance
+    const combined = balance + owed * -1;
 
     if (wallet.currency === baseCurrency) {
       return total + combined;

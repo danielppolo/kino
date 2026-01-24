@@ -24,7 +24,9 @@ import {
 } from "@/components/ui/form";
 import { useTags, useWallets } from "@/contexts/settings-context";
 import useFilters from "@/hooks/use-filters";
+import { createClient } from "@/utils/supabase/client";
 import { deleteTransaction, setTransactionBills } from "@/utils/supabase/mutations";
+import { getBillsForTransaction } from "@/utils/supabase/queries";
 import { Transaction, TransactionList } from "@/utils/supabase/types";
 
 interface TransactionPage {
@@ -227,19 +229,48 @@ const ExpenseIncomeForm = ({
 
   const handleSubmit = async (values: ExpenseIncomeFormValues) => {
     try {
+      // Check if amount has changed (for edits)
+      const isEdit = initialData && values.id;
+      const originalAmount = initialData
+        ? Math.abs(initialData.amount_cents) / 100
+        : 0;
+      const amountChanged = isEdit && values.amount !== originalAmount;
+
+      // IMPORTANT: If editing and amount hasn't changed, preserve existing bill_payments
+      // This prevents losing bill associations when editing other transaction fields
+      // If amount changes, we clear bill_payments as the split amounts are no longer valid
+      let existingBillIds: string[] = [];
+      if (isEdit && !amountChanged && values.id) {
+        const supabase = await createClient();
+        const billsResult = await getBillsForTransaction(supabase, values.id);
+        if (billsResult.data) {
+          existingBillIds = billsResult.data
+            .map((bp: any) => bp.bill_id)
+            .filter(Boolean);
+        }
+      }
+
       const result = await mutateAsync(values);
       const transactionId = result?.data?.[0]?.id ?? values.id;
 
-      // Link transaction to bill if bill_id is provided
-      if (transactionId && values.bill_id) {
-        await setTransactionBills(transactionId, [values.bill_id]);
-        queryClient.invalidateQueries({ queryKey: ["bills"] });
-        queryClient.invalidateQueries({ queryKey: ["bills-with-payments"] });
-      } else if (transactionId && !values.bill_id) {
-        // Clear bill link if bill_id is empty (for updates)
-        await setTransactionBills(transactionId, []);
-        queryClient.invalidateQueries({ queryKey: ["bills"] });
-        queryClient.invalidateQueries({ queryKey: ["bills-with-payments"] });
+      // Handle bill linking
+      if (transactionId) {
+        if (isEdit && !amountChanged && existingBillIds.length > 0) {
+          // Preserve existing bill links when amount hasn't changed
+          await setTransactionBills(transactionId, existingBillIds);
+          queryClient.invalidateQueries({ queryKey: ["bills"] });
+          queryClient.invalidateQueries({ queryKey: ["bills-with-payments"] });
+        } else if (values.bill_id) {
+          // Link to new bill (for new transactions or when user selected a bill)
+          await setTransactionBills(transactionId, [values.bill_id]);
+          queryClient.invalidateQueries({ queryKey: ["bills"] });
+          queryClient.invalidateQueries({ queryKey: ["bills-with-payments"] });
+        } else if (!isEdit || amountChanged) {
+          // Clear bill links for new transactions without bill or when amount changed
+          await setTransactionBills(transactionId, []);
+          queryClient.invalidateQueries({ queryKey: ["bills"] });
+          queryClient.invalidateQueries({ queryKey: ["bills-with-payments"] });
+        }
       }
 
       return {
