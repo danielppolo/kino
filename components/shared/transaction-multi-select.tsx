@@ -1,11 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { format } from "date-fns";
 import { ChevronDown, XCircle } from "lucide-react";
-
-import TagBadges from "./tag-badges";
-import TransactionAmount from "./transaction-amount";
-import TransactionDescription from "./transaction-description";
 
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -20,6 +17,9 @@ import {
 } from "../ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Separator } from "../ui/separator";
+import { Text } from "../ui/typography";
+import TransactionAmount from "./transaction-amount";
+import TransactionDescription from "./transaction-description";
 
 import { cn } from "@/lib/utils";
 import { TransactionList } from "@/utils/supabase/types";
@@ -59,7 +59,10 @@ const TransactionMultiSelect = React.forwardRef<
       }
     };
 
-    const handleClear = () => onChange([]);
+    const handleClear = () => {
+      onChange([]);
+      setOpen(false);
+    };
 
     const filteredTransactions = React.useMemo(() => {
       const q = query.toLowerCase();
@@ -151,7 +154,9 @@ const TransactionMultiSelect = React.forwardRef<
                           <TransactionDescription transaction={transaction} />
                         </div>
                         <div className="shrink-0">
-                          <TagBadges transaction={transaction} />
+                          <Text muted>
+                            {format(new Date(transaction.date!), "MMM d, yyyy")}
+                          </Text>
                         </div>
                         <div className="shrink-0">
                           <TransactionAmount
