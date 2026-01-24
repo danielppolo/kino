@@ -663,6 +663,28 @@ export const linkTransactionToBill = async (
   return result;
 };
 
+export const linkTransactionsToBill = async (
+  billId: string,
+  transactionIds: string[],
+) => {
+  if (transactionIds.length === 0) return;
+
+  const supabase = await createClient();
+  const batches = chunk(transactionIds, BATCH_SIZE);
+
+  for (const batchIds of batches) {
+    const insertData = batchIds.map((transactionId) => ({
+      bill_id: billId,
+      transaction_id: transactionId,
+    }));
+
+    const { error } = await supabase
+      .from("bill_payments")
+      .insert(insertData);
+    if (error) throw new Error(error.message);
+  }
+};
+
 export const unlinkTransactionFromBill = async (
   billId: string,
   transactionId: string,
