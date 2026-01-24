@@ -233,6 +233,21 @@ export const deleteTransaction = async (id: string) => {
   if (error) throw new Error(error.message);
 };
 
+export const deleteTransactions = async (ids: string[]) => {
+  if (ids.length === 0) return;
+
+  const supabase = await createClient();
+  const batches = chunk(ids, BATCH_SIZE);
+
+  for (const batchIds of batches) {
+    const { error } = await supabase
+      .from("transactions")
+      .delete()
+      .in("id", batchIds);
+    if (error) throw new Error(error.message);
+  }
+};
+
 export const deleteWallet = async (id: string) => {
   const supabase = await createClient();
   const { error } = await supabase.from("wallets").delete().eq("id", id);

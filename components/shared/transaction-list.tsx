@@ -2,11 +2,22 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
-import { Download, Pencil } from "lucide-react";
+import { Download, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../ui/alert-dialog";
 import { RowLoading } from "../ui/row";
 import { TooltipButton } from "../ui/tooltip-button";
 import { BulkActions } from "./bulk-actions";
@@ -22,6 +33,7 @@ import { PAGE_SIZE } from "@/utils/constants";
 import { convertTransactionsToCSV, downloadCSV } from "@/utils/csv-export";
 import { canUseGlobalShortcuts } from "@/utils/keyboard-shortcuts";
 import { createClient } from "@/utils/supabase/client";
+import { deleteTransactions } from "@/utils/supabase/mutations";
 import { listTransactions } from "@/utils/supabase/queries";
 import { type Transaction, type TransactionList } from "@/utils/supabase/types";
 
@@ -43,7 +55,9 @@ export default function TransactionList() {
   const filters = useFilters();
   const { open: formOpen, openForm } = useTransactionForm();
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const queryClient = useQueryClient();
   const {
     data,
     dataUpdatedAt,
@@ -95,6 +109,31 @@ export default function TransactionList() {
     getAllIds: () =>
       data?.pages.flatMap((page) => page.data.map((t) => t.id!)) ?? [],
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (transactionIds: string[]) => {
+      await deleteTransactions(transactionIds);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["wallet-owed-amounts"] });
+      queryClient.invalidateQueries({ queryKey: ["bills"] });
+      toast.success(`${selected.length} transaction${selected.length > 1 ? "s" : ""} deleted`);
+      clearSelection();
+      setDeleteConfirmOpen(false);
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to delete transactions: ${error.message}`);
+    },
+  });
+
+  const handleDeleteClick = () => {
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    deleteMutation.mutate(selected);
+  };
 
   const toggleSelected = useCallback(
     (id: string, shiftKey = false) => {
@@ -287,6 +326,19 @@ export default function TransactionList() {
         return;
       }
 
+      // Handle Delete or Backspace with Command key for bulk delete
+      if (
+        (event.key === "Delete" || event.key === "Backspace") &&
+        event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        selectedCount > 0
+      ) {
+        event.preventDefault();
+        handleDeleteClick();
+        return;
+      }
+
       if (event.key === "ArrowDown" || event.key === "ArrowUp") {
         event.preventDefault();
         setActiveIndex((prev) => {
@@ -326,6 +378,7 @@ export default function TransactionList() {
     activeIndex,
     flatTransactions,
     formOpen,
+    handleDeleteClick,
     handleDownload,
     openForm,
     scrollToTransactionIndex,
@@ -439,6 +492,15 @@ export default function TransactionList() {
           >
             <Pencil className="size-4" />
           </TooltipButton>
+          <TooltipButton
+            variant="ghost"
+            size="sm"
+            tooltip="Delete selected transactions (⌘⌫)"
+            onClick={handleDeleteClick}
+            disabled={deleteMutation.isPending}
+          >
+            <Trash2 className="size-4" />
+          </TooltipButton>
         </BulkActions>
       )}
       <BulkTransactionEditForm
@@ -455,6 +517,31 @@ export default function TransactionList() {
           clearSelection();
         }}
       />
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 className="text-destructive size-5" />
+              Delete {selectedCount} transaction{selectedCount === 1 ? "" : "s"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete{" "}
+              {selectedCount} transaction{selectedCount === 1 ? "" : "s"} from
+              your wallet.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
