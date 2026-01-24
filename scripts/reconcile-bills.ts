@@ -157,6 +157,14 @@ async function reconcileBillsAndTransactions(walletId: string): Promise<void> {
     );
 
     if (matchingBill) {
+      // Skip if transaction amount is greater than bill amount
+      if (
+        transaction.amount_cents &&
+        Math.abs(transaction.amount_cents) > matchingBill.amount_cents
+      ) {
+        continue;
+      }
+
       newPayments.push({
         bill_id: matchingBill.id,
         transaction_id: transaction.id,
@@ -196,6 +204,14 @@ async function reconcileBillsAndTransactions(walletId: string): Promise<void> {
     );
 
     if (matchingBill) {
+      // Skip if transaction amount is greater than bill amount
+      if (
+        transaction.amount_cents &&
+        Math.abs(transaction.amount_cents) > matchingBill.amount_cents
+      ) {
+        continue;
+      }
+
       newPayments.push({
         bill_id: matchingBill.id,
         transaction_id: transaction.id,
@@ -256,6 +272,12 @@ async function reconcileBillsAndTransactions(walletId: string): Promise<void> {
     );
 
     if (matchingBill) {
+      // Skip if transaction amount is greater than bill amount
+      // (Note: In Phase 3 we match exact amounts, but check for consistency)
+      if (transactionAmount > matchingBill.amount_cents) {
+        continue;
+      }
+
       newPayments.push({
         bill_id: matchingBill.id,
         transaction_id: transaction.id,

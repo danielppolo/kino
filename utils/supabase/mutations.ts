@@ -699,6 +699,97 @@ export const unlinkTransactionFromBill = async (
   if (error) throw new Error(error.message);
 };
 
+export const splitTransaction = async (
+  transactionId: string,
+  splitAmountCents: number,
+): Promise<{ matchingTransactionId: string; remainingTransactionId: string }> => {
+  const supabase = await createClient();
+
+  // Get the original transaction
+  const { data: originalTransaction, error: fetchError } = await supabase
+    .from("transactions")
+    .select("*")
+    .eq("id", transactionId)
+    .single();
+
+  if (fetchError) throw new Error(fetchError.message);
+  if (!originalTransaction) throw new Error("Transaction not found");
+
+  // Calculate the remaining amount
+  const remainingAmountCents =
+    originalTransaction.amount_cents - splitAmountCents;
+
+  if (remainingAmountCents <= 0) {
+    throw new Error("Split amount must be less than transaction amount");
+  }
+
+  // Prepare the two new transactions
+  const baseDescription = originalTransaction.description || "Transaction";
+  const transaction1: Database["public"]["Tables"]["transactions"]["Insert"] = {
+    amount_cents: splitAmountCents,
+    base_amount_cents: originalTransaction.base_amount_cents
+      ? Math.round(
+          (originalTransaction.base_amount_cents * splitAmountCents) /
+            originalTransaction.amount_cents,
+        )
+      : null,
+    category_id: originalTransaction.category_id,
+    conversion_rate_to_base: originalTransaction.conversion_rate_to_base,
+    currency: originalTransaction.currency,
+    date: originalTransaction.date,
+    description: `${baseDescription} (1/2)`,
+    label_id: originalTransaction.label_id,
+    note: originalTransaction.note,
+    tags: originalTransaction.tags,
+    type: originalTransaction.type,
+    wallet_id: originalTransaction.wallet_id,
+  };
+
+  const transaction2: Database["public"]["Tables"]["transactions"]["Insert"] = {
+    amount_cents: remainingAmountCents,
+    base_amount_cents: originalTransaction.base_amount_cents
+      ? Math.round(
+          (originalTransaction.base_amount_cents * remainingAmountCents) /
+            originalTransaction.amount_cents,
+        )
+      : null,
+    category_id: originalTransaction.category_id,
+    conversion_rate_to_base: originalTransaction.conversion_rate_to_base,
+    currency: originalTransaction.currency,
+    date: originalTransaction.date,
+    description: `${baseDescription} (2/2)`,
+    label_id: originalTransaction.label_id,
+    note: originalTransaction.note,
+    tags: originalTransaction.tags,
+    type: originalTransaction.type,
+    wallet_id: originalTransaction.wallet_id,
+  };
+
+  // Insert the new transactions
+  const { data: newTransactions, error: insertError } = await supabase
+    .from("transactions")
+    .insert([transaction1, transaction2])
+    .select();
+
+  if (insertError) throw new Error(insertError.message);
+  if (!newTransactions || newTransactions.length !== 2) {
+    throw new Error("Failed to create split transactions");
+  }
+
+  // Delete the original transaction
+  const { error: deleteError } = await supabase
+    .from("transactions")
+    .delete()
+    .eq("id", transactionId);
+
+  if (deleteError) throw new Error(deleteError.message);
+
+  return {
+    matchingTransactionId: newTransactions[0].id,
+    remainingTransactionId: newTransactions[1].id,
+  };
+};
+
 export const setTransactionBills = async (
   transactionId: string,
   billIds: string[],
