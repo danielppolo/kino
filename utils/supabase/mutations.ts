@@ -233,6 +233,21 @@ export const deleteTransaction = async (id: string) => {
   if (error) throw new Error(error.message);
 };
 
+export const deleteTransactions = async (ids: string[]) => {
+  if (ids.length === 0) return;
+
+  const supabase = await createClient();
+  const batches = chunk(ids, BATCH_SIZE);
+
+  for (const batchIds of batches) {
+    const { error } = await supabase
+      .from("transactions")
+      .delete()
+      .in("id", batchIds);
+    if (error) throw new Error(error.message);
+  }
+};
+
 export const deleteWallet = async (id: string) => {
   const supabase = await createClient();
   const { error } = await supabase.from("wallets").delete().eq("id", id);
@@ -648,6 +663,28 @@ export const linkTransactionToBill = async (
   return result;
 };
 
+export const linkTransactionsToBill = async (
+  billId: string,
+  transactionIds: string[],
+) => {
+  if (transactionIds.length === 0) return;
+
+  const supabase = await createClient();
+  const batches = chunk(transactionIds, BATCH_SIZE);
+
+  for (const batchIds of batches) {
+    const insertData = batchIds.map((transactionId) => ({
+      bill_id: billId,
+      transaction_id: transactionId,
+    }));
+
+    const { error } = await supabase
+      .from("bill_payments")
+      .insert(insertData);
+    if (error) throw new Error(error.message);
+  }
+};
+
 export const unlinkTransactionFromBill = async (
   billId: string,
   transactionId: string,
@@ -745,4 +782,42 @@ export const removeWalletMember = async (id: string) => {
   const { error } = await supabase.from("user_wallets").delete().eq("id", id);
 
   if (error) throw new Error(error.message);
+};
+
+export const updateUserPhone = async (
+  userId: string,
+  phone: string | null,
+) => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("user_preferences")
+    .upsert({ user_id: userId, phone }, { onConflict: "user_id" })
+    .select();
+
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+export const updateUserPreferences = async (params: {
+  userId: string;
+  baseCurrency: string;
+  phone: string | null;
+}) => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("user_preferences")
+    .upsert(
+      {
+        user_id: params.userId,
+        base_currency: params.baseCurrency,
+        phone: params.phone,
+      },
+      { onConflict: "user_id" },
+    )
+    .select();
+
+  if (error) throw new Error(error.message);
+  return data;
 };
