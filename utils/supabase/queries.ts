@@ -1035,13 +1035,13 @@ export const getUnassociatedTransactions = async (
     associatedIds?.map((p) => p.transaction_id) ?? [],
   );
 
-  // Get all expense transactions for the wallet
+  // Get all income transactions for the wallet
   const { data: transactions, error } = await client
     .from("transaction_list")
     .select("*")
     .eq("wallet_id", params.walletId)
     .eq("currency", params.billCurrency)
-    .eq("type", "expense")
+    .eq("type", "income")
     .order("date", { ascending: false });
 
   if (error) {

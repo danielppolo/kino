@@ -1,21 +1,36 @@
 "use client";
 
-import { useMemo } from "react";
-import { format } from "date-fns";
+import { useMemo, useState } from "react";
+import { X } from "lucide-react";
 import { toast } from "sonner";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import BillGroupHeader, { BillGroupHeaderLoading } from "./bill-group-header";
 import EmptyState from "./empty-state";
+import TransactionMultiSelect from "./transaction-multi-select";
 import TransactionRow from "./transaction-row";
 
-import { Combobox, ComboboxOption } from "@/components/ui/combobox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { RowLoading } from "@/components/ui/row";
 import { useCategories } from "@/contexts/settings-context";
 import { useTransactionForm } from "@/contexts/transaction-form-context";
 import { createClient } from "@/utils/supabase/client";
-import { linkTransactionToBill } from "@/utils/supabase/mutations";
+import {
+  linkTransactionsToBill,
+  splitTransaction,
+  unlinkTransactionFromBill,
+} from "@/utils/supabase/mutations";
 import { listBillsWithPayments } from "@/utils/supabase/queries";
 import { BillWithPayments, Transaction } from "@/utils/supabase/types";
 
@@ -23,10 +38,20 @@ interface BillsListProps {
   walletId?: string;
 }
 
+interface SplitConfirmation {
+  billId: string;
+  transactionId: string;
+  transactionAmount: number;
+  billRemainingAmount: number;
+  otherTransactionIds: string[];
+}
+
 export default function BillsList({ walletId }: BillsListProps) {
   const { openForm } = useTransactionForm();
   const queryClient = useQueryClient();
   const [, categoryMap] = useCategories();
+  const [splitConfirmation, setSplitConfirmation] =
+    useState<SplitConfirmation | null>(null);
 
   const { data: bills, isLoading } = useQuery<BillWithPayments[]>({
     queryKey: ["bills-with-payments", walletId],
@@ -38,34 +63,48 @@ export default function BillsList({ walletId }: BillsListProps) {
     },
   });
 
-  // Get unassociated transactions for the wallet
-  const { data: unassociatedTransactions } = useQuery({
-    queryKey: ["unassociated-transactions", walletId],
+  console.log(bills);
+
+  // Get all income transactions for the wallet
+  const { data: allIncomeTransactions } = useQuery({
+    queryKey: ["income-transactions", walletId],
     queryFn: async () => {
       if (!walletId) return [];
       const supabase = await createClient();
-      // Get all transactions for this wallet, we'll filter by bill currency later
+      // Get all income transactions for this wallet, we'll filter by bill currency later
       const { data: transactions } = await supabase
         .from("transaction_list")
         .select("*")
         .eq("wallet_id", walletId)
-        .eq("type", "expense")
+        .eq("type", "income")
         .order("date", { ascending: false });
 
-      // Get associated transaction IDs
-      const { data: associatedIds } = await supabase
-        .from("bill_payments")
-        .select("transaction_id");
-
-      const associatedSet = new Set(
-        associatedIds?.map((p) => p.transaction_id) ?? [],
-      );
-
-      // Filter out associated transactions
-      return transactions?.filter((t) => !associatedSet.has(t.id!)) ?? [];
+      return transactions ?? [];
     },
     enabled: !!walletId,
   });
+
+  // Calculate associated transaction IDs from bills with payments
+  const associatedTransactionIds = useMemo(() => {
+    if (!bills) return new Set<string>();
+    const ids = new Set<string>();
+    bills.forEach((bill) => {
+      bill.payments.forEach((payment) => {
+        if (payment.transaction?.id) {
+          ids.add(payment.transaction.id);
+        }
+      });
+    });
+    return ids;
+  }, [bills]);
+
+  // Filter out associated transactions using bills data
+  const unassociatedTransactions = useMemo(() => {
+    if (!allIncomeTransactions) return [];
+    return allIncomeTransactions.filter(
+      (t) => !associatedTransactionIds.has(t.id!),
+    );
+  }, [allIncomeTransactions, associatedTransactionIds]);
 
   const sortedBills = useMemo(() => {
     if (!bills) return [];
@@ -82,12 +121,40 @@ export default function BillsList({ walletId }: BillsListProps) {
   const linkMutation = useMutation({
     mutationFn: async ({
       billId,
+      transactionIds,
+    }: {
+      billId: string;
+      transactionIds: string[];
+    }) => {
+      await linkTransactionsToBill(billId, transactionIds);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["bills-with-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({
+        queryKey: ["unassociated-transactions"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["income-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["wallet-owed-amounts"] });
+      const count = variables.transactionIds.length;
+      toast.success(
+        `${count} transaction${count > 1 ? "s" : ""} linked to bill`,
+      );
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to link transactions: ${error.message}`);
+    },
+  });
+
+  const unlinkMutation = useMutation({
+    mutationFn: async ({
+      billId,
       transactionId,
     }: {
       billId: string;
       transactionId: string;
     }) => {
-      await linkTransactionToBill(billId, transactionId);
+      await unlinkTransactionFromBill(billId, transactionId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bills-with-payments"] });
@@ -95,11 +162,51 @@ export default function BillsList({ walletId }: BillsListProps) {
       queryClient.invalidateQueries({
         queryKey: ["unassociated-transactions"],
       });
+      queryClient.invalidateQueries({ queryKey: ["income-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["wallet-owed-amounts"] });
-      toast.success("Transaction linked to bill");
+      toast.success("Transaction unlinked from bill");
     },
     onError: (error: Error) => {
-      toast.error(`Failed to link transaction: ${error.message}`);
+      toast.error(`Failed to unlink transaction: ${error.message}`);
+    },
+  });
+
+  const splitAndLinkMutation = useMutation({
+    mutationFn: async ({
+      billId,
+      transactionId,
+      splitAmount,
+      otherTransactionIds,
+    }: {
+      billId: string;
+      transactionId: string;
+      splitAmount: number;
+      otherTransactionIds: string[];
+    }) => {
+      // Split the transaction
+      const { matchingTransactionId } = await splitTransaction(
+        transactionId,
+        splitAmount,
+      );
+
+      // Link all transactions (split one + others)
+      const allTransactionIds = [matchingTransactionId, ...otherTransactionIds];
+      await linkTransactionsToBill(billId, allTransactionIds);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bills-with-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({
+        queryKey: ["unassociated-transactions"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["income-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["wallet-owed-amounts"] });
+      toast.success("Transaction split and linked to bill");
+      setSplitConfirmation(null);
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to split and link transaction: ${error.message}`);
+      setSplitConfirmation(null);
     },
   });
 
@@ -111,30 +218,60 @@ export default function BillsList({ walletId }: BillsListProps) {
     });
   };
 
-  const getTransactionOptionsForBill = (bill: BillWithPayments) => {
+  const getAvailableTransactionsForBill = (bill: BillWithPayments) => {
     if (!unassociatedTransactions) return [];
 
     // Filter transactions by bill currency
-    const filtered = unassociatedTransactions.filter(
-      (t) => t.currency === bill.currency,
-    );
-
-    return filtered.map((transaction): ComboboxOption => {
-      const category = categoryMap.get(transaction.category_id ?? "");
-      return {
-        value: transaction.id!,
-        label: transaction.description || "No description",
-        keywords: [
-          transaction.description?.toLowerCase() ?? "",
-          transaction.date ?? "",
-          category?.name.toLowerCase() ?? "",
-        ],
-      };
-    });
+    return unassociatedTransactions.filter((t) => t.currency === bill.currency);
   };
 
-  const getTransactionFromOption = (transactionId: string) => {
-    return unassociatedTransactions?.find((t) => t.id === transactionId);
+  const handleLinkTransactions = (
+    billId: string,
+    bill: BillWithPayments,
+    transactionIds: string[],
+  ) => {
+    if (transactionIds.length === 0) return;
+
+    // Calculate remaining bill amount
+    const remainingAmount = bill.amount_cents - bill.paid_amount_cents;
+
+    // Find if any transaction needs to be split
+    const transactionNeedingSplit = transactionIds.find((id) => {
+      const transaction = allIncomeTransactions?.find((t) => t.id === id);
+      return transaction && transaction.amount_cents > remainingAmount;
+    });
+
+    if (transactionNeedingSplit) {
+      const transaction = allIncomeTransactions?.find(
+        (t) => t.id === transactionNeedingSplit,
+      );
+      if (!transaction) return;
+
+      // Show confirmation dialog
+      setSplitConfirmation({
+        billId,
+        transactionId: transaction.id!,
+        transactionAmount: transaction.amount_cents!,
+        billRemainingAmount: remainingAmount,
+        otherTransactionIds: transactionIds.filter(
+          (id) => id !== transactionNeedingSplit,
+        ),
+      });
+    } else {
+      // Link all transactions without splitting
+      linkMutation.mutate({ billId, transactionIds });
+    }
+  };
+
+  const confirmSplit = () => {
+    if (!splitConfirmation) return;
+
+    splitAndLinkMutation.mutate({
+      billId: splitConfirmation.billId,
+      transactionId: splitConfirmation.transactionId,
+      splitAmount: splitConfirmation.billRemainingAmount,
+      otherTransactionIds: splitConfirmation.otherTransactionIds,
+    });
   };
 
   if (isLoading) {
@@ -151,93 +288,136 @@ export default function BillsList({ walletId }: BillsListProps) {
   }
 
   return (
-    <div className="relative h-full w-full divide-y overflow-auto">
-      {sortedBills.map((bill) => {
-        const transactionOptions = getTransactionOptionsForBill(bill);
+    <>
+      <div className="relative h-full w-full divide-y overflow-auto">
+        {sortedBills.map((bill) => {
+          const availableTransactions = getAvailableTransactionsForBill(bill);
 
-        return (
-          <div key={bill.id}>
-            <BillGroupHeader bill={bill} />
-            {bill.payments.length === 0 ? (
-              <div className="flex flex-col gap-2 px-4 py-3">
-                <span className="text-muted-foreground text-sm">
-                  No payments linked yet
-                </span>
-                {transactionOptions.length > 0 ? (
-                  <Combobox
-                    variant="outline"
-                    size="sm"
-                    options={transactionOptions}
-                    value=""
-                    onChange={(transactionId) => {
-                      if (transactionId) {
-                        linkMutation.mutate({
+          return (
+            <div key={bill.id}>
+              <BillGroupHeader bill={bill} />
+              <div className="flex flex-col">
+                {/* Linked transactions */}
+                {bill.payments.map((payment) => (
+                  <div
+                    key={payment.id}
+                    className="group relative flex items-center"
+                  >
+                    <div className="flex-1">
+                      <TransactionRow
+                        transaction={payment.transaction as any}
+                        onClick={() =>
+                          handleTransactionClick(payment.transaction)
+                        }
+                      />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-2 opacity-0 transition-opacity group-hover:opacity-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        unlinkMutation.mutate({
                           billId: bill.id,
-                          transactionId,
+                          transactionId: payment.transaction.id,
                         });
-                      }
-                    }}
-                    placeholder="Link a transaction..."
-                    searchPlaceholder="Search transactions..."
-                    className="w-full"
-                    renderOption={(option) => {
-                      const transaction = getTransactionFromOption(
-                        option.value,
-                      );
-                      if (!transaction) return option.label;
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
 
-                      const category = categoryMap.get(
-                        transaction.category_id ?? "",
-                      );
-                      return (
-                        <span className="flex w-full items-center justify-between gap-2">
-                          <span className="flex min-w-0 flex-1 items-center gap-2">
-                            {category && (
-                              <span className="text-base">{category.icon}</span>
-                            )}
-                            <span className="flex min-w-0 flex-1 flex-col">
-                              <span className="truncate text-sm font-medium">
-                                {transaction.description || "No description"}
-                              </span>
-                              <span className="text-muted-foreground text-xs">
-                                {format(
-                                  new Date(`${transaction.date}T00:00:00`),
-                                  "PP",
-                                )}
-                              </span>
-                            </span>
-                          </span>
-                          <span className="text-muted-foreground shrink-0 text-xs">
-                            {new Intl.NumberFormat("en-US", {
-                              style: "currency",
-                              currency: transaction.currency ?? "USD",
-                            }).format(
-                              Math.abs(transaction.amount_cents ?? 0) / 100,
-                            )}
-                          </span>
-                        </span>
-                      );
-                    }}
-                  />
-                ) : (
-                  <span className="text-muted-foreground text-xs italic">
-                    No available transactions to link
-                  </span>
+                {/* Link transactions section - only show if bill is not fully paid */}
+                {bill.payment_percentage < 100 && (
+                  <div className="flex flex-col gap-2 px-4 py-3">
+                    {availableTransactions.length > 0 ? (
+                      <TransactionMultiSelect
+                        transactions={availableTransactions as any}
+                        value={[]}
+                        onChange={(transactionIds) => {
+                          handleLinkTransactions(bill.id, bill, transactionIds);
+                        }}
+                        placeholder="Link transactions..."
+                        className="w-full"
+                      />
+                    ) : (
+                      <span className="text-muted-foreground text-xs italic">
+                        {bill.payments.length === 0
+                          ? "No available transactions to link"
+                          : ""}
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
-            ) : (
-              bill.payments.map((payment) => (
-                <TransactionRow
-                  key={payment.id}
-                  transaction={payment.transaction as any}
-                  onClick={() => handleTransactionClick(payment.transaction)}
-                />
-              ))
-            )}
-          </div>
-        );
-      })}
-    </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Split confirmation dialog */}
+      <AlertDialog
+        open={!!splitConfirmation}
+        onOpenChange={(open) => !open && setSplitConfirmation(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Split Transaction?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {splitConfirmation && (
+                <>
+                  The selected transaction amount (
+                  {new Intl.NumberFormat("en-US", {
+                    style: "currency",
+                    currency: bills?.find(
+                      (b) => b.id === splitConfirmation.billId,
+                    )?.currency,
+                  }).format(splitConfirmation.transactionAmount / 100)}
+                  ) is greater than the remaining bill amount (
+                  {new Intl.NumberFormat("en-US", {
+                    style: "currency",
+                    currency: bills?.find(
+                      (b) => b.id === splitConfirmation.billId,
+                    )?.currency,
+                  }).format(splitConfirmation.billRemainingAmount / 100)}
+                  ).
+                  <br />
+                  <br />
+                  The transaction will be split into two:
+                  <br />• One matching the bill amount (
+                  {new Intl.NumberFormat("en-US", {
+                    style: "currency",
+                    currency: bills?.find(
+                      (b) => b.id === splitConfirmation.billId,
+                    )?.currency,
+                  }).format(splitConfirmation.billRemainingAmount / 100)}
+                  ) and linked to this bill
+                  <br />• One with the remaining amount (
+                  {new Intl.NumberFormat("en-US", {
+                    style: "currency",
+                    currency: bills?.find(
+                      (b) => b.id === splitConfirmation.billId,
+                    )?.currency,
+                  }).format(
+                    (splitConfirmation.transactionAmount -
+                      splitConfirmation.billRemainingAmount) /
+                      100,
+                  )}
+                  )
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmSplit}>
+              Split & Link
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

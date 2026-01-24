@@ -1,6 +1,5 @@
 "use client";
 
-import { Receipt } from "lucide-react";
 import { useParams } from "next/navigation";
 
 import BillsList from "./bills-list";
@@ -28,7 +27,6 @@ export function BillsSheet({ open, onOpenChange }: BillsSheetProps) {
       <SheetContent side="right" className="flex w-full flex-col sm:max-w-2xl">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
-            <Receipt className="size-5" />
             Bills
             <BillsBalanceBadge alwaysShow />
           </SheetTitle>
