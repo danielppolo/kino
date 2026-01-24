@@ -12,7 +12,7 @@ import {
 import { useTotalBalance } from "@/hooks/use-total-balance";
 
 export function SidebarHeaderMenu() {
-  const { totalBalance, baseCurrency } = useTotalBalance();
+  const { totalBalance, baseCurrency, showOwedInBalance } = useTotalBalance();
 
   return (
     <SidebarMenu>
@@ -31,6 +31,11 @@ export function SidebarHeaderMenu() {
                 as="span"
                 className="truncate text-xs"
               />
+              {showOwedInBalance && (
+                <span className="text-muted-foreground text-xs">
+                  (incl. owed)
+                </span>
+              )}
             </div>
           </Link>
         </SidebarMenuButton>

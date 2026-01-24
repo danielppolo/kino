@@ -8,6 +8,7 @@ import {
   Eye,
   EyeOff,
   User,
+  Receipt,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -34,7 +35,12 @@ import { UpdateProfileForm } from "@/components/shared/update-profile-form";
 
 export function NavUser() {
   const { isMobile } = useSidebar();
-  const { moneyVisible, toggleMoneyVisibility } = useSettings();
+  const {
+    moneyVisible,
+    toggleMoneyVisibility,
+    showOwedInBalance,
+    toggleShowOwedInBalance,
+  } = useSettings();
   const [user, setUser] = useState<{
     name: string;
     email: string;
@@ -142,6 +148,13 @@ export function NavUser() {
                   <Eye className="size-4" />
                 )}
                 {moneyVisible ? "Hide" : "Show"} Money
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="gap-2 p-2"
+                onClick={toggleShowOwedInBalance}
+              >
+                <Receipt className="size-4" />
+                {showOwedInBalance ? "Hide" : "Include"} Owed in Balance
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <form action={signOutAction} className="w-full">
