@@ -39,6 +39,7 @@ import {
   addWalletMember,
   removeWalletMember,
   updateWalletMemberRole,
+  updateUserPhone,
 } from "@/utils/supabase/mutations";
 import { getWalletMembers } from "@/utils/supabase/queries";
 
@@ -52,6 +53,7 @@ type WalletMember = {
   wallet_id: string;
   role: "owner" | "editor" | "reader";
   email: string | null;
+  phone: string | null;
   created_at: string;
 };
 
@@ -64,6 +66,9 @@ export default function WalletMembersSection({
   const [newMemberRole, setNewMemberRole] = useState<"editor" | "reader">(
     "editor",
   );
+  const [phoneByMemberId, setPhoneByMemberId] = useState<
+    Record<string, string>
+  >({});
   const queryClient = useQueryClient();
 
   // Get current user
@@ -95,10 +100,19 @@ export default function WalletMembersSection({
         wallet_id: m.wallet_id,
         role: m.role as "owner" | "editor" | "reader",
         email: m.email,
+        phone: m.phone ?? null,
         created_at: m.created_at,
       })) || [],
     [membersData?.data],
   );
+
+  useEffect(() => {
+    const nextPhones = members.reduce<Record<string, string>>((acc, member) => {
+      acc[member.id] = member.phone ?? "";
+      return acc;
+    }, {});
+    setPhoneByMemberId(nextPhones);
+  }, [members]);
 
   // Check if current user is owner
   useEffect(() => {
@@ -185,6 +199,29 @@ export default function WalletMembersSection({
     },
   });
 
+  const updatePhoneMutation = useMutation({
+    mutationFn: async ({
+      userId,
+      phone,
+    }: {
+      userId: string;
+      phone: string | null;
+    }) => {
+      return await updateUserPhone(userId, phone);
+    },
+    onSuccess: () => {
+      toast.success("Phone updated successfully");
+      queryClient.invalidateQueries({ queryKey: ["wallet-members", walletId] });
+    },
+    onError: (error: unknown) => {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to update phone");
+      }
+    },
+  });
+
   const handleAddMember = () => {
     addMemberMutation.mutate();
   };
@@ -200,6 +237,21 @@ export default function WalletMembersSection({
     if (confirm("Are you sure you want to remove this member?")) {
       removeMemberMutation.mutate(memberId);
     }
+  };
+
+  const handlePhoneChange = (memberId: string, value: string) => {
+    setPhoneByMemberId((prev) => ({ ...prev, [memberId]: value }));
+  };
+
+  const handlePhoneSave = (member: WalletMember) => {
+    if (member.user_id !== currentUserId) return;
+    const nextPhone = phoneByMemberId[member.id]?.trim() ?? "";
+    const currentPhone = member.phone ?? "";
+    if (nextPhone === currentPhone) return;
+    updatePhoneMutation.mutate({
+      userId: member.user_id,
+      phone: nextPhone.length > 0 ? nextPhone : null,
+    });
   };
 
   if (isLoading) {
@@ -270,6 +322,7 @@ export default function WalletMembersSection({
           <TableHeader>
             <TableRow>
               <TableHead>Email</TableHead>
+              <TableHead>Phone</TableHead>
               <TableHead>Role</TableHead>
               {isOwner && <TableHead className="w-[100px]">Actions</TableHead>}
             </TableRow>
@@ -278,7 +331,7 @@ export default function WalletMembersSection({
             {members.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={isOwner ? 3 : 2}
+                  colSpan={isOwner ? 4 : 3}
                   className="text-muted-foreground text-center"
                 >
                   No members found
@@ -323,54 +376,74 @@ export default function WalletMembersSection({
                         </div>
                       </div>
                     </TableCell>
-                  <TableCell>
-                    {isOwner ? (
-                      <Select
-                        value={member.role}
-                        onValueChange={(value) =>
-                          handleRoleChange(
-                            member.id,
-                            value as "owner" | "editor" | "reader",
-                          )
-                        }
-                        disabled={updateRoleMutation.isPending}
-                      >
-                        <SelectTrigger className="w-[120px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="owner">Owner</SelectItem>
-                          <SelectItem value="editor">Editor</SelectItem>
-                          <SelectItem value="reader">Reader</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <span className="capitalize">{member.role}</span>
-                    )}
-                  </TableCell>
-                  {isOwner && (
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveMember(member.id)}
+                      <Input
+                        type="tel"
+                        placeholder="Add phone"
+                        value={phoneByMemberId[member.id] ?? ""}
+                        onChange={(e) =>
+                          handlePhoneChange(member.id, e.target.value)
+                        }
+                        onBlur={() => handlePhoneSave(member)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            handlePhoneSave(member);
+                          }
+                        }}
                         disabled={
-                          removeMemberMutation.isPending ||
-                          (members.filter((m) => m.role === "owner").length ===
-                            1 &&
-                            member.role === "owner")
+                          member.user_id !== currentUserId ||
+                          updatePhoneMutation.isPending
                         }
-                        title={
-                          members.filter((m) => m.role === "owner").length ===
-                            1 && member.role === "owner"
-                            ? "Cannot remove the last owner"
-                            : "Remove member"
-                        }
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      />
                     </TableCell>
-                  )}
+                    <TableCell>
+                      {isOwner ? (
+                        <Select
+                          value={member.role}
+                          onValueChange={(value) =>
+                            handleRoleChange(
+                              member.id,
+                              value as "owner" | "editor" | "reader",
+                            )
+                          }
+                          disabled={updateRoleMutation.isPending}
+                        >
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="owner">Owner</SelectItem>
+                            <SelectItem value="editor">Editor</SelectItem>
+                            <SelectItem value="reader">Reader</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <span className="capitalize">{member.role}</span>
+                      )}
+                    </TableCell>
+                    {isOwner && (
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveMember(member.id)}
+                          disabled={
+                            removeMemberMutation.isPending ||
+                            (members.filter((m) => m.role === "owner").length ===
+                              1 &&
+                              member.role === "owner")
+                          }
+                          title={
+                            members.filter((m) => m.role === "owner").length ===
+                              1 && member.role === "owner"
+                              ? "Cannot remove the last owner"
+                              : "Remove member"
+                          }
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })
