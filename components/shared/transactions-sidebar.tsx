@@ -42,7 +42,7 @@ export function TransactionsSidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { walletsByCurrency } = useTotalBalance();
+  const { walletsByCurrency, showOwedInBalance } = useTotalBalance();
   const [views] = useViews();
   const queryClient = useQueryClient();
   const { open: formOpen } = useTransactionForm();
@@ -160,6 +160,10 @@ export function TransactionsSidebar() {
                     ? shortcutIndex + 1
                     : undefined;
 
+                const displayBalance = showOwedInBalance
+                  ? (wallet.balance_cents ?? 0) + (wallet.owed_cents ?? 0)
+                  : (wallet.balance_cents ?? 0);
+
                 return (
                   <SidebarMenuItem key={wallet.id}>
                     <SidebarMenuButton asChild isActive={walletId === wallet.id}>
@@ -173,7 +177,7 @@ export function TransactionsSidebar() {
 
                         <span className="relative inline-flex items-center justify-center min-w-fit">
                           <Money
-                            cents={wallet.balance_cents ?? 0}
+                            cents={displayBalance}
                             currency={wallet.currency}
                             as="span"
                             className="text-muted-foreground text-xs group-hover/wallet-link:hidden"
