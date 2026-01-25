@@ -1,6 +1,7 @@
 "use client";
 
 import { Receipt } from "lucide-react";
+import { useParams } from "next/navigation";
 
 import { TooltipButton } from "@/components/ui/tooltip-button";
 
@@ -9,6 +10,10 @@ interface BillsToggleProps {
 }
 
 function BillsToggle({ onOpenSheet }: BillsToggleProps) {
+  const { walletId } = useParams();
+
+  if (!walletId) return null;
+
   return (
     <TooltipButton
       size="sm"

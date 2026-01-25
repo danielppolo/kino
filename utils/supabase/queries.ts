@@ -1073,3 +1073,69 @@ export const getUnassociatedTransactions = async (
 
   return { data: unassociated, error: null };
 };
+
+export interface MonthlyBillStats {
+  month: string;
+  wallet_id: string;
+  total_bills_cents: number;
+  total_paid_cents: number;
+  total_outstanding_cents: number;
+  bill_count: number;
+}
+
+export const getMonthlyBillStats = async (
+  client: TypedSupabaseClient,
+  params: {
+    walletId?: string;
+    from?: string;
+    to?: string;
+  },
+) => {
+  // Get all bills with payments
+  const { data: bills, error } = await listBillsWithPayments(client, {
+    walletId: params.walletId,
+  });
+
+  if (error || !bills) {
+    return { data: null, error };
+  }
+
+  // Group bills by month (using due_date)
+  const monthlyStats: Record<string, MonthlyBillStats> = {};
+
+  bills.forEach((bill) => {
+    // Get the month from due_date (format: YYYY-MM-01)
+    const dueDate = new Date(bill.due_date);
+    const month = `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, "0")}-01`;
+
+    // Apply date filters
+    if (params.from && month < params.from) return;
+    if (params.to && month > params.to) return;
+
+    const key = `${bill.wallet_id}-${month}`;
+
+    if (!monthlyStats[key]) {
+      monthlyStats[key] = {
+        month,
+        wallet_id: bill.wallet_id,
+        total_bills_cents: 0,
+        total_paid_cents: 0,
+        total_outstanding_cents: 0,
+        bill_count: 0,
+      };
+    }
+
+    monthlyStats[key].total_bills_cents += bill.amount_cents;
+    monthlyStats[key].total_paid_cents += bill.paid_amount_cents;
+    monthlyStats[key].total_outstanding_cents +=
+      Math.max(0, bill.amount_cents - bill.paid_amount_cents);
+    monthlyStats[key].bill_count += 1;
+  });
+
+  // Convert to array and sort by month
+  const result = Object.values(monthlyStats).sort((a, b) =>
+    a.month.localeCompare(b.month),
+  );
+
+  return { data: result, error: null };
+};

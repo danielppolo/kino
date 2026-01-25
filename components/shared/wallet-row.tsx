@@ -46,7 +46,12 @@ export function WalletRow({
           {wallet.id === "c357aa5c-ad41-4c41-8d67-bf5516117187" && (
             <UNAMDonation walletId={wallet.id} />
           )}
-          <WalletMemberAvatars walletId={wallet.id} size="sm" />
+          <WalletMemberAvatars
+            walletId={wallet.id}
+            walletName={wallet.name}
+            size="sm"
+            clickable={true}
+          />
           <ToggleWalletVisibility wallet={wallet} />
         </div>
       </div>
