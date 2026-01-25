@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import { useQuery } from "@tanstack/react-query";
@@ -63,37 +63,32 @@ export default function TagsSection({
   }, [transactionCountsData, onTransactionCountsLoaded]);
 
   // Group tags by their group property
-  const groupedTags = useMemo(() => {
-    const groups: Record<string, Tag[]> = {};
+  const groups: Record<string, Tag[]> = {};
 
-    tags.forEach((tag) => {
-      const group = tag.group || "";
-      if (!groups[group]) {
-        groups[group] = [];
-      }
-      groups[group].push(tag);
+  tags.forEach((tag) => {
+    const group = tag.group || "";
+    if (!groups[group]) {
+      groups[group] = [];
+    }
+    groups[group].push(tag);
+  });
+
+  // Sort tags within each group by title
+  Object.values(groups).forEach((groupTags) => {
+    groupTags.sort((a, b) => a.title.localeCompare(b.title));
+  });
+
+  // Sort groups alphabetically
+  const sortedGroups: Record<string, Tag[]> = {};
+  Object.keys(groups)
+    .sort((a, b) => a.localeCompare(b))
+    .forEach((groupName) => {
+      sortedGroups[groupName] = groups[groupName];
     });
 
-    // Sort tags within each group by title
-    Object.values(groups).forEach((groupTags) => {
-      groupTags.sort((a, b) => a.title.localeCompare(b.title));
-    });
+  const groupedTags = sortedGroups;
 
-    // Sort groups alphabetically
-    const sortedGroups: Record<string, Tag[]> = {};
-    Object.keys(groups)
-      .sort((a, b) => a.localeCompare(b))
-      .forEach((groupName) => {
-        sortedGroups[groupName] = groups[groupName];
-      });
-
-    return sortedGroups;
-  }, [tags]);
-
-  const orderedTags = useMemo(
-    () => Object.values(groupedTags).flatMap((groupTags) => groupTags),
-    [groupedTags],
-  );
+  const orderedTags = Object.values(groupedTags).flatMap((groupTags) => groupTags);
 
   const { activeId, setActiveId } = useKeyboardListNavigation({
     items: orderedTags,

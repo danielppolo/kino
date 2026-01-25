@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -92,19 +92,16 @@ export default function WalletMembersSection({
     },
   });
 
-  const members: WalletMember[] = useMemo(
-    () =>
-      membersData?.data?.map((m) => ({
-        id: m.id,
-        user_id: m.user_id,
-        wallet_id: m.wallet_id,
-        role: m.role as "owner" | "editor" | "reader",
-        email: m.email,
-        phone: m.phone ?? null,
-        created_at: m.created_at,
-      })) || [],
-    [membersData?.data],
-  );
+  const members: WalletMember[] =
+    membersData?.data?.map((m) => ({
+      id: m.id,
+      user_id: m.user_id,
+      wallet_id: m.wallet_id,
+      role: m.role as "owner" | "editor" | "reader",
+      email: m.email,
+      phone: m.phone ?? null,
+      created_at: m.created_at,
+    })) || [];
 
   useEffect(() => {
     const nextPhones = members.reduce<Record<string, string>>((acc, member) => {

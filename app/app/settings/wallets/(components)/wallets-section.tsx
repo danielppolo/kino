@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 
 import EmptyState from "@/components/shared/empty-state";
 import WalletForm from "@/components/shared/wallet-form";
@@ -34,32 +34,30 @@ export default function WalletsSection({
   const wallets = propWallets || allWallets;
 
   // Group wallets by currency
-  const groupedWallets = useMemo(() => {
-    const groups: Record<string, Wallet[]> = {};
+  const groups: Record<string, Wallet[]> = {};
 
-    wallets.forEach((wallet) => {
-      const currency = wallet.currency || "Unknown";
-      if (!groups[currency]) {
-        groups[currency] = [];
-      }
-      groups[currency].push(wallet);
+  wallets.forEach((wallet) => {
+    const currency = wallet.currency || "Unknown";
+    if (!groups[currency]) {
+      groups[currency] = [];
+    }
+    groups[currency].push(wallet);
+  });
+
+  // Sort wallets within each group by name
+  Object.values(groups).forEach((groupWallets) => {
+    groupWallets.sort((a, b) => a.name.localeCompare(b.name));
+  });
+
+  // Sort groups alphabetically
+  const sortedGroups: Record<string, Wallet[]> = {};
+  Object.keys(groups)
+    .sort((a, b) => a.localeCompare(b))
+    .forEach((currency) => {
+      sortedGroups[currency] = groups[currency];
     });
 
-    // Sort wallets within each group by name
-    Object.values(groups).forEach((groupWallets) => {
-      groupWallets.sort((a, b) => a.name.localeCompare(b.name));
-    });
-
-    // Sort groups alphabetically
-    const sortedGroups: Record<string, Wallet[]> = {};
-    Object.keys(groups)
-      .sort((a, b) => a.localeCompare(b))
-      .forEach((currency) => {
-        sortedGroups[currency] = groups[currency];
-      });
-
-    return sortedGroups;
-  }, [wallets]);
+  const groupedWallets = sortedGroups;
 
   const handleRowClick = (wallet: Wallet) => {
     setSelectedWallet(wallet);
@@ -71,10 +69,7 @@ export default function WalletsSection({
     setSelectedWallet(null);
   };
 
-  const orderedWallets = useMemo(
-    () => Object.values(groupedWallets).flatMap((group) => group),
-    [groupedWallets],
-  );
+  const orderedWallets = Object.values(groupedWallets).flatMap((group) => group);
 
   const { activeId, setActiveId } = useKeyboardListNavigation({
     items: orderedWallets,

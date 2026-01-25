@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { endOfMonth, format, startOfMonth } from "date-fns";
 import { X } from "lucide-react";
 import Link from "next/link";
@@ -74,12 +74,8 @@ export function TransactionsSidebar() {
     deleteMutation.mutate(viewId);
   };
 
-  const walletShortcutTargets = useMemo(
-    () =>
-      Object.entries(walletsByCurrency).flatMap(
-        ([, currencyWallets]) => currencyWallets,
-      ),
-    [walletsByCurrency],
+  const walletShortcutTargets = Object.entries(walletsByCurrency).flatMap(
+    ([, currencyWallets]) => currencyWallets,
   );
 
   useEffect(() => {

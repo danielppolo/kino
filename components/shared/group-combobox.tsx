@@ -23,7 +23,7 @@ const GroupCombobox = ({
   const [tags] = useTags();
 
   // Extract unique groups from tags, filter out null/empty values, and sort
-  const uniqueGroups = React.useMemo(() => {
+  const uniqueGroups = (() => {
     const groups = new Set<string>();
     tags.forEach((tag) => {
       if (tag.group && tag.group.trim()) {
@@ -31,7 +31,7 @@ const GroupCombobox = ({
       }
     });
     return Array.from(groups).sort((a, b) => a.localeCompare(b));
-  }, [tags]);
+  })();
 
   const options: ComboboxOption[] = uniqueGroups.map((group) => ({
     value: group,

@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { format } from "date-fns";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
@@ -55,10 +54,7 @@ interface IncomeAreaChartProps {
 
 export function IncomeAreaChart({ transactions }: IncomeAreaChartProps) {
   const { baseCurrency } = useCurrency();
-  const chartData = useMemo(
-    () => groupTransactionsByMonth(transactions ?? []),
-    [transactions],
-  );
+  const chartData = groupTransactionsByMonth(transactions ?? []);
 
   const chartConfig: ChartConfig = {
     amount: {

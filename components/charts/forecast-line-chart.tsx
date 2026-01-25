@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { addMonths, format } from "date-fns";
 import {
   CartesianGrid,
@@ -211,61 +210,42 @@ export function ForecastLineChart({
   const isLoading = isLoadingBalances || isLoadingStats || isLoadingRecurring;
   const error = balancesError || statsError || recurringError;
 
-  const historicalData = useMemo(
-    () =>
-      calculateMonthlyTotals(
-        monthlyBalances ?? [],
-        conversionRates,
-        baseCurrency,
-        walletMap,
-        walletId,
-      ),
-    [monthlyBalances, conversionRates, baseCurrency, walletMap, walletId],
+  const historicalData = calculateMonthlyTotals(
+    monthlyBalances ?? [],
+    conversionRates,
+    baseCurrency,
+    walletMap,
+    walletId,
   );
 
   // Get visible wallets
-  const visibleWallets = useMemo(() => {
-    if (walletId) {
-      const wallet = walletMap.get(walletId);
-      return wallet ? [wallet] : [];
-    } else {
-      const walletIds = new Set(monthlyBalances?.map((b) => b.wallet_id) ?? []);
-      return Array.from(walletMap.values()).filter((w) => walletIds.has(w.id));
-    }
-  }, [walletMap, monthlyBalances, walletId]);
+  let visibleWallets;
+  if (walletId) {
+    const wallet = walletMap.get(walletId);
+    visibleWallets = wallet ? [wallet] : [];
+  } else {
+    const walletIds = new Set(monthlyBalances?.map((b) => b.wallet_id) ?? []);
+    visibleWallets = Array.from(walletMap.values()).filter((w) => walletIds.has(w.id));
+  }
 
   // Calculate forecast using advanced strategies
-  const forecastData = useMemo(
-    () =>
-      calculateAdvancedForecast(
-        historicalData,
-        monthlyStats ?? [],
-        recurringTransactions ?? [],
-        visibleWallets,
-        conversionRates,
-        baseCurrency,
-        walletMap,
-        walletId,
-      ),
-    [
-      historicalData,
-      monthlyStats,
-      recurringTransactions,
-      visibleWallets,
-      conversionRates,
-      baseCurrency,
-      walletMap,
-      walletId,
-    ],
+  const forecastData = calculateAdvancedForecast(
+    historicalData,
+    monthlyStats ?? [],
+    recurringTransactions ?? [],
+    visibleWallets,
+    conversionRates,
+    baseCurrency,
+    walletMap,
+    walletId,
   );
 
   // Combine historical and forecast data
-  const combinedData = useMemo(() => {
-    if (historicalData.length === 0) return [];
-    
+  let combinedData = [];
+  if (historicalData.length > 0) {
     const lastHistoricalMonth = historicalData[historicalData.length - 1].month;
     const combined = [...historicalData];
-    
+
     // Mark forecast data points
     forecastData.forEach((point) => {
       combined.push({
@@ -274,41 +254,39 @@ export function ForecastLineChart({
       });
     });
 
-    return combined;
-  }, [historicalData, forecastData]);
+    combinedData = combined;
+  }
 
   // Calculate total balance for chart display
-  const chartData = useMemo(() => {
-    const historical = historicalData.map((point, index) => {
-      const total = visibleWallets.reduce((sum, wallet) => {
-        const balance = (point[wallet.id] as number | undefined) || 0;
-        return sum + balance;
-      }, 0);
-      // Add forecast value to the last historical point for connection
-      const isLastHistorical = index === historicalData.length - 1;
-      return {
-        month: point.month,
-        total,
-        forecast: isLastHistorical ? total : null,
-        isForecast: false,
-      };
-    });
+  const historical = historicalData.map((point, index) => {
+    const total = visibleWallets.reduce((sum, wallet) => {
+      const balance = (point[wallet.id] as number | undefined) || 0;
+      return sum + balance;
+    }, 0);
+    // Add forecast value to the last historical point for connection
+    const isLastHistorical = index === historicalData.length - 1;
+    return {
+      month: point.month,
+      total,
+      forecast: isLastHistorical ? total : null,
+      isForecast: false,
+    };
+  });
 
-    const forecast = forecastData.map((point) => {
-      const total = visibleWallets.reduce((sum, wallet) => {
-        const balance = (point[wallet.id] as number | undefined) || 0;
-        return sum + balance;
-      }, 0);
-      return {
-        month: point.month,
-        total: null,
-        forecast: total,
-        isForecast: true,
-      };
-    });
+  const forecast = forecastData.map((point) => {
+    const total = visibleWallets.reduce((sum, wallet) => {
+      const balance = (point[wallet.id] as number | undefined) || 0;
+      return sum + balance;
+    }, 0);
+    return {
+      month: point.month,
+      total: null,
+      forecast: total,
+      isForecast: true,
+    };
+  });
 
-    return [...historical, ...forecast];
-  }, [historicalData, forecastData, visibleWallets]);
+  const chartData = [...historical, ...forecast];
 
   const chartConfig: ChartConfig = {
     total: {
@@ -318,10 +296,7 @@ export function ForecastLineChart({
   };
 
   // Find the last historical month for the reference line
-  const lastHistoricalMonth = useMemo(() => {
-    if (historicalData.length === 0) return null;
-    return historicalData[historicalData.length - 1].month;
-  }, [historicalData]);
+  const lastHistoricalMonth = historicalData.length === 0 ? null : historicalData[historicalData.length - 1].month;
 
   if (isLoading) {
     return (

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { canUseGlobalShortcuts } from "@/utils/keyboard-shortcuts";
 
@@ -21,29 +21,20 @@ export function useKeyboardListNavigation<T>({
 }: KeyboardListNavigationOptions<T>) {
   const [activeIndex, setActiveIndex] = useState(-1);
 
-  const itemIds = useMemo(
-    () => items.map((item) => getItemId(item)),
-    [items, getItemId],
-  );
+  const itemIds = items.map((item) => getItemId(item));
 
-  const indexById = useMemo(
-    () => new Map(itemIds.map((id, index) => [id, index])),
-    [itemIds],
-  );
+  const indexById = new Map(itemIds.map((id, index) => [id, index]));
 
-  const setActiveId = useCallback(
-    (id: string | null) => {
-      if (!id) {
-        setActiveIndex(-1);
-        return;
-      }
-      const index = indexById.get(id);
-      if (typeof index === "number") {
-        setActiveIndex(index);
-      }
-    },
-    [indexById],
-  );
+  const setActiveId = (id: string | null) => {
+    if (!id) {
+      setActiveIndex(-1);
+      return;
+    }
+    const index = indexById.get(id);
+    if (typeof index === "number") {
+      setActiveIndex(index);
+    }
+  };
 
   const activeItem = activeIndex >= 0 ? items[activeIndex] : undefined;
   const activeId = activeItem ? getItemId(activeItem) : null;

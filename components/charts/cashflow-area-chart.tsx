@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { format } from "date-fns";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
@@ -98,21 +97,14 @@ export function CashflowAreaChart({
   const { baseCurrency } = useCurrency();
 
   // Aggregate by month
-  const aggregatedStats = useMemo(
-    () => aggregateMonthlyStats(monthlyStats ?? []),
-    [monthlyStats],
-  );
+  const aggregatedStats = aggregateMonthlyStats(monthlyStats ?? []);
 
-  const chartData = useMemo(
-    () =>
-      aggregatedStats.map((stat) => ({
-        month: stat.month,
-        income: stat.income_cents / 100,
-        outcome: -stat.outcome_cents / 100,
-        net: stat.net_cents / 100,
-      })),
-    [aggregatedStats],
-  );
+  const chartData = aggregatedStats.map((stat) => ({
+    month: stat.month,
+    income: stat.income_cents / 100,
+    outcome: -stat.outcome_cents / 100,
+    net: stat.net_cents / 100,
+  }));
 
   const chartConfig: ChartConfig = {
     income: {

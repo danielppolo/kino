@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { useParams } from "next/navigation";
 
 import { useTransactionQueryState } from "@/hooks/use-transaction-query";
@@ -25,13 +24,10 @@ function useFilters(): Filters {
   const params = useParams();
   const [filters] = useTransactionQueryState();
 
-  return useMemo(
-    () => ({
-      wallet_id: params.walletId as string,
-      ...filters,
-    }),
-    [filters, params.walletId],
-  );
+  return {
+    wallet_id: params.walletId as string,
+    ...filters,
+  };
 }
 
 export default useFilters;

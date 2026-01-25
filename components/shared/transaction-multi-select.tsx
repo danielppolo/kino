@@ -64,14 +64,12 @@ const TransactionMultiSelect = React.forwardRef<
       setOpen(false);
     };
 
-    const filteredTransactions = React.useMemo(() => {
-      const q = query.toLowerCase();
-      return transactions.filter((t) => {
-        const desc = t.description?.toLowerCase() ?? "";
-        const date = t.date ?? "";
-        return desc.includes(q) || date.includes(q);
-      });
-    }, [transactions, query]);
+    const q = query.toLowerCase();
+    const filteredTransactions = transactions.filter((t) => {
+      const desc = t.description?.toLowerCase() ?? "";
+      const date = t.date ?? "";
+      return desc.includes(q) || date.includes(q);
+    });
 
     const selectedTransactions = transactions.filter((t) =>
       value.includes(t.id!),

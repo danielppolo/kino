@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { format } from "date-fns";
 import { X } from "lucide-react";
 import { toast } from "sonner";
@@ -83,40 +83,28 @@ export function SelectTransactionsSheet({
 
   const [comboboxValue, setComboboxValue] = useState("");
 
-  const transactionMap = useMemo(() => {
-    const map = new Map<string, TransactionList>();
-    transactions?.forEach((t) => map.set(t.id!, t));
-    return map;
-  }, [transactions]);
+  const transactionMap = new Map<string, TransactionList>();
+  transactions?.forEach((t) => transactionMap.set(t.id!, t));
 
-  const selectedTransactionDetails = useMemo(
-    () =>
-      selectedTransactions
-        .map((id) => transactionMap.get(id))
-        .filter(Boolean) as TransactionList[],
-    [selectedTransactions, transactionMap],
-  );
+  const selectedTransactionDetails = selectedTransactions
+    .map((id) => transactionMap.get(id))
+    .filter(Boolean) as TransactionList[];
 
-  const availableTransactions = useMemo(
-    () =>
-      transactions?.filter((t) => !selectedTransactions.includes(t.id!)) ?? [],
-    [transactions, selectedTransactions],
-  );
+  const availableTransactions =
+    transactions?.filter((t) => !selectedTransactions.includes(t.id!)) ?? [];
 
-  const options: ComboboxOption[] = useMemo(() => {
-    return availableTransactions.map((transaction) => {
-      const category = categoryMap.get(transaction.category_id ?? "");
-      return {
-        value: transaction.id!,
-        label: transaction.description || "No description",
-        keywords: [
-          transaction.description?.toLowerCase() ?? "",
-          transaction.date ?? "",
-          category?.name.toLowerCase() ?? "",
-        ],
-      };
-    });
-  }, [availableTransactions, categoryMap]);
+  const options: ComboboxOption[] = availableTransactions.map((transaction) => {
+    const category = categoryMap.get(transaction.category_id ?? "");
+    return {
+      value: transaction.id!,
+      label: transaction.description || "No description",
+      keywords: [
+        transaction.description?.toLowerCase() ?? "",
+        transaction.date ?? "",
+        category?.name.toLowerCase() ?? "",
+      ],
+    };
+  });
 
   const handleTransactionSelect = (transactionId: string) => {
     if (transactionId && !selectedTransactions.includes(transactionId)) {

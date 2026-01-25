@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, SquaresUnite, Trash2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -30,10 +30,7 @@ export default function Page() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeType = searchParams.get("type") || "expense";
-  const visibleCategories = useMemo(
-    () => categories.filter((category) => category.type === activeType),
-    [activeType, categories],
-  );
+  const visibleCategories = categories.filter((category) => category.type === activeType);
 
   const {
     selected,
@@ -45,13 +42,9 @@ export default function Page() {
     getAllIds: () => visibleCategories.map((category) => category.id),
   });
 
-  const selectedCategories = useMemo(
-    () =>
-      selected
-        .map((id) => categories.find((c) => c.id === id))
-        .filter(Boolean) as Category[],
-    [selected, categories],
-  );
+  const selectedCategories = selected
+    .map((id) => categories.find((c) => c.id === id))
+    .filter(Boolean) as Category[];
   const selectedType =
     selectedCategories.length > 0 &&
     selectedCategories.every((c) => c.type === selectedCategories[0].type)

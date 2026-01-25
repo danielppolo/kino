@@ -108,18 +108,16 @@ const TagMultiSelect = React.forwardRef<HTMLButtonElement, TagMultiSelectProps>(
       },
     });
 
-    const groupedOptions = React.useMemo(() => {
-      const map: Record<string, Tag[]> = {};
-      options.forEach((tag) => {
-        const group = tag.group || "Other";
-        if (!map[group]) map[group] = [];
-        map[group].push(tag);
-      });
-      Object.values(map).forEach((arr) =>
-        arr.sort((a, b) => a.title.localeCompare(b.title)),
-      );
-      return map;
-    }, [options]);
+    const groupedOptionsMap: Record<string, Tag[]> = {};
+    options.forEach((tag) => {
+      const group = tag.group || "Other";
+      if (!groupedOptionsMap[group]) groupedOptionsMap[group] = [];
+      groupedOptionsMap[group].push(tag);
+    });
+    Object.values(groupedOptionsMap).forEach((arr) =>
+      arr.sort((a, b) => a.title.localeCompare(b.title)),
+    );
+    const groupedOptions = groupedOptionsMap;
 
     const toggleOption = (option: string) => {
       if (value.includes(option)) {
@@ -131,22 +129,19 @@ const TagMultiSelect = React.forwardRef<HTMLButtonElement, TagMultiSelectProps>(
 
     const handleClear = () => onChange([]);
 
-    const filteredGrouped = React.useMemo(() => {
-      const q = query.toLowerCase();
-      const map: Record<string, Tag[]> = {};
-      Object.entries(groupedOptions).forEach(([group, items]) => {
-        const filtered = items.filter((t) => t.title.toLowerCase().includes(q));
-        if (filtered.length) map[group] = filtered;
-      });
-      return map;
-    }, [groupedOptions, query]);
+    const q = query.toLowerCase();
+    const filteredGroupedMap: Record<string, Tag[]> = {};
+    Object.entries(groupedOptions).forEach(([group, items]) => {
+      const filtered = items.filter((t) => t.title.toLowerCase().includes(q));
+      if (filtered.length) filteredGroupedMap[group] = filtered;
+    });
+    const filteredGrouped = filteredGroupedMap;
 
-    const canCreate = React.useMemo(() => {
-      if (!query.trim()) return false;
-      return !options.some(
-        (t) => t.title.toLowerCase() === query.trim().toLowerCase(),
-      );
-    }, [query, options]);
+    const canCreate = !query.trim()
+      ? false
+      : !options.some(
+          (t) => t.title.toLowerCase() === query.trim().toLowerCase(),
+        );
 
     const handleCreate = async () => {
       const title = query.trim();

@@ -58,10 +58,10 @@ const WalletMultiSelect = React.forwardRef<
 
     const handleClear = () => onChange([]);
 
-    const filteredOptions = React.useMemo(() => {
-      const q = query.toLowerCase();
-      return options.filter((w) => w.name.toLowerCase().includes(q));
-    }, [options, query]);
+    const q = query.toLowerCase();
+    const filteredOptions = options.filter((w) =>
+      w.name.toLowerCase().includes(q),
+    );
 
     return (
       <Popover open={open} onOpenChange={setOpen} modal>
