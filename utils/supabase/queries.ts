@@ -907,7 +907,7 @@ export const listBillsWithPayments = async (
   let billsQuery = client
     .from("bills")
     .select("*")
-    .order("due_date", { ascending: true });
+    .order("due_date", { ascending: false });
 
   if (params?.walletId) {
     billsQuery = billsQuery.eq("wallet_id", params.walletId);
@@ -1036,7 +1036,6 @@ export const getAllWalletMembers = async (
   return { data, error };
 };
 
-
 export const getUnassociatedTransactions = async (
   client: TypedSupabaseClient,
   params: { walletId: string; billCurrency: string },
@@ -1068,9 +1067,8 @@ export const getUnassociatedTransactions = async (
   }
 
   // Filter out transactions that are already associated with bills
-  const unassociated = transactions?.filter(
-    (t) => !associatedSet.has(t.id!),
-  ) ?? [];
+  const unassociated =
+    transactions?.filter((t) => !associatedSet.has(t.id!)) ?? [];
 
   return { data: unassociated, error: null };
 };
@@ -1128,8 +1126,10 @@ export const getMonthlyBillStats = async (
 
     monthlyStats[key].total_bills_cents += bill.amount_cents;
     monthlyStats[key].total_paid_cents += bill.paid_amount_cents;
-    monthlyStats[key].total_outstanding_cents +=
-      Math.max(0, bill.amount_cents - bill.paid_amount_cents);
+    monthlyStats[key].total_outstanding_cents += Math.max(
+      0,
+      bill.amount_cents - bill.paid_amount_cents,
+    );
     monthlyStats[key].bill_count += 1;
   });
 
