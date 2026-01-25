@@ -1025,16 +1025,17 @@ export const getBillsForTransaction = async (
   };
 };
 
-export const getWalletMembers = async (
+export const getAllWalletMembers = async (
   client: TypedSupabaseClient,
-  walletId: string,
+  walletIds: string[],
 ) => {
-  const { data, error } = await client.rpc("get_wallet_members", {
-    wallet_uuid: walletId,
+  const { data, error } = await client.rpc("get_all_wallet_members", {
+    wallet_uuids: walletIds,
   });
 
   return { data, error };
 };
+
 
 export const getUnassociatedTransactions = async (
   client: TypedSupabaseClient,

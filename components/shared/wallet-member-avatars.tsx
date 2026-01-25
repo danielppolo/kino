@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
 
+import WalletMembersDialog from "./wallet-members-dialog";
+
 import {
   Avatar,
   AvatarFallback,
@@ -17,8 +19,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { createClient } from "@/utils/supabase/client";
-import { getWalletMembers } from "@/utils/supabase/queries";
-import WalletMembersDialog from "./wallet-members-dialog";
+import { getAllWalletMembers } from "@/utils/supabase/queries";
 
 interface WalletMemberAvatarsProps {
   walletId: string;
@@ -65,7 +66,7 @@ export default function WalletMemberAvatars({
     queryKey: ["wallet-members", walletId],
     queryFn: async () => {
       const supabase = createClient();
-      return getWalletMembers(supabase, walletId);
+      return getAllWalletMembers(supabase, [walletId]);
     },
   });
 

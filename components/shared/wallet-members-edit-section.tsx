@@ -6,10 +6,7 @@ import { toast } from "sonner";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import {
-  Avatar,
-  AvatarFallback,
-} from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -36,10 +33,10 @@ import {
 import { createClient } from "@/utils/supabase/client";
 import {
   removeWalletMember,
-  updateWalletMemberRole,
   updateUserPhone,
+  updateWalletMemberRole,
 } from "@/utils/supabase/mutations";
-import { getWalletMembers } from "@/utils/supabase/queries";
+import { getAllWalletMembers } from "@/utils/supabase/queries";
 
 interface WalletMembersEditSectionProps {
   walletId: string;
@@ -82,7 +79,7 @@ export default function WalletMembersEditSection({
     queryKey: ["wallet-members", walletId],
     queryFn: async () => {
       const supabase = createClient();
-      return getWalletMembers(supabase, walletId);
+      return getAllWalletMembers(supabase, [walletId]);
     },
   });
 
@@ -334,8 +331,8 @@ export default function WalletMembersEditSection({
                           onClick={() => handleRemoveMember(member.id)}
                           disabled={
                             removeMemberMutation.isPending ||
-                            (members.filter((m) => m.role === "owner").length ===
-                              1 &&
+                            (members.filter((m) => m.role === "owner")
+                              .length === 1 &&
                               member.role === "owner")
                           }
                           title={

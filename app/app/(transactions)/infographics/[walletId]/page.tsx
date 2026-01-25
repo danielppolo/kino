@@ -1,6 +1,7 @@
 import React from "react";
 
 import { AccumulatedAreaChart } from "@/components/charts/accumulated-area-chart";
+import { BillBalanceLineChart } from "@/components/charts/bill-balance-line-chart";
 import { BillsHistoryChart } from "@/components/charts/bills-history-chart";
 import { CashflowAreaChart } from "@/components/charts/cashflow-area-chart";
 import LabelAreaChart from "@/components/charts/label-area-chart";
@@ -38,6 +39,15 @@ async function InfographicsPage({ params, searchParams }: PageParams) {
       {/* Bills History Chart - Full Width */}
       <div className="md:col-span-2 lg:col-span-3">
         <BillsHistoryChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
+        />
+      </div>
+
+      {/* Bill Balance Line Chart - Full Width */}
+      <div className="md:col-span-2 lg:col-span-3">
+        <BillBalanceLineChart
           walletId={walletId}
           from={filters.from}
           to={filters.to}

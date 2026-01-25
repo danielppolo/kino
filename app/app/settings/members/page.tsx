@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -16,7 +16,7 @@ import { useWallets } from "@/contexts/settings-context";
 import { useSelection } from "@/hooks/use-selection";
 import { canUseGlobalShortcuts } from "@/utils/keyboard-shortcuts";
 import { createClient } from "@/utils/supabase/client";
-import { getWalletMembers } from "@/utils/supabase/queries";
+import { getAllWalletMembers } from "@/utils/supabase/queries";
 import { removeWalletMember } from "@/utils/supabase/mutations";
 
 type WalletMember = {
@@ -25,7 +25,6 @@ type WalletMember = {
   wallet_id: string;
   role: "owner" | "editor" | "reader";
   email: string | null;
-  phone: string | null;
   created_at: string;
 };
 
@@ -46,37 +45,39 @@ export default function MembersPage() {
     fetchCurrentUser();
   }, []);
 
-  // Fetch all members to get IDs for selection
-  const memberQueries = wallets.map((wallet) => {
-    return useQuery({
-      queryKey: ["wallet-members", wallet.id],
-      queryFn: async () => {
-        const supabase = createClient();
-        return getWalletMembers(supabase, wallet.id);
-      },
-    });
+  // Fetch all members for all wallets
+  const walletIds = useMemo(() => wallets.map((w) => w.id), [wallets]);
+
+  const { data: allMembersData } = useQuery({
+    queryKey: ["wallet-members", walletIds],
+    queryFn: async () => {
+      const supabase = createClient();
+      return getAllWalletMembers(supabase, walletIds);
+    },
+    enabled: walletIds.length > 0,
   });
 
-  const allMemberIds: string[] = [];
-  const membersMap = new Map<string, WalletMember>();
+  const { allMemberIds, membersMap } = useMemo(() => {
+    const ids: string[] = [];
+    const map = new Map<string, WalletMember>();
 
-  memberQueries.forEach((query) => {
-    if (query.data?.data) {
-      query.data.data.forEach((m) => {
+    if (allMembersData?.data) {
+      allMembersData.data.forEach((m: any) => {
         const member: WalletMember = {
           id: m.id,
           user_id: m.user_id,
           wallet_id: m.wallet_id,
           role: m.role as "owner" | "editor" | "reader",
           email: m.email,
-          phone: m.phone ?? null,
           created_at: m.created_at,
         };
-        allMemberIds.push(m.id);
-        membersMap.set(m.id, member);
+        ids.push(m.id);
+        map.set(m.id, member);
       });
     }
-  });
+
+    return { allMemberIds: ids, membersMap: map };
+  }, [allMembersData]);
 
   const {
     selected,

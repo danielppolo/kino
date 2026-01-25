@@ -1,18 +1,18 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
 
+import EditMemberForm from "@/components/shared/edit-member-form";
 import EmptyState from "@/components/shared/empty-state";
 import MemberRow from "@/components/shared/member-row";
 import RowGroupHeader from "@/components/shared/row-group-header";
 import { DrawerDialog } from "@/components/ui/drawer-dialog";
-import EditMemberForm from "@/components/shared/edit-member-form";
 import { useWallets } from "@/contexts/settings-context";
 import { useKeyboardListNavigation } from "@/hooks/use-keyboard-list-navigation";
 import { createClient } from "@/utils/supabase/client";
-import { getWalletMembers } from "@/utils/supabase/queries";
+import { getAllWalletMembers } from "@/utils/supabase/queries";
 import { Wallet } from "@/utils/supabase/types";
 
 type WalletMember = {
@@ -21,7 +21,6 @@ type WalletMember = {
   wallet_id: string;
   role: "owner" | "editor" | "reader";
   email: string | null;
-  phone: string | null;
   created_at: string;
 };
 
@@ -57,47 +56,56 @@ export default function MembersSection({
   }, []);
 
   // Fetch all members for all wallets
-  const memberQueries = wallets.map((wallet) => {
-    return useQuery({
-      queryKey: ["wallet-members", wallet.id],
-      queryFn: async () => {
-        const supabase = createClient();
-        return getWalletMembers(supabase, wallet.id);
-      },
-    });
-  });
+  const walletIds = useMemo(() => wallets.map((w) => w.id), [wallets]);
 
-  const isLoading = memberQueries.some((q) => q.isLoading);
+  const { data: allMembersData, isLoading } = useQuery({
+    queryKey: ["wallet-members", walletIds],
+    queryFn: async () => {
+      const supabase = createClient();
+      return getAllWalletMembers(supabase, walletIds);
+    },
+    enabled: walletIds.length > 0,
+  });
 
   // Build members map grouped by wallet
-  const membersByWallet: Record<string, WalletMember[]> = {};
-  const walletsMap = new Map<string, Wallet>();
+  const membersByWallet = useMemo(() => {
+    const result: Record<string, WalletMember[]> = {};
 
-  wallets.forEach((wallet) => {
-    walletsMap.set(wallet.id, wallet);
-  });
-
-  memberQueries.forEach((query, index) => {
-    const wallet = wallets[index];
-    if (query.data?.data) {
-      membersByWallet[wallet.id] = query.data.data.map((m) => ({
-        id: m.id,
-        user_id: m.user_id,
-        wallet_id: m.wallet_id,
-        role: m.role as "owner" | "editor" | "reader",
-        email: m.email,
-        phone: m.phone ?? null,
-        created_at: m.created_at,
-      }));
+    if (allMembersData?.data) {
+      allMembersData.data.forEach((m: any) => {
+        if (!result[m.wallet_id]) {
+          result[m.wallet_id] = [];
+        }
+        result[m.wallet_id].push({
+          id: m.id,
+          user_id: m.user_id,
+          wallet_id: m.wallet_id,
+          role: m.role as "owner" | "editor" | "reader",
+          email: m.email,
+          created_at: m.created_at,
+        });
+      });
     }
-  });
+
+    return result;
+  }, [allMembersData]);
+
+  const walletsMap = useMemo(() => {
+    const map = new Map<string, Wallet>();
+    wallets.forEach((wallet) => {
+      map.set(wallet.id, wallet);
+    });
+    return map;
+  }, [wallets]);
 
   // Check if current user is owner for each wallet
   useEffect(() => {
     if (!currentUserId) return;
     const ownerMap: Record<string, boolean> = {};
     Object.entries(membersByWallet).forEach(([walletId, members]) => {
-      const currentUserMember = members.find((m) => m.user_id === currentUserId);
+      const currentUserMember = members.find(
+        (m) => m.user_id === currentUserId,
+      );
       ownerMap[walletId] = currentUserMember?.role === "owner";
     });
     setIsOwnerMap(ownerMap);
@@ -125,7 +133,11 @@ export default function MembersSection({
   });
 
   if (isLoading) {
-    return <div className="text-muted-foreground p-4 text-sm">Loading members...</div>;
+    return (
+      <div className="text-muted-foreground p-4 text-sm">
+        Loading members...
+      </div>
+    );
   }
 
   if (allMembers.length === 0) {

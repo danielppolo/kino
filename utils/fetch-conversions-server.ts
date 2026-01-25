@@ -146,5 +146,13 @@ export async function fetchAllConversions({
     }),
   );
 
+  if (currencies.includes(baseCurrency)) {
+    conversions[baseCurrency] = {
+      rate: 1,
+      lastUpdated: new Date().toISOString(),
+      source: "direct",
+    };
+  }
+
   return conversions;
 }
