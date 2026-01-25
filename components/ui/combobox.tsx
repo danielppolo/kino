@@ -86,14 +86,14 @@ export function Combobox({
   const [query, setQuery] = React.useState("");
   const selectedOption = options.find((option) => option.value === value);
 
-  const canCreate = React.useMemo(() => {
+  const canCreate = (() => {
     if (!query.trim() || !onCreateOption) return false;
     return !options.some(
       (o) => o.label.toLowerCase() === query.trim().toLowerCase(),
     );
-  }, [query, options, onCreateOption]);
+  })();
 
-  const handleCreate = React.useCallback(async () => {
+  const handleCreate = async () => {
     if (!onCreateOption || !query.trim()) return;
 
     const newOption = await onCreateOption(query.trim());
@@ -101,7 +101,7 @@ export function Combobox({
       onChange(newOption.value);
     }
     setOpen(false);
-  }, [onCreateOption, query, onChange]);
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen} modal>

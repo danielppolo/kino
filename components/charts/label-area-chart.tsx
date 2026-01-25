@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { format } from "date-fns";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 
@@ -64,39 +63,37 @@ export default function LabelAreaChart({
   });
 
   // Transform data for area chart
-  const chartData = useMemo(() => {
-    // Generate all months between from and to dates in YYYY-MM-01 format
-    const allMonths = new Set<string>();
-    if (from && to) {
-      const startDate = new Date(from);
-      startDate.setDate(1);
-      startDate.setHours(0, 0, 0, 0);
+  // Generate all months between from and to dates in YYYY-MM-01 format
+  const allMonths = new Set<string>();
+  if (from && to) {
+    const startDate = new Date(from);
+    startDate.setDate(1);
+    startDate.setHours(0, 0, 0, 0);
 
-      const endDate = new Date(to);
-      endDate.setDate(1);
-      endDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(to);
+    endDate.setDate(1);
+    endDate.setHours(0, 0, 0, 0);
 
-      const currentDate = new Date(startDate);
-      while (currentDate <= endDate) {
-        // Format as YYYY-MM-01
-        const monthKey = format(currentDate, "yyyy-MM-01");
-        allMonths.add(monthKey);
-        currentDate.setMonth(currentDate.getMonth() + 1);
-      }
+    const currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      // Format as YYYY-MM-01
+      const monthKey = format(currentDate, "yyyy-MM-01");
+      allMonths.add(monthKey);
+      currentDate.setMonth(currentDate.getMonth() + 1);
     }
+  }
 
-    if (!data || data.length === 0) {
-      // If no data but we have a date range, create empty chart data
-      if (from && to && allMonths.size > 0) {
-        const emptyChartData = Array.from(allMonths).map((month) => ({
-          month: month as string,
-          empty: 0, // Add empty field for chart structure
-        }));
-        return emptyChartData.sort((a, b) => a.month.localeCompare(b.month));
-      }
-      return [];
+  let chartData = [];
+  if (!data || data.length === 0) {
+    // If no data but we have a date range, create empty chart data
+    if (from && to && allMonths.size > 0) {
+      const emptyChartData = Array.from(allMonths).map((month) => ({
+        month: month as string,
+        empty: 0, // Add empty field for chart structure
+      }));
+      chartData = emptyChartData.sort((a, b) => a.month.localeCompare(b.month));
     }
-
+  } else {
     // First pass: collect all unique labels and months, and aggregate values
     const labels = new Map();
     const months = new Set<string>();
@@ -172,95 +169,91 @@ export default function LabelAreaChart({
     });
 
     // Convert to array and sort by month
-    return Array.from(monthlyData.values()).sort((a, b) =>
+    chartData = Array.from(monthlyData.values()).sort((a, b) =>
       a.month.localeCompare(b.month),
     );
-  }, [data, type, from, to]);
+  }
 
   // Create chart config from labels (reuse the labels from chartData transformation)
-  const chartConfig = useMemo(() => {
-    const config: ChartConfig = {};
+  const config: ChartConfig = {};
 
-    if (data && data.length > 0) {
-      // Collect unique labels (same logic as in chartData)
-      const labels = new Map();
-      data.forEach((item) => {
-        const labelId = item.labels?.id;
-        const labelName = item.labels?.name || "Unknown";
-        const labelColor = item.labels?.color || "#8884d8";
-        const safeKey = labelName.replace(/[^a-zA-Z0-9]/g, "_");
+  if (data && data.length > 0) {
+    // Collect unique labels (same logic as in chartData)
+    const labels = new Map();
+    data.forEach((item) => {
+      const labelId = item.labels?.id;
+      const labelName = item.labels?.name || "Unknown";
+      const labelColor = item.labels?.color || "#8884d8";
+      const safeKey = labelName.replace(/[^a-zA-Z0-9]/g, "_");
 
-        if (!labels.has(labelId)) {
-          labels.set(labelId, {
-            id: labelId,
-            name: labelName,
-            safeKey: safeKey,
-            color: labelColor,
-          });
-        }
-      });
-
-      // Reverse the order of labels for proper stacking
-      Array.from(labels.values())
-        .reverse()
-        .forEach((label) => {
-          config[label.safeKey] = {
-            label: label.name,
-            color: label.color,
-          };
+      if (!labels.has(labelId)) {
+        labels.set(labelId, {
+          id: labelId,
+          name: labelName,
+          safeKey: safeKey,
+          color: labelColor,
         });
-    }
+      }
+    });
 
-    return config;
-  }, [data]);
+    // Reverse the order of labels for proper stacking
+    Array.from(labels.values())
+      .reverse()
+      .forEach((label) => {
+        config[label.safeKey] = {
+          label: label.name,
+          color: label.color,
+        };
+      });
+  }
+
+  const chartConfig = config;
 
   // Calculate aggregated totals by label
-  const labelTotals = useMemo(() => {
-    const totals: Array<{
-      name: string;
-      total: number;
-      color: string;
-      safeKey: string;
-      id: string;
-    }> = [];
+  const totals: Array<{
+    name: string;
+    total: number;
+    color: string;
+    safeKey: string;
+    id: string;
+  }> = [];
 
-    if (data && data.length > 0) {
-      // Collect unique labels and their totals
-      const labelMap = new Map();
+  if (data && data.length > 0) {
+    // Collect unique labels and their totals
+    const labelMap = new Map();
 
-      data.forEach((item) => {
-        const labelId = item.labels?.id;
-        const labelName = item.labels?.name || "Unknown";
-        const labelColor = item.labels?.color || "#8884d8";
-        const safeKey = labelName.replace(/[^a-zA-Z0-9]/g, "_");
+    data.forEach((item) => {
+      const labelId = item.labels?.id;
+      const labelName = item.labels?.name || "Unknown";
+      const labelColor = item.labels?.color || "#8884d8";
+      const safeKey = labelName.replace(/[^a-zA-Z0-9]/g, "_");
 
-        const value =
-          type === "income"
-            ? item.income_cents
-            : type === "expense"
-              ? Math.abs(item.outcome_cents)
-              : Math.abs(item.net_cents);
+      const value =
+        type === "income"
+          ? item.income_cents
+          : type === "expense"
+            ? Math.abs(item.outcome_cents)
+            : Math.abs(item.net_cents);
 
-        if (!labelMap.has(labelId)) {
-          labelMap.set(labelId, {
-            name: labelName,
-            total: 0,
-            color: labelColor,
-            safeKey: safeKey,
-            id: labelId,
-          });
-        }
+      if (!labelMap.has(labelId)) {
+        labelMap.set(labelId, {
+          name: labelName,
+          total: 0,
+          color: labelColor,
+          safeKey: safeKey,
+          id: labelId,
+        });
+      }
 
-        labelMap.get(labelId).total += value;
-      });
+      labelMap.get(labelId).total += value;
+    });
 
-      // Convert to array and sort by total (descending)
-      totals.push(...Array.from(labelMap.values()));
-      totals.sort((a, b) => b.total - a.total);
-    }
+    // Convert to array and sort by total (descending)
+    totals.push(...Array.from(labelMap.values()));
+    totals.sort((a, b) => b.total - a.total);
+  }
 
-    return totals;
-  }, [data, type]);
+  const labelTotals = totals;
 
   if (isLoading) {
     return (

@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { Pie, PieChart } from "recharts";
 import { Cell } from "recharts";
 
@@ -52,9 +51,8 @@ export default function LabelPieChart({
   });
 
   // Transform data with currency conversion
-  const transformedData = useMemo(() => {
-    if (!data || data.length === 0) return [];
-
+  let transformedData = [];
+  if (data && data.length > 0) {
     // Convert the data to the format expected by the aggregation function
     const dataWithAmounts = data.map((item) => {
       const amount_cents =
@@ -94,22 +92,20 @@ export default function LabelPieChart({
     });
 
     result.sort((a, b) => b.value - a.value);
-    return result;
-  }, [data, type, conversionRates, baseCurrency, walletMap]);
+    transformedData = result;
+  }
 
   // Create chart config for the interactive chart
-  const chartConfig: ChartConfig = useMemo(() => {
-    const config: ChartConfig = {};
+  const config: ChartConfig = {};
 
-    transformedData.forEach((item, index) => {
-      config[item.name] = {
-        label: item.name,
-        color: item.color,
-      };
-    });
+  transformedData.forEach((item, index) => {
+    config[item.name] = {
+      label: item.name,
+      color: item.color,
+    };
+  });
 
-    return config;
-  }, [transformedData]);
+  const chartConfig: ChartConfig = config;
 
   if (isLoading) {
     return (

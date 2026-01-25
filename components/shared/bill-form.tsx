@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -62,12 +62,9 @@ const BillForm = ({
   const [wallets] = useWallets();
   const queryClient = useQueryClient();
 
-  const defaultWallet = useMemo(() => {
-    if (defaultWalletId) {
-      return wallets.find((w) => w.id === defaultWalletId);
-    }
-    return wallets[0];
-  }, [wallets, defaultWalletId]);
+  const defaultWallet = defaultWalletId
+    ? wallets.find((w) => w.id === defaultWalletId)
+    : wallets[0];
 
   const form = useForm<BillFormValues>({
     defaultValues: {
@@ -111,17 +108,19 @@ const BillForm = ({
   const selectedWalletIds = form.watch("wallet_ids");
   const selectedWallet = wallets.find((w) => w.id === selectedWalletId);
 
-  const selectedWallets = useMemo(() => {
-    return wallets.filter((w) => selectedWalletIds?.includes(w.id));
-  }, [wallets, selectedWalletIds]);
+  const selectedWallets = wallets.filter((w) =>
+    selectedWalletIds?.includes(w.id),
+  );
 
-  const currenciesLabel = useMemo(() => {
+  const currenciesLabel = (() => {
     if (isEdit && selectedWallet) {
       return selectedWallet.currency;
     }
-    const currencies = Array.from(new Set(selectedWallets.map((w) => w.currency)));
+    const currencies = Array.from(
+      new Set(selectedWallets.map((w) => w.currency)),
+    );
     return currencies.length > 0 ? currencies.join(", ") : "";
-  }, [isEdit, selectedWallet, selectedWallets]);
+  })();
 
   const createMutation = useMutation({
     mutationFn: async (values: BillFormValues) => {

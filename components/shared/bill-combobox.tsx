@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React from "react";
 import { format } from "date-fns";
 import { ReceiptText } from "lucide-react";
 
@@ -31,40 +31,34 @@ const BillCombobox = ({
   const [, walletMap] = useWallets();
 
   // Filter bills by wallet if provided
-  const filteredBills = useMemo(() => {
-    if (!walletId) return bills;
-    return bills.filter((bill) => bill.wallet_id === walletId);
-  }, [bills, walletId]);
+  const filteredBills = !walletId
+    ? bills
+    : bills.filter((bill) => bill.wallet_id === walletId);
 
-  const options: ComboboxOption[] = useMemo(() => {
-    const billOptions = filteredBills
-      .sort((a, b) => a.due_date.localeCompare(b.due_date))
-      .map((bill) => {
-        const wallet = walletMap.get(bill.wallet_id);
-        const dueDate = format(new Date(bill.due_date), "MMM d");
-        return {
-          value: bill.id,
-          label: bill.description,
-          keywords: [
-            bill.description.toLowerCase(),
-            dueDate.toLowerCase(),
-            wallet?.name.toLowerCase() ?? "",
-          ],
-        };
-      });
+  const billOptions = filteredBills
+    .sort((a, b) => a.due_date.localeCompare(b.due_date))
+    .map((bill) => {
+      const wallet = walletMap.get(bill.wallet_id);
+      const dueDate = format(new Date(bill.due_date), "MMM d");
+      return {
+        value: bill.id,
+        label: bill.description,
+        keywords: [
+          bill.description.toLowerCase(),
+          dueDate.toLowerCase(),
+          wallet?.name.toLowerCase() ?? "",
+        ],
+      };
+    });
 
-    // Add "None" option at the beginning
-    return [
-      { value: "", label: "None", keywords: ["none", "clear"] },
-      ...billOptions,
-    ];
-  }, [filteredBills, walletMap]);
+  // Add "None" option at the beginning
+  const options: ComboboxOption[] = [
+    { value: "", label: "None", keywords: ["none", "clear"] },
+    ...billOptions,
+  ];
 
-  const billMap = useMemo(() => {
-    const map = new Map<string, Bill>();
-    filteredBills.forEach((b) => map.set(b.id, b));
-    return map;
-  }, [filteredBills]);
+  const billMap = new Map<string, Bill>();
+  filteredBills.forEach((b) => billMap.set(b.id, b));
 
   const formatAmount = (cents: number, currency: string) => {
     return new Intl.NumberFormat("en-US", {

@@ -4,7 +4,6 @@ import React, {
   createContext,
   useContext,
   useEffect,
-  useMemo,
   useReducer,
 } from "react";
 
@@ -85,22 +84,17 @@ export const FilterProvider: React.FC<{ children: React.ReactNode }> = ({
     wallet_id: searchParams.get("wallet_id") || undefined,
   });
 
-  const setters = useMemo(
-    () => ({
-      setLabelId: (label_id: string | undefined) =>
-        dispatch({ type: "SET_CATEGORY_ID", payload: label_id }),
+  const setLabelId = (label_id: string | undefined) =>
+    dispatch({ type: "SET_CATEGORY_ID", payload: label_id });
 
-      setCategoryId: (category_id: string | undefined) =>
-        dispatch({ type: "SET_SUBJECT_ID", payload: category_id }),
+  const setCategoryId = (category_id: string | undefined) =>
+    dispatch({ type: "SET_SUBJECT_ID", payload: category_id });
 
-      setDateRange: (range: Range) =>
-        dispatch({ type: "SET_DATE_RANGE", payload: range }),
+  const setDateRange = (range: Range) =>
+    dispatch({ type: "SET_DATE_RANGE", payload: range });
 
-      setWalletId: (wallet_id: string | undefined) =>
-        dispatch({ type: "SET_WALLET_ID", payload: wallet_id }),
-    }),
-    [],
-  );
+  const setWalletId = (wallet_id: string | undefined) =>
+    dispatch({ type: "SET_WALLET_ID", payload: wallet_id });
 
   // Sync filter changes with URL query params
   useEffect(() => {
@@ -115,7 +109,10 @@ export const FilterProvider: React.FC<{ children: React.ReactNode }> = ({
     <FilterContext.Provider
       value={{
         filters,
-        ...setters,
+        setLabelId,
+        setCategoryId,
+        setDateRange,
+        setWalletId,
       }}
     >
       {children}

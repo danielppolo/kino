@@ -49,11 +49,7 @@ export const CreatableMultiSelect = React.forwardRef<
     const [inputValue, setInputValue] = React.useState("");
     const [customOptions, setCustomOptions] = React.useState<string[]>([]);
 
-    const allOptions = React.useMemo(
-      () =>
-        Array.from(new Set([...(options ?? []), ...value, ...customOptions])),
-      [options, value, customOptions],
-    );
+    const allOptions = Array.from(new Set([...(options ?? []), ...value, ...customOptions]));
 
     const handleInputKeyDown = (
       event: React.KeyboardEvent<HTMLInputElement>,

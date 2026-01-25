@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { format } from "date-fns";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -30,13 +30,13 @@ import { Transaction, TransactionTemplate } from "@/utils/supabase/types";
 function TemplateSelect({ type }: { type: "income" | "expense" }) {
   const { setValue } = useFormContext();
   const [templates] = useTemplates();
-  const map = useMemo(() => {
+  const map = (() => {
     const m = new Map<string, TransactionTemplate>();
     templates.forEach((t) => {
       if (t.type === type) m.set(t.id, t);
     });
     return m;
-  }, [templates, type]);
+  })();
 
   return (
     <TemplateCombobox

@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { format } from "date-fns";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
@@ -106,15 +105,9 @@ export function TransactionsAreaChart({
   transactions,
 }: TransactionsAreaChartProps) {
   const [labels] = useLabels();
-  const chartData = useMemo(
-    () => groupTransactionsByLabel(transactions ?? [], labels ?? []),
-    [transactions, labels],
-  );
+  const chartData = groupTransactionsByLabel(transactions ?? [], labels ?? []);
 
-  const chartConfig: ChartConfig = useMemo(
-    () => getChartConfig(labels ?? []),
-    [labels],
-  );
+  const chartConfig: ChartConfig = getChartConfig(labels ?? []);
 
   // Calculate percentage change for total transactions
   const calculatePercentageChange = () => {

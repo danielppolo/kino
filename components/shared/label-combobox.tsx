@@ -35,11 +35,11 @@ const LabelCombobox = ({
       keywords: [label.name.toLowerCase(), label.color ?? ""],
     }));
 
-  const labelMap = React.useMemo(() => {
+  const labelMap = (() => {
     const map = new Map<string, LabelType>();
     labels.forEach((l) => map.set(l.id, l));
     return map;
-  }, [labels]);
+  })();
 
   return (
     <Combobox

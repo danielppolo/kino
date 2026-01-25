@@ -22,11 +22,11 @@ const TemplateCombobox = ({
     value: t.id,
     label: t.name,
   }));
-  const templateMap = React.useMemo(() => {
+  const templateMap = (() => {
     const m = new Map<string, TransactionTemplate>();
     filtered.forEach((t) => m.set(t.id, t));
     return m;
-  }, [filtered]);
+  })();
 
   const handleChange = (id: string) => {
     const tpl = templateMap.get(id);

@@ -10,7 +10,6 @@ import {
 } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
 
 import { createClient } from "@/utils/supabase/client";
 import { getCategoryPieChartData } from "@/utils/supabase/queries";
@@ -71,9 +70,8 @@ export default function CategoryPieChart({
   });
 
   // Transform data with currency conversion
-  const transformedData = useMemo(() => {
-    if (!data || data.length === 0) return [];
-
+  let transformedData = [];
+  if (data && data.length > 0) {
     // Convert the data to the format expected by the aggregation function
     const dataWithAmounts = data.map((item) => {
       const amount_cents =
@@ -119,8 +117,8 @@ export default function CategoryPieChart({
     );
 
     result.sort((a, b) => b.value - a.value);
-    return result;
-  }, [data, type, conversionRates, baseCurrency, walletMap]);
+    transformedData = result;
+  }
 
   if (isLoading) {
     return (

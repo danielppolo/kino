@@ -45,18 +45,16 @@ const CategoryMultiSelect = React.forwardRef<HTMLButtonElement, CategoryMultiSel
     const [open, setOpen] = React.useState(false);
     const [query, setQuery] = React.useState("");
 
-    const groupedOptions = React.useMemo(() => {
-      const map: Record<string, Category[]> = {};
-      options.forEach((cat) => {
-        const group = cat.type || "other";
-        if (!map[group]) map[group] = [];
-        map[group].push(cat);
-      });
-      Object.values(map).forEach((arr) =>
-        arr.sort((a, b) => a.name.localeCompare(b.name)),
-      );
-      return map;
-    }, [options]);
+    const groupedOptionsMap: Record<string, Category[]> = {};
+    options.forEach((cat) => {
+      const group = cat.type || "other";
+      if (!groupedOptionsMap[group]) groupedOptionsMap[group] = [];
+      groupedOptionsMap[group].push(cat);
+    });
+    Object.values(groupedOptionsMap).forEach((arr) =>
+      arr.sort((a, b) => a.name.localeCompare(b.name)),
+    );
+    const groupedOptions = groupedOptionsMap;
 
     const toggleOption = (option: string) => {
       if (value.includes(option)) {
@@ -68,15 +66,13 @@ const CategoryMultiSelect = React.forwardRef<HTMLButtonElement, CategoryMultiSel
 
     const handleClear = () => onChange([]);
 
-    const filteredGrouped = React.useMemo(() => {
-      const q = query.toLowerCase();
-      const map: Record<string, Category[]> = {};
-      Object.entries(groupedOptions).forEach(([group, items]) => {
-        const filtered = items.filter((c) => c.name.toLowerCase().includes(q));
-        if (filtered.length) map[group] = filtered;
-      });
-      return map;
-    }, [groupedOptions, query]);
+    const q = query.toLowerCase();
+    const filteredGroupedMap: Record<string, Category[]> = {};
+    Object.entries(groupedOptions).forEach(([group, items]) => {
+      const filtered = items.filter((c) => c.name.toLowerCase().includes(q));
+      if (filtered.length) filteredGroupedMap[group] = filtered;
+    });
+    const filteredGrouped = filteredGroupedMap;
 
     return (
       <Popover open={open} onOpenChange={setOpen} modal>

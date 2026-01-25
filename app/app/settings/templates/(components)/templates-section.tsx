@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import React from "react";
 
 import EmptyState from "@/components/shared/empty-state";
 import TemplateRow from "@/components/shared/template-row";
@@ -18,11 +18,9 @@ export default function TemplatesSection({
 }: TemplatesSectionProps) {
   const [templates] = useTemplates();
 
-  const filteredTemplates = useMemo(() => {
-    return templates
-      .filter((template) => template.type === type)
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [templates, type]);
+  const filteredTemplates = templates
+    .filter((template) => template.type === type)
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   if (filteredTemplates.length === 0) {
     return (

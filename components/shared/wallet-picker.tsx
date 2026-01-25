@@ -44,11 +44,8 @@ const WalletPicker = ({
     keywords: [wallet.name.toLowerCase(), wallet.currency ?? ""],
   }));
 
-  const walletMapMemo = React.useMemo(() => {
-    const map = new Map<string, Wallet>();
-    wallets.forEach((w) => map.set(w.id, w));
-    return map;
-  }, [wallets]);
+  const walletMapMemo = new Map<string, Wallet>();
+  wallets.forEach((w) => walletMapMemo.set(w.id, w));
 
   return (
     <Combobox

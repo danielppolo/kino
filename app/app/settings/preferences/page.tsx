@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -87,13 +87,10 @@ export default function Page() {
     },
   });
 
-  const isDirty = useMemo(() => {
-    if (!preferencesData) return false;
-    return (
-      preferencesData.baseCurrency !== formState.baseCurrency ||
-      (preferencesData.phone ?? "") !== formState.phone
-    );
-  }, [formState, preferencesData]);
+  const isDirty = !preferencesData ? false : (
+    preferencesData.baseCurrency !== formState.baseCurrency ||
+    (preferencesData.phone ?? "") !== formState.phone
+  );
 
   const handleSave = () => {
     updatePreferencesMutation.mutate();

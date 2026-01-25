@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { format } from "date-fns";
 import { X } from "lucide-react";
 import { toast } from "sonner";
@@ -90,7 +90,7 @@ export default function BillsList({ walletId }: BillsListProps) {
   });
 
   // Calculate associated transaction IDs from bills with payments
-  const associatedTransactionIds = useMemo(() => {
+  const getAssociatedTransactionIds = () => {
     if (!bills) return new Set<string>();
     const ids = new Set<string>();
     bills.forEach((bill) => {
@@ -101,27 +101,23 @@ export default function BillsList({ walletId }: BillsListProps) {
       });
     });
     return ids;
-  }, [bills]);
+  };
+  const associatedTransactionIds = getAssociatedTransactionIds();
 
   // Filter out associated transactions using bills data
-  const unassociatedTransactions = useMemo(() => {
-    if (!allIncomeTransactions) return [];
-    return allIncomeTransactions.filter(
-      (t) => !associatedTransactionIds.has(t.id!),
-    );
-  }, [allIncomeTransactions, associatedTransactionIds]);
+  const unassociatedTransactions = !allIncomeTransactions
+    ? []
+    : allIncomeTransactions.filter((t) => !associatedTransactionIds.has(t.id!));
 
-  const sortedBills = useMemo(() => {
-    if (!bills) return [];
-    // Sort by due date, then by payment status (unpaid first)
-    return [...bills].sort((a, b) => {
-      // First sort by payment status (incomplete first)
-      if (a.payment_percentage < 100 && b.payment_percentage >= 100) return -1;
-      if (a.payment_percentage >= 100 && b.payment_percentage < 100) return 1;
-      // Then sort by due date
-      return a.due_date.localeCompare(b.due_date);
-    });
-  }, [bills]);
+  const sortedBills = !bills
+    ? []
+    : [...bills].sort((a, b) => {
+        // First sort by payment status (incomplete first)
+        if (a.payment_percentage < 100 && b.payment_percentage >= 100) return -1;
+        if (a.payment_percentage >= 100 && b.payment_percentage < 100) return 1;
+        // Then sort by due date
+        return a.due_date.localeCompare(b.due_date);
+      });
 
   const linkMutation = useMutation({
     mutationFn: async ({

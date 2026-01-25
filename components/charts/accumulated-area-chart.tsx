@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React from "react";
 import { format } from "date-fns";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
@@ -88,12 +88,12 @@ export function AccumulatedAreaChart({
   const { conversionRates, baseCurrency } = useCurrency();
 
   // Merge owed into balance data
-  const combinedData = useMemo(() => {
-    if (!monthlyBalances) return [];
-    if (!showOwedInBalance || !monthlyOwed) {
-      return monthlyBalances;
-    }
-
+  let combinedData = [];
+  if (!monthlyBalances) {
+    combinedData = [];
+  } else if (!showOwedInBalance || !monthlyOwed) {
+    combinedData = monthlyBalances;
+  } else {
     // Create lookup map: wallet_id-month -> owed_cents
     const owedMap = monthlyOwed.reduce(
       (acc, item) => {
@@ -104,27 +104,26 @@ export function AccumulatedAreaChart({
     );
 
     // Add owed_cents to each balance record
-    return monthlyBalances.map((record) => ({
+    combinedData = monthlyBalances.map((record) => ({
       ...record,
       owed_cents: owedMap[`${record.wallet_id}-${record.month}`] ?? 0,
     }));
-  }, [monthlyBalances, monthlyOwed, showOwedInBalance]);
+  }
 
-  const chartData = useMemo(() => {
-    const processed = calculateMonthlyTotals(
-      combinedData ?? [],
-      conversionRates,
-      baseCurrency,
-      walletMap,
-      walletId,
-    );
+  const processed = calculateMonthlyTotals(
+    combinedData ?? [],
+    conversionRates,
+    baseCurrency,
+    walletMap,
+    walletId,
+  );
 
-    // If showing owed, create stacked data structure
-    if (!showOwedInBalance || !monthlyOwed) {
-      return processed;
-    }
-
-    return processed.map((item) => {
+  // If showing owed, create stacked data structure
+  let chartData;
+  if (!showOwedInBalance || !monthlyOwed) {
+    chartData = processed;
+  } else {
+    chartData = processed.map((item) => {
       const result: any = { month: item.month };
 
       // For each wallet in the data point, separate balance and owed
@@ -163,55 +162,44 @@ export function AccumulatedAreaChart({
 
       return result;
     });
-  }, [
-    combinedData,
-    conversionRates,
-    baseCurrency,
-    walletMap,
-    walletId,
-    showOwedInBalance,
-    monthlyOwed,
-  ]);
+  }
 
   // Get visible wallets and create chart config
-  const visibleWallets = useMemo(() => {
-    if (walletId) {
-      // When walletId is provided, show only that wallet
-      const wallet = walletMap.get(walletId);
-      return wallet ? [wallet] : [];
-    } else {
-      // When no walletId, show all wallets that have data
-      const walletIds = new Set(monthlyBalances?.map((b) => b.wallet_id) ?? []);
-      return Array.from(walletMap.values()).filter((w) => walletIds.has(w.id));
-    }
-  }, [walletMap, monthlyBalances, walletId]);
+  let visibleWallets;
+  if (walletId) {
+    // When walletId is provided, show only that wallet
+    const wallet = walletMap.get(walletId);
+    visibleWallets = wallet ? [wallet] : [];
+  } else {
+    // When no walletId, show all wallets that have data
+    const walletIds = new Set(monthlyBalances?.map((b) => b.wallet_id) ?? []);
+    visibleWallets = Array.from(walletMap.values()).filter((w) => walletIds.has(w.id));
+  }
 
-  const chartConfig: ChartConfig = useMemo(() => {
-    const config = visibleWallets.reduce(
-      (acc, wallet) => ({
-        ...acc,
-        [wallet.id]: {
-          label: wallet.name,
-          color: wallet.color,
-        },
-      }),
-      {} as ChartConfig,
-    );
+  const config = visibleWallets.reduce(
+    (acc, wallet) => ({
+      ...acc,
+      [wallet.id]: {
+        label: wallet.name,
+        color: wallet.color,
+      },
+    }),
+    {} as ChartConfig,
+  );
 
-    // Add owed series when toggle is ON
-    if (showOwedInBalance) {
-      visibleWallets.forEach((wallet) => {
-        config[`${wallet.id}_owed`] = {
-          label: `${wallet.name} (owed)`,
-          color: wallet.color
-            ? `${wallet.color}80` // Add transparency
-            : "hsl(var(--muted))",
-        };
-      });
-    }
+  // Add owed series when toggle is ON
+  if (showOwedInBalance) {
+    visibleWallets.forEach((wallet) => {
+      config[`${wallet.id}_owed`] = {
+        label: `${wallet.name} (owed)`,
+        color: wallet.color
+          ? `${wallet.color}80` // Add transparency
+          : "hsl(var(--muted))",
+      };
+    });
+  }
 
-    return config;
-  }, [visibleWallets, showOwedInBalance]);
+  const chartConfig: ChartConfig = config;
 
   // Calculate percentage change for the total
   const calculatePercentageChange = () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { Download, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -141,29 +141,26 @@ export default function TransactionList() {
     deleteMutation.mutate(selected);
   };
 
-  const toggleSelected = useCallback(
-    (id: string, shiftKey = false) => {
-      toggleSelection(id, shiftKey);
-    },
-    [toggleSelection],
-  );
+  const toggleSelected = (id: string, shiftKey = false) => {
+    toggleSelection(id, shiftKey);
+  };
 
-  const handleTransactionClick = useCallback(
-    (event: React.MouseEvent, transaction: TransactionList) => {
-      if (selectedCount > 0) {
-        toggleSelection(transaction.id!, event.shiftKey);
-        return;
-      }
-      openForm({
-        type: transaction.type!,
-        walletId: transaction.wallet_id!,
-        initialData: transaction as Transaction,
-      });
-    },
-    [openForm, selectedCount, toggleSelection],
-  );
+  const handleTransactionClick = (
+    event: React.MouseEvent,
+    transaction: TransactionList,
+  ) => {
+    if (selectedCount > 0) {
+      toggleSelection(transaction.id!, event.shiftKey);
+      return;
+    }
+    openForm({
+      type: transaction.type!,
+      walletId: transaction.wallet_id!,
+      initialData: transaction as Transaction,
+    });
+  };
 
-  const handleDownload = useCallback(() => {
+  const handleDownload = () => {
     const selectedTransactions =
       data?.pages
         .flatMap((page) => page.data)
@@ -174,68 +171,60 @@ export default function TransactionList() {
     const csvContent = convertTransactionsToCSV(selectedTransactions);
     const filename = `transactions-${new Date().toISOString().split("T")[0]}.csv`;
     downloadCSV(csvContent, filename);
-  }, [data?.pages, selected]);
+  };
 
   // Group transactions by date or handle flat list for amount sorting
-  const groupedTransactions = useMemo(() => {
-    const seenIds = new Set<string>();
-    const allTransactions: TransactionList[] = [];
+  const seenIds = new Set<string>();
+  const allTransactions: TransactionList[] = [];
 
-    data?.pages.forEach((page: TransactionPage) => {
-      page.data.forEach((transaction: TransactionList) => {
-        // Skip if we've already seen this transaction
-        if (seenIds.has(transaction.id!)) return;
-        seenIds.add(transaction.id!);
-        allTransactions.push(transaction);
-      });
+  data?.pages.forEach((page: TransactionPage) => {
+    page.data.forEach((transaction: TransactionList) => {
+      // Skip if we've already seen this transaction
+      if (seenIds.has(transaction.id!)) return;
+      seenIds.add(transaction.id!);
+      allTransactions.push(transaction);
     });
+  });
 
-    // If sorting by amount, return as flat list without date grouping
-    if (filters.sort === "amount_cents") {
-      return [["", allTransactions] as [string, TransactionList[]]];
-    }
+  // If sorting by amount, return as flat list without date grouping
+  const groupedTransactions =
+    filters.sort === "amount_cents"
+      ? [["", allTransactions] as [string, TransactionList[]]]
+      : (() => {
+          // Group by date for date sorting
+          const groups: { [key: string]: TransactionList[] } = {};
+          allTransactions.forEach((transaction: TransactionList) => {
+            const date = transaction.date!;
+            if (!groups[date]) {
+              groups[date] = [];
+            }
+            groups[date].push(transaction);
+          });
 
-    // Group by date for date sorting
-    const groups: { [key: string]: TransactionList[] } = {};
-    allTransactions.forEach((transaction: TransactionList) => {
-      const date = transaction.date!;
-      if (!groups[date]) {
-        groups[date] = [];
-      }
-      groups[date].push(transaction);
-    });
+          return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
+        })();
 
-    return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
-  }, [data?.pages, filters.sort]);
-
-  const flatTransactions = useMemo(
-    () => groupedTransactions.flatMap(([, transactions]) => transactions),
-    [groupedTransactions],
+  const flatTransactions = groupedTransactions.flatMap(
+    ([, transactions]) => transactions,
   );
 
-  const transactionIndexById = useMemo(() => {
-    return new Map(
-      flatTransactions.map((transaction, index) => [transaction.id!, index]),
-    );
-  }, [flatTransactions]);
+  const transactionIndexById = new Map(
+    flatTransactions.map((transaction, index) => [transaction.id!, index]),
+  );
 
-  const transactionPositions = useMemo(() => {
-    const positions: { id: string; top: number }[] = [];
-    let offset = 0;
-    groupedTransactions.forEach(([, transactions]) => {
-      const headerHeight =
-        filters.sort === "amount_cents" ? 0 : dayHeaderHeight;
-      const transactionStart = offset + headerHeight;
-      transactions.forEach((transaction, index) => {
-        positions.push({
-          id: transaction.id!,
-          top: transactionStart + index * transactionRowHeight,
-        });
+  const transactionPositions: { id: string; top: number }[] = [];
+  let offset = 0;
+  groupedTransactions.forEach(([, transactions]) => {
+    const headerHeight = filters.sort === "amount_cents" ? 0 : dayHeaderHeight;
+    const transactionStart = offset + headerHeight;
+    transactions.forEach((transaction, index) => {
+      transactionPositions.push({
+        id: transaction.id!,
+        top: transactionStart + index * transactionRowHeight,
       });
-      offset += headerHeight + transactions.length * transactionRowHeight;
     });
-    return positions;
-  }, [filters.sort, groupedTransactions]);
+    offset += headerHeight + transactions.length * transactionRowHeight;
+  });
 
   // Virtualization Setup
   const parentRef = useRef<HTMLDivElement>(null);
@@ -277,24 +266,21 @@ export default function TransactionList() {
     rowVirtualizer.measure();
   }, [rowVirtualizer, dataUpdatedAt, selectedCount]);
 
-  const scrollToTransactionIndex = useCallback(
-    (index: number) => {
-      const container = parentRef.current;
-      if (!container) return;
-      const target = transactionPositions[index];
-      if (!target) return;
-      const targetTop = target.top;
-      const targetBottom = targetTop + transactionRowHeight;
-      if (targetTop < container.scrollTop) {
-        container.scrollTop = targetTop;
-        return;
-      }
-      if (targetBottom > container.scrollTop + container.clientHeight) {
-        container.scrollTop = targetBottom - container.clientHeight;
-      }
-    },
-    [transactionPositions],
-  );
+  const scrollToTransactionIndex = (index: number) => {
+    const container = parentRef.current;
+    if (!container) return;
+    const target = transactionPositions[index];
+    if (!target) return;
+    const targetTop = target.top;
+    const targetBottom = targetTop + transactionRowHeight;
+    if (targetTop < container.scrollTop) {
+      container.scrollTop = targetTop;
+      return;
+    }
+    if (targetBottom > container.scrollTop + container.clientHeight) {
+      container.scrollTop = targetBottom - container.clientHeight;
+    }
+  };
 
   useEffect(() => {
     if (!flatTransactions.length) {

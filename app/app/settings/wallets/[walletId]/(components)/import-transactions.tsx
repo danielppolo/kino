@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { useParams } from "next/navigation";
 import Papa from "papaparse";
 import { toast } from "sonner";
@@ -57,31 +57,23 @@ const CsvTransactionUploader = ({
     missingLabel: "new",
   } as const);
 
-  const csvDisplayData = useMemo(() => {
-    const isLabel = (id?: string) => id && labelsMap.has(id);
-    const isCategory = (id?: string) => id && categoriesMap.has(id);
-    return csvData.map((row: Row) => ({
-      date: row.date,
-      type: row.type,
-      amount: row.amount ? Math.round(Number(row.amount) * 100) : undefined,
-      description: row.description,
-      category:
-        isCategory(row.category) || options.missingCategory === "new"
-          ? row.category
-          : "Other",
-      label:
-        isLabel(row.label) || options.missingLabel === "new"
-          ? row.label
-          : "Other",
-      tags: row.tags?.split(",").map((tag) => tag.trim()),
-    }));
-  }, [
-    csvData,
-    labelsMap,
-    categoriesMap,
-    options.missingCategory,
-    options.missingLabel,
-  ]);
+  const isLabel = (id?: string) => id && labelsMap.has(id);
+  const isCategory = (id?: string) => id && categoriesMap.has(id);
+  const csvDisplayData = csvData.map((row: Row) => ({
+    date: row.date,
+    type: row.type,
+    amount: row.amount ? Math.round(Number(row.amount) * 100) : undefined,
+    description: row.description,
+    category:
+      isCategory(row.category) || options.missingCategory === "new"
+        ? row.category
+        : "Other",
+    label:
+      isLabel(row.label) || options.missingLabel === "new"
+        ? row.label
+        : "Other",
+    tags: row.tags?.split(",").map((tag) => tag.trim()),
+  }));
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

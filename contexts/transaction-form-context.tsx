@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useContext, useState } from "react";
 
 import { Transaction } from "@/utils/supabase/types";
 
@@ -31,23 +31,20 @@ export function TransactionFormProvider({
   const [walletId, setWalletId] = useState<string>();
   const [initialData, setInitialData] = useState<Transaction>();
 
-  const openForm = useCallback(
-    ({
-      type: newType,
-      walletId: newWalletId,
-      initialData: newInitialData,
-    }: {
-      type?: "transfer" | "income" | "expense";
-      walletId?: string;
-      initialData?: Transaction;
-    }) => {
-      setType(newType);
-      setWalletId(newWalletId);
-      setInitialData(newInitialData);
-      setOpen(true);
-    },
-    [],
-  );
+  const openForm = ({
+    type: newType,
+    walletId: newWalletId,
+    initialData: newInitialData,
+  }: {
+    type?: "transfer" | "income" | "expense";
+    walletId?: string;
+    initialData?: Transaction;
+  }) => {
+    setType(newType);
+    setWalletId(newWalletId);
+    setInitialData(newInitialData);
+    setOpen(true);
+  };
 
   return (
     <TransactionFormContext.Provider
