@@ -1,6 +1,7 @@
 import React from "react";
 
 import { AccumulatedAreaChart } from "@/components/charts/accumulated-area-chart";
+import { BillsHistoryChart } from "@/components/charts/bills-history-chart";
 import { CashflowAreaChart } from "@/components/charts/cashflow-area-chart";
 import LabelAreaChart from "@/components/charts/label-area-chart";
 import { Filters } from "@/utils/supabase/queries";
@@ -28,6 +29,15 @@ async function InfographicsPage({ params, searchParams }: PageParams) {
       </div>
       <div className="md:col-span-2 lg:col-span-3">
         <CashflowAreaChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
+        />
+      </div>
+
+      {/* Bills History Chart - Full Width */}
+      <div className="md:col-span-2 lg:col-span-3">
+        <BillsHistoryChart
           walletId={walletId}
           from={filters.from}
           to={filters.to}

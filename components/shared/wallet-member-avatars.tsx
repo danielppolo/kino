@@ -18,12 +18,15 @@ import {
 } from "@/components/ui/tooltip";
 import { createClient } from "@/utils/supabase/client";
 import { getWalletMembers } from "@/utils/supabase/queries";
+import WalletMembersDialog from "./wallet-members-dialog";
 
 interface WalletMemberAvatarsProps {
   walletId: string;
+  walletName?: string;
   maxAvatars?: number;
   size?: "sm" | "md" | "lg";
   showTooltip?: boolean;
+  clickable?: boolean;
 }
 
 type WalletMember = {
@@ -37,11 +40,14 @@ type WalletMember = {
 
 export default function WalletMemberAvatars({
   walletId,
+  walletName = "Wallet",
   maxAvatars = 3,
   size = "sm",
   showTooltip = true,
+  clickable = false,
 }: WalletMemberAvatarsProps) {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   // Get current user
   useEffect(() => {
@@ -91,6 +97,12 @@ export default function WalletMemberAvatars({
     lg: "h-8 w-8 text-sm",
   };
 
+  const handleClick = () => {
+    if (clickable) {
+      setDialogOpen(true);
+    }
+  };
+
   const avatarGroup = (
     <AvatarGroup>
       {displayedMembers.map((member) => (
@@ -109,38 +121,72 @@ export default function WalletMemberAvatars({
     </AvatarGroup>
   );
 
+  const content = clickable ? (
+    <button
+      onClick={handleClick}
+      className="cursor-pointer transition-opacity hover:opacity-80"
+      type="button"
+    >
+      {avatarGroup}
+    </button>
+  ) : (
+    avatarGroup
+  );
+
   if (!showTooltip) {
-    return avatarGroup;
+    return (
+      <>
+        {content}
+        {clickable && (
+          <WalletMembersDialog
+            walletId={walletId}
+            walletName={walletName}
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
+          />
+        )}
+      </>
+    );
   }
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div>{avatarGroup}</div>
-        </TooltipTrigger>
-        <TooltipContent>
-          <div className="space-y-2">
-            {(["owner", "editor", "reader"] as const).map((role) => {
-              const roleMembers = allMembers.filter((m) => m.role === role);
-              if (roleMembers.length === 0) return null;
+    <>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div>{content}</div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <div className="space-y-2">
+              {(["owner", "editor", "reader"] as const).map((role) => {
+                const roleMembers = allMembers.filter((m) => m.role === role);
+                if (roleMembers.length === 0) return null;
 
-              return (
-                <div key={role}>
-                  <div className="text-muted-foreground mb-1 text-xs font-semibold capitalize">
-                    {role}
+                return (
+                  <div key={role}>
+                    <div className="text-muted-foreground mb-1 text-xs font-semibold capitalize">
+                      {role}
+                    </div>
+                    <ul className="space-y-0.5 text-sm font-light">
+                      {roleMembers.map((member) => (
+                        <li key={member.id}>{member.email || "Unknown"}</li>
+                      ))}
+                    </ul>
                   </div>
-                  <ul className="space-y-0.5 text-sm font-light">
-                    {roleMembers.map((member) => (
-                      <li key={member.id}>{member.email || "Unknown"}</li>
-                    ))}
-                  </ul>
-                </div>
-              );
-            })}
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+                );
+              })}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      {clickable && (
+        <WalletMembersDialog
+          walletId={walletId}
+          walletName={walletName}
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+        />
+      )}
+    </>
   );
 }
