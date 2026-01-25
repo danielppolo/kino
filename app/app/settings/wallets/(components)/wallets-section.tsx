@@ -6,9 +6,7 @@ import EmptyState from "@/components/shared/empty-state";
 import WalletForm from "@/components/shared/wallet-form";
 import WalletRow from "@/components/shared/wallet-row";
 import RowGroupHeader from "@/components/shared/row-group-header";
-import WalletMembersSection from "@/components/shared/wallet-members-section";
 import { DrawerDialog } from "@/components/ui/drawer-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useWallets } from "@/contexts/settings-context";
 import { useKeyboardListNavigation } from "@/hooks/use-keyboard-list-navigation";
 import { Wallet } from "@/utils/supabase/types";
@@ -119,21 +117,10 @@ export default function WalletsSection({
         open={open}
         onOpenChange={setOpen}
         title="Wallet Settings"
-        description="Manage your wallet and members."
+        description="Manage your wallet settings."
       >
         {selectedWallet && (
-          <Tabs defaultValue="settings" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="settings">Settings</TabsTrigger>
-              <TabsTrigger value="members">Members</TabsTrigger>
-            </TabsList>
-            <TabsContent value="settings" className="mt-4">
-              <WalletForm wallet={selectedWallet} onSuccess={handleFormSuccess} />
-            </TabsContent>
-            <TabsContent value="members" className="mt-4">
-              <WalletMembersSection walletId={selectedWallet.id} />
-            </TabsContent>
-          </Tabs>
+          <WalletForm wallet={selectedWallet} onSuccess={handleFormSuccess} />
         )}
       </DrawerDialog>
     </>

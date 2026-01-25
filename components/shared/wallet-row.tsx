@@ -50,7 +50,7 @@ export function WalletRow({
             walletId={wallet.id}
             walletName={wallet.name}
             size="sm"
-            clickable={true}
+            clickable={false}
           />
           <ToggleWalletVisibility wallet={wallet} />
         </div>
