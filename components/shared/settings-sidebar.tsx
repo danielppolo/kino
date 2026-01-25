@@ -11,6 +11,7 @@ import {
   User,
   ViewGrid,
   Wallet,
+  MultiplePages,
 } from "iconoir-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -49,6 +50,17 @@ const SettingsSidebar: React.FC = () => {
                 <Link href="/app/settings/wallets">
                   <Wallet className="size-4" />
                   Wallets
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === "/app/settings/members"}
+              >
+                <Link href="/app/settings/members">
+                  <MultiplePages className="size-4" />
+                  Members
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
