@@ -68,8 +68,6 @@ export default function BillsList({ walletId }: BillsListProps) {
     },
   });
 
-  console.log(bills);
-
   // Get all income transactions for the wallet
   const { data: allIncomeTransactions } = useQuery({
     queryKey: ["income-transactions", walletId],
@@ -113,7 +111,8 @@ export default function BillsList({ walletId }: BillsListProps) {
     ? []
     : [...bills].sort((a, b) => {
         // First sort by payment status (incomplete first)
-        if (a.payment_percentage < 100 && b.payment_percentage >= 100) return -1;
+        if (a.payment_percentage < 100 && b.payment_percentage >= 100)
+          return -1;
         if (a.payment_percentage >= 100 && b.payment_percentage < 100) return 1;
         // Then sort by due date
         return a.due_date.localeCompare(b.due_date);

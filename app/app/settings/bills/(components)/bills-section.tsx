@@ -1,15 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 import DeleteBillsDialog from "./delete-bills-dialog";
 
+import BillRow from "@/components/shared/bill-row";
 import { BulkActions } from "@/components/shared/bulk-actions";
 import EmptyState from "@/components/shared/empty-state";
-import BillForm from "@/components/shared/bill-form";
-import BillRow from "@/components/shared/bill-row";
-import PageHeader from "@/components/shared/page-header";
 import { TooltipButton } from "@/components/ui/tooltip-button";
 import { useBills } from "@/contexts/settings-context";
 import { useKeyboardListNavigation } from "@/hooks/use-keyboard-list-navigation";
@@ -17,11 +15,24 @@ import { useSelection } from "@/hooks/use-selection";
 import { canUseGlobalShortcuts } from "@/utils/keyboard-shortcuts";
 import { Bill } from "@/utils/supabase/types";
 
-export default function BillsSection() {
-  const [open, setOpen] = useState(false);
+interface BillsSectionProps {
+  type: "recurrent" | "archive";
+  isActive: boolean;
+  onEdit: (bill: Bill) => void;
+}
+
+export default function BillsSection({ type, onEdit }: BillsSectionProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [editBill, setEditBill] = useState<Bill | undefined>(undefined);
-  const [bills] = useBills();
+  const [allBills] = useBills();
+
+  // Filter bills based on type
+  const bills = allBills.filter((bill) => {
+    if (type === "recurrent") {
+      return bill.is_recurring === true;
+    } else {
+      return bill.is_recurring === false || bill.is_recurring === null;
+    }
+  });
 
   const {
     selected,
@@ -32,21 +43,6 @@ export default function BillsSection() {
   } = useSelection({
     getAllIds: () => bills.map((b) => b.id),
   });
-
-  const handleAdd = () => {
-    setEditBill(undefined);
-    setOpen(true);
-  };
-
-  const handleEdit = (bill: Bill) => {
-    setEditBill(bill);
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-    setEditBill(undefined);
-  };
 
   const handleDeleteSuccess = () => {
     setDeleteDialogOpen(false);
@@ -81,72 +77,43 @@ export default function BillsSection() {
   const { activeId, setActiveId } = useKeyboardListNavigation({
     items: sortedBills,
     getItemId: (bill) => bill.id,
-    onEnter: handleEdit,
+    onEnter: onEdit,
     onSpace: (bill) => toggleSelection(bill.id),
     onSelectAll: selectAll,
   });
 
   if (sortedBills.length === 0) {
-    return (
-      <>
-        <PageHeader className="justify-end">
-          <TooltipButton
-            size="sm"
-            variant="outline"
-            tooltip="Add bill"
-            onClick={handleAdd}
-          >
-            <Plus className="size-4" />
-          </TooltipButton>
-        </PageHeader>
-        <EmptyState
-          title="No bills found"
-          description="Add your first bill to track your payment responsibilities."
-        />
-        <BillForm open={open} onOpenChange={setOpen} onSuccess={handleClose} />
-      </>
-    );
+    const emptyMessage =
+      type === "recurrent"
+        ? "No recurrent bills found"
+        : "No archived bills found";
+    const emptyDescription =
+      type === "recurrent"
+        ? "Add your first recurrent bill to track your payment responsibilities."
+        : "Archived bills will appear here.";
+
+    return <EmptyState title={emptyMessage} description={emptyDescription} />;
   }
 
   return (
     <>
-      <PageHeader className="justify-end">
-        <TooltipButton
-          size="sm"
-          variant="outline"
-          tooltip="Add bill"
-          onClick={handleAdd}
-        >
-          <Plus className="size-4" />
-        </TooltipButton>
-      </PageHeader>
-
-      <div style={{ height: "calc(100vh - 44px)", overflow: "auto" }}>
-        {sortedBills?.map((bill) => {
-          const isSelected = selected.includes(bill.id);
-          return (
-            <BillRow
-              key={bill.id}
-              bill={bill}
-              onClick={() => {
-                setActiveId(bill.id);
-                handleEdit(bill);
-              }}
-              selected={isSelected}
-              selectionMode={selectedCount > 0}
-              onToggleSelect={(e) => toggleSelect(bill, e.shiftKey)}
-              active={bill.id === activeId}
-            />
-          );
-        })}
-      </div>
-
-      <BillForm
-        open={open}
-        onOpenChange={setOpen}
-        onSuccess={handleClose}
-        bill={editBill}
-      />
+      {sortedBills?.map((bill) => {
+        const isSelected = selected.includes(bill.id);
+        return (
+          <BillRow
+            key={bill.id}
+            bill={bill}
+            onClick={() => {
+              setActiveId(bill.id);
+              onEdit(bill);
+            }}
+            selected={isSelected}
+            selectionMode={selectedCount > 0}
+            onToggleSelect={(e) => toggleSelect(bill, e.shiftKey)}
+            active={bill.id === activeId}
+          />
+        );
+      })}
 
       <DeleteBillsDialog
         open={deleteDialogOpen}
@@ -173,4 +140,3 @@ export default function BillsSection() {
     </>
   );
 }
-
