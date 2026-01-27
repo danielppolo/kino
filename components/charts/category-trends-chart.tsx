@@ -118,7 +118,7 @@ export function CategoryTrendsChart({
 
     // Calculate 95th percentile to cap outliers
     const sorted = [...allValues].sort((a, b) => a - b);
-    const p95Index = Math.floor(sorted.length * 0.99);
+    const p95Index = Math.floor(sorted.length * 0.997);
     const p95Value = sorted[p95Index] || Infinity;
 
     // Cap values at 95th percentile to normalize the chart
@@ -130,8 +130,8 @@ export function CategoryTrendsChart({
         Object.entries(categories).forEach(([categoryId, amount]) => {
           // Cap extreme values to keep chart readable
           const cappedAmount = Math.min(amount, p95Value);
-          dataPoint[categoryId] = cappedAmount;        // Display capped in bars
-          originalValues[categoryId] = amount;         // Store original
+          dataPoint[categoryId] = cappedAmount; // Display capped in bars
+          originalValues[categoryId] = amount; // Store original
         });
 
         // Store originals as hidden property for tooltip access
@@ -353,7 +353,7 @@ export function CategoryTrendsChart({
                                 />
                                 {/* Show capped note if value was normalized */}
                                 {isCapped && (
-                                  <span className="text-xs text-muted-foreground">
+                                  <span className="text-muted-foreground text-xs">
                                     (chart shows{" "}
                                     {formatCurrency(
                                       displayedAmount,
