@@ -13,7 +13,6 @@ import { BillVelocityGaugeChart } from "@/components/charts/bill-velocity-gauge-
 import { BillsHistoryChart } from "@/components/charts/bills-history-chart";
 import { BillsVsDiscretionaryChart } from "@/components/charts/bills-vs-discretionary-chart";
 import { CashFlowAfterBillsChart } from "@/components/charts/cash-flow-after-bills-chart";
-import { CashflowAreaChart } from "@/components/charts/cashflow-area-chart";
 import { CategoryTrendsChart } from "@/components/charts/category-trends-chart";
 import { CurrencyExposureChart } from "@/components/charts/currency-exposure-chart";
 import { ExpenseConcentrationChart } from "@/components/charts/expense-concentration-chart";
@@ -56,9 +55,6 @@ async function InfographicsPage({ searchParams }: PageParams) {
       </div>
       <div className="md:col-span-2 lg:col-span-4">
         <AccumulatedAreaChart from={filters.from} to={filters.to} />
-      </div>
-      <div className="md:col-span-2 lg:col-span-4">
-        <CashflowAreaChart from={filters.from} to={filters.to} />
       </div>
       <div className="md:col-span-2 lg:col-span-4">
         <AvgSpendingVsIncomeChart from={filters.from} to={filters.to} />
