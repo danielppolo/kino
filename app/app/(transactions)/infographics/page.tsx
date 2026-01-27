@@ -1,6 +1,9 @@
 import React from "react";
 
 import { AccumulatedAreaChart } from "@/components/charts/accumulated-area-chart";
+import { parseFeatureFlags, DEFAULT_FEATURE_FLAGS } from "@/utils/types/feature-flags";
+import { createClient } from "@/utils/supabase/server";
+import { AvgSpendingVsIncomeChart } from "@/components/charts/avg-spending-vs-income-chart";
 import { BillBurdenRatioChart } from "@/components/charts/bill-burden-ratio-chart";
 import { BillCoverageRatioChart } from "@/components/charts/bill-coverage-ratio-chart";
 import { BillDebtFlowChart } from "@/components/charts/bill-debt-flow-chart";
@@ -34,6 +37,17 @@ export const dynamic = "force-dynamic";
 async function InfographicsPage({ searchParams }: PageParams) {
   const filters = await searchParams;
 
+  // Fetch feature flags
+  const supabase = await createClient();
+  const { data: preferences } = await supabase
+    .from("user_preferences")
+    .select("feature_flags")
+    .maybeSingle();
+
+  const featureFlags = preferences?.feature_flags
+    ? parseFeatureFlags(preferences.feature_flags)
+    : DEFAULT_FEATURE_FLAGS;
+
   return (
     <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
       {/* Overview & Forecasting */}
@@ -45,6 +59,9 @@ async function InfographicsPage({ searchParams }: PageParams) {
       </div>
       <div className="md:col-span-2 lg:col-span-4">
         <CashflowAreaChart from={filters.from} to={filters.to} />
+      </div>
+      <div className="md:col-span-2 lg:col-span-4">
+        <AvgSpendingVsIncomeChart from={filters.from} to={filters.to} />
       </div>
 
       {/* Transaction Analysis */}
@@ -131,44 +148,48 @@ async function InfographicsPage({ searchParams }: PageParams) {
         <TransferFlowDiagramChart from={filters.from} to={filters.to} />
       </div> */}
 
-      {/* Bills Analysis */}
-      <div className="md:col-span-2 lg:col-span-4">
-        <BillsHistoryChart from={filters.from} to={filters.to} />
-      </div>
-      <div className="md:col-span-2 lg:col-span-4">
-        <BillDebtFlowChart from={filters.from} to={filters.to} />
-      </div>
-      <div className="md:col-span-2 lg:col-span-4">
-        <RecurringVsOnetimeBillsChart from={filters.from} to={filters.to} />
-      </div>
-      <div className="md:col-span-2 lg:col-span-4">
-        <BillPaymentTimelineChart from={filters.from} to={filters.to} />
-      </div>
-      <div className="md:col-span-2 lg:col-span-2">
-        <BillPaymentRateChart from={filters.from} to={filters.to} />
-      </div>
-      <div className="md:col-span-2 lg:col-span-2">
-        <BillVelocityGaugeChart from={filters.from} to={filters.to} />
-      </div>
-      <div className="md:col-span-2 lg:col-span-4">
-        <BillCoverageRatioChart />
-      </div>
+      {/* Bills Analysis - Conditionally rendered */}
+      {featureFlags.bills_enabled && (
+        <>
+          <div className="md:col-span-2 lg:col-span-4">
+            <BillsHistoryChart from={filters.from} to={filters.to} />
+          </div>
+          <div className="md:col-span-2 lg:col-span-4">
+            <BillDebtFlowChart from={filters.from} to={filters.to} />
+          </div>
+          <div className="md:col-span-2 lg:col-span-4">
+            <RecurringVsOnetimeBillsChart from={filters.from} to={filters.to} />
+          </div>
+          <div className="md:col-span-2 lg:col-span-4">
+            <BillPaymentTimelineChart from={filters.from} to={filters.to} />
+          </div>
+          <div className="md:col-span-2 lg:col-span-2">
+            <BillPaymentRateChart from={filters.from} to={filters.to} />
+          </div>
+          <div className="md:col-span-2 lg:col-span-2">
+            <BillVelocityGaugeChart from={filters.from} to={filters.to} />
+          </div>
+          <div className="md:col-span-2 lg:col-span-4">
+            <BillCoverageRatioChart />
+          </div>
 
-      {/* Bills vs Expenses */}
-      <div className="md:col-span-2 lg:col-span-4">
-        <BillsVsDiscretionaryChart from={filters.from} to={filters.to} />
-      </div>
-      <div className="md:col-span-2 lg:col-span-2">
-        <BillBurdenRatioChart from={filters.from} to={filters.to} />
-      </div>
-      <div className="md:col-span-2 lg:col-span-2">
-        <ExpensePredictabilityChart from={filters.from} to={filters.to} />
-      </div>
+          {/* Bills vs Expenses */}
+          <div className="md:col-span-2 lg:col-span-4">
+            <BillsVsDiscretionaryChart from={filters.from} to={filters.to} />
+          </div>
+          <div className="md:col-span-2 lg:col-span-2">
+            <BillBurdenRatioChart from={filters.from} to={filters.to} />
+          </div>
+          <div className="md:col-span-2 lg:col-span-2">
+            <ExpensePredictabilityChart from={filters.from} to={filters.to} />
+          </div>
 
-      {/* Cash Flow */}
-      <div className="md:col-span-2 lg:col-span-4">
-        <CashFlowAfterBillsChart from={filters.from} to={filters.to} />
-      </div>
+          {/* Cash Flow */}
+          <div className="md:col-span-2 lg:col-span-4">
+            <CashFlowAfterBillsChart from={filters.from} to={filters.to} />
+          </div>
+        </>
+      )}
     </div>
   );
 }

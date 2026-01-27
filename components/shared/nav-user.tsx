@@ -3,18 +3,20 @@
 import { useEffect, useState } from "react";
 import {
   ChevronsUpDown,
-  LogOut,
-  Settings,
   Eye,
   EyeOff,
-  User,
+  LogOut,
   Receipt,
+  Settings,
+  User,
 } from "lucide-react";
 import Link from "next/link";
 
 import { signOutAction } from "@/app/actions";
+import { UpdateProfileForm } from "@/components/shared/update-profile-form";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DrawerDialog } from "@/components/ui/drawer-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,19 +24,19 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DrawerDialog } from "@/components/ui/drawer-dialog";
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useFeatureFlags, useSettings } from "@/contexts/settings-context";
 import { createClient } from "@/utils/supabase/client";
-import { useSettings } from "@/contexts/settings-context";
-import { UpdateProfileForm } from "@/components/shared/update-profile-form";
 
 export function NavUser() {
   const { isMobile } = useSidebar();
+  const { bills_enabled } = useFeatureFlags();
+
   const {
     moneyVisible,
     toggleMoneyVisibility,
@@ -149,13 +151,15 @@ export function NavUser() {
                 )}
                 {moneyVisible ? "Hide" : "Show"} Money
               </DropdownMenuItem>
-              <DropdownMenuItem
-                className="gap-2 p-2"
-                onClick={toggleShowOwedInBalance}
-              >
-                <Receipt className="size-4" />
-                {showOwedInBalance ? "Hide" : "Include"} Owed in Balance
-              </DropdownMenuItem>
+              {bills_enabled && (
+                <DropdownMenuItem
+                  className="gap-2 p-2"
+                  onClick={toggleShowOwedInBalance}
+                >
+                  <Receipt className="size-4" />
+                  {showOwedInBalance ? "Hide" : "Include"} Owed in Balance
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem>
                 <form action={signOutAction} className="w-full">
                   <button className="flex w-full items-center gap-2 bg-transparent">

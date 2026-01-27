@@ -8,6 +8,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import PageHeader from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -17,11 +19,13 @@ import {
 } from "@/components/ui/select";
 import { createClient } from "@/utils/supabase/client";
 import { updateUserPreferences } from "@/utils/supabase/mutations";
+import { FeatureFlags, parseFeatureFlags, DEFAULT_FEATURE_FLAGS } from "@/utils/types/feature-flags";
 
 type PreferencesFormState = {
   userId: string | null;
   baseCurrency: "USD" | "MXN";
   phone: string;
+  featureFlags: FeatureFlags;
 };
 
 export default function Page() {
@@ -30,6 +34,7 @@ export default function Page() {
     userId: null,
     baseCurrency: "USD",
     phone: "",
+    featureFlags: DEFAULT_FEATURE_FLAGS,
   });
 
   const { data: preferencesData, isLoading } = useQuery({
@@ -41,7 +46,7 @@ export default function Page() {
       } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from("user_preferences")
-        .select("user_id, base_currency, phone")
+        .select("user_id, base_currency, phone, feature_flags")
         .maybeSingle();
 
       if (error) throw new Error(error.message);
@@ -50,6 +55,9 @@ export default function Page() {
         userId: data?.user_id ?? user?.id ?? null,
         baseCurrency: (data?.base_currency ?? "USD") as "USD" | "MXN",
         phone: data?.phone ?? "",
+        featureFlags: data?.feature_flags
+          ? parseFeatureFlags(data.feature_flags)
+          : DEFAULT_FEATURE_FLAGS,
       };
     },
   });
@@ -60,6 +68,7 @@ export default function Page() {
       userId: preferencesData.userId,
       baseCurrency: preferencesData.baseCurrency,
       phone: preferencesData.phone,
+      featureFlags: preferencesData.featureFlags,
     });
   }, [preferencesData]);
 
@@ -72,11 +81,13 @@ export default function Page() {
         userId: formState.userId,
         baseCurrency: formState.baseCurrency,
         phone: formState.phone.trim() ? formState.phone.trim() : null,
+        featureFlags: formState.featureFlags,
       });
     },
     onSuccess: () => {
       toast.success("Preferences updated successfully");
       queryClient.invalidateQueries({ queryKey: ["user-preferences"] });
+      window.location.reload(); // Reload to apply feature flag changes
     },
     onError: (error: unknown) => {
       if (error instanceof Error) {
@@ -89,7 +100,8 @@ export default function Page() {
 
   const isDirty = !preferencesData ? false : (
     preferencesData.baseCurrency !== formState.baseCurrency ||
-    (preferencesData.phone ?? "") !== formState.phone
+    (preferencesData.phone ?? "") !== formState.phone ||
+    preferencesData.featureFlags.bills_enabled !== formState.featureFlags.bills_enabled
   );
 
   const handleSave = () => {
@@ -148,6 +160,38 @@ export default function Page() {
                 <SelectItem value="MXN">MXN</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Feature Flags Section */}
+          <div className="space-y-4 border-t pt-6">
+            <h3 className="text-lg font-medium">Features</h3>
+            <p className="text-sm text-muted-foreground">
+              Control which features are enabled in your workspace
+            </p>
+
+            <div className="flex items-center justify-between space-x-2">
+              <div className="flex-1">
+                <Label htmlFor="bills-enabled" className="text-sm font-medium">
+                  Bills Management
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Track and manage recurring and one-time bills
+                </p>
+              </div>
+              <Switch
+                id="bills-enabled"
+                checked={formState.featureFlags.bills_enabled}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    featureFlags: {
+                      ...prev.featureFlags,
+                      bills_enabled: checked,
+                    },
+                  }))
+                }
+              />
+            </div>
           </div>
         </div>
       </div>

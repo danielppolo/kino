@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import MonthPagination from "../transactions/(components)/month-pagination";
 import BillsBalanceBadge from "./bills-balance-badge";
 import BillsToggle from "./bills-toggle";
 import ChartToggle from "./chart-toggle";
@@ -14,10 +15,11 @@ import SaveViewButton from "@/components/shared/save-view-button";
 import { SortDropdown } from "@/components/shared/sort-dropdown";
 import TransactionTotal from "@/components/shared/transaction-total";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import MonthPagination from "../transactions/(components)/month-pagination";
+import { useFeatureFlags } from "@/contexts/settings-context";
 
 export function TransactionsHeader() {
   const [billsSheetOpen, setBillsSheetOpen] = useState(false);
+  const { bills_enabled } = useFeatureFlags();
 
   return (
     <>
@@ -26,10 +28,12 @@ export function TransactionsHeader() {
           <MonthPagination />
         </div>
         <div className="flex items-center gap-2">
-          <BillsBalanceBadge />
+          {bills_enabled && <BillsBalanceBadge />}
           <TransactionTotal />
           <SaveViewButton />
-          <BillsToggle onOpenSheet={() => setBillsSheetOpen(true)} />
+          {bills_enabled && (
+            <BillsToggle onOpenSheet={() => setBillsSheetOpen(true)} />
+          )}
           <ChartToggle />
           <SortDropdown />
           <FiltersDropdown />
@@ -37,7 +41,9 @@ export function TransactionsHeader() {
           <SidebarTrigger />
         </div>
       </PageHeader>
-      <BillsSheet open={billsSheetOpen} onOpenChange={setBillsSheetOpen} />
+      {bills_enabled && (
+        <BillsSheet open={billsSheetOpen} onOpenChange={setBillsSheetOpen} />
+      )}
     </>
   );
 }

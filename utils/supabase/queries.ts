@@ -333,7 +333,6 @@ export const getTotalExpenses = async (
     .from("monthly_stats")
     .select("outcome_cents")
     .eq("wallet_id", walletId);
-
   if (error) {
     return { data: null, error } as const;
   }
@@ -342,6 +341,8 @@ export const getTotalExpenses = async (
     (sum, month) => sum + Math.abs(month.outcome_cents ?? 0),
     0,
   );
+
+  console.log("totalExpenses", totalExpenses);
 
   return { data: totalExpenses, error: null } as const;
 };
@@ -1142,11 +1143,11 @@ export const getMonthlyBillStats = async (
 };
 
 export interface BillDebtFlowData {
-  month: string;              // YYYY-MM-01 format
+  month: string; // YYYY-MM-01 format
   wallet_id: string;
   debt_increase_cents: number; // Bills created this month (by created_at)
   debt_decrease_cents: number; // Payments made this month (by transaction.date)
-  net_change_cents: number;    // increase - decrease
+  net_change_cents: number; // increase - decrease
 }
 
 export const getBillDebtFlow = async (
@@ -1210,7 +1211,9 @@ export const getBillDebtFlow = async (
         monthlyDecreases[month][bill.wallet_id] = 0;
       }
 
-      monthlyDecreases[month][bill.wallet_id] += Math.abs(payment.transaction.amount_cents);
+      monthlyDecreases[month][bill.wallet_id] += Math.abs(
+        payment.transaction.amount_cents,
+      );
     });
   });
 
@@ -1274,7 +1277,9 @@ export const getBillPaymentTimeline = async (
   }
 
   // Only include bills that have at least one payment
-  const paidBills = bills.filter((bill) => bill.payments && bill.payments.length > 0);
+  const paidBills = bills.filter(
+    (bill) => bill.payments && bill.payments.length > 0,
+  );
 
   const monthlyData: Record<string, BillPaymentTimelineData> = {};
 
@@ -1293,7 +1298,7 @@ export const getBillPaymentTimeline = async (
 
     // Calculate days difference (negative = early, positive = late)
     const daysFromDue = Math.round(
-      (paymentDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)
+      (paymentDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24),
     );
 
     const key = `${bill.wallet_id}-${month}`;
@@ -1320,12 +1325,13 @@ export const getBillPaymentTimeline = async (
   });
 
   // Calculate averages
-  const result = Object.values(monthlyData).map((data) => ({
-    ...data,
-    avg_days_from_due: data.total_count > 0
-      ? data.avg_days_from_due / data.total_count
-      : 0,
-  })).sort((a, b) => a.month.localeCompare(b.month));
+  const result = Object.values(monthlyData)
+    .map((data) => ({
+      ...data,
+      avg_days_from_due:
+        data.total_count > 0 ? data.avg_days_from_due / data.total_count : 0,
+    }))
+    .sort((a, b) => a.month.localeCompare(b.month));
 
   return { data: result, error: null };
 };
@@ -1388,7 +1394,7 @@ export const getRecurringVsOneTimeStats = async (
   });
 
   const result = Object.values(monthlyData).sort((a, b) =>
-    a.month.localeCompare(b.month)
+    a.month.localeCompare(b.month),
   );
 
   return { data: result, error: null };
@@ -1476,7 +1482,7 @@ export const getTransactionTypeDistribution = async (
   });
 
   const result = Object.values(monthlyData).sort((a, b) =>
-    a.month.localeCompare(b.month)
+    a.month.localeCompare(b.month),
   );
 
   return { data: result, error: null };
@@ -1505,7 +1511,9 @@ export const getBillVelocity = async (
     return { data: null, error };
   }
 
-  const paidBills = bills.filter((bill) => bill.payments && bill.payments.length > 0);
+  const paidBills = bills.filter(
+    (bill) => bill.payments && bill.payments.length > 0,
+  );
 
   const monthlyData: Record<string, BillVelocityData> = {};
 
@@ -1522,7 +1530,9 @@ export const getBillVelocity = async (
 
     const daysToPayAfterDue = Math.max(
       0,
-      Math.round((paymentDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
+      Math.round(
+        (paymentDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24),
+      ),
     );
 
     const key = `${bill.wallet_id}-${month}`;
@@ -1540,10 +1550,13 @@ export const getBillVelocity = async (
     monthlyData[key].bill_count += 1;
   });
 
-  const result = Object.values(monthlyData).map((data) => ({
-    ...data,
-    avg_days_to_pay: data.bill_count > 0 ? data.avg_days_to_pay / data.bill_count : 0,
-  })).sort((a, b) => a.month.localeCompare(b.month));
+  const result = Object.values(monthlyData)
+    .map((data) => ({
+      ...data,
+      avg_days_to_pay:
+        data.bill_count > 0 ? data.avg_days_to_pay / data.bill_count : 0,
+    }))
+    .sort((a, b) => a.month.localeCompare(b.month));
 
   return { data: result, error: null };
 };
@@ -1578,9 +1591,12 @@ export const getBillCoverageRatio = async (
     ? wallets.filter((w) => w.id === params.walletId)
     : wallets;
 
-  const { data: bills, error: billsError } = await listBillsWithPayments(client, {
-    walletId: params.walletId,
-  });
+  const { data: bills, error: billsError } = await listBillsWithPayments(
+    client,
+    {
+      walletId: params.walletId,
+    },
+  );
 
   if (billsError || !bills) {
     return { data: null, error: billsError };
@@ -1599,21 +1615,30 @@ export const getBillCoverageRatio = async (
         const dueDate = new Date(b.due_date);
         return dueDate > now && dueDate <= thirtyDaysFromNow;
       })
-      .reduce((sum, b) => sum + Math.max(0, b.amount_cents - b.paid_amount_cents), 0);
+      .reduce(
+        (sum, b) => sum + Math.max(0, b.amount_cents - b.paid_amount_cents),
+        0,
+      );
 
     const upcoming60 = walletBills
       .filter((b) => {
         const dueDate = new Date(b.due_date);
         return dueDate > now && dueDate <= sixtyDaysFromNow;
       })
-      .reduce((sum, b) => sum + Math.max(0, b.amount_cents - b.paid_amount_cents), 0);
+      .reduce(
+        (sum, b) => sum + Math.max(0, b.amount_cents - b.paid_amount_cents),
+        0,
+      );
 
     const upcoming90 = walletBills
       .filter((b) => {
         const dueDate = new Date(b.due_date);
         return dueDate > now && dueDate <= ninetyDaysFromNow;
       })
-      .reduce((sum, b) => sum + Math.max(0, b.amount_cents - b.paid_amount_cents), 0);
+      .reduce(
+        (sum, b) => sum + Math.max(0, b.amount_cents - b.paid_amount_cents),
+        0,
+      );
 
     const balanceCents = wallet.balance_cents ?? 0;
 
@@ -1624,9 +1649,12 @@ export const getBillCoverageRatio = async (
       upcoming_bills_30_days_cents: upcoming30,
       upcoming_bills_60_days_cents: upcoming60,
       upcoming_bills_90_days_cents: upcoming90,
-      coverage_ratio_30: upcoming30 > 0 ? balanceCents / upcoming30 : balanceCents > 0 ? 999 : 0,
-      coverage_ratio_60: upcoming60 > 0 ? balanceCents / upcoming60 : balanceCents > 0 ? 999 : 0,
-      coverage_ratio_90: upcoming90 > 0 ? balanceCents / upcoming90 : balanceCents > 0 ? 999 : 0,
+      coverage_ratio_30:
+        upcoming30 > 0 ? balanceCents / upcoming30 : balanceCents > 0 ? 999 : 0,
+      coverage_ratio_60:
+        upcoming60 > 0 ? balanceCents / upcoming60 : balanceCents > 0 ? 999 : 0,
+      coverage_ratio_90:
+        upcoming90 > 0 ? balanceCents / upcoming90 : balanceCents > 0 ? 999 : 0,
     };
   });
 
@@ -1668,11 +1696,12 @@ export const getCategoryTrends = async (
       wallet_id: stat.wallet_id,
       category_id: stat.category_id,
       category_name: stat.categories?.name || "Unknown",
-      amount_cents: params.type === "income"
-        ? stat.income_cents
-        : params.type === "expense"
-        ? Math.abs(stat.outcome_cents)
-        : Math.abs(stat.net_cents),
+      amount_cents:
+        params.type === "income"
+          ? stat.income_cents
+          : params.type === "expense"
+            ? Math.abs(stat.outcome_cents)
+            : Math.abs(stat.net_cents),
     }));
 
   return { data: result, error: null };
@@ -1913,10 +1942,14 @@ export const getCurrencyExposure = async (
     }
 
     currencyStats[currency].transaction_count += 1;
-    currencyStats[currency].total_amount_cents += Math.abs(transaction.amount_cents);
+    currencyStats[currency].total_amount_cents += Math.abs(
+      transaction.amount_cents,
+    );
   });
 
-  const result = Object.values(currencyStats).sort((a, b) => b.total_amount_cents - a.total_amount_cents);
+  const result = Object.values(currencyStats).sort(
+    (a, b) => b.total_amount_cents - a.total_amount_cents,
+  );
 
   return { data: result, error: null };
 };
@@ -1937,13 +1970,19 @@ export const getBillBurdenRatio = async (
     to?: string;
   },
 ) => {
-  const { data: billStats, error: billError } = await getMonthlyBillStats(client, params);
+  const { data: billStats, error: billError } = await getMonthlyBillStats(
+    client,
+    params,
+  );
 
   if (billError || !billStats) {
     return { data: null, error: billError };
   }
 
-  const { data: monthlyStats, error: statsError } = await getMonthlyStats(client, params);
+  const { data: monthlyStats, error: statsError } = await getMonthlyStats(
+    client,
+    params,
+  );
 
   if (statsError || !monthlyStats) {
     return { data: null, error: statsError };
@@ -1951,11 +1990,12 @@ export const getBillBurdenRatio = async (
 
   const result: BillsBurdenData[] = billStats.map((bill) => {
     const stat = monthlyStats.find(
-      (s) => s.month === bill.month && s.wallet_id === bill.wallet_id
+      (s) => s.month === bill.month && s.wallet_id === bill.wallet_id,
     );
 
     const totalIncome = stat ? stat.income_cents : 0;
-    const burdenRatio = totalIncome > 0 ? (bill.total_bills_cents / totalIncome) * 100 : 0;
+    const burdenRatio =
+      totalIncome > 0 ? (bill.total_bills_cents / totalIncome) * 100 : 0;
 
     return {
       month: bill.month,
@@ -2013,7 +2053,7 @@ export const getExpenseConcentration = async (
 
   const totalExpenses = Object.values(categoryTotals).reduce(
     (sum, cat) => sum + cat.total,
-    0
+    0,
   );
 
   const sorted = Object.entries(categoryTotals)
@@ -2032,7 +2072,10 @@ export const getExpenseConcentration = async (
   const result = [...topCategories];
 
   if (otherCategories.length > 0) {
-    const otherTotal = otherCategories.reduce((sum, cat) => sum + cat.total_cents, 0);
+    const otherTotal = otherCategories.reduce(
+      (sum, cat) => sum + cat.total_cents,
+      0,
+    );
     result.push({
       category_id: "other",
       category_name: "Other",
@@ -2059,13 +2102,19 @@ export const getBillsVsDiscretionarySpending = async (
     to?: string;
   },
 ) => {
-  const { data: billStats, error: billError } = await getMonthlyBillStats(client, params);
+  const { data: billStats, error: billError } = await getMonthlyBillStats(
+    client,
+    params,
+  );
 
   if (billError || !billStats) {
     return { data: null, error: billError };
   }
 
-  const { data: monthlyStats, error: statsError } = await getMonthlyStats(client, params);
+  const { data: monthlyStats, error: statsError } = await getMonthlyStats(
+    client,
+    params,
+  );
 
   if (statsError || !monthlyStats) {
     return { data: null, error: statsError };
@@ -2073,7 +2122,7 @@ export const getBillsVsDiscretionarySpending = async (
 
   const result: BillsVsDiscretionaryData[] = monthlyStats.map((stat) => {
     const bill = billStats.find(
-      (b) => b.month === stat.month && b.wallet_id === stat.wallet_id
+      (b) => b.month === stat.month && b.wallet_id === stat.wallet_id,
     );
 
     const billExpenses = bill ? bill.total_paid_cents : 0;
@@ -2108,13 +2157,19 @@ export const getCashFlowAfterBills = async (
     to?: string;
   },
 ) => {
-  const { data: billStats, error: billError } = await getMonthlyBillStats(client, params);
+  const { data: billStats, error: billError } = await getMonthlyBillStats(
+    client,
+    params,
+  );
 
   if (billError || !billStats) {
     return { data: null, error: billError };
   }
 
-  const { data: monthlyStats, error: statsError } = await getMonthlyStats(client, params);
+  const { data: monthlyStats, error: statsError } = await getMonthlyStats(
+    client,
+    params,
+  );
 
   if (statsError || !monthlyStats) {
     return { data: null, error: statsError };
@@ -2122,7 +2177,7 @@ export const getCashFlowAfterBills = async (
 
   const result: CashFlowAfterBillsData[] = monthlyStats.map((stat) => {
     const bill = billStats.find(
-      (b) => b.month === stat.month && b.wallet_id === stat.wallet_id
+      (b) => b.month === stat.month && b.wallet_id === stat.wallet_id,
     );
 
     const billExpenses = bill ? bill.total_paid_cents : 0;
@@ -2160,7 +2215,8 @@ export const getExpensePredictability = async (
     to?: string;
   },
 ) => {
-  const { data: billsVsDiscretionary, error } = await getBillsVsDiscretionarySpending(client, params);
+  const { data: billsVsDiscretionary, error } =
+    await getBillsVsDiscretionarySpending(client, params);
 
   if (error || !billsVsDiscretionary) {
     return { data: null, error };
@@ -2175,28 +2231,36 @@ export const getExpensePredictability = async (
     walletGroups[stat.wallet_id].push(stat.discretionary_expenses_cents);
   });
 
-  const result: ExpensePredictabilityData[] = billsVsDiscretionary.map((stat, index, arr) => {
-    const discretionaryExpenses = walletGroups[stat.wallet_id] || [];
+  const result: ExpensePredictabilityData[] = billsVsDiscretionary.map(
+    (stat, index, arr) => {
+      const discretionaryExpenses = walletGroups[stat.wallet_id] || [];
 
-    if (discretionaryExpenses.length < 2) {
+      if (discretionaryExpenses.length < 2) {
+        return {
+          ...stat,
+          predictability_score: 100,
+        };
+      }
+
+      const mean =
+        discretionaryExpenses.reduce((a, b) => a + b, 0) /
+        discretionaryExpenses.length;
+      const variance =
+        discretionaryExpenses.reduce(
+          (sum, val) => sum + Math.pow(val - mean, 2),
+          0,
+        ) / discretionaryExpenses.length;
+      const stdDev = Math.sqrt(variance);
+
+      const coefficientOfVariation = mean > 0 ? (stdDev / mean) * 100 : 0;
+      const predictabilityScore = Math.max(0, 100 - coefficientOfVariation);
+
       return {
         ...stat,
-        predictability_score: 100,
+        predictability_score: predictabilityScore,
       };
-    }
-
-    const mean = discretionaryExpenses.reduce((a, b) => a + b, 0) / discretionaryExpenses.length;
-    const variance = discretionaryExpenses.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / discretionaryExpenses.length;
-    const stdDev = Math.sqrt(variance);
-
-    const coefficientOfVariation = mean > 0 ? (stdDev / mean) * 100 : 0;
-    const predictabilityScore = Math.max(0, 100 - coefficientOfVariation);
-
-    return {
-      ...stat,
-      predictability_score: predictabilityScore,
-    };
-  });
+    },
+  );
 
   return { data: result, error: null };
 };
@@ -2268,12 +2332,15 @@ export const getTransferFlowData = async (
 
   const walletMap = new Map(wallets.map((w) => [w.id, w.name]));
 
-  const transferGroups: Record<string, {
-    from_wallet_id: string;
-    to_wallet_id: string;
-    total_amount_cents: number;
-    transfer_count: number;
-  }> = {};
+  const transferGroups: Record<
+    string,
+    {
+      from_wallet_id: string;
+      to_wallet_id: string;
+      total_amount_cents: number;
+      transfer_count: number;
+    }
+  > = {};
 
   const processedTransfers = new Set<string>();
 
@@ -2281,15 +2348,21 @@ export const getTransferFlowData = async (
     if (processedTransfers.has(transfer.transfer_id)) return;
 
     const relatedTransfer = allTransfers.find(
-      (t) => t.transfer_id === transfer.transfer_id && t.id !== transfer.id
+      (t) => t.transfer_id === transfer.transfer_id && t.id !== transfer.id,
     );
 
     if (!relatedTransfer) return;
 
     processedTransfers.add(transfer.transfer_id);
 
-    const fromWallet = transfer.amount_cents < 0 ? transfer.wallet_id : relatedTransfer.wallet_id;
-    const toWallet = transfer.amount_cents < 0 ? relatedTransfer.wallet_id : transfer.wallet_id;
+    const fromWallet =
+      transfer.amount_cents < 0
+        ? transfer.wallet_id
+        : relatedTransfer.wallet_id;
+    const toWallet =
+      transfer.amount_cents < 0
+        ? relatedTransfer.wallet_id
+        : transfer.wallet_id;
     const amount = Math.abs(transfer.amount_cents);
 
     const key = `${fromWallet}-${toWallet}`;
@@ -2307,11 +2380,157 @@ export const getTransferFlowData = async (
     transferGroups[key].transfer_count += 1;
   });
 
-  const result: TransferFlowData[] = Object.values(transferGroups).map((group) => ({
-    ...group,
-    from_wallet_name: walletMap.get(group.from_wallet_id) || "Unknown",
-    to_wallet_name: walletMap.get(group.to_wallet_id) || "Unknown",
-  })).sort((a, b) => b.total_amount_cents - a.total_amount_cents);
+  const result: TransferFlowData[] = Object.values(transferGroups)
+    .map((group) => ({
+      ...group,
+      from_wallet_name: walletMap.get(group.from_wallet_id) || "Unknown",
+      to_wallet_name: walletMap.get(group.to_wallet_id) || "Unknown",
+    }))
+    .sort((a, b) => b.total_amount_cents - a.total_amount_cents);
 
   return { data: result, error: null };
+};
+
+export interface MonthlySpendingVsIncomeData {
+  month: string;
+  income: number;
+  spending: number;
+  net: number;
+}
+
+export interface SpendingVsIncomeStatistics {
+  avgIncome: number;
+  avgSpending: number;
+  avgNet: number;
+  savingsRate: number;
+  monthsIncluded: number;
+  monthsExcluded: number;
+}
+
+export interface AverageMonthlySpendingVsIncomeResult {
+  monthlyData: MonthlySpendingVsIncomeData[];
+  statistics: SpendingVsIncomeStatistics;
+}
+
+export const getAverageMonthlySpendingVsIncome = async (
+  client: TypedSupabaseClient,
+  params: {
+    walletId?: string;
+    from?: string;
+    to?: string;
+  },
+  conversionRates: Record<string, { rate: number }>,
+  baseCurrency: string,
+  walletMap: Map<string, { id: string; currency: string }>,
+): Promise<{ data: AverageMonthlySpendingVsIncomeResult | null; error: any }> => {
+  const { data: monthlyStats, error: statsError } = await getMonthlyStats(
+    client,
+    params,
+  );
+
+  if (statsError || !monthlyStats) {
+    return { data: null, error: statsError };
+  }
+
+  // Group by month and aggregate across wallets
+  const monthGroups: Record<
+    string,
+    { income: number; spending: number }
+  > = {};
+
+  monthlyStats.forEach((stat) => {
+    if (!monthGroups[stat.month]) {
+      monthGroups[stat.month] = { income: 0, spending: 0 };
+    }
+
+    // Apply currency conversion
+    const wallet = walletMap.get(stat.wallet_id!);
+    if (!wallet) return;
+
+    const rate = conversionRates[wallet.currency]?.rate ?? 1;
+    const convertedIncome = (stat.income_cents * rate) / 100;
+    const convertedSpending = (stat.outcome_cents * rate) / 100;
+
+    monthGroups[stat.month].income += convertedIncome;
+    monthGroups[stat.month].spending += convertedSpending;
+  });
+
+  // Convert to array and sort by month
+  const monthlyData: MonthlySpendingVsIncomeData[] = Object.entries(monthGroups)
+    .map(([month, values]) => ({
+      month,
+      income: values.income,
+      spending: values.spending,
+      net: values.income - values.spending,
+    }))
+    .sort((a, b) => a.month.localeCompare(b.month));
+
+  // Calculate statistics using trimmed mean
+  // Need at least 4 months for trimmed mean
+  const hasEnoughData = monthlyData.length >= 4;
+
+  if (!hasEnoughData) {
+    return {
+      data: {
+        monthlyData,
+        statistics: {
+          avgIncome: 0,
+          avgSpending: 0,
+          avgNet: 0,
+          savingsRate: 0,
+          monthsIncluded: 0,
+          monthsExcluded: 0,
+        },
+      },
+      error: null,
+    };
+  }
+
+  // Extract arrays for trimmed mean calculation
+  const incomeValues = monthlyData.map((m) => m.income);
+  const spendingValues = monthlyData.map((m) => m.spending);
+
+  // Sort and calculate trim indices (5% from each end)
+  const trimPercentage = 0.05;
+  const trimCount = Math.floor(monthlyData.length * trimPercentage);
+
+  const sortedIncome = [...incomeValues].sort((a, b) => a - b);
+  const sortedSpending = [...spendingValues].sort((a, b) => a - b);
+
+  // Trim outliers
+  const trimmedIncome = sortedIncome.slice(
+    trimCount,
+    sortedIncome.length - trimCount,
+  );
+  const trimmedSpending = sortedSpending.slice(
+    trimCount,
+    sortedSpending.length - trimCount,
+  );
+
+  // Calculate averages
+  const avgIncome =
+    trimmedIncome.reduce((sum, val) => sum + val, 0) / trimmedIncome.length;
+  const avgSpending =
+    trimmedSpending.reduce((sum, val) => sum + val, 0) / trimmedSpending.length;
+  const avgNet = avgIncome - avgSpending;
+
+  // Calculate savings rate (handle division by zero)
+  const savingsRate = avgIncome > 0 ? (avgNet / avgIncome) * 100 : 0;
+
+  const statistics: SpendingVsIncomeStatistics = {
+    avgIncome,
+    avgSpending,
+    avgNet,
+    savingsRate,
+    monthsIncluded: trimmedIncome.length,
+    monthsExcluded: trimCount * 2,
+  };
+
+  return {
+    data: {
+      monthlyData,
+      statistics,
+    },
+    error: null,
+  };
 };

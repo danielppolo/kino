@@ -1,5 +1,6 @@
 import { createClient } from "./client";
 import { Database } from "./database.types";
+import { FeatureFlags } from "@/utils/types/feature-flags";
 
 const BATCH_SIZE = 20;
 
@@ -892,21 +893,36 @@ export const updateUserPhone = async (
 
 export const updateUserPreferences = async (params: {
   userId: string;
-  baseCurrency: string;
-  phone: string | null;
+  baseCurrency?: string;
+  phone?: string | null;
+  featureFlags?: FeatureFlags;
 }) => {
   const supabase = await createClient();
 
+  const updateData: {
+    user_id: string;
+    base_currency?: string;
+    phone?: string | null;
+    feature_flags?: FeatureFlags;
+  } = {
+    user_id: params.userId,
+  };
+
+  if (params.baseCurrency !== undefined) {
+    updateData.base_currency = params.baseCurrency;
+  }
+
+  if (params.phone !== undefined) {
+    updateData.phone = params.phone;
+  }
+
+  if (params.featureFlags !== undefined) {
+    updateData.feature_flags = params.featureFlags as any;
+  }
+
   const { data, error } = await supabase
     .from("user_preferences")
-    .upsert(
-      {
-        user_id: params.userId,
-        base_currency: params.baseCurrency,
-        phone: params.phone,
-      },
-      { onConflict: "user_id" },
-    )
+    .upsert(updateData, { onConflict: "user_id" })
     .select();
 
   if (error) throw new Error(error.message);

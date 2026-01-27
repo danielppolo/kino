@@ -3,9 +3,9 @@
 import React, { useState } from "react";
 
 import EmptyState from "@/components/shared/empty-state";
+import RowGroupHeader from "@/components/shared/row-group-header";
 import WalletForm from "@/components/shared/wallet-form";
 import WalletRow from "@/components/shared/wallet-row";
-import RowGroupHeader from "@/components/shared/row-group-header";
 import { DrawerDialog } from "@/components/ui/drawer-dialog";
 import { useWallets } from "@/contexts/settings-context";
 import { useKeyboardListNavigation } from "@/hooks/use-keyboard-list-navigation";
@@ -67,7 +67,9 @@ export default function WalletsSection({
     setSelectedWallet(null);
   };
 
-  const orderedWallets = Object.values(groupedWallets).flatMap((group) => group);
+  const orderedWallets = Object.values(groupedWallets).flatMap(
+    (group) => group,
+  );
 
   const { activeId, setActiveId } = useKeyboardListNavigation({
     items: orderedWallets,

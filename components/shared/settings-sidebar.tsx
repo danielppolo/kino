@@ -26,10 +26,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { useWallets } from "@/contexts/settings-context";
+import { useWallets, useFeatureFlags } from "@/contexts/settings-context";
 
 const SettingsSidebar: React.FC = () => {
   const [wallets] = useWallets();
+  const { bills_enabled } = useFeatureFlags();
   const pathname = usePathname();
 
   // Sort wallets alphabetically by name
@@ -141,17 +142,19 @@ const SettingsSidebar: React.FC = () => {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === "/app/settings/bills"}
-              >
-                <Link href="/app/settings/bills">
-                  <Reports className="size-4" />
-                  Bills
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            {bills_enabled && (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === "/app/settings/bills"}
+                >
+                  <Link href="/app/settings/bills">
+                    <Reports className="size-4" />
+                    Bills
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>

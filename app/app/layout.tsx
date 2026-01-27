@@ -6,6 +6,7 @@ import { SettingsProvider } from "@/contexts/settings-context";
 import { fetchAllConversions } from "@/utils/fetch-conversions-server";
 import { listWallets } from "@/utils/supabase/queries";
 import { createClient } from "@/utils/supabase/server";
+import { parseFeatureFlags, DEFAULT_FEATURE_FLAGS } from "@/utils/types/feature-flags";
 
 // Force dynamic rendering since this layout uses user-specific data
 export const dynamic = "force-dynamic";
@@ -24,6 +25,9 @@ export default async function Layout({ children }: LayoutProps) {
     .maybeSingle();
 
   const baseCurrency = preferences?.base_currency || "USD";
+  const featureFlags = preferences?.feature_flags
+    ? parseFeatureFlags(preferences.feature_flags)
+    : DEFAULT_FEATURE_FLAGS;
 
   // Fetch wallets to get currencies
   const walletsResult = await listWallets(supabase);
@@ -42,6 +46,7 @@ export default async function Layout({ children }: LayoutProps) {
         <SettingsProvider
           initialConversionRates={conversionRates}
           initialBaseCurrency={baseCurrency}
+          initialFeatureFlags={featureFlags}
         >
           {children}
         </SettingsProvider>
