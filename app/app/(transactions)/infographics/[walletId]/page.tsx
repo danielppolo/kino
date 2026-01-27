@@ -1,6 +1,7 @@
 import React from "react";
 
 import { AccumulatedAreaChart } from "@/components/charts/accumulated-area-chart";
+import { AvgSpendingVsIncomeChart } from "@/components/charts/avg-spending-vs-income-chart";
 import { BillBalanceLineChart } from "@/components/charts/bill-balance-line-chart";
 import { BillBurdenRatioChart } from "@/components/charts/bill-burden-ratio-chart";
 import { BillCoverageRatioChart } from "@/components/charts/bill-coverage-ratio-chart";
@@ -11,7 +12,6 @@ import { BillVelocityGaugeChart } from "@/components/charts/bill-velocity-gauge-
 import { BillsHistoryChart } from "@/components/charts/bills-history-chart";
 import { BillsVsDiscretionaryChart } from "@/components/charts/bills-vs-discretionary-chart";
 import { CashFlowAfterBillsChart } from "@/components/charts/cash-flow-after-bills-chart";
-import { CashflowAreaChart } from "@/components/charts/cashflow-area-chart";
 import { CategoryTrendsChart } from "@/components/charts/category-trends-chart";
 import { CurrencyExposureChart } from "@/components/charts/currency-exposure-chart";
 import { ExpenseConcentrationChart } from "@/components/charts/expense-concentration-chart";
@@ -45,7 +45,7 @@ async function InfographicsPage({ params, searchParams }: PageParams) {
         />
       </div>
       <div className="md:col-span-2 lg:col-span-3">
-        <CashflowAreaChart
+        <AvgSpendingVsIncomeChart
           walletId={walletId}
           from={filters.from}
           to={filters.to}

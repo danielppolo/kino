@@ -49,6 +49,7 @@ interface ChartDataPoint {
   _original?: {
     income: number;
     spending: number;
+    net: number;
   };
 }
 
@@ -60,6 +61,10 @@ const chartConfig: ChartConfig = {
   spending: {
     label: "Spending",
     color: "#ef4444", // Red
+  },
+  net: {
+    label: "Cashflow",
+    color: "#3b82f6", // Blue
   },
   avgIncome: {
     label: "Avg Income",
@@ -134,6 +139,7 @@ export function AvgSpendingVsIncomeChart({
       const originalValues = {
         income: Math.abs(month.income),
         spending: Math.abs(month.spending),
+        net: month.net,
       };
 
       // Cap extreme values to keep chart readable (use absolute values)
@@ -171,9 +177,9 @@ export function AvgSpendingVsIncomeChart({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Average Monthly Spending vs Income</CardTitle>
+          <CardTitle>Income, Spending & Cashflow Analysis</CardTitle>
           <CardDescription>
-            Compare typical monthly income and spending in {baseCurrency}
+            Monthly income, spending, and net cashflow in {baseCurrency}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -189,9 +195,9 @@ export function AvgSpendingVsIncomeChart({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Average Monthly Spending vs Income</CardTitle>
+          <CardTitle>Income, Spending & Cashflow Analysis</CardTitle>
           <CardDescription>
-            Compare typical monthly income and spending in {baseCurrency}
+            Monthly income, spending, and net cashflow in {baseCurrency}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -207,9 +213,9 @@ export function AvgSpendingVsIncomeChart({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Average Monthly Spending vs Income</CardTitle>
+          <CardTitle>Income, Spending & Cashflow Analysis</CardTitle>
           <CardDescription>
-            Compare typical monthly income and spending in {baseCurrency}
+            Monthly income, spending, and net cashflow in {baseCurrency}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -226,9 +232,9 @@ export function AvgSpendingVsIncomeChart({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Average Monthly Spending vs Income</CardTitle>
+          <CardTitle>Income, Spending & Cashflow Analysis</CardTitle>
           <CardDescription>
-            Compare typical monthly income and spending in {baseCurrency}
+            Monthly income, spending, and net cashflow in {baseCurrency}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -243,10 +249,10 @@ export function AvgSpendingVsIncomeChart({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Average Monthly Spending vs Income</CardTitle>
+        <CardTitle>Income, Spending & Cashflow Analysis</CardTitle>
         <CardDescription>
-          Compare typical monthly income and spending in {baseCurrency}{" "}
-          (outliers capped at 75th percentile for clarity)
+          Monthly income, spending, and net cashflow in {baseCurrency} (outliers
+          capped at 99th percentile for clarity)
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -343,6 +349,18 @@ export function AvgSpendingVsIncomeChart({
                   stopOpacity={0.1}
                 />
               </linearGradient>
+              <linearGradient id="fillNet" x1="0" y1="0" x2="0" y2="1">
+                <stop
+                  offset="5%"
+                  stopColor="var(--color-net)"
+                  stopOpacity={0.8}
+                />
+                <stop
+                  offset="95%"
+                  stopColor="var(--color-net)"
+                  stopOpacity={0.5}
+                />
+              </linearGradient>
             </defs>
             <CartesianGrid vertical={false} />
             <XAxis
@@ -357,7 +375,6 @@ export function AvgSpendingVsIncomeChart({
               axisLine={false}
               tickMargin={8}
               tickFormatter={(value) => formatCurrency(value, baseCurrency)}
-              domain={[0, "auto"]}
             />
             <ReferenceLine
               y={Math.abs(statistics.avgIncome)}
@@ -501,18 +518,25 @@ export function AvgSpendingVsIncomeChart({
             />
             <Area
               dataKey="spending"
-              type="natural"
+              type="monotone"
               fill="url(#fillSpending)"
               stroke="var(--color-spending)"
-              strokeWidth={2}
+              strokeWidth={1}
             />
             <Area
               dataKey="income"
-              type="natural"
+              type="monotone"
               fill="url(#fillIncome)"
               stroke="var(--color-income)"
-              strokeWidth={2}
+              strokeWidth={1}
             />
+            {/* <Area
+              dataKey="net"
+              type="monotone"
+              fill="url(#fillNet)"
+              stroke="var(--color-net)"
+              strokeWidth={1}
+            /> */}
             <ChartLegend content={<ChartLegendContent />} />
           </AreaChart>
         </ChartContainer>
