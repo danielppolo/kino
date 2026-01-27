@@ -312,3 +312,37 @@ export function forecastIncomeExpense(
   };
 }
 
+/**
+ * Calculate trimmed mean (removes top and bottom percentiles)
+ * More robust than simple mean against outliers
+ * Falls back to simple mean if insufficient data points
+ *
+ * @param values - Array of numbers to calculate trimmed mean from
+ * @param trimPercentage - Percentage to trim from each end (default 0.05 = 5%)
+ * @returns Trimmed mean value
+ */
+export function calculateTrimmedMean(
+  values: number[],
+  trimPercentage: number = 0.05,
+): number {
+  if (values.length === 0) return 0;
+
+  // Need at least 4 data points to trim (remove at least 1 from each end)
+  if (values.length < 4) {
+    // Fall back to simple mean
+    return values.reduce((sum, val) => sum + val, 0) / values.length;
+  }
+
+  // Sort values
+  const sorted = [...values].sort((a, b) => a - b);
+
+  // Calculate how many values to trim from each end
+  const trimCount = Math.floor(sorted.length * trimPercentage);
+
+  // Remove trimmed values
+  const trimmed = sorted.slice(trimCount, sorted.length - trimCount);
+
+  // Calculate mean of remaining values
+  return trimmed.reduce((sum, val) => sum + val, 0) / trimmed.length;
+}
+

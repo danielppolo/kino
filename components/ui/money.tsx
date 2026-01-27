@@ -12,6 +12,7 @@ interface MoneyProps {
   strong?: boolean;
   small?: boolean;
   as?: "span";
+  showSign?: boolean;
 }
 
 export function Money({
@@ -23,11 +24,16 @@ export function Money({
   strong,
   small,
   as,
+  showSign = false,
   ...props
 }: MoneyProps) {
   const { moneyVisible } = useSettings();
 
-  const displayValue = moneyVisible ? formatCents(cents, currency) : "••••••";
+  let displayValue = moneyVisible ? formatCents(cents, currency) : "••••••";
+
+  if (showSign && moneyVisible && cents > 0) {
+    displayValue = "+" + displayValue;
+  }
 
   return (
     <Text

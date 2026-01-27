@@ -6,6 +6,7 @@ import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 
 import { TRANSFER_CATEGORIES } from "@/utils/constants";
 import { createClient } from "@/utils/supabase/client";
+import { FeatureFlags, parseFeatureFlags, DEFAULT_FEATURE_FLAGS } from "@/utils/types/feature-flags";
 import {
   listBills,
   listCategories,
@@ -41,6 +42,7 @@ interface SettingsContextType {
   wallets: Wallet[];
   conversionRates: Record<string, CurrencyConversion>;
   baseCurrency: string;
+  featureFlags: FeatureFlags;
   moneyVisible: boolean;
   toggleMoneyVisibility: () => void;
   showOwedInBalance: boolean;
@@ -55,12 +57,14 @@ interface SettingsProviderProps {
   children: ReactNode;
   initialConversionRates: Record<string, CurrencyConversion>;
   initialBaseCurrency: string;
+  initialFeatureFlags: FeatureFlags;
 }
 
 export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   children,
   initialConversionRates,
   initialBaseCurrency,
+  initialFeatureFlags,
 }) => {
   const [moneyVisible, setMoneyVisible] = useState(true);
   const [showOwedInBalance, setShowOwedInBalance] = useState(false);
@@ -155,6 +159,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
     wallets,
     conversionRates: initialConversionRates,
     baseCurrency: initialBaseCurrency,
+    featureFlags: initialFeatureFlags,
     moneyVisible,
     toggleMoneyVisibility,
     showOwedInBalance,
@@ -290,4 +295,12 @@ export const useBills = (
   const map = new Map(context.bills.map((bill) => [String(bill[key]), bill]));
 
   return [list, map];
+};
+
+export const useFeatureFlags = (): FeatureFlags => {
+  const context = useContext(SettingsContext);
+  if (context === undefined) {
+    throw new Error("useFeatureFlags must be used within a SettingsProvider");
+  }
+  return context.featureFlags;
 };
