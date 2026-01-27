@@ -1,12 +1,14 @@
 "use client";
 
 import { format } from "date-fns";
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
 
 import Color from "../shared/color";
 import { TransactionLink } from "../shared/transaction-link";
+import { useCurrency, useWallets } from "@/contexts/settings-context";
+import { formatCurrency } from "@/utils/chart-helpers";
 
 import {
   Accordion,
@@ -46,6 +48,9 @@ export default function LabelAreaChart({
   type,
   title = "Label Trends",
 }: LabelAreaChartProps) {
+  const [wallets, walletMap] = useWallets();
+  const { conversionRates, baseCurrency } = useCurrency();
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["label-area-chart", walletId, from, to, type],
     queryFn: async () => {
@@ -120,17 +125,25 @@ export default function LabelAreaChart({
 
       months.add(month);
 
+      // Apply currency conversion
+      const wallet = walletMap.get(item.wallet_id);
+      if (!wallet) return;
+
+      const rate = conversionRates[wallet.currency]?.rate ?? 1;
+
       // Aggregate values for the same month and label
-      const value =
+      const rawValue =
         type === "income"
           ? item.income_cents
           : type === "expense"
             ? Math.abs(item.outcome_cents)
             : Math.abs(item.net_cents);
 
+      const convertedValue = rawValue * rate;
+
       const key = `${month}|${labelId}`;
       const existingValue = aggregatedData.get(key) || 0;
-      aggregatedData.set(key, existingValue + value);
+      aggregatedData.set(key, existingValue + convertedValue);
     });
 
     // If no date range specified, use only months with data
@@ -228,12 +241,20 @@ export default function LabelAreaChart({
       const labelColor = item.labels?.color || "#8884d8";
       const safeKey = labelName.replace(/[^a-zA-Z0-9]/g, "_");
 
-      const value =
+      // Apply currency conversion
+      const wallet = walletMap.get(item.wallet_id);
+      if (!wallet) return;
+
+      const rate = conversionRates[wallet.currency]?.rate ?? 1;
+
+      const rawValue =
         type === "income"
           ? item.income_cents
           : type === "expense"
             ? Math.abs(item.outcome_cents)
             : Math.abs(item.net_cents);
+
+      const convertedValue = rawValue * rate;
 
       if (!labelMap.has(labelId)) {
         labelMap.set(labelId, {
@@ -245,7 +266,7 @@ export default function LabelAreaChart({
         });
       }
 
-      labelMap.get(labelId).total += value;
+      labelMap.get(labelId).total += convertedValue;
     });
 
     // Convert to array and sort by total (descending)
@@ -316,7 +337,7 @@ export default function LabelAreaChart({
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         <CardDescription>
-          Showing {type} trends by label over time
+          Showing {type} trends by label over time in {baseCurrency}
           {walletId ? " for this wallet" : " across all wallets"}
         </CardDescription>
       </CardHeader>
@@ -345,6 +366,12 @@ export default function LabelAreaChart({
                   year: "2-digit",
                 });
               }}
+            />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              tickFormatter={(value) => formatCurrency(value / 100, baseCurrency)}
             />
             <ChartTooltip
               reverseDirection={{
@@ -392,6 +419,7 @@ export default function LabelAreaChart({
                             </div>
                             <Money
                               cents={Number(entry.value) || 0}
+                              currency={baseCurrency}
                               className="text-sm"
                             />
                           </div>
@@ -427,7 +455,7 @@ export default function LabelAreaChart({
       <CardFooter>
         <div className="flex w-full flex-col gap-3 text-sm">
           <div className="flex items-center gap-2 leading-none font-medium">
-            Total: <Money cents={total} /> | {labelCount} labels
+            Total: <Money cents={total} currency={baseCurrency} /> | {labelCount} labels
           </div>
 
           {labelTotals.length > 0 && (
@@ -450,7 +478,7 @@ export default function LabelAreaChart({
                           <span className="text-sm">{label.name}</span>
                         </div>
                         <span className="text-sm font-medium">
-                          <Money cents={label.total} />
+                          <Money cents={label.total} currency={baseCurrency} />
                         </span>
                       </TransactionLink>
                     ))}
