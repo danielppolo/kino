@@ -21,14 +21,12 @@ import {
   ChartLegendContent,
   ChartTooltip,
 } from "@/components/ui/chart";
-import { Money } from "@/components/ui/money";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
-import { useCurrency, useWallets } from "@/contexts/settings-context";
-import { formatCurrency } from "@/utils/chart-helpers";
+import { useWallets } from "@/contexts/settings-context";
 import { createClient } from "@/utils/supabase/client";
-import { getMonthlyBillStats } from "@/utils/supabase/queries";
+import { getExpensePredictability } from "@/utils/supabase/queries";
 
-interface BillsHistoryChartProps {
+interface ExpensePredictabilityChartProps {
   walletId?: string;
   from?: string;
   to?: string;
@@ -39,20 +37,20 @@ interface ChartDataPoint {
   [key: string]: number | string;
 }
 
-export function BillsHistoryChart({
+export function ExpensePredictabilityChart({
   walletId,
   from,
   to,
-}: BillsHistoryChartProps) {
+}: ExpensePredictabilityChartProps) {
   const {
-    data: monthlyBillStats,
+    data: predictabilityData,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["bills-history-chart", walletId, from, to],
+    queryKey: ["expense-predictability", walletId, from, to],
     queryFn: async () => {
       const supabase = await createClient();
-      const { data, error } = await getMonthlyBillStats(supabase, {
+      const { data, error } = await getExpensePredictability(supabase, {
         walletId,
         from,
         to,
@@ -64,67 +62,44 @@ export function BillsHistoryChart({
   });
 
   const [wallets, walletMap] = useWallets();
-  const { conversionRates, baseCurrency } = useCurrency();
 
-  // Process data to calculate accumulated debt over time
   const chartData: ChartDataPoint[] = React.useMemo(() => {
-    if (!monthlyBillStats || monthlyBillStats.length === 0) return [];
+    if (!predictabilityData) return [];
 
-    // Sort by month first
-    const sortedStats = [...monthlyBillStats].sort((a, b) =>
-      a.month.localeCompare(b.month)
-    );
+    const monthGroups: Record<string, Record<string, number>> = {};
 
-    // Track accumulated debt per wallet
-    const accumulatedDebt: Record<string, number> = {};
+    predictabilityData.forEach((stat) => {
+      if (!monthGroups[stat.month]) {
+        monthGroups[stat.month] = {};
+      }
 
-    // Get all unique months
-    const allMonths = Array.from(new Set(sortedStats.map((s) => s.month))).sort();
+      const wallet = walletMap.get(stat.wallet_id);
+      if (!wallet) return;
 
-    // Calculate accumulated debt for each month
-    return allMonths.map((month) => {
-      const dataPoint: ChartDataPoint = { month };
-
-      // Get stats for this month
-      const monthStats = sortedStats.filter((s) => s.month === month);
-
-      monthStats.forEach((stat) => {
-        const wallet = walletMap.get(stat.wallet_id);
-        if (!wallet) return;
-
-        const rate = conversionRates[wallet.currency]?.rate ?? 1;
-        const outstandingThisMonth = (stat.total_outstanding_cents * rate) / 100;
-
-        // Initialize if first time seeing this wallet
-        if (accumulatedDebt[wallet.id] === undefined) {
-          accumulatedDebt[wallet.id] = 0;
-        }
-
-        // Add this month's outstanding to accumulated
-        accumulatedDebt[wallet.id] += outstandingThisMonth;
-
-        // Set the accumulated value for this month
-        dataPoint[wallet.id] = accumulatedDebt[wallet.id];
-      });
-
-      // For wallets that don't have data this month, carry forward previous value
-      Object.keys(accumulatedDebt).forEach((walletId) => {
-        if (dataPoint[walletId] === undefined) {
-          dataPoint[walletId] = accumulatedDebt[walletId];
-        }
-      });
-
-      return dataPoint;
+      monthGroups[stat.month][wallet.id] = stat.predictability_score;
     });
-  }, [monthlyBillStats, conversionRates, walletMap]);
 
-  // Get visible wallets
+    return Object.entries(monthGroups)
+      .map(([month, wallets]) => {
+        const dataPoint: ChartDataPoint = { month };
+        Object.entries(wallets).forEach(([walletId, score]) => {
+          dataPoint[walletId] = score;
+        });
+        return dataPoint;
+      })
+      .sort(
+        (a, b) =>
+          new Date(a.month as string).getTime() -
+          new Date(b.month as string).getTime(),
+      );
+  }, [predictabilityData, walletMap]);
+
   let visibleWallets;
   if (walletId) {
     const wallet = walletMap.get(walletId);
     visibleWallets = wallet ? [wallet] : [];
   } else {
-    const walletIds = new Set(monthlyBillStats?.map((b) => b.wallet_id) ?? []);
+    const walletIds = new Set(predictabilityData?.map((b) => b.wallet_id) ?? []);
     visibleWallets = Array.from(walletMap.values()).filter((w) =>
       walletIds.has(w.id),
     );
@@ -143,39 +118,38 @@ export function BillsHistoryChart({
 
   const chartConfig: ChartConfig = config;
 
-  // Calculate percentage change
+  const currentScore = React.useMemo(() => {
+    if (chartData.length === 0) return 0;
+    const lastMonth = chartData[chartData.length - 1];
+    const total = visibleWallets.reduce((sum, wallet) => {
+      return sum + ((lastMonth[wallet.id] as number) || 0);
+    }, 0);
+    return visibleWallets.length > 0 ? total / visibleWallets.length : 0;
+  }, [chartData, visibleWallets]);
+
   const calculatePercentageChange = () => {
     if (chartData.length < 2) return 0;
     const current = visibleWallets.reduce((total, wallet) => {
-      const debt = (chartData[chartData.length - 1][wallet.id] as number) || 0;
-      return total + debt;
-    }, 0);
+      const score = (chartData[chartData.length - 1][wallet.id] as number) || 0;
+      return total + score;
+    }, 0) / visibleWallets.length;
     const previous = visibleWallets.reduce((total, wallet) => {
-      const debt = (chartData[chartData.length - 2][wallet.id] as number) || 0;
-      return total + debt;
-    }, 0);
+      const score = (chartData[chartData.length - 2][wallet.id] as number) || 0;
+      return total + score;
+    }, 0) / visibleWallets.length;
     if (previous === 0) return current > 0 ? 100 : 0;
-    return ((current - previous) / Math.abs(previous)) * 100;
+    return ((current - previous) / previous) * 100;
   };
 
   const percentageChange = calculatePercentageChange();
-
-  // Calculate current total debt
-  const currentTotalDebt = React.useMemo(() => {
-    if (chartData.length === 0) return 0;
-    const lastMonth = chartData[chartData.length - 1];
-    return visibleWallets.reduce((total, wallet) => {
-      return total + ((lastMonth[wallet.id] as number) || 0);
-    }, 0);
-  }, [chartData, visibleWallets]);
 
   if (isLoading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Accumulated Bills Debt</CardTitle>
+          <CardTitle>Expense Predictability Score</CardTitle>
           <CardDescription>
-            Outstanding bills accumulated over time in {baseCurrency}
+            Budget stability measure (higher = more predictable)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -191,9 +165,9 @@ export function BillsHistoryChart({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Accumulated Bills Debt</CardTitle>
+          <CardTitle>Expense Predictability Score</CardTitle>
           <CardDescription>
-            Outstanding bills accumulated over time in {baseCurrency}
+            Budget stability measure (higher = more predictable)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -209,14 +183,14 @@ export function BillsHistoryChart({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Accumulated Bills Debt</CardTitle>
+          <CardTitle>Expense Predictability Score</CardTitle>
           <CardDescription>
-            Outstanding bills accumulated over time in {baseCurrency}
+            Budget stability measure (higher = more predictable)
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex h-64 items-center justify-center text-gray-500">
-            No bills data available for this period
+            No data available for this period
           </div>
         </CardContent>
       </Card>
@@ -226,18 +200,18 @@ export function BillsHistoryChart({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Accumulated Bills Debt</CardTitle>
+        <CardTitle>Expense Predictability Score</CardTitle>
         <CardDescription>
-          Outstanding bills accumulated over time in {baseCurrency}
+          Budget stability measure (higher = more predictable)
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-4">
           <div className="text-3xl font-bold">
-            <Money cents={Math.round(currentTotalDebt * 100)} currency={baseCurrency} />
+            {currentScore.toFixed(0)}
           </div>
           <p className="text-sm text-muted-foreground">
-            Current accumulated debt
+            Current predictability score
           </p>
         </div>
         <ChartContainer config={chartConfig}>
@@ -262,8 +236,7 @@ export function BillsHistoryChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => formatCurrency(value, baseCurrency)}
-              domain={[0, "auto"]}
+              domain={[0, 100]}
             />
             <ChartTooltip
               cursor={false}
@@ -283,7 +256,7 @@ export function BillsHistoryChart({
                         {payload.map((item) => {
                           const wallet = walletMap.get(item.dataKey as string);
                           if (!wallet) return null;
-                          const debt = item.value as number;
+                          const score = item.value as number;
                           return (
                             <div key={item.dataKey} className="flex items-center justify-between gap-2">
                               <div className="flex items-center gap-2">
@@ -293,10 +266,9 @@ export function BillsHistoryChart({
                                 />
                                 <span className="text-sm">{wallet.name}</span>
                               </div>
-                              <Money
-                                cents={Math.round(debt * 100)}
-                                currency={baseCurrency}
-                              />
+                              <span className="text-sm font-medium">
+                                {score.toFixed(0)}
+                              </span>
                             </div>
                           );
                         })}
@@ -313,7 +285,7 @@ export function BillsHistoryChart({
                 type="monotone"
                 stroke={chartConfig[wallet.id].color}
                 strokeWidth={2}
-                dot={false}
+                dot={true}
               />
             ))}
             <ChartLegend content={<ChartLegendContent />} />

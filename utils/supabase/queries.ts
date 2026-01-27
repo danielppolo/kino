@@ -1140,3 +1140,1178 @@ export const getMonthlyBillStats = async (
 
   return { data: result, error: null };
 };
+
+export interface BillDebtFlowData {
+  month: string;              // YYYY-MM-01 format
+  wallet_id: string;
+  debt_increase_cents: number; // Bills created this month (by created_at)
+  debt_decrease_cents: number; // Payments made this month (by transaction.date)
+  net_change_cents: number;    // increase - decrease
+}
+
+export const getBillDebtFlow = async (
+  client: TypedSupabaseClient,
+  params: {
+    walletId?: string;
+    from?: string;
+    to?: string;
+  },
+) => {
+  // Get all bills with payments
+  const { data: bills, error } = await listBillsWithPayments(client, {
+    walletId: params.walletId,
+  });
+
+  if (error || !bills) {
+    return { data: null, error };
+  }
+
+  // Track monthly increases (when bills are created) and decreases (when payments are made)
+  const monthlyIncreases: Record<string, Record<string, number>> = {};
+  const monthlyDecreases: Record<string, Record<string, number>> = {};
+
+  // Group debt increases by created_at month
+  bills.forEach((bill) => {
+    const createdDate = new Date(bill.created_at);
+    const month = `${createdDate.getFullYear()}-${String(createdDate.getMonth() + 1).padStart(2, "0")}-01`;
+
+    // Apply date filters
+    if (params.from && month < params.from) return;
+    if (params.to && month > params.to) return;
+
+    if (!monthlyIncreases[month]) {
+      monthlyIncreases[month] = {};
+    }
+
+    if (!monthlyIncreases[month][bill.wallet_id]) {
+      monthlyIncreases[month][bill.wallet_id] = 0;
+    }
+
+    monthlyIncreases[month][bill.wallet_id] += bill.amount_cents;
+  });
+
+  // Group debt decreases by transaction.date month
+  bills.forEach((bill) => {
+    bill.payments.forEach((payment) => {
+      if (!payment.transaction) return;
+
+      const paymentDate = new Date(payment.transaction.date);
+      const month = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, "0")}-01`;
+
+      // Apply date filters
+      if (params.from && month < params.from) return;
+      if (params.to && month > params.to) return;
+
+      if (!monthlyDecreases[month]) {
+        monthlyDecreases[month] = {};
+      }
+
+      if (!monthlyDecreases[month][bill.wallet_id]) {
+        monthlyDecreases[month][bill.wallet_id] = 0;
+      }
+
+      monthlyDecreases[month][bill.wallet_id] += Math.abs(payment.transaction.amount_cents);
+    });
+  });
+
+  // Combine increases and decreases into unified monthly data
+  const allMonths = new Set([
+    ...Object.keys(monthlyIncreases),
+    ...Object.keys(monthlyDecreases),
+  ]);
+
+  const result: BillDebtFlowData[] = [];
+
+  allMonths.forEach((month) => {
+    const walletIds = new Set([
+      ...Object.keys(monthlyIncreases[month] || {}),
+      ...Object.keys(monthlyDecreases[month] || {}),
+    ]);
+
+    walletIds.forEach((walletId) => {
+      const increase = monthlyIncreases[month]?.[walletId] || 0;
+      const decrease = monthlyDecreases[month]?.[walletId] || 0;
+
+      result.push({
+        month,
+        wallet_id: walletId,
+        debt_increase_cents: increase,
+        debt_decrease_cents: decrease,
+        net_change_cents: increase - decrease,
+      });
+    });
+  });
+
+  // Sort by month
+  result.sort((a, b) => a.month.localeCompare(b.month));
+
+  return { data: result, error: null };
+};
+
+export interface BillPaymentTimelineData {
+  month: string;
+  wallet_id: string;
+  avg_days_from_due: number;
+  on_time_count: number;
+  late_count: number;
+  total_count: number;
+}
+
+export const getBillPaymentTimeline = async (
+  client: TypedSupabaseClient,
+  params: {
+    walletId?: string;
+    from?: string;
+    to?: string;
+  },
+) => {
+  const { data: bills, error } = await listBillsWithPayments(client, {
+    walletId: params.walletId,
+  });
+
+  if (error || !bills) {
+    return { data: null, error };
+  }
+
+  // Only include bills that have at least one payment
+  const paidBills = bills.filter((bill) => bill.payments && bill.payments.length > 0);
+
+  const monthlyData: Record<string, BillPaymentTimelineData> = {};
+
+  paidBills.forEach((bill) => {
+    // Get the first payment date (assuming first payment is what we track)
+    const firstPayment = bill.payments[0];
+    if (!firstPayment?.transaction) return;
+
+    const dueDate = new Date(bill.due_date);
+    const paymentDate = new Date(firstPayment.transaction.date);
+    const month = `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, "0")}-01`;
+
+    // Apply date filters
+    if (params.from && month < params.from) return;
+    if (params.to && month > params.to) return;
+
+    // Calculate days difference (negative = early, positive = late)
+    const daysFromDue = Math.round(
+      (paymentDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    const key = `${bill.wallet_id}-${month}`;
+
+    if (!monthlyData[key]) {
+      monthlyData[key] = {
+        month,
+        wallet_id: bill.wallet_id,
+        avg_days_from_due: 0,
+        on_time_count: 0,
+        late_count: 0,
+        total_count: 0,
+      };
+    }
+
+    monthlyData[key].avg_days_from_due += daysFromDue;
+    monthlyData[key].total_count += 1;
+
+    if (daysFromDue <= 0) {
+      monthlyData[key].on_time_count += 1;
+    } else {
+      monthlyData[key].late_count += 1;
+    }
+  });
+
+  // Calculate averages
+  const result = Object.values(monthlyData).map((data) => ({
+    ...data,
+    avg_days_from_due: data.total_count > 0
+      ? data.avg_days_from_due / data.total_count
+      : 0,
+  })).sort((a, b) => a.month.localeCompare(b.month));
+
+  return { data: result, error: null };
+};
+
+export interface RecurringVsOneTimeData {
+  month: string;
+  wallet_id: string;
+  recurring_bills_cents: number;
+  one_time_bills_cents: number;
+  recurring_count: number;
+  one_time_count: number;
+}
+
+export const getRecurringVsOneTimeStats = async (
+  client: TypedSupabaseClient,
+  params: {
+    walletId?: string;
+    from?: string;
+    to?: string;
+  },
+) => {
+  const { data: bills, error } = await listBillsWithPayments(client, {
+    walletId: params.walletId,
+  });
+
+  if (error || !bills) {
+    return { data: null, error };
+  }
+
+  const monthlyData: Record<string, RecurringVsOneTimeData> = {};
+
+  bills.forEach((bill) => {
+    const dueDate = new Date(bill.due_date);
+    const month = `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, "0")}-01`;
+
+    // Apply date filters
+    if (params.from && month < params.from) return;
+    if (params.to && month > params.to) return;
+
+    const key = `${bill.wallet_id}-${month}`;
+
+    if (!monthlyData[key]) {
+      monthlyData[key] = {
+        month,
+        wallet_id: bill.wallet_id,
+        recurring_bills_cents: 0,
+        one_time_bills_cents: 0,
+        recurring_count: 0,
+        one_time_count: 0,
+      };
+    }
+
+    if (bill.is_recurring) {
+      monthlyData[key].recurring_bills_cents += bill.amount_cents;
+      monthlyData[key].recurring_count += 1;
+    } else {
+      monthlyData[key].one_time_bills_cents += bill.amount_cents;
+      monthlyData[key].one_time_count += 1;
+    }
+  });
+
+  const result = Object.values(monthlyData).sort((a, b) =>
+    a.month.localeCompare(b.month)
+  );
+
+  return { data: result, error: null };
+};
+
+export interface TransactionTypeData {
+  month: string;
+  wallet_id: string;
+  income_cents: number;
+  expense_cents: number;
+  transfer_cents: number;
+}
+
+export const getTransactionTypeDistribution = async (
+  client: TypedSupabaseClient,
+  params: {
+    walletId?: string;
+    from?: string;
+    to?: string;
+  },
+) => {
+  const PAGE_SIZE = 1000;
+  let page = 0;
+  let hasMore = true;
+  let allTransactions: any[] = [];
+
+  while (hasMore) {
+    let query = client
+      .from("transaction_list")
+      .select("*")
+      .order("date", { ascending: true })
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+    if (params.walletId) {
+      query = query.eq("wallet_id", params.walletId);
+    }
+
+    if (params.from) {
+      query = query.gte("date", params.from);
+    }
+
+    if (params.to) {
+      query = query.lte("date", params.to);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      return { data: null, error };
+    }
+
+    if (data) {
+      allTransactions = [...allTransactions, ...data];
+    }
+
+    hasMore = data?.length === PAGE_SIZE;
+    page++;
+  }
+
+  const monthlyData: Record<string, TransactionTypeData> = {};
+
+  allTransactions.forEach((transaction) => {
+    const date = new Date(transaction.date);
+    const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
+
+    const key = `${transaction.wallet_id}-${month}`;
+
+    if (!monthlyData[key]) {
+      monthlyData[key] = {
+        month,
+        wallet_id: transaction.wallet_id,
+        income_cents: 0,
+        expense_cents: 0,
+        transfer_cents: 0,
+      };
+    }
+
+    if (transaction.type === "income") {
+      monthlyData[key].income_cents += Math.abs(transaction.amount_cents);
+    } else if (transaction.type === "expense") {
+      monthlyData[key].expense_cents += Math.abs(transaction.amount_cents);
+    } else if (transaction.type === "transfer") {
+      monthlyData[key].transfer_cents += Math.abs(transaction.amount_cents);
+    }
+  });
+
+  const result = Object.values(monthlyData).sort((a, b) =>
+    a.month.localeCompare(b.month)
+  );
+
+  return { data: result, error: null };
+};
+
+export interface BillVelocityData {
+  month: string;
+  wallet_id: string;
+  avg_days_to_pay: number;
+  bill_count: number;
+}
+
+export const getBillVelocity = async (
+  client: TypedSupabaseClient,
+  params: {
+    walletId?: string;
+    from?: string;
+    to?: string;
+  },
+) => {
+  const { data: bills, error } = await listBillsWithPayments(client, {
+    walletId: params.walletId,
+  });
+
+  if (error || !bills) {
+    return { data: null, error };
+  }
+
+  const paidBills = bills.filter((bill) => bill.payments && bill.payments.length > 0);
+
+  const monthlyData: Record<string, BillVelocityData> = {};
+
+  paidBills.forEach((bill) => {
+    const firstPayment = bill.payments[0];
+    if (!firstPayment?.transaction) return;
+
+    const dueDate = new Date(bill.due_date);
+    const paymentDate = new Date(firstPayment.transaction.date);
+    const month = `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, "0")}-01`;
+
+    if (params.from && month < params.from) return;
+    if (params.to && month > params.to) return;
+
+    const daysToPayAfterDue = Math.max(
+      0,
+      Math.round((paymentDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
+    );
+
+    const key = `${bill.wallet_id}-${month}`;
+
+    if (!monthlyData[key]) {
+      monthlyData[key] = {
+        month,
+        wallet_id: bill.wallet_id,
+        avg_days_to_pay: 0,
+        bill_count: 0,
+      };
+    }
+
+    monthlyData[key].avg_days_to_pay += daysToPayAfterDue;
+    monthlyData[key].bill_count += 1;
+  });
+
+  const result = Object.values(monthlyData).map((data) => ({
+    ...data,
+    avg_days_to_pay: data.bill_count > 0 ? data.avg_days_to_pay / data.bill_count : 0,
+  })).sort((a, b) => a.month.localeCompare(b.month));
+
+  return { data: result, error: null };
+};
+
+export interface BillCoverageData {
+  wallet_id: string;
+  wallet_name: string;
+  current_balance_cents: number;
+  upcoming_bills_30_days_cents: number;
+  upcoming_bills_60_days_cents: number;
+  upcoming_bills_90_days_cents: number;
+  coverage_ratio_30: number;
+  coverage_ratio_60: number;
+  coverage_ratio_90: number;
+}
+
+export const getBillCoverageRatio = async (
+  client: TypedSupabaseClient,
+  params: {
+    walletId?: string;
+  },
+) => {
+  const { data: wallets, error: walletsError } = await client
+    .from("wallets")
+    .select("id, name, balance_cents");
+
+  if (walletsError || !wallets) {
+    return { data: null, error: walletsError };
+  }
+
+  const filteredWallets = params.walletId
+    ? wallets.filter((w) => w.id === params.walletId)
+    : wallets;
+
+  const { data: bills, error: billsError } = await listBillsWithPayments(client, {
+    walletId: params.walletId,
+  });
+
+  if (billsError || !bills) {
+    return { data: null, error: billsError };
+  }
+
+  const now = new Date();
+  const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const sixtyDaysFromNow = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+  const ninetyDaysFromNow = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+
+  const result: BillCoverageData[] = filteredWallets.map((wallet) => {
+    const walletBills = bills.filter((b) => b.wallet_id === wallet.id);
+
+    const upcoming30 = walletBills
+      .filter((b) => {
+        const dueDate = new Date(b.due_date);
+        return dueDate > now && dueDate <= thirtyDaysFromNow;
+      })
+      .reduce((sum, b) => sum + Math.max(0, b.amount_cents - b.paid_amount_cents), 0);
+
+    const upcoming60 = walletBills
+      .filter((b) => {
+        const dueDate = new Date(b.due_date);
+        return dueDate > now && dueDate <= sixtyDaysFromNow;
+      })
+      .reduce((sum, b) => sum + Math.max(0, b.amount_cents - b.paid_amount_cents), 0);
+
+    const upcoming90 = walletBills
+      .filter((b) => {
+        const dueDate = new Date(b.due_date);
+        return dueDate > now && dueDate <= ninetyDaysFromNow;
+      })
+      .reduce((sum, b) => sum + Math.max(0, b.amount_cents - b.paid_amount_cents), 0);
+
+    const balanceCents = wallet.balance_cents ?? 0;
+
+    return {
+      wallet_id: wallet.id,
+      wallet_name: wallet.name,
+      current_balance_cents: balanceCents,
+      upcoming_bills_30_days_cents: upcoming30,
+      upcoming_bills_60_days_cents: upcoming60,
+      upcoming_bills_90_days_cents: upcoming90,
+      coverage_ratio_30: upcoming30 > 0 ? balanceCents / upcoming30 : balanceCents > 0 ? 999 : 0,
+      coverage_ratio_60: upcoming60 > 0 ? balanceCents / upcoming60 : balanceCents > 0 ? 999 : 0,
+      coverage_ratio_90: upcoming90 > 0 ? balanceCents / upcoming90 : balanceCents > 0 ? 999 : 0,
+    };
+  });
+
+  return { data: result, error: null };
+};
+
+export interface CategoryTrendData {
+  month: string;
+  wallet_id: string;
+  category_id: string;
+  category_name: string;
+  amount_cents: number;
+}
+
+export const getCategoryTrends = async (
+  client: TypedSupabaseClient,
+  params: {
+    walletId?: string;
+    from?: string;
+    to?: string;
+    type?: "income" | "expense";
+  },
+) => {
+  const stats = await getMonthlyCategoryStats(client, {
+    walletId: params.walletId,
+    from: params.from,
+    to: params.to,
+    type: params.type,
+  });
+
+  if (stats.error || !stats.data) {
+    return { data: null, error: stats.error };
+  }
+
+  const result: CategoryTrendData[] = stats.data
+    .filter((stat) => stat.categories)
+    .map((stat) => ({
+      month: stat.month,
+      wallet_id: stat.wallet_id,
+      category_id: stat.category_id,
+      category_name: stat.categories?.name || "Unknown",
+      amount_cents: params.type === "income"
+        ? stat.income_cents
+        : params.type === "expense"
+        ? Math.abs(stat.outcome_cents)
+        : Math.abs(stat.net_cents),
+    }));
+
+  return { data: result, error: null };
+};
+
+export interface TagCloudData {
+  tag: string;
+  count: number;
+  total_amount_cents: number;
+}
+
+export const getTagCloudAnalytics = async (
+  client: TypedSupabaseClient,
+  params: {
+    walletId?: string;
+    from?: string;
+    to?: string;
+  },
+) => {
+  const PAGE_SIZE = 1000;
+  let page = 0;
+  let hasMore = true;
+  let allTransactions: any[] = [];
+
+  while (hasMore) {
+    let query = client
+      .from("transaction_list")
+      .select("*")
+      .order("date", { ascending: true })
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+    if (params.walletId) {
+      query = query.eq("wallet_id", params.walletId);
+    }
+
+    if (params.from) {
+      query = query.gte("date", params.from);
+    }
+
+    if (params.to) {
+      query = query.lte("date", params.to);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      return { data: null, error };
+    }
+
+    if (data) {
+      allTransactions = [...allTransactions, ...data];
+    }
+
+    hasMore = data?.length === PAGE_SIZE;
+    page++;
+  }
+
+  const tagStats: Record<string, TagCloudData> = {};
+
+  allTransactions.forEach((transaction) => {
+    if (!transaction.tag_ids || !Array.isArray(transaction.tag_ids)) return;
+
+    transaction.tag_ids.forEach((tag: string) => {
+      if (!tagStats[tag]) {
+        tagStats[tag] = {
+          tag,
+          count: 0,
+          total_amount_cents: 0,
+        };
+      }
+
+      tagStats[tag].count += 1;
+      tagStats[tag].total_amount_cents += Math.abs(transaction.amount_cents);
+    });
+  });
+
+  const result = Object.values(tagStats).sort((a, b) => b.count - a.count);
+
+  return { data: result, error: null };
+};
+
+export interface TransactionSizeData {
+  range: string;
+  count: number;
+  total_amount_cents: number;
+}
+
+export const getTransactionSizeDistribution = async (
+  client: TypedSupabaseClient,
+  params: {
+    walletId?: string;
+    from?: string;
+    to?: string;
+    type?: "income" | "expense";
+  },
+) => {
+  const PAGE_SIZE = 1000;
+  let page = 0;
+  let hasMore = true;
+  let allTransactions: any[] = [];
+
+  while (hasMore) {
+    let query = client
+      .from("transaction_list")
+      .select("*")
+      .order("date", { ascending: true })
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+    if (params.walletId) {
+      query = query.eq("wallet_id", params.walletId);
+    }
+
+    if (params.from) {
+      query = query.gte("date", params.from);
+    }
+
+    if (params.to) {
+      query = query.lte("date", params.to);
+    }
+
+    if (params.type) {
+      query = query.eq("type", params.type);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      return { data: null, error };
+    }
+
+    if (data) {
+      allTransactions = [...allTransactions, ...data];
+    }
+
+    hasMore = data?.length === PAGE_SIZE;
+    page++;
+  }
+
+  const ranges = [
+    { min: 0, max: 1000, label: "$0-$10" },
+    { min: 1000, max: 5000, label: "$10-$50" },
+    { min: 5000, max: 10000, label: "$50-$100" },
+    { min: 10000, max: 50000, label: "$100-$500" },
+    { min: 50000, max: 100000, label: "$500-$1000" },
+    { min: 100000, max: Infinity, label: "$1000+" },
+  ];
+
+  const distribution: Record<string, TransactionSizeData> = {};
+
+  ranges.forEach((range) => {
+    distribution[range.label] = {
+      range: range.label,
+      count: 0,
+      total_amount_cents: 0,
+    };
+  });
+
+  allTransactions.forEach((transaction) => {
+    const amount = Math.abs(transaction.amount_cents);
+
+    for (const range of ranges) {
+      if (amount >= range.min && amount < range.max) {
+        distribution[range.label].count += 1;
+        distribution[range.label].total_amount_cents += amount;
+        break;
+      }
+    }
+  });
+
+  const result = Object.values(distribution);
+
+  return { data: result, error: null };
+};
+
+export interface CurrencyExposureData {
+  currency: string;
+  transaction_count: number;
+  total_amount_cents: number;
+}
+
+export const getCurrencyExposure = async (
+  client: TypedSupabaseClient,
+  params: {
+    walletId?: string;
+    from?: string;
+    to?: string;
+  },
+) => {
+  const PAGE_SIZE = 1000;
+  let page = 0;
+  let hasMore = true;
+  let allTransactions: any[] = [];
+
+  while (hasMore) {
+    let query = client
+      .from("transaction_list")
+      .select("*")
+      .order("date", { ascending: true })
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+    if (params.walletId) {
+      query = query.eq("wallet_id", params.walletId);
+    }
+
+    if (params.from) {
+      query = query.gte("date", params.from);
+    }
+
+    if (params.to) {
+      query = query.lte("date", params.to);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      return { data: null, error };
+    }
+
+    if (data) {
+      allTransactions = [...allTransactions, ...data];
+    }
+
+    hasMore = data?.length === PAGE_SIZE;
+    page++;
+  }
+
+  const currencyStats: Record<string, CurrencyExposureData> = {};
+
+  allTransactions.forEach((transaction) => {
+    const currency = transaction.currency || "USD";
+
+    if (!currencyStats[currency]) {
+      currencyStats[currency] = {
+        currency,
+        transaction_count: 0,
+        total_amount_cents: 0,
+      };
+    }
+
+    currencyStats[currency].transaction_count += 1;
+    currencyStats[currency].total_amount_cents += Math.abs(transaction.amount_cents);
+  });
+
+  const result = Object.values(currencyStats).sort((a, b) => b.total_amount_cents - a.total_amount_cents);
+
+  return { data: result, error: null };
+};
+
+export interface BillsBurdenData {
+  month: string;
+  wallet_id: string;
+  total_bills_cents: number;
+  total_income_cents: number;
+  burden_ratio: number;
+}
+
+export const getBillBurdenRatio = async (
+  client: TypedSupabaseClient,
+  params: {
+    walletId?: string;
+    from?: string;
+    to?: string;
+  },
+) => {
+  const { data: billStats, error: billError } = await getMonthlyBillStats(client, params);
+
+  if (billError || !billStats) {
+    return { data: null, error: billError };
+  }
+
+  const { data: monthlyStats, error: statsError } = await getMonthlyStats(client, params);
+
+  if (statsError || !monthlyStats) {
+    return { data: null, error: statsError };
+  }
+
+  const result: BillsBurdenData[] = billStats.map((bill) => {
+    const stat = monthlyStats.find(
+      (s) => s.month === bill.month && s.wallet_id === bill.wallet_id
+    );
+
+    const totalIncome = stat ? stat.income_cents : 0;
+    const burdenRatio = totalIncome > 0 ? (bill.total_bills_cents / totalIncome) * 100 : 0;
+
+    return {
+      month: bill.month,
+      wallet_id: bill.wallet_id,
+      total_bills_cents: bill.total_bills_cents,
+      total_income_cents: totalIncome,
+      burden_ratio: burdenRatio,
+    };
+  });
+
+  return { data: result, error: null };
+};
+
+export interface ExpenseConcentrationData {
+  category_id: string;
+  category_name: string;
+  total_cents: number;
+  percentage: number;
+}
+
+export const getExpenseConcentration = async (
+  client: TypedSupabaseClient,
+  params: {
+    walletId?: string;
+    from?: string;
+    to?: string;
+    topN?: number;
+  },
+) => {
+  const stats = await getMonthlyCategoryStats(client, {
+    walletId: params.walletId,
+    from: params.from,
+    to: params.to,
+    type: "expense",
+  });
+
+  if (stats.error || !stats.data) {
+    return { data: null, error: stats.error };
+  }
+
+  const categoryTotals: Record<string, { name: string; total: number }> = {};
+
+  stats.data.forEach((stat) => {
+    if (!stat.categories) return;
+
+    if (!categoryTotals[stat.category_id]) {
+      categoryTotals[stat.category_id] = {
+        name: stat.categories.name || "Unknown",
+        total: 0,
+      };
+    }
+
+    categoryTotals[stat.category_id].total += Math.abs(stat.outcome_cents);
+  });
+
+  const totalExpenses = Object.values(categoryTotals).reduce(
+    (sum, cat) => sum + cat.total,
+    0
+  );
+
+  const sorted = Object.entries(categoryTotals)
+    .map(([id, data]) => ({
+      category_id: id,
+      category_name: data.name,
+      total_cents: data.total,
+      percentage: totalExpenses > 0 ? (data.total / totalExpenses) * 100 : 0,
+    }))
+    .sort((a, b) => b.total_cents - a.total_cents);
+
+  const topN = params.topN || 5;
+  const topCategories = sorted.slice(0, topN);
+  const otherCategories = sorted.slice(topN);
+
+  const result = [...topCategories];
+
+  if (otherCategories.length > 0) {
+    const otherTotal = otherCategories.reduce((sum, cat) => sum + cat.total_cents, 0);
+    result.push({
+      category_id: "other",
+      category_name: "Other",
+      total_cents: otherTotal,
+      percentage: totalExpenses > 0 ? (otherTotal / totalExpenses) * 100 : 0,
+    });
+  }
+
+  return { data: result, error: null };
+};
+
+export interface BillsVsDiscretionaryData {
+  month: string;
+  wallet_id: string;
+  bill_expenses_cents: number;
+  discretionary_expenses_cents: number;
+}
+
+export const getBillsVsDiscretionarySpending = async (
+  client: TypedSupabaseClient,
+  params: {
+    walletId?: string;
+    from?: string;
+    to?: string;
+  },
+) => {
+  const { data: billStats, error: billError } = await getMonthlyBillStats(client, params);
+
+  if (billError || !billStats) {
+    return { data: null, error: billError };
+  }
+
+  const { data: monthlyStats, error: statsError } = await getMonthlyStats(client, params);
+
+  if (statsError || !monthlyStats) {
+    return { data: null, error: statsError };
+  }
+
+  const result: BillsVsDiscretionaryData[] = monthlyStats.map((stat) => {
+    const bill = billStats.find(
+      (b) => b.month === stat.month && b.wallet_id === stat.wallet_id
+    );
+
+    const billExpenses = bill ? bill.total_paid_cents : 0;
+    const totalExpenses = Math.abs(stat.outcome_cents);
+    const discretionaryExpenses = Math.max(0, totalExpenses - billExpenses);
+
+    return {
+      month: stat.month,
+      wallet_id: stat.wallet_id,
+      bill_expenses_cents: billExpenses,
+      discretionary_expenses_cents: discretionaryExpenses,
+    };
+  });
+
+  return { data: result, error: null };
+};
+
+export interface CashFlowAfterBillsData {
+  month: string;
+  wallet_id: string;
+  income_cents: number;
+  bills_cents: number;
+  other_expenses_cents: number;
+  net_after_bills_cents: number;
+}
+
+export const getCashFlowAfterBills = async (
+  client: TypedSupabaseClient,
+  params: {
+    walletId?: string;
+    from?: string;
+    to?: string;
+  },
+) => {
+  const { data: billStats, error: billError } = await getMonthlyBillStats(client, params);
+
+  if (billError || !billStats) {
+    return { data: null, error: billError };
+  }
+
+  const { data: monthlyStats, error: statsError } = await getMonthlyStats(client, params);
+
+  if (statsError || !monthlyStats) {
+    return { data: null, error: statsError };
+  }
+
+  const result: CashFlowAfterBillsData[] = monthlyStats.map((stat) => {
+    const bill = billStats.find(
+      (b) => b.month === stat.month && b.wallet_id === stat.wallet_id
+    );
+
+    const billExpenses = bill ? bill.total_paid_cents : 0;
+    const totalExpenses = Math.abs(stat.outcome_cents);
+    const otherExpenses = Math.max(0, totalExpenses - billExpenses);
+    const income = stat.income_cents;
+    const netAfterBills = income - billExpenses - otherExpenses;
+
+    return {
+      month: stat.month,
+      wallet_id: stat.wallet_id,
+      income_cents: income,
+      bills_cents: billExpenses,
+      other_expenses_cents: otherExpenses,
+      net_after_bills_cents: netAfterBills,
+    };
+  });
+
+  return { data: result, error: null };
+};
+
+export interface ExpensePredictabilityData {
+  month: string;
+  wallet_id: string;
+  bill_expenses_cents: number;
+  discretionary_expenses_cents: number;
+  predictability_score: number;
+}
+
+export const getExpensePredictability = async (
+  client: TypedSupabaseClient,
+  params: {
+    walletId?: string;
+    from?: string;
+    to?: string;
+  },
+) => {
+  const { data: billsVsDiscretionary, error } = await getBillsVsDiscretionarySpending(client, params);
+
+  if (error || !billsVsDiscretionary) {
+    return { data: null, error };
+  }
+
+  const walletGroups: Record<string, number[]> = {};
+
+  billsVsDiscretionary.forEach((stat) => {
+    if (!walletGroups[stat.wallet_id]) {
+      walletGroups[stat.wallet_id] = [];
+    }
+    walletGroups[stat.wallet_id].push(stat.discretionary_expenses_cents);
+  });
+
+  const result: ExpensePredictabilityData[] = billsVsDiscretionary.map((stat, index, arr) => {
+    const discretionaryExpenses = walletGroups[stat.wallet_id] || [];
+
+    if (discretionaryExpenses.length < 2) {
+      return {
+        ...stat,
+        predictability_score: 100,
+      };
+    }
+
+    const mean = discretionaryExpenses.reduce((a, b) => a + b, 0) / discretionaryExpenses.length;
+    const variance = discretionaryExpenses.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / discretionaryExpenses.length;
+    const stdDev = Math.sqrt(variance);
+
+    const coefficientOfVariation = mean > 0 ? (stdDev / mean) * 100 : 0;
+    const predictabilityScore = Math.max(0, 100 - coefficientOfVariation);
+
+    return {
+      ...stat,
+      predictability_score: predictabilityScore,
+    };
+  });
+
+  return { data: result, error: null };
+};
+
+export interface TransferFlowData {
+  from_wallet_id: string;
+  to_wallet_id: string;
+  from_wallet_name: string;
+  to_wallet_name: string;
+  total_amount_cents: number;
+  transfer_count: number;
+}
+
+export const getTransferFlowData = async (
+  client: TypedSupabaseClient,
+  params: {
+    walletId?: string;
+    from?: string;
+    to?: string;
+  },
+) => {
+  const PAGE_SIZE = 1000;
+  let page = 0;
+  let hasMore = true;
+  let allTransfers: any[] = [];
+
+  while (hasMore) {
+    let query = client
+      .from("transaction_list")
+      .select("*")
+      .eq("type", "transfer")
+      .not("transfer_id", "is", null)
+      .order("date", { ascending: true })
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+    if (params.walletId) {
+      query = query.eq("wallet_id", params.walletId);
+    }
+
+    if (params.from) {
+      query = query.gte("date", params.from);
+    }
+
+    if (params.to) {
+      query = query.lte("date", params.to);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      return { data: null, error };
+    }
+
+    if (data) {
+      allTransfers = [...allTransfers, ...data];
+    }
+
+    hasMore = data?.length === PAGE_SIZE;
+    page++;
+  }
+
+  const { data: wallets, error: walletsError } = await client
+    .from("wallets")
+    .select("id, name");
+
+  if (walletsError || !wallets) {
+    return { data: null, error: walletsError };
+  }
+
+  const walletMap = new Map(wallets.map((w) => [w.id, w.name]));
+
+  const transferGroups: Record<string, {
+    from_wallet_id: string;
+    to_wallet_id: string;
+    total_amount_cents: number;
+    transfer_count: number;
+  }> = {};
+
+  const processedTransfers = new Set<string>();
+
+  allTransfers.forEach((transfer) => {
+    if (processedTransfers.has(transfer.transfer_id)) return;
+
+    const relatedTransfer = allTransfers.find(
+      (t) => t.transfer_id === transfer.transfer_id && t.id !== transfer.id
+    );
+
+    if (!relatedTransfer) return;
+
+    processedTransfers.add(transfer.transfer_id);
+
+    const fromWallet = transfer.amount_cents < 0 ? transfer.wallet_id : relatedTransfer.wallet_id;
+    const toWallet = transfer.amount_cents < 0 ? relatedTransfer.wallet_id : transfer.wallet_id;
+    const amount = Math.abs(transfer.amount_cents);
+
+    const key = `${fromWallet}-${toWallet}`;
+
+    if (!transferGroups[key]) {
+      transferGroups[key] = {
+        from_wallet_id: fromWallet,
+        to_wallet_id: toWallet,
+        total_amount_cents: 0,
+        transfer_count: 0,
+      };
+    }
+
+    transferGroups[key].total_amount_cents += amount;
+    transferGroups[key].transfer_count += 1;
+  });
+
+  const result: TransferFlowData[] = Object.values(transferGroups).map((group) => ({
+    ...group,
+    from_wallet_name: walletMap.get(group.from_wallet_id) || "Unknown",
+    to_wallet_name: walletMap.get(group.to_wallet_id) || "Unknown",
+  })).sort((a, b) => b.total_amount_cents - a.total_amount_cents);
+
+  return { data: result, error: null };
+};
