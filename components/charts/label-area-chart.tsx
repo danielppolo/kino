@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import Color from "../shared/color";
 import { TransactionLink } from "../shared/transaction-link";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
-import { formatCurrency } from "@/utils/chart-helpers";
+import { formatCurrency, parseMonthDate } from "@/utils/chart-helpers";
 
 import {
   Accordion,
@@ -360,7 +360,7 @@ export default function LabelAreaChart({
               axisLine={false}
               tickMargin={8}
               tickFormatter={(value) => {
-                const date = new Date(value);
+                const date = parseMonthDate(value);
                 return date.toLocaleDateString("en-US", {
                   month: "short",
                   year: "2-digit",
@@ -397,7 +397,7 @@ export default function LabelAreaChart({
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
                     <div className="grid gap-2">
                       <p className="text-sm font-medium">
-                        {new Date(label).toLocaleDateString("en-US", {
+                        {parseMonthDate(label).toLocaleDateString("en-US", {
                           month: "long",
                           year: "numeric",
                         })}

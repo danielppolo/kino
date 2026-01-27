@@ -19,6 +19,7 @@ import {
 import { Money } from "@/components/ui/money";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency } from "@/contexts/settings-context";
+import { parseMonthDate } from "@/utils/chart-helpers";
 import { TransactionList } from "@/utils/supabase/types";
 
 // Helper function for YAxis tick formatting since it can't use React components
@@ -104,7 +105,7 @@ export function OutcomeAreaChart({ transactions }: OutcomeAreaChartProps) {
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => format(new Date(value), "MMM yyyy")}
+              tickFormatter={(value) => format(parseMonthDate(value), "MMM yyyy")}
             />
             <YAxis
               tickLine={false}
@@ -114,7 +115,7 @@ export function OutcomeAreaChart({ transactions }: OutcomeAreaChartProps) {
             />
             <ChartTooltip
               cursor={false}
-              labelFormatter={(value) => format(new Date(value), "MMMM yyyy")}
+              labelFormatter={(value) => format(parseMonthDate(value), "MMMM yyyy")}
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
                 return (
@@ -122,7 +123,7 @@ export function OutcomeAreaChart({ transactions }: OutcomeAreaChartProps) {
                     <div className="grid gap-2">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-medium">
-                          {format(new Date(label), "MMMM yyyy")}
+                          {format(parseMonthDate(label), "MMMM yyyy")}
                         </span>
                         <span className="text-sm font-medium">
                           <Money
