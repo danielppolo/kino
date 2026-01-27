@@ -1,17 +1,16 @@
 import React from "react";
 
 import { AccumulatedAreaChart } from "@/components/charts/accumulated-area-chart";
-import { BillBalanceLineChart } from "@/components/charts/bill-balance-line-chart";
 import { BillBurdenRatioChart } from "@/components/charts/bill-burden-ratio-chart";
 import { BillCoverageRatioChart } from "@/components/charts/bill-coverage-ratio-chart";
 import { BillDebtFlowChart } from "@/components/charts/bill-debt-flow-chart";
 import { BillPaymentRateChart } from "@/components/charts/bill-payment-rate-chart";
 import { BillPaymentTimelineChart } from "@/components/charts/bill-payment-timeline-chart";
+import { BillVelocityGaugeChart } from "@/components/charts/bill-velocity-gauge-chart";
 import { BillsHistoryChart } from "@/components/charts/bills-history-chart";
 import { BillsVsDiscretionaryChart } from "@/components/charts/bills-vs-discretionary-chart";
-import { BillVelocityGaugeChart } from "@/components/charts/bill-velocity-gauge-chart";
-import { CashflowAreaChart } from "@/components/charts/cashflow-area-chart";
 import { CashFlowAfterBillsChart } from "@/components/charts/cash-flow-after-bills-chart";
+import { CashflowAreaChart } from "@/components/charts/cashflow-area-chart";
 import { CategoryTrendsChart } from "@/components/charts/category-trends-chart";
 import { CurrencyExposureChart } from "@/components/charts/currency-exposure-chart";
 import { ExpenseConcentrationChart } from "@/components/charts/expense-concentration-chart";
@@ -23,7 +22,6 @@ import { RecurringVsOnetimeBillsChart } from "@/components/charts/recurring-vs-o
 import { TagCloudAnalyticsChart } from "@/components/charts/tag-cloud-analytics-chart";
 import { TransactionSizeDistributionChart } from "@/components/charts/transaction-size-distribution-chart";
 import { TransactionTypeDistributionChart } from "@/components/charts/transaction-type-distribution-chart";
-import { TransferFlowDiagramChart } from "@/components/charts/transfer-flow-diagram-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Filters } from "@/utils/supabase/queries";
 
@@ -54,10 +52,18 @@ async function InfographicsPage({ searchParams }: PageParams) {
         <TransactionTypeDistributionChart from={filters.from} to={filters.to} />
       </div>
       <div className="md:col-span-2 lg:col-span-4">
-        <CategoryTrendsChart from={filters.from} to={filters.to} type="expense" />
+        <CategoryTrendsChart
+          from={filters.from}
+          to={filters.to}
+          type="expense"
+        />
       </div>
       <div className="md:col-span-2 lg:col-span-4">
-        <CategoryTrendsChart from={filters.from} to={filters.to} type="income" />
+        <CategoryTrendsChart
+          from={filters.from}
+          to={filters.to}
+          type="income"
+        />
       </div>
 
       {/* Label Analysis */}
@@ -100,10 +106,18 @@ async function InfographicsPage({ searchParams }: PageParams) {
 
       {/* Expense Analysis */}
       <div className="md:col-span-2 lg:col-span-2">
-        <ExpenseConcentrationChart from={filters.from} to={filters.to} topN={5} />
+        <ExpenseConcentrationChart
+          from={filters.from}
+          to={filters.to}
+          topN={5}
+        />
       </div>
       <div className="md:col-span-2 lg:col-span-2">
-        <TransactionSizeDistributionChart from={filters.from} to={filters.to} type="expense" />
+        <TransactionSizeDistributionChart
+          from={filters.from}
+          to={filters.to}
+          type="expense"
+        />
       </div>
       <div className="md:col-span-2 lg:col-span-2">
         <TagCloudAnalyticsChart from={filters.from} to={filters.to} />
@@ -113,9 +127,9 @@ async function InfographicsPage({ searchParams }: PageParams) {
       </div>
 
       {/* Transfer Analysis */}
-      <div className="md:col-span-2 lg:col-span-4">
+      {/* <div className="md:col-span-2 lg:col-span-4">
         <TransferFlowDiagramChart from={filters.from} to={filters.to} />
-      </div>
+      </div> */}
 
       {/* Bills Analysis */}
       <div className="md:col-span-2 lg:col-span-4">
