@@ -133,29 +133,29 @@ export function TransactionTypeDistributionChart({
     visibleWallets = wallet ? [wallet] : [];
   } else {
     const walletIds = new Set(typeData?.map((b) => b.wallet_id) ?? []);
-    visibleWallets = Array.from(walletMap.values()).filter((w) =>
-      walletIds.has(w.id),
+    visibleWallets = Array.from(walletMap.values()).filter(
+      (w) => walletIds.has(w.id) && w.visible,
     );
   }
 
-  const config = visibleWallets.reduce(
-    (acc, wallet) => ({
+  const config = visibleWallets.reduce((acc, wallet) => {
+    const baseColor = wallet.color || "#888888";
+    return {
       ...acc,
       [`${wallet.id}_income`]: {
         label: `${wallet.name} - Income`,
-        color: "hsl(142, 76%, 36%)",
+        color: "hsl(142, 76%, 36%)", // Green for income
       },
       [`${wallet.id}_expense`]: {
         label: `${wallet.name} - Expense`,
-        color: "hsl(0, 84%, 60%)",
+        color: "hsl(0, 84%, 60%)", // Red for expense
       },
       [`${wallet.id}_transfer`]: {
         label: `${wallet.name} - Transfer`,
-        color: "hsl(217, 91%, 60%)",
+        color: baseColor, // Use wallet color for transfers
       },
-    }),
-    {} as ChartConfig,
-  );
+    };
+  }, {} as ChartConfig);
 
   const chartConfig: ChartConfig = config;
 
@@ -165,18 +165,22 @@ export function TransactionTypeDistributionChart({
       const income =
         (chartData[chartData.length - 1][`${wallet.id}_income`] as number) || 0;
       const expense =
-        (chartData[chartData.length - 1][`${wallet.id}_expense`] as number) || 0;
+        (chartData[chartData.length - 1][`${wallet.id}_expense`] as number) ||
+        0;
       const transfer =
-        (chartData[chartData.length - 1][`${wallet.id}_transfer`] as number) || 0;
+        (chartData[chartData.length - 1][`${wallet.id}_transfer`] as number) ||
+        0;
       return total + income + expense + transfer;
     }, 0);
     const previous = visibleWallets.reduce((total, wallet) => {
       const income =
         (chartData[chartData.length - 2][`${wallet.id}_income`] as number) || 0;
       const expense =
-        (chartData[chartData.length - 2][`${wallet.id}_expense`] as number) || 0;
+        (chartData[chartData.length - 2][`${wallet.id}_expense`] as number) ||
+        0;
       const transfer =
-        (chartData[chartData.length - 2][`${wallet.id}_transfer`] as number) || 0;
+        (chartData[chartData.length - 2][`${wallet.id}_transfer`] as number) ||
+        0;
       return total + income + expense + transfer;
     }, 0);
     if (previous === 0) return current > 0 ? 100 : 0;
@@ -290,7 +294,9 @@ export function TransactionTypeDistributionChart({
 
                 payload.forEach((item) => {
                   const dataKey = item.dataKey as string;
-                  const match = dataKey.match(/^(.+)_(income|expense|transfer)$/);
+                  const match = dataKey.match(
+                    /^(.+)_(income|expense|transfer)$/,
+                  );
                   if (match) {
                     const [, walletId, type] = match;
                     if (!walletGroups[walletId]) {
@@ -324,7 +330,10 @@ export function TransactionTypeDistributionChart({
                                 <div className="flex items-center gap-2">
                                   <div
                                     className="h-2 w-2 rounded-full"
-                                    style={{ backgroundColor: wallet.color }}
+                                    style={{
+                                      backgroundColor:
+                                        wallet.color || "#888888",
+                                    }}
                                   />
                                   <span className="text-sm font-medium">
                                     {wallet.name}
@@ -369,40 +378,41 @@ export function TransactionTypeDistributionChart({
                 );
               }}
             />
-            {visibleWallets.map((wallet) => (
-              <React.Fragment key={wallet.id}>
-                <Area
-                  dataKey={`${wallet.id}_income`}
-                  name={`${wallet.name} - Income`}
-                  type="monotone"
-                  fill={chartConfig[`${wallet.id}_income`].color}
-                  fillOpacity={0.5}
-                  stroke={chartConfig[`${wallet.id}_income`].color}
-                  strokeWidth={2}
-                  stackId="transactions"
-                />
-                <Area
-                  dataKey={`${wallet.id}_expense`}
-                  name={`${wallet.name} - Expense`}
-                  type="monotone"
-                  fill={chartConfig[`${wallet.id}_expense`].color}
-                  fillOpacity={0.5}
-                  stroke={chartConfig[`${wallet.id}_expense`].color}
-                  strokeWidth={2}
-                  stackId="transactions"
-                />
-                <Area
-                  dataKey={`${wallet.id}_transfer`}
-                  name={`${wallet.name} - Transfer`}
-                  type="monotone"
-                  fill={chartConfig[`${wallet.id}_transfer`].color}
-                  fillOpacity={0.5}
-                  stroke={chartConfig[`${wallet.id}_transfer`].color}
-                  strokeWidth={2}
-                  stackId="transactions"
-                />
-              </React.Fragment>
-            ))}
+            {visibleWallets.flatMap((wallet) => [
+              <Area
+                key={`${wallet.id}_income`}
+                dataKey={`${wallet.id}_income`}
+                name={`${wallet.name} - Income`}
+                type="monotone"
+                fill={chartConfig[`${wallet.id}_income`].color}
+                fillOpacity={0.5}
+                stroke={chartConfig[`${wallet.id}_income`].color}
+                strokeWidth={2}
+                stackId="transactions"
+              />,
+              <Area
+                key={`${wallet.id}_expense`}
+                dataKey={`${wallet.id}_expense`}
+                name={`${wallet.name} - Expense`}
+                type="monotone"
+                fill={chartConfig[`${wallet.id}_expense`].color}
+                fillOpacity={0.5}
+                stroke={chartConfig[`${wallet.id}_expense`].color}
+                strokeWidth={2}
+                stackId="transactions"
+              />,
+              <Area
+                key={`${wallet.id}_transfer`}
+                dataKey={`${wallet.id}_transfer`}
+                name={`${wallet.name} - Transfer`}
+                type="monotone"
+                fill={chartConfig[`${wallet.id}_transfer`].color}
+                fillOpacity={0.5}
+                stroke={chartConfig[`${wallet.id}_transfer`].color}
+                strokeWidth={2}
+                stackId="transactions"
+              />,
+            ])}
             <ChartLegend content={<ChartLegendContent />} />
           </AreaChart>
         </ChartContainer>
