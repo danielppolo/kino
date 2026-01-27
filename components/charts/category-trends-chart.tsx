@@ -2,7 +2,7 @@
 
 import React from "react";
 import { format } from "date-fns";
-import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
 
@@ -26,12 +26,13 @@ import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import { formatCurrency } from "@/utils/chart-helpers";
 import { createClient } from "@/utils/supabase/client";
-import { getMonthlyBillStats } from "@/utils/supabase/queries";
+import { getCategoryTrends } from "@/utils/supabase/queries";
 
-interface BillsHistoryChartProps {
+interface CategoryTrendsChartProps {
   walletId?: string;
   from?: string;
   to?: string;
+  type?: "income" | "expense";
 }
 
 interface ChartDataPoint {
@@ -39,23 +40,38 @@ interface ChartDataPoint {
   [key: string]: number | string;
 }
 
-export function BillsHistoryChart({
+const CATEGORY_COLORS = [
+  "hsl(142, 76%, 36%)",
+  "hsl(221, 83%, 53%)",
+  "hsl(262, 83%, 58%)",
+  "hsl(291, 64%, 42%)",
+  "hsl(24, 70%, 50%)",
+  "hsl(43, 89%, 38%)",
+  "hsl(168, 76%, 42%)",
+  "hsl(199, 89%, 48%)",
+  "hsl(339, 82%, 52%)",
+  "hsl(48, 96%, 53%)",
+];
+
+export function CategoryTrendsChart({
   walletId,
   from,
   to,
-}: BillsHistoryChartProps) {
+  type = "expense",
+}: CategoryTrendsChartProps) {
   const {
-    data: monthlyBillStats,
+    data: categoryData,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["bills-history-chart", walletId, from, to],
+    queryKey: ["category-trends", walletId, from, to, type],
     queryFn: async () => {
       const supabase = await createClient();
-      const { data, error } = await getMonthlyBillStats(supabase, {
+      const { data, error } = await getCategoryTrends(supabase, {
         walletId,
         from,
         to,
+        type,
       });
 
       if (error) throw error;
@@ -66,76 +82,94 @@ export function BillsHistoryChart({
   const [wallets, walletMap] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
 
-  // Process data to calculate accumulated debt over time
   const chartData: ChartDataPoint[] = React.useMemo(() => {
-    if (!monthlyBillStats || monthlyBillStats.length === 0) return [];
+    if (!categoryData) return [];
 
-    // Sort by month first
-    const sortedStats = [...monthlyBillStats].sort((a, b) =>
-      a.month.localeCompare(b.month)
-    );
+    const monthGroups: Record<string, Record<string, number>> = {};
 
-    // Track accumulated debt per wallet
-    const accumulatedDebt: Record<string, number> = {};
+    categoryData.forEach((stat) => {
+      if (!monthGroups[stat.month]) {
+        monthGroups[stat.month] = {};
+      }
 
-    // Get all unique months
-    const allMonths = Array.from(new Set(sortedStats.map((s) => s.month))).sort();
+      // Apply currency conversion
+      const wallet = walletMap.get(stat.wallet_id);
+      if (!wallet) return;
 
-    // Calculate accumulated debt for each month
-    return allMonths.map((month) => {
-      const dataPoint: ChartDataPoint = { month };
+      const rate = conversionRates[wallet.currency]?.rate ?? 1;
+      const convertedAmount = (stat.amount_cents * rate) / 100;
 
-      // Get stats for this month
-      const monthStats = sortedStats.filter((s) => s.month === month);
-
-      monthStats.forEach((stat) => {
-        const wallet = walletMap.get(stat.wallet_id);
-        if (!wallet) return;
-
-        const rate = conversionRates[wallet.currency]?.rate ?? 1;
-        const outstandingThisMonth = (stat.total_outstanding_cents * rate) / 100;
-
-        // Initialize if first time seeing this wallet
-        if (accumulatedDebt[wallet.id] === undefined) {
-          accumulatedDebt[wallet.id] = 0;
-        }
-
-        // Add this month's outstanding to accumulated
-        accumulatedDebt[wallet.id] += outstandingThisMonth;
-
-        // Set the accumulated value for this month
-        dataPoint[wallet.id] = accumulatedDebt[wallet.id];
-      });
-
-      // For wallets that don't have data this month, carry forward previous value
-      Object.keys(accumulatedDebt).forEach((walletId) => {
-        if (dataPoint[walletId] === undefined) {
-          dataPoint[walletId] = accumulatedDebt[walletId];
-        }
-      });
-
-      return dataPoint;
+      // Aggregate by category (sum if multiple wallets have same category)
+      if (!monthGroups[stat.month][stat.category_id]) {
+        monthGroups[stat.month][stat.category_id] = 0;
+      }
+      monthGroups[stat.month][stat.category_id] += convertedAmount;
     });
-  }, [monthlyBillStats, conversionRates, walletMap]);
 
-  // Get visible wallets
-  let visibleWallets;
-  if (walletId) {
-    const wallet = walletMap.get(walletId);
-    visibleWallets = wallet ? [wallet] : [];
-  } else {
-    const walletIds = new Set(monthlyBillStats?.map((b) => b.wallet_id) ?? []);
-    visibleWallets = Array.from(walletMap.values()).filter((w) =>
-      walletIds.has(w.id),
-    );
-  }
+    // Collect all values to calculate percentiles
+    const allValues: number[] = [];
+    Object.values(monthGroups).forEach((categories) => {
+      Object.values(categories).forEach((amount) => {
+        allValues.push(amount);
+      });
+    });
 
-  const config = visibleWallets.reduce(
-    (acc, wallet) => ({
+    // Calculate 95th percentile to cap outliers
+    const sorted = [...allValues].sort((a, b) => a - b);
+    const p95Index = Math.floor(sorted.length * 0.95);
+    const p95Value = sorted[p95Index] || Infinity;
+
+    // Cap values at 95th percentile to normalize the chart
+    return Object.entries(monthGroups)
+      .map(([month, categories]) => {
+        const dataPoint: ChartDataPoint = { month };
+        Object.entries(categories).forEach(([categoryId, amount]) => {
+          // Cap extreme values to keep chart readable
+          dataPoint[categoryId] = Math.min(amount, p95Value);
+        });
+        return dataPoint;
+      })
+      .sort(
+        (a, b) =>
+          new Date(a.month as string).getTime() -
+          new Date(b.month as string).getTime(),
+      );
+  }, [categoryData, conversionRates, walletMap]);
+
+  const visibleCategories = React.useMemo(() => {
+    if (!categoryData) return [];
+
+    const categoryMap = new Map<string, { id: string; name: string; total: number }>();
+
+    categoryData.forEach((stat) => {
+      if (!categoryMap.has(stat.category_id)) {
+        categoryMap.set(stat.category_id, {
+          id: stat.category_id,
+          name: stat.category_name,
+          total: 0,
+        });
+      }
+      const cat = categoryMap.get(stat.category_id)!;
+
+      // Apply currency conversion for totals
+      const wallet = walletMap.get(stat.wallet_id);
+      if (wallet) {
+        const rate = conversionRates[wallet.currency]?.rate ?? 1;
+        cat.total += (stat.amount_cents * rate);
+      }
+    });
+
+    return Array.from(categoryMap.values())
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10);
+  }, [categoryData, conversionRates, walletMap]);
+
+  const config = visibleCategories.reduce(
+    (acc, category, index) => ({
       ...acc,
-      [wallet.id]: {
-        label: wallet.name,
-        color: wallet.color || "hsl(var(--primary))",
+      [category.id]: {
+        label: category.name,
+        color: CATEGORY_COLORS[index % CATEGORY_COLORS.length],
       },
     }),
     {} as ChartConfig,
@@ -143,39 +177,31 @@ export function BillsHistoryChart({
 
   const chartConfig: ChartConfig = config;
 
-  // Calculate percentage change
   const calculatePercentageChange = () => {
     if (chartData.length < 2) return 0;
-    const current = visibleWallets.reduce((total, wallet) => {
-      const debt = (chartData[chartData.length - 1][wallet.id] as number) || 0;
-      return total + debt;
+    const current = visibleCategories.reduce((total, category) => {
+      const amount =
+        (chartData[chartData.length - 1][category.id] as number) || 0;
+      return total + amount;
     }, 0);
-    const previous = visibleWallets.reduce((total, wallet) => {
-      const debt = (chartData[chartData.length - 2][wallet.id] as number) || 0;
-      return total + debt;
+    const previous = visibleCategories.reduce((total, category) => {
+      const amount =
+        (chartData[chartData.length - 2][category.id] as number) || 0;
+      return total + amount;
     }, 0);
     if (previous === 0) return current > 0 ? 100 : 0;
-    return ((current - previous) / Math.abs(previous)) * 100;
+    return ((current - previous) / previous) * 100;
   };
 
   const percentageChange = calculatePercentageChange();
-
-  // Calculate current total debt
-  const currentTotalDebt = React.useMemo(() => {
-    if (chartData.length === 0) return 0;
-    const lastMonth = chartData[chartData.length - 1];
-    return visibleWallets.reduce((total, wallet) => {
-      return total + ((lastMonth[wallet.id] as number) || 0);
-    }, 0);
-  }, [chartData, visibleWallets]);
 
   if (isLoading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Accumulated Bills Debt</CardTitle>
+          <CardTitle>Category Trends</CardTitle>
           <CardDescription>
-            Outstanding bills accumulated over time in {baseCurrency}
+            {type === "income" ? "Income" : "Expense"} categories over time in {baseCurrency}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -191,9 +217,9 @@ export function BillsHistoryChart({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Accumulated Bills Debt</CardTitle>
+          <CardTitle>Category Trends</CardTitle>
           <CardDescription>
-            Outstanding bills accumulated over time in {baseCurrency}
+            {type === "income" ? "Income" : "Expense"} categories over time in {baseCurrency}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -209,14 +235,14 @@ export function BillsHistoryChart({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Accumulated Bills Debt</CardTitle>
+          <CardTitle>Category Trends</CardTitle>
           <CardDescription>
-            Outstanding bills accumulated over time in {baseCurrency}
+            {type === "income" ? "Income" : "Expense"} categories over time in {baseCurrency}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex h-64 items-center justify-center text-gray-500">
-            No bills data available for this period
+            No category data available for this period
           </div>
         </CardContent>
       </Card>
@@ -226,22 +252,14 @@ export function BillsHistoryChart({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Accumulated Bills Debt</CardTitle>
+        <CardTitle>Category Trends</CardTitle>
         <CardDescription>
-          Outstanding bills accumulated over time in {baseCurrency}
+          Top {type === "income" ? "income" : "expense"} categories over time in {baseCurrency} (extreme outliers normalized)
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="mb-4">
-          <div className="text-3xl font-bold">
-            <Money cents={Math.round(currentTotalDebt * 100)} currency={baseCurrency} />
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Current accumulated debt
-          </p>
-        </div>
         <ChartContainer config={chartConfig}>
-          <LineChart
+          <BarChart
             data={chartData}
             margin={{
               left: 12,
@@ -281,20 +299,22 @@ export function BillsHistoryChart({
                       </div>
                       <div className="grid gap-1">
                         {payload.map((item) => {
-                          const wallet = walletMap.get(item.dataKey as string);
-                          if (!wallet) return null;
-                          const debt = item.value as number;
+                          const category = visibleCategories.find(
+                            (c) => c.id === item.dataKey
+                          );
+                          if (!category) return null;
+                          const amount = item.value as number;
                           return (
                             <div key={item.dataKey} className="flex items-center justify-between gap-2">
                               <div className="flex items-center gap-2">
                                 <div
                                   className="h-2 w-2 rounded-full"
-                                  style={{ backgroundColor: wallet.color }}
+                                  style={{ backgroundColor: item.color }}
                                 />
-                                <span className="text-sm">{wallet.name}</span>
+                                <span className="text-sm">{category.name}</span>
                               </div>
                               <Money
-                                cents={Math.round(debt * 100)}
+                                cents={Math.round(amount * 100)}
                                 currency={baseCurrency}
                               />
                             </div>
@@ -306,18 +326,18 @@ export function BillsHistoryChart({
                 );
               }}
             />
-            {visibleWallets.map((wallet) => (
-              <Line
-                key={wallet.id}
-                dataKey={wallet.id}
-                type="monotone"
-                stroke={chartConfig[wallet.id].color}
-                strokeWidth={2}
-                dot={false}
+            {visibleCategories.map((category) => (
+              <Bar
+                key={category.id}
+                dataKey={category.id}
+                name={category.name}
+                fill={chartConfig[category.id].color}
+                stackId="categories"
+                radius={[0, 0, 0, 0]}
               />
             ))}
             <ChartLegend content={<ChartLegendContent />} />
-          </LineChart>
+          </BarChart>
         </ChartContainer>
       </CardContent>
       <CardFooter>

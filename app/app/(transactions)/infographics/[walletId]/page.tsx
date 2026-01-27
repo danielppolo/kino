@@ -2,9 +2,26 @@ import React from "react";
 
 import { AccumulatedAreaChart } from "@/components/charts/accumulated-area-chart";
 import { BillBalanceLineChart } from "@/components/charts/bill-balance-line-chart";
+import { BillBurdenRatioChart } from "@/components/charts/bill-burden-ratio-chart";
+import { BillCoverageRatioChart } from "@/components/charts/bill-coverage-ratio-chart";
+import { BillDebtFlowChart } from "@/components/charts/bill-debt-flow-chart";
+import { BillPaymentRateChart } from "@/components/charts/bill-payment-rate-chart";
+import { BillPaymentTimelineChart } from "@/components/charts/bill-payment-timeline-chart";
+import { BillVelocityGaugeChart } from "@/components/charts/bill-velocity-gauge-chart";
 import { BillsHistoryChart } from "@/components/charts/bills-history-chart";
+import { BillsVsDiscretionaryChart } from "@/components/charts/bills-vs-discretionary-chart";
+import { CashFlowAfterBillsChart } from "@/components/charts/cash-flow-after-bills-chart";
 import { CashflowAreaChart } from "@/components/charts/cashflow-area-chart";
+import { CategoryTrendsChart } from "@/components/charts/category-trends-chart";
+import { CurrencyExposureChart } from "@/components/charts/currency-exposure-chart";
+import { ExpenseConcentrationChart } from "@/components/charts/expense-concentration-chart";
+import { ExpensePredictabilityChart } from "@/components/charts/expense-predictability-chart";
 import LabelAreaChart from "@/components/charts/label-area-chart";
+import { RecurringVsOnetimeBillsChart } from "@/components/charts/recurring-vs-onetime-bills-chart";
+import { TagCloudAnalyticsChart } from "@/components/charts/tag-cloud-analytics-chart";
+import { TransactionSizeDistributionChart } from "@/components/charts/transaction-size-distribution-chart";
+import { TransactionTypeDistributionChart } from "@/components/charts/transaction-type-distribution-chart";
+import { TransferFlowDiagramChart } from "@/components/charts/transfer-flow-diagram-chart";
 import { Filters } from "@/utils/supabase/queries";
 
 interface PageParams {
@@ -20,7 +37,7 @@ async function InfographicsPage({ params, searchParams }: PageParams) {
 
   return (
     <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3">
-      {/* Area Charts - Full Width */}
+      {/* Overview */}
       <div className="md:col-span-2 lg:col-span-3">
         <AccumulatedAreaChart
           walletId={walletId}
@@ -36,25 +53,32 @@ async function InfographicsPage({ params, searchParams }: PageParams) {
         />
       </div>
 
-      {/* Bills History Chart - Full Width */}
+      {/* Transaction Analysis */}
       <div className="md:col-span-2 lg:col-span-3">
-        <BillsHistoryChart
+        <TransactionTypeDistributionChart
           walletId={walletId}
           from={filters.from}
           to={filters.to}
         />
       </div>
-
-      {/* Bill Balance Line Chart - Full Width */}
       <div className="md:col-span-2 lg:col-span-3">
-        <BillBalanceLineChart
+        <CategoryTrendsChart
           walletId={walletId}
           from={filters.from}
           to={filters.to}
+          type="expense"
+        />
+      </div>
+      <div className="md:col-span-2 lg:col-span-3">
+        <CategoryTrendsChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
+          type="income"
         />
       </div>
 
-      {/* Label Area Chart - Full Width */}
+      {/* Label Analysis */}
       <div className="md:col-span-2 lg:col-span-3">
         <LabelAreaChart
           walletId={walletId}
@@ -64,7 +88,6 @@ async function InfographicsPage({ params, searchParams }: PageParams) {
           title="Expense Trends by Label"
         />
       </div>
-      {/* Label Area Chart - Full Width */}
       <div className="md:col-span-2 lg:col-span-3">
         <LabelAreaChart
           walletId={walletId}
@@ -75,86 +98,132 @@ async function InfographicsPage({ params, searchParams }: PageParams) {
         />
       </div>
 
-      {/* Pie Charts - Side by Side */}
-      {/* <div className="md:col-span-1 lg:col-span-1">
-        <Card>
-          <CardHeader>
-            <CardTitle>Category Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CategoryPieChart
-              walletId={walletId}
-              from={filters.from}
-              to={filters.to}
-              type="expense"
-              title="Expenses by Category"
-            />
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="md:col-span-1 lg:col-span-1">
-        <Card>
-          <CardHeader>
-            <CardTitle>Label Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <LabelPieChart
-              walletId={walletId}
-              from={filters.from}
-              to={filters.to}
-              type="expense"
-              title="Expenses by Label"
-            />
-          </CardContent>
-        </Card> 
-      </div>*/}
-
-      {/* Income Pie Charts - Full Width */}
-      {/* <div className="md:col-span-2 lg:col-span-3">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Income by Category</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CategoryPieChart
-                walletId={walletId}
-                from={filters.from}
-                to={filters.to}
-                type="income"
-                title="Income by Category"
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Income by Label</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <LabelPieChart
-                walletId={walletId}
-                from={filters.from}
-                to={filters.to}
-                type="income"
-                title="Income by Label"
-              />
-            </CardContent>
-          </Card>
-        </div>
-      </div> */}
-
-      {/* Income Label Area Chart - Full Width */}
-      {/* <div className="md:col-span-2 lg:col-span-3">
-        <LabelAreaChart
+      {/* Expense Analysis */}
+      <div className="md:col-span-2 lg:col-span-1">
+        <ExpenseConcentrationChart
           walletId={walletId}
           from={filters.from}
           to={filters.to}
-          type="income"
-          title="Income Trends by Label"
+          topN={5}
         />
-      </div> */}
+      </div>
+      <div className="md:col-span-2 lg:col-span-1">
+        <TransactionSizeDistributionChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
+          type="expense"
+        />
+      </div>
+      <div className="md:col-span-2 lg:col-span-1">
+        <CurrencyExposureChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
+        />
+      </div>
+      <div className="md:col-span-2 lg:col-span-3">
+        <TagCloudAnalyticsChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
+        />
+      </div>
+
+      {/* Transfer Analysis */}
+      <div className="md:col-span-2 lg:col-span-3">
+        <TransferFlowDiagramChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
+        />
+      </div>
+
+      {/* Bills Analysis */}
+      <div className="md:col-span-2 lg:col-span-3">
+        <BillsHistoryChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
+        />
+      </div>
+      <div className="md:col-span-2 lg:col-span-3">
+        <BillDebtFlowChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
+        />
+      </div>
+      <div className="md:col-span-2 lg:col-span-3">
+        <BillBalanceLineChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
+        />
+      </div>
+      <div className="md:col-span-2 lg:col-span-3">
+        <RecurringVsOnetimeBillsChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
+        />
+      </div>
+      <div className="md:col-span-2 lg:col-span-3">
+        <BillPaymentTimelineChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
+        />
+      </div>
+      <div className="md:col-span-2 lg:col-span-1">
+        <BillPaymentRateChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
+        />
+      </div>
+      <div className="md:col-span-2 lg:col-span-1">
+        <BillVelocityGaugeChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
+        />
+      </div>
+      <div className="md:col-span-2 lg:col-span-1">
+        <BillCoverageRatioChart walletId={walletId} />
+      </div>
+
+      {/* Bills vs Expenses */}
+      <div className="md:col-span-2 lg:col-span-3">
+        <BillsVsDiscretionaryChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
+        />
+      </div>
+      <div className="md:col-span-2 lg:col-span-1">
+        <BillBurdenRatioChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
+        />
+      </div>
+      <div className="md:col-span-2 lg:col-span-2">
+        <ExpensePredictabilityChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
+        />
+      </div>
+
+      {/* Cash Flow */}
+      <div className="md:col-span-2 lg:col-span-3">
+        <CashFlowAfterBillsChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
+        />
+      </div>
     </div>
   );
 }

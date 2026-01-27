@@ -37,11 +37,11 @@ const sendTwilioMessage = async (params: {
 };
 
 async function handle(request: NextRequest) {
-  // if (
-  //   request.headers.get("Authorization") !== `Bearer ${process.env.CRON_SECRET}`
-  // ) {
-  //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  // }
+  if (
+    request.headers.get("Authorization") !== `Bearer ${process.env.CRON_SECRET}`
+  ) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
