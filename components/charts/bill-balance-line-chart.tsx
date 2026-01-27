@@ -23,7 +23,7 @@ import {
 import { Money } from "@/components/ui/money";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
-import { formatCurrency } from "@/utils/chart-helpers";
+import { formatCurrency, parseMonthDate } from "@/utils/chart-helpers";
 import { createClient } from "@/utils/supabase/client";
 import { getMonthlyBillStats } from "@/utils/supabase/queries";
 
@@ -98,7 +98,7 @@ function BillBalanceChartRenderer({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => format(new Date(value), "MMM yyyy")}
+              tickFormatter={(value) => format(parseMonthDate(value), "MMM yyyy")}
             />
             <YAxis
               tickLine={false}
@@ -112,7 +112,7 @@ function BillBalanceChartRenderer({
               content={
                 <ChartTooltipContent
                   labelFormatter={(value) =>
-                    format(new Date(value), "MMMM yyyy")
+                    format(parseMonthDate(value), "MMMM yyyy")
                   }
                   formatter={(value) => (
                     <Money

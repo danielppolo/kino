@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/chart";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useLabels } from "@/contexts/settings-context";
+import { parseMonthDate } from "@/utils/chart-helpers";
 import { Label, TransactionList } from "@/utils/supabase/types";
 
 export const description = "A stacked area chart with expand stacking";
@@ -160,7 +161,7 @@ export function TransactionsAreaChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => format(new Date(value), "MMMM")}
+              tickFormatter={(value) => format(parseMonthDate(value), "MMMM")}
             />
             <YAxis
               tickLine={false}
@@ -176,7 +177,7 @@ export function TransactionsAreaChart({
             />
             <ChartTooltip
               cursor={false}
-              labelFormatter={(value) => format(new Date(value), "MMMM yyyy")}
+              labelFormatter={(value) => format(parseMonthDate(value), "MMMM yyyy")}
               content={
                 <ChartTooltipContent
                   indicator="line"

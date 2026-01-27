@@ -346,3 +346,23 @@ export function calculateTrimmedMean(
   return trimmed.reduce((sum, val) => sum + val, 0) / trimmed.length;
 }
 
+/**
+ * Safely parse a month date string (YYYY-MM-DD) without timezone issues.
+ *
+ * Month dates from the database are in YYYY-MM-DD format representing the first day
+ * of the month. Using new Date() directly can cause timezone issues where the date
+ * gets converted to the previous day in local timezones west of UTC.
+ *
+ * @param monthString - Date string in YYYY-MM-DD format (e.g., "2024-01-01")
+ * @returns Date object representing the month in local timezone
+ *
+ * @example
+ * // Instead of: format(new Date("2024-01-01"), "MMMM yyyy")
+ * // Use: format(parseMonthDate("2024-01-01"), "MMMM yyyy")
+ */
+export function parseMonthDate(monthString: string): Date {
+  const [year, month, day] = monthString.split('-').map(Number);
+  // Create date in local timezone (month is 0-indexed in JS)
+  return new Date(year, month - 1, day);
+}
+

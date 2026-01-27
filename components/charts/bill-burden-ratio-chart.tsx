@@ -24,6 +24,7 @@ import {
 import { Money } from "@/components/ui/money";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
+import { parseMonthDate } from "@/utils/chart-helpers";
 import { createClient } from "@/utils/supabase/client";
 import { getBillBurdenRatio } from "@/utils/supabase/queries";
 
@@ -233,7 +234,7 @@ export function BillBurdenRatioChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => format(new Date(value), "MMM yyyy")}
+              tickFormatter={(value) => format(parseMonthDate(value), "MMM yyyy")}
             />
             <YAxis
               tickLine={false}
@@ -244,7 +245,7 @@ export function BillBurdenRatioChart({
             />
             <ChartTooltip
               cursor={false}
-              labelFormatter={(value) => format(new Date(value), "MMMM yyyy")}
+              labelFormatter={(value) => format(parseMonthDate(value), "MMMM yyyy")}
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
 
@@ -253,7 +254,7 @@ export function BillBurdenRatioChart({
                     <div className="grid gap-2">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-medium">
-                          {format(new Date(label), "MMMM yyyy")}
+                          {format(parseMonthDate(label), "MMMM yyyy")}
                         </span>
                       </div>
                       <div className="grid gap-1">
