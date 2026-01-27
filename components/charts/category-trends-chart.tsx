@@ -94,7 +94,9 @@ export function CategoryTrendsChart({
 
       // Apply currency conversion
       const wallet = walletMap.get(stat.wallet_id);
-      if (!wallet) return;
+      if (!wallet) {
+        return;
+      }
 
       const rate = conversionRates[wallet.currency]?.rate ?? 1;
       const convertedAmount = (stat.amount_cents * rate) / 100;
@@ -116,17 +118,24 @@ export function CategoryTrendsChart({
 
     // Calculate 95th percentile to cap outliers
     const sorted = [...allValues].sort((a, b) => a - b);
-    const p95Index = Math.floor(sorted.length * 0.95);
+    const p95Index = Math.floor(sorted.length * 0.99);
     const p95Value = sorted[p95Index] || Infinity;
 
     // Cap values at 95th percentile to normalize the chart
-    return Object.entries(monthGroups)
+    const result = Object.entries(monthGroups)
       .map(([month, categories]) => {
         const dataPoint: ChartDataPoint = { month };
+        const originalValues: Record<string, number> = {}; // Store originals
+
         Object.entries(categories).forEach(([categoryId, amount]) => {
           // Cap extreme values to keep chart readable
-          dataPoint[categoryId] = Math.min(amount, p95Value);
+          const cappedAmount = Math.min(amount, p95Value);
+          dataPoint[categoryId] = cappedAmount;        // Display capped in bars
+          originalValues[categoryId] = amount;         // Store original
         });
+
+        // Store originals as hidden property for tooltip access
+        (dataPoint as any)._original = originalValues;
         return dataPoint;
       })
       .sort(
@@ -134,12 +143,17 @@ export function CategoryTrendsChart({
           new Date(a.month as string).getTime() -
           new Date(b.month as string).getTime(),
       );
+
+    return result;
   }, [categoryData, conversionRates, walletMap]);
 
   const visibleCategories = React.useMemo(() => {
     if (!categoryData) return [];
 
-    const categoryMap = new Map<string, { id: string; name: string; total: number }>();
+    const categoryMap = new Map<
+      string,
+      { id: string; name: string; total: number }
+    >();
 
     categoryData.forEach((stat) => {
       if (!categoryMap.has(stat.category_id)) {
@@ -155,7 +169,7 @@ export function CategoryTrendsChart({
       const wallet = walletMap.get(stat.wallet_id);
       if (wallet) {
         const rate = conversionRates[wallet.currency]?.rate ?? 1;
-        cat.total += (stat.amount_cents * rate);
+        cat.total += stat.amount_cents * rate;
       }
     });
 
@@ -201,7 +215,8 @@ export function CategoryTrendsChart({
         <CardHeader>
           <CardTitle>Category Trends</CardTitle>
           <CardDescription>
-            {type === "income" ? "Income" : "Expense"} categories over time in {baseCurrency}
+            {type === "income" ? "Income" : "Expense"} categories over time in{" "}
+            {baseCurrency}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -219,7 +234,8 @@ export function CategoryTrendsChart({
         <CardHeader>
           <CardTitle>Category Trends</CardTitle>
           <CardDescription>
-            {type === "income" ? "Income" : "Expense"} categories over time in {baseCurrency}
+            {type === "income" ? "Income" : "Expense"} categories over time in{" "}
+            {baseCurrency}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -237,7 +253,8 @@ export function CategoryTrendsChart({
         <CardHeader>
           <CardTitle>Category Trends</CardTitle>
           <CardDescription>
-            {type === "income" ? "Income" : "Expense"} categories over time in {baseCurrency}
+            {type === "income" ? "Income" : "Expense"} categories over time in{" "}
+            {baseCurrency}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -254,7 +271,8 @@ export function CategoryTrendsChart({
       <CardHeader>
         <CardTitle>Category Trends</CardTitle>
         <CardDescription>
-          Top {type === "income" ? "income" : "expense"} categories over time in {baseCurrency} (extreme outliers normalized)
+          Top {type === "income" ? "income" : "expense"} categories over time in{" "}
+          {baseCurrency} (extreme outliers normalized)
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -289,6 +307,10 @@ export function CategoryTrendsChart({
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
 
+                // Get original uncapped values from the data point
+                const dataPoint = chartData.find((d) => d.month === label);
+                const originalValues = (dataPoint as any)?._original || {};
+
                 return (
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
                     <div className="grid gap-2">
@@ -300,12 +322,22 @@ export function CategoryTrendsChart({
                       <div className="grid gap-1">
                         {payload.map((item) => {
                           const category = visibleCategories.find(
-                            (c) => c.id === item.dataKey
+                            (c) => c.id === item.dataKey,
                           );
                           if (!category) return null;
-                          const amount = item.value as number;
+
+                          // Get original value, fallback to capped if not found
+                          const originalAmount =
+                            originalValues[item.dataKey as string] ??
+                            item.value;
+                          const displayedAmount = item.value as number;
+                          const isCapped = originalAmount > displayedAmount;
+
                           return (
-                            <div key={item.dataKey} className="flex items-center justify-between gap-2">
+                            <div
+                              key={item.dataKey}
+                              className="flex items-center justify-between gap-2"
+                            >
                               <div className="flex items-center gap-2">
                                 <div
                                   className="h-2 w-2 rounded-full"
@@ -313,10 +345,24 @@ export function CategoryTrendsChart({
                                 />
                                 <span className="text-sm">{category.name}</span>
                               </div>
-                              <Money
-                                cents={Math.round(amount * 100)}
-                                currency={baseCurrency}
-                              />
+                              <div className="flex flex-col items-end gap-0.5">
+                                {/* Show original uncapped value */}
+                                <Money
+                                  cents={Math.round(originalAmount * 100)}
+                                  currency={baseCurrency}
+                                />
+                                {/* Show capped note if value was normalized */}
+                                {isCapped && (
+                                  <span className="text-xs text-muted-foreground">
+                                    (chart shows{" "}
+                                    {formatCurrency(
+                                      displayedAmount,
+                                      baseCurrency,
+                                    )}
+                                    )
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           );
                         })}
