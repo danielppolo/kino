@@ -22,10 +22,17 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import { useTags, useWallets } from "@/contexts/settings-context";
+import {
+  useFeatureFlags,
+  useTags,
+  useWallets,
+} from "@/contexts/settings-context";
 import useFilters from "@/hooks/use-filters";
 import { createClient } from "@/utils/supabase/client";
-import { deleteTransaction, setTransactionBills } from "@/utils/supabase/mutations";
+import {
+  deleteTransaction,
+  setTransactionBills,
+} from "@/utils/supabase/mutations";
 import { getBillsForTransaction } from "@/utils/supabase/queries";
 import { Transaction, TransactionList } from "@/utils/supabase/types";
 
@@ -74,6 +81,7 @@ const ExpenseIncomeForm = ({
   onOpenChange,
 }: ExpenseIncomeFormProps) => {
   const [, walletMap] = useWallets();
+  const { bills_enabled } = useFeatureFlags();
   const filters = useFilters();
   const [availableTags] = useTags();
   const [addAnother, setAddAnother] = useState(false);
@@ -438,7 +446,7 @@ const ExpenseIncomeForm = ({
         )}
       />
 
-      {type === "expense" && (
+      {type === "expense" && bills_enabled && (
         <FormField
           name="bill_id"
           render={({ field }) => (

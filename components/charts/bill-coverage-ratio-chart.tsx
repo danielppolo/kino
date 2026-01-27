@@ -20,6 +20,7 @@ import {
 import { Money } from "@/components/ui/money";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import { formatCurrency } from "@/utils/chart-helpers";
+import { ChartColors } from "@/utils/constants";
 import { createClient } from "@/utils/supabase/client";
 import { getBillCoverageRatio } from "@/utils/supabase/queries";
 
@@ -80,19 +81,19 @@ export function BillCoverageRatioChart({
   const chartConfig: ChartConfig = {
     balance: {
       label: "Current Balance",
-      color: "hsl(142, 76%, 36%)",
+      color: ChartColors.hsl.green,
     },
     bills_30: {
       label: "30-Day Bills",
-      color: "hsl(48, 96%, 53%)",
+      color: ChartColors.hsl.lightYellow,
     },
     bills_60: {
       label: "60-Day Bills",
-      color: "hsl(25, 95%, 53%)",
+      color: ChartColors.hsl.lightOrange,
     },
     bills_90: {
       label: "90-Day Bills",
-      color: "hsl(0, 84%, 60%)",
+      color: ChartColors.hsl.red,
     },
   };
 

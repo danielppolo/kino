@@ -20,6 +20,7 @@ import {
 import { Money } from "@/components/ui/money";
 import { useCurrency } from "@/contexts/settings-context";
 import { formatCurrency } from "@/utils/chart-helpers";
+import { ChartColors } from "@/utils/constants";
 import { createClient } from "@/utils/supabase/client";
 import { getTransactionSizeDistribution } from "@/utils/supabase/queries";
 
@@ -71,7 +72,7 @@ export function TransactionSizeDistributionChart({
   const chartConfig: ChartConfig = {
     count: {
       label: "Transaction Count",
-      color: "hsl(221, 83%, 53%)",
+      color: ChartColors.hsl.blue,
     },
   };
 

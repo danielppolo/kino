@@ -18,6 +18,7 @@ import {
   ChartTooltip,
 } from "@/components/ui/chart";
 import { Money } from "@/components/ui/money";
+import { ChartColors } from "@/utils/constants";
 import { createClient } from "@/utils/supabase/client";
 import { getCurrencyExposure } from "@/utils/supabase/queries";
 
@@ -28,12 +29,12 @@ interface CurrencyExposureChartProps {
 }
 
 const CURRENCY_COLORS = [
-  "hsl(142, 76%, 36%)",
-  "hsl(221, 83%, 53%)",
-  "hsl(262, 83%, 58%)",
-  "hsl(24, 70%, 50%)",
-  "hsl(168, 76%, 42%)",
-  "hsl(339, 82%, 52%)",
+  ChartColors.hsl.green,
+  ChartColors.hsl.blue,
+  ChartColors.hsl.purple,
+  ChartColors.hsl.orange,
+  ChartColors.hsl.teal,
+  ChartColors.hsl.pink,
 ];
 
 export function CurrencyExposureChart({

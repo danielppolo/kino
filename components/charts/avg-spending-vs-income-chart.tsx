@@ -32,6 +32,7 @@ import { Money } from "@/components/ui/money";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import { formatCurrency, parseMonthDate } from "@/utils/chart-helpers";
+import { ChartColors } from "@/utils/constants";
 import { createClient } from "@/utils/supabase/client";
 import { getAverageMonthlySpendingVsIncome } from "@/utils/supabase/queries";
 
@@ -56,23 +57,23 @@ interface ChartDataPoint {
 const chartConfig: ChartConfig = {
   income: {
     label: "Income",
-    color: "#22c55e", // Green
+    color: ChartColors.income,
   },
   spending: {
     label: "Spending",
-    color: "#ef4444", // Red
+    color: ChartColors.expense,
   },
   net: {
     label: "Cashflow",
-    color: "#3b82f6", // Blue
+    color: ChartColors.balance,
   },
   avgIncome: {
     label: "Avg Income",
-    color: "#22c55e",
+    color: ChartColors.income,
   },
   avgSpending: {
     label: "Avg Spending",
-    color: "#ef4444",
+    color: ChartColors.expense,
   },
 };
 
