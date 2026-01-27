@@ -225,6 +225,53 @@ export const ICONS = [
   "wrench",
 ];
 
+// Chart color palette - semantic names for common use cases
+export const ChartColors = {
+  // Primary semantic colors
+  income: "#22c55e", // Green - represents positive cash flow
+  expense: "#ef4444", // Red - represents spending
+  balance: "#3b82f6", // Blue - represents net/balance
+  warning: "#f59e0b", // Orange - represents warnings
+
+  // Extended palette for categories, trends, etc.
+  palette: {
+    rose: "#B8255F",
+    red: "#DB4035",
+    lightRed: "#FF8D85",
+    orange: "#FF9933",
+    yellow: "#FAD000",
+    lime: "#AFB83B",
+    lightGreen: "#7ECC49",
+    green: "#299438",
+    teal: "#6ACCBC",
+    cyan: "#158FAD",
+    lightBlue: "#14AAF5",
+    sky: "#96C3EB",
+    blue: "#4073FF",
+    purple: "#884DFF",
+    magenta: "#AF38EB",
+    gray: "#B8B8B8",
+    brown: "#CCAC93",
+  },
+
+  // HSL versions for category trends and distributions
+  hsl: {
+    green: "hsl(142, 76%, 36%)",
+    blue: "hsl(221, 83%, 53%)",
+    purple: "hsl(262, 83%, 58%)",
+    darkPurple: "hsl(291, 64%, 42%)",
+    orange: "hsl(24, 70%, 50%)",
+    yellow: "hsl(43, 89%, 38%)",
+    teal: "hsl(168, 76%, 42%)",
+    cyan: "hsl(199, 89%, 48%)",
+    pink: "hsl(339, 82%, 52%)",
+    lightYellow: "hsl(48, 96%, 53%)",
+    lightOrange: "hsl(25, 95%, 53%)",
+    red: "hsl(0, 84%, 60%)",
+  },
+} as const;
+
+// Backwards compatible array export
 export const COLORS = [
   "#B8255F",
   "#DB4035",

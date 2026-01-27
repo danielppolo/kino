@@ -25,6 +25,7 @@ import { Money } from "@/components/ui/money";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import { formatCurrency, parseMonthDate } from "@/utils/chart-helpers";
+import { ChartColors } from "@/utils/constants";
 import { createClient } from "@/utils/supabase/client";
 import { getTransactionTypeDistribution } from "@/utils/supabase/queries";
 
@@ -114,15 +115,15 @@ export function TransactionTypeDistributionChart({
   const chartConfig: ChartConfig = {
     income: {
       label: "Income",
-      color: "hsl(142, 76%, 36%)",
+      color: ChartColors.hsl.green,
     },
     expense: {
       label: "Expense",
-      color: "hsl(0, 84%, 60%)",
+      color: ChartColors.hsl.red,
     },
     transfer: {
       label: "Transfer",
-      color: "hsl(217, 91%, 60%)",
+      color: ChartColors.hsl.blue,
     },
   };
 

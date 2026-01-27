@@ -33,6 +33,7 @@ import { Money } from "@/components/ui/money";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import { formatCurrency, parseMonthDate } from "@/utils/chart-helpers";
+import { ChartColors } from "@/utils/constants";
 import { createClient } from "@/utils/supabase/client";
 import { getBillDebtFlow } from "@/utils/supabase/queries";
 
@@ -52,15 +53,15 @@ interface ChartDataPoint {
 const chartConfig: ChartConfig = {
   debt_increase: {
     label: "Debt Added",
-    color: "#ef4444", // Red
+    color: ChartColors.expense,
   },
   debt_decrease: {
     label: "Debt Paid",
-    color: "#22c55e", // Green
+    color: ChartColors.income,
   },
   running_total: {
     label: "Total Outstanding",
-    color: "#3b82f6", // Blue
+    color: ChartColors.balance,
   },
 };
 

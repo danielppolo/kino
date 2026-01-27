@@ -21,6 +21,7 @@ import { Money } from "@/components/ui/money";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency } from "@/contexts/settings-context";
 import { parseMonthDate } from "@/utils/chart-helpers";
+import { ChartColors } from "@/utils/constants";
 import { TransactionList } from "@/utils/supabase/types";
 
 function groupTransactionsByMonth(transactions: TransactionList[]) {
@@ -60,7 +61,7 @@ export function IncomeAreaChart({ transactions }: IncomeAreaChartProps) {
   const chartConfig: ChartConfig = {
     amount: {
       label: "Income",
-      color: "#22c55e", // Green color for income
+      color: ChartColors.income,
     },
   };
 

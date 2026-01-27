@@ -25,6 +25,7 @@ import { Money } from "@/components/ui/money";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import { formatCurrency, parseMonthDate } from "@/utils/chart-helpers";
+import { ChartColors } from "@/utils/constants";
 import { createClient } from "@/utils/supabase/client";
 import { getCategoryTrends } from "@/utils/supabase/queries";
 
@@ -41,16 +42,16 @@ interface ChartDataPoint {
 }
 
 const CATEGORY_COLORS = [
-  "hsl(142, 76%, 36%)",
-  "hsl(221, 83%, 53%)",
-  "hsl(262, 83%, 58%)",
-  "hsl(291, 64%, 42%)",
-  "hsl(24, 70%, 50%)",
-  "hsl(43, 89%, 38%)",
-  "hsl(168, 76%, 42%)",
-  "hsl(199, 89%, 48%)",
-  "hsl(339, 82%, 52%)",
-  "hsl(48, 96%, 53%)",
+  ChartColors.hsl.green,
+  ChartColors.hsl.blue,
+  ChartColors.hsl.purple,
+  ChartColors.hsl.darkPurple,
+  ChartColors.hsl.orange,
+  ChartColors.hsl.yellow,
+  ChartColors.hsl.teal,
+  ChartColors.hsl.cyan,
+  ChartColors.hsl.pink,
+  ChartColors.hsl.lightYellow,
 ];
 
 export function CategoryTrendsChart({

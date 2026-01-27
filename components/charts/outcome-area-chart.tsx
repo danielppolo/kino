@@ -20,6 +20,7 @@ import { Money } from "@/components/ui/money";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency } from "@/contexts/settings-context";
 import { parseMonthDate } from "@/utils/chart-helpers";
+import { ChartColors } from "@/utils/constants";
 import { TransactionList } from "@/utils/supabase/types";
 
 // Helper function for YAxis tick formatting since it can't use React components
@@ -69,7 +70,7 @@ export function OutcomeAreaChart({ transactions }: OutcomeAreaChartProps) {
   const chartConfig: ChartConfig = {
     amount: {
       label: "Outcome",
-      color: "#ef4444", // Red color for expenses
+      color: ChartColors.expense,
     },
   };
 
