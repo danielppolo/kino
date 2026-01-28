@@ -1,7 +1,7 @@
 "use client";
 
 import React, { memo } from "react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { RefreshCcw } from "lucide-react";
 
 import SelectableRow from "./selectable-row";
@@ -62,7 +62,7 @@ export function BillRow({
         </Badge>
       )}
       <Text muted small className={isOverdue ? "text-destructive" : undefined}>
-        {format(dueDate, "MMM d, yyyy")}
+        {format(parseISO(dueDate.toISOString().split("T")[0]), "MMM d, yyyy")}
       </Text>
       <Money
         cents={bill.amount_cents}
