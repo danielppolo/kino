@@ -13,13 +13,12 @@ import { BillVelocityGaugeChart } from "@/components/charts/bill-velocity-gauge-
 import { BillsHistoryChart } from "@/components/charts/bills-history-chart";
 import { BillsVsDiscretionaryChart } from "@/components/charts/bills-vs-discretionary-chart";
 import { CashFlowAfterBillsChart } from "@/components/charts/cash-flow-after-bills-chart";
-import { CategoryTrendsChart } from "@/components/charts/category-trends-chart";
 import { CurrencyExposureChart } from "@/components/charts/currency-exposure-chart";
 import { ExpenseConcentrationChart } from "@/components/charts/expense-concentration-chart";
 import { ExpensePredictabilityChart } from "@/components/charts/expense-predictability-chart";
 import { ForecastLineChart } from "@/components/charts/forecast-line-chart";
-import LabelAreaChart from "@/components/charts/label-area-chart";
 import LabelPieChart from "@/components/charts/label-pie-chart";
+import { TrendsChart } from "@/components/charts/trends-chart";
 import { RecurringVsOnetimeBillsChart } from "@/components/charts/recurring-vs-onetime-bills-chart";
 import { TagCloudAnalyticsChart } from "@/components/charts/tag-cloud-analytics-chart";
 import { TransactionSizeDistributionChart } from "@/components/charts/transaction-size-distribution-chart";
@@ -65,14 +64,16 @@ async function InfographicsPage({ searchParams }: PageParams) {
         <TransactionTypeDistributionChart from={filters.from} to={filters.to} />
       </div>
       <div className="md:col-span-2 lg:col-span-4">
-        <CategoryTrendsChart
+        <TrendsChart
+          variant="categories"
           from={filters.from}
           to={filters.to}
           type="expense"
         />
       </div>
       <div className="md:col-span-2 lg:col-span-4">
-        <CategoryTrendsChart
+        <TrendsChart
+          variant="categories"
           from={filters.from}
           to={filters.to}
           type="income"
@@ -81,7 +82,8 @@ async function InfographicsPage({ searchParams }: PageParams) {
 
       {/* Label Analysis */}
       <div className="md:col-span-2 lg:col-span-4">
-        <LabelAreaChart
+        <TrendsChart
+          variant="labels"
           from={filters.from}
           to={filters.to}
           type="expense"
@@ -89,7 +91,8 @@ async function InfographicsPage({ searchParams }: PageParams) {
         />
       </div>
       <div className="md:col-span-2 lg:col-span-4">
-        <LabelAreaChart
+        <TrendsChart
+          variant="labels"
           from={filters.from}
           to={filters.to}
           type="income"

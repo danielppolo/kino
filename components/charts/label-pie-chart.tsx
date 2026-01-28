@@ -175,7 +175,6 @@ export default function LabelPieChart({
               <Cell
                 key={`cell-${index}`}
                 fill={entry.color}
-                fillOpacity={0.5}
                 stroke={entry.color}
               />
             ))}
