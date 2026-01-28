@@ -17,7 +17,7 @@ export default function Page() {
   const [editBill, setEditBill] = useState<Bill | undefined>(undefined);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeType = searchParams.get("type") || "recurrent";
+  const activeType = searchParams.get("type") || "future";
 
   const handleTabChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -46,8 +46,8 @@ export default function Page() {
         <PageHeader>
           <div className="flex items-center gap-4">
             <TabsList>
-              <TabsTrigger value="recurrent">Recurrent</TabsTrigger>
-              <TabsTrigger value="archive">Archive</TabsTrigger>
+              <TabsTrigger value="future">Future</TabsTrigger>
+              <TabsTrigger value="past">Past</TabsTrigger>
             </TabsList>
           </div>
           <div className="flex gap-2">
@@ -62,18 +62,18 @@ export default function Page() {
           </div>
         </PageHeader>
         <div style={{ height: "calc(100vh - 44px)", overflow: "auto" }}>
-          <TabsContent value="recurrent">
+          <TabsContent value="future">
             <BillsSection
-              type="recurrent"
-              isActive={activeType === "recurrent"}
+              type="future"
+              isActive={activeType === "future"}
               onEdit={handleEdit}
             />
           </TabsContent>
 
-          <TabsContent value="archive">
+          <TabsContent value="past">
             <BillsSection
-              type="archive"
-              isActive={activeType === "archive"}
+              type="past"
+              isActive={activeType === "past"}
               onEdit={handleEdit}
             />
           </TabsContent>

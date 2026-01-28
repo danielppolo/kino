@@ -131,6 +131,7 @@ export default function BillsList({ walletId }: BillsListProps) {
       await linkTransactionsToBill(billId, transactionIds);
     },
     onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["bills"] });
       queryClient.invalidateQueries({ queryKey: ["bills-with-payments"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({
@@ -159,6 +160,7 @@ export default function BillsList({ walletId }: BillsListProps) {
       await unlinkTransactionFromBill(billId, transactionId);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bills"] });
       queryClient.invalidateQueries({ queryKey: ["bills-with-payments"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({
@@ -202,6 +204,7 @@ export default function BillsList({ walletId }: BillsListProps) {
       await linkTransactionsToBill(billId, allTransactionIds);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bills"] });
       queryClient.invalidateQueries({ queryKey: ["bills-with-payments"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({

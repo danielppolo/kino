@@ -37,7 +37,8 @@ export default function DeleteBillsDialog({
       await deleteBills(selected);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries();
+      queryClient.invalidateQueries({ queryKey: ["bills"] });
+      queryClient.invalidateQueries({ queryKey: ["bills-with-payments"] });
       toast.success(`${selected.length} bill${selected.length === 1 ? "" : "s"} deleted`);
       onOpenChange(false);
       onSuccess?.();
