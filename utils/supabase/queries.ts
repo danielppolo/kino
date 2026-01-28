@@ -2534,3 +2534,130 @@ export const getAverageMonthlySpendingVsIncome = async (
     error: null,
   };
 };
+
+export interface NetBalanceDataPoint {
+  month: string; // YYYY-MM-01 format
+  wallet_id: string;
+  bills_due_cents: number; // Bills due this month (by due_date)
+  payments_made_cents: number; // Payments to bills this month (by transaction date)
+  net_balance_cents: number; // Running total: payments - bills
+}
+
+export const getWalletNetBalance = async (
+  client: TypedSupabaseClient,
+  params: {
+    walletId?: string;
+    from?: string;
+    to?: string;
+  },
+) => {
+  // Get all bills with payments
+  const { data: bills, error } = await listBillsWithPayments(client, {
+    walletId: params.walletId,
+  });
+
+  if (error || !bills) {
+    return { data: null, error };
+  }
+
+  // Track monthly bills (by due_date) and payments (by transaction.date)
+  const monthlyBills: Record<string, Record<string, number>> = {};
+  const monthlyPayments: Record<string, Record<string, number>> = {};
+
+  // Group bills by due_date month
+  bills.forEach((bill) => {
+    const dueDate = new Date(bill.due_date);
+    const month = `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, "0")}-01`;
+
+    // Apply date filters
+    if (params.from && month < params.from) return;
+    if (params.to && month > params.to) return;
+
+    if (!monthlyBills[month]) {
+      monthlyBills[month] = {};
+    }
+
+    if (!monthlyBills[month][bill.wallet_id]) {
+      monthlyBills[month][bill.wallet_id] = 0;
+    }
+
+    // Bills are debt (negative in concept, but stored as positive)
+    monthlyBills[month][bill.wallet_id] += bill.amount_cents;
+  });
+
+  // Group payments by transaction.date month
+  bills.forEach((bill) => {
+    bill.payments.forEach((payment) => {
+      if (!payment.transaction) return;
+
+      const paymentDate = new Date(payment.transaction.date);
+      const month = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, "0")}-01`;
+
+      // Apply date filters
+      if (params.from && month < params.from) return;
+      if (params.to && month > params.to) return;
+
+      if (!monthlyPayments[month]) {
+        monthlyPayments[month] = {};
+      }
+
+      if (!monthlyPayments[month][bill.wallet_id]) {
+        monthlyPayments[month][bill.wallet_id] = 0;
+      }
+
+      // Payments repay debt (positive in concept)
+      monthlyPayments[month][bill.wallet_id] += Math.abs(
+        payment.transaction.amount_cents,
+      );
+    });
+  });
+
+  // Combine bills and payments into unified monthly data
+  const allMonths = new Set([
+    ...Object.keys(monthlyBills),
+    ...Object.keys(monthlyPayments),
+  ]);
+
+  const monthlyData: NetBalanceDataPoint[] = [];
+
+  allMonths.forEach((month) => {
+    const walletIds = new Set([
+      ...Object.keys(monthlyBills[month] || {}),
+      ...Object.keys(monthlyPayments[month] || {}),
+    ]);
+
+    walletIds.forEach((walletId) => {
+      const billsDue = monthlyBills[month]?.[walletId] || 0;
+      const paymentsMade = monthlyPayments[month]?.[walletId] || 0;
+
+      monthlyData.push({
+        month,
+        wallet_id: walletId,
+        bills_due_cents: billsDue,
+        payments_made_cents: paymentsMade,
+        net_balance_cents: 0, // Will be calculated in next step
+      });
+    });
+  });
+
+  // Sort by month
+  monthlyData.sort((a, b) => a.month.localeCompare(b.month));
+
+  // Calculate running balance (cumulative: payments - bills)
+  const walletBalances: Record<string, number> = {};
+
+  monthlyData.forEach((dataPoint) => {
+    if (!walletBalances[dataPoint.wallet_id]) {
+      walletBalances[dataPoint.wallet_id] = 0;
+    }
+
+    // Net change: payments (positive) - bills (negative)
+    const netChange = dataPoint.payments_made_cents - dataPoint.bills_due_cents;
+    walletBalances[dataPoint.wallet_id] += netChange;
+
+    // Update running balance
+    dataPoint.net_balance_cents = walletBalances[dataPoint.wallet_id];
+  });
+
+  return { data: monthlyData, error: null };
+};

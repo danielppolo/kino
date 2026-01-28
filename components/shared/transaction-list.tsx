@@ -103,6 +103,8 @@ export default function TransactionList() {
     },
   });
 
+  console.log(data)
+
   const {
     selected,
     selectedCount,
@@ -396,6 +398,8 @@ export default function TransactionList() {
       />
     );
   }
+
+  console.log(groupedTransactions)
 
   return (
     <div className="relative">

@@ -23,6 +23,7 @@ import { RecurringVsOnetimeBillsChart } from "@/components/charts/recurring-vs-o
 import { TagCloudAnalyticsChart } from "@/components/charts/tag-cloud-analytics-chart";
 import { TransactionSizeDistributionChart } from "@/components/charts/transaction-size-distribution-chart";
 import { TransactionTypeDistributionChart } from "@/components/charts/transaction-type-distribution-chart";
+import { WalletNetBalanceLineChart } from "@/components/charts/wallet-net-balance-line-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Filters } from "@/utils/supabase/queries";
 
@@ -155,6 +156,9 @@ async function InfographicsPage({ searchParams }: PageParams) {
           </div>
           <div className="md:col-span-2 lg:col-span-4">
             <BillDebtFlowChart from={filters.from} to={filters.to} />
+          </div>
+          <div className="md:col-span-2 lg:col-span-4">
+            <WalletNetBalanceLineChart from={filters.from} to={filters.to} />
           </div>
           <div className="md:col-span-2 lg:col-span-4">
             <RecurringVsOnetimeBillsChart from={filters.from} to={filters.to} />

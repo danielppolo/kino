@@ -703,6 +703,8 @@ export const unlinkTransactionFromBill = async (
 export const splitTransaction = async (
   transactionId: string,
   splitAmountCents: number,
+  billDescription?: string,
+  billDueDate?: string,
 ): Promise<{ matchingTransactionId: string; remainingTransactionId: string }> => {
   const supabase = await createClient();
 
@@ -725,7 +727,17 @@ export const splitTransaction = async (
   }
 
   // Prepare the two new transactions
-  const baseDescription = originalTransaction.description || "Transaction";
+  // Determine description for matching transaction (transaction1)
+  let transaction1Description: string;
+  if (!originalTransaction.description && billDescription && billDueDate) {
+    // Extract YYYY-MM from YYYY-MM-DD
+    const yearMonth = billDueDate.substring(0, 7); // Gets "YYYY-MM"
+    transaction1Description = `${billDescription} ${yearMonth} (1/2)`;
+  } else {
+    const baseDescription = originalTransaction.description || "Transaction";
+    transaction1Description = `${baseDescription} (1/2)`;
+  }
+
   const transaction1: Database["public"]["Tables"]["transactions"]["Insert"] = {
     amount_cents: splitAmountCents,
     base_amount_cents: originalTransaction.base_amount_cents
@@ -738,13 +750,22 @@ export const splitTransaction = async (
     conversion_rate_to_base: originalTransaction.conversion_rate_to_base,
     currency: originalTransaction.currency,
     date: originalTransaction.date,
-    description: `${baseDescription} (1/2)`,
+    description: transaction1Description,
     label_id: originalTransaction.label_id,
     note: originalTransaction.note,
     tags: originalTransaction.tags,
     type: originalTransaction.type,
     wallet_id: originalTransaction.wallet_id,
   };
+
+  // Determine description for remaining transaction (transaction2)
+  let transaction2Description: string | null;
+  if (!originalTransaction.description) {
+    // Keep no description if original had none
+    transaction2Description = null;
+  } else {
+    transaction2Description = `${originalTransaction.description} (2/2)`;
+  }
 
   const transaction2: Database["public"]["Tables"]["transactions"]["Insert"] = {
     amount_cents: remainingAmountCents,
@@ -758,7 +779,7 @@ export const splitTransaction = async (
     conversion_rate_to_base: originalTransaction.conversion_rate_to_base,
     currency: originalTransaction.currency,
     date: originalTransaction.date,
-    description: `${baseDescription} (2/2)`,
+    description: transaction2Description,
     label_id: originalTransaction.label_id,
     note: originalTransaction.note,
     tags: originalTransaction.tags,
