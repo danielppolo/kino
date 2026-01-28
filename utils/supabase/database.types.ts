@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "14.1"
   }
   graphql_public: {
     Tables: {
@@ -143,7 +143,7 @@ export type Database = {
           keywords: string[] | null
           name: string
           type: string
-          user_id: string | null
+          workspace_id: string
         }
         Insert: {
           icon: string
@@ -151,7 +151,7 @@ export type Database = {
           keywords?: string[] | null
           name: string
           type: string
-          user_id?: string | null
+          workspace_id: string
         }
         Update: {
           icon?: string
@@ -159,9 +159,17 @@ export type Database = {
           keywords?: string[] | null
           name?: string
           type?: string
-          user_id?: string | null
+          workspace_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "categories_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       currency_conversions: {
         Row: {
@@ -198,21 +206,29 @@ export type Database = {
           color: string
           id: string
           name: string
-          user_id: string
+          workspace_id: string
         }
         Insert: {
           color: string
           id?: string
           name: string
-          user_id?: string
+          workspace_id: string
         }
         Update: {
           color?: string
           id?: string
           name?: string
-          user_id?: string
+          workspace_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "labels_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       monthly_category_stats: {
         Row: {
@@ -439,23 +455,31 @@ export type Database = {
           group: string | null
           id: string
           title: string
-          user_id: string
+          workspace_id: string
         }
         Insert: {
           created_at?: string | null
           group?: string | null
           id?: string
           title: string
-          user_id?: string
+          workspace_id: string
         }
         Update: {
           created_at?: string | null
           group?: string | null
           id?: string
           title?: string
-          user_id?: string
+          workspace_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tags_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transaction_tags: {
         Row: {
@@ -506,7 +530,7 @@ export type Database = {
           name: string
           tags: string[] | null
           type: Database["public"]["Enums"]["transaction_type_enum"]
-          user_id: string
+          workspace_id: string
         }
         Insert: {
           amount_cents?: number | null
@@ -519,7 +543,7 @@ export type Database = {
           name: string
           tags?: string[] | null
           type: Database["public"]["Enums"]["transaction_type_enum"]
-          user_id?: string
+          workspace_id: string
         }
         Update: {
           amount_cents?: number | null
@@ -532,7 +556,7 @@ export type Database = {
           name?: string
           tags?: string[] | null
           type?: Database["public"]["Enums"]["transaction_type_enum"]
-          user_id?: string
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -547,6 +571,13 @@ export type Database = {
             columns: ["label_id"]
             isOneToOne: false
             referencedRelation: "labels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_templates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -629,6 +660,7 @@ export type Database = {
       }
       user_preferences: {
         Row: {
+          active_workspace_id: string | null
           base_currency: string
           created_at: string
           feature_flags: Json
@@ -638,6 +670,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          active_workspace_id?: string | null
           base_currency?: string
           created_at?: string
           feature_flags?: Json
@@ -647,6 +680,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          active_workspace_id?: string | null
           base_currency?: string
           created_at?: string
           feature_flags?: Json
@@ -655,7 +689,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_preferences_active_workspace_id_fkey"
+            columns: ["active_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_wallets: {
         Row: {
@@ -694,21 +736,29 @@ export type Database = {
           id: string
           name: string
           query_params: string
-          user_id: string
+          workspace_id: string
         }
         Insert: {
           id?: string
           name: string
           query_params: string
-          user_id?: string
+          workspace_id: string
         }
         Update: {
           id?: string
           name?: string
           query_params?: string
-          user_id?: string
+          workspace_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "views_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       wallet_monthly_balances: {
         Row: {
@@ -790,6 +840,7 @@ export type Database = {
           notes: string | null
           position: number | null
           visible: boolean
+          workspace_id: string
         }
         Insert: {
           balance_cents?: number | null
@@ -800,6 +851,7 @@ export type Database = {
           notes?: string | null
           position?: number | null
           visible?: boolean
+          workspace_id: string
         }
         Update: {
           balance_cents?: number | null
@@ -810,6 +862,68 @@ export type Database = {
           notes?: string | null
           position?: number | null
           visible?: boolean
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_members: {
+        Row: {
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspaces: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -863,6 +977,7 @@ export type Database = {
           created_at: string | null
           email: string | null
           id: string | null
+          phone: string | null
           role: string | null
           user_id: string | null
           wallet_id: string | null
@@ -885,17 +1000,6 @@ export type Database = {
       backfill_wallet_monthly_balances: { Args: never; Returns: undefined }
       backfill_wallet_monthly_owed: { Args: never; Returns: undefined }
       calculate_wallet_owed: { Args: { p_wallet_id: string }; Returns: number }
-      get_all_wallet_members: {
-        Args: { wallet_uuids: string[] }
-        Returns: {
-          created_at: string
-          email: string
-          id: string
-          role: string
-          user_id: string
-          wallet_id: string
-        }[]
-      }
       get_cashflow_breakdown: {
         Args: {
           p_category_id?: string
@@ -963,16 +1067,25 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          phone: string
           role: string
           user_id: string
           wallet_id: string
         }[]
+      }
+      has_workspace_role: {
+        Args: { required_role: string[]; workspace_uuid: string }
+        Returns: boolean
       }
       insert_wallet_and_user_wallet: {
         Args: { wallet_currency: string; wallet_name: string }
         Returns: {
           wallet_id: string
         }[]
+      }
+      is_workspace_member: {
+        Args: { workspace_uuid: string }
+        Returns: boolean
       }
     }
     Enums: {

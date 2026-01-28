@@ -47,6 +47,7 @@ export function useTotalBalance() {
     return total + Math.round(combined * rate);
   }, 0);
 
+
   // Calculate total owed across all wallets
   const totalOwed = sortedWallets.reduce((total, wallet) => {
     const owed = owedByWallet[wallet.id] ?? 0;
