@@ -5,9 +5,14 @@ import { SmtpMessage } from "../smtp-message";
 import { forgotPasswordAction } from "@/app/actions";
 import { FormMessage, Message } from "@/components/form-message";
 import { SubmitButton } from "@/components/submit-button";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Text, Title } from "@/components/ui/typography";
+import { cn } from "@/lib/utils";
 
 export default async function ForgotPassword({
   searchParams,
@@ -16,27 +21,36 @@ export default async function ForgotPassword({
 }) {
   const message = await searchParams;
   return (
-    <>
-      <form className="mx-auto flex w-full min-w-64 max-w-64 flex-1 flex-col gap-2 [&>input]:mb-6">
-        <div>
-          <Title>Reset Password</Title>
-          <Text>
+    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
+      <div className="w-full max-w-sm">
+        <div className={cn("flex flex-col gap-2")}>
+          <form action={forgotPasswordAction}>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="email">Email</FieldLabel>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  required
+                />
+              </Field>
+              <Field>
+                <SubmitButton className="w-full">Reset Password</SubmitButton>
+              </Field>
+              <FormMessage message={message} />
+            </FieldGroup>
+          </form>
+          <FieldDescription className="px-6 text-center">
             Already have an account?{" "}
-            <Link className="underline" href="/sign-in">
-              <Text>Sign in</Text>
+            <Link href="/sign-in" className="underline underline-offset-4">
+              Sign in
             </Link>
-          </Text>
+          </FieldDescription>
         </div>
-        <div className="mt-8 flex flex-col gap-2 [&>input]:mb-3">
-          <Label htmlFor="email">Email</Label>
-          <Input name="email" placeholder="you@example.com" required />
-          <SubmitButton formAction={forgotPasswordAction}>
-            Reset Password
-          </SubmitButton>
-          <FormMessage message={message} />
-        </div>
-      </form>
-      <SmtpMessage />
-    </>
+        <SmtpMessage />
+      </div>
+    </div>
   );
 }

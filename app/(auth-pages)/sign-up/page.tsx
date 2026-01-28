@@ -5,9 +5,14 @@ import { SmtpMessage } from "../smtp-message";
 import { signUpAction } from "@/app/actions";
 import { FormMessage, Message } from "@/components/form-message";
 import { SubmitButton } from "@/components/submit-button";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Text, Title } from "@/components/ui/typography";
+import { cn } from "@/lib/utils";
 
 export default async function Signup({
   searchParams,
@@ -17,40 +22,56 @@ export default async function Signup({
   const message = await searchParams;
   if ("message" in message) {
     return (
-      <div className="flex h-screen w-full flex-1 items-center justify-center gap-2 p-4 sm:max-w-md">
-        <FormMessage message={message} />
+      <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
+        <div className="w-full max-w-sm">
+          <FormMessage message={message} />
+        </div>
       </div>
     );
   }
 
   return (
-    <>
-      <form className="mx-auto flex min-w-64 max-w-64 flex-col">
-        <Title>Sign up</Title>
-        <Text>
-          Already have an account?{" "}
-          <Link className="underline" href="/sign-in">
-            <Text>Sign in</Text>
-          </Link>
-        </Text>
-        <div className="mt-8 flex flex-col gap-2 [&>input]:mb-3">
-          <Label htmlFor="email">Email</Label>
-          <Input name="email" placeholder="you@example.com" required />
-          <Label htmlFor="password">Password</Label>
-          <Input
-            type="password"
-            name="password"
-            placeholder="Your password"
-            minLength={6}
-            required
-          />
-          <SubmitButton formAction={signUpAction} pendingText="Signing up...">
-            Sign up
-          </SubmitButton>
-          <FormMessage message={message} />
+    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
+      <div className="w-full max-w-sm">
+        <div className={cn("flex flex-col gap-2")}>
+          <form action={signUpAction}>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="email">Email</FieldLabel>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  required
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="password">Password</FieldLabel>
+                <Input
+                  id="password"
+                  type="password"
+                  name="password"
+                  placeholder="Your password"
+                  minLength={6}
+                  required
+                />
+              </Field>
+              <Field>
+                <SubmitButton className="w-full">Sign up</SubmitButton>
+              </Field>
+              <FormMessage message={message} />
+            </FieldGroup>
+          </form>
+          <FieldDescription className="px-6 text-center">
+            Already have an account?{" "}
+            <Link href="/sign-in" className="underline underline-offset-4">
+              Sign in
+            </Link>
+          </FieldDescription>
         </div>
-      </form>
-      <SmtpMessage />
-    </>
+        <SmtpMessage />
+      </div>
+    </div>
   );
 }
