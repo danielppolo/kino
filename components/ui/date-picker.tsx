@@ -68,7 +68,7 @@ function DaterPicker({
           <Button
             variant={variant}
             className={cn(
-              "text-left font-normal",
+              "w-full grow text-left font-normal",
               "text-muted-foreground",
               className,
             )}
@@ -81,8 +81,9 @@ function DaterPicker({
           <Calendar
             mode="single"
             selected={date}
+            defaultMonth={date}
+            captionLayout="dropdown"
             onSelect={handleChange}
-            initialFocus
           />
         </PopoverContent>
       </Popover>

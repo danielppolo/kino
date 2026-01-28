@@ -230,9 +230,7 @@ export function WalletNetBalanceLineChart({
                 showSign
               />
             </div>
-            <p className="text-muted-foreground text-sm">
-              Current net balance
-            </p>
+            <p className="text-muted-foreground text-sm">Current net balance</p>
           </div>
           <div>
             <div
@@ -250,9 +248,7 @@ export function WalletNetBalanceLineChart({
                 showSign
               />
             </div>
-            <p className="text-muted-foreground text-sm">
-              Last month's change
-            </p>
+            <p className="text-muted-foreground text-sm">Last month's change</p>
           </div>
         </div>
         <ChartContainer config={chartConfig}>
@@ -271,7 +267,9 @@ export function WalletNetBalanceLineChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => format(parseMonthDate(value), "MMM yyyy")}
+              tickFormatter={(value) =>
+                format(parseMonthDate(value), "MMM yyyy")
+              }
             />
             <YAxis
               tickLine={false}
@@ -286,7 +284,9 @@ export function WalletNetBalanceLineChart({
             />
             <ChartTooltip
               cursor={false}
-              labelFormatter={(value) => format(parseMonthDate(value), "MMMM yyyy")}
+              labelFormatter={(value) =>
+                format(parseMonthDate(value), "MMMM yyyy")
+              }
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
 
@@ -354,15 +354,10 @@ export function WalletNetBalanceLineChart({
             />
             <Line
               dataKey="net_balance"
-              type="monotone"
+              type="step"
               stroke={lineColor}
               strokeWidth={2}
-              dot={{
-                fill: lineColor,
-              }}
-              activeDot={{
-                r: 6,
-              }}
+              dot={false}
             />
           </LineChart>
         </ChartContainer>
