@@ -2,13 +2,14 @@
 
 import React, { memo } from "react";
 import { format } from "date-fns";
-import { ReceiptText, RefreshCcw } from "lucide-react";
+import { RefreshCcw } from "lucide-react";
 
 import SelectableRow from "./selectable-row";
 
 import { Badge } from "@/components/ui/badge";
 import { Money } from "@/components/ui/money";
 import { Text } from "@/components/ui/typography";
+import { useWallets } from "@/contexts/settings-context";
 import { Bill } from "@/utils/supabase/types";
 
 interface BillRowProps {
@@ -28,6 +29,8 @@ export function BillRow({
   onToggleSelect,
   active = false,
 }: BillRowProps) {
+  const [, walletMap] = useWallets();
+  const wallet = walletMap.get(bill.wallet_id);
   const dueDate = new Date(bill.due_date);
   const isOverdue = dueDate < new Date();
 
@@ -40,10 +43,9 @@ export function BillRow({
       onToggleSelect={onToggleSelect}
       active={active}
     >
-      <div className="shrink-0">
-        <ReceiptText className="text-muted-foreground size-4" />
-      </div>
+
       <Text className="shrink grow truncate">{bill.description}</Text>
+
       {bill.is_recurring && bill.interval_type && (
         <Badge
           variant="outline"
@@ -51,6 +53,12 @@ export function BillRow({
         >
           <RefreshCcw className="size-3" />
           {bill.interval_type}
+        </Badge>
+      )}
+
+      {wallet && (
+        <Badge variant="secondary" className="hidden text-xs sm:flex">
+          {wallet.name}
         </Badge>
       )}
       <Text muted small className={isOverdue ? "text-destructive" : undefined}>

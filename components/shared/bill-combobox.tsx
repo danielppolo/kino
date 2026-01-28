@@ -5,8 +5,11 @@ import { format } from "date-fns";
 import { ReceiptText } from "lucide-react";
 
 import { Combobox, ComboboxOption } from "@/components/ui/combobox";
-import { useBills, useWallets } from "@/contexts/settings-context";
+import { useWallets } from "@/contexts/settings-context";
 import { Bill } from "@/utils/supabase/types";
+import { useQuery } from "@tanstack/react-query";
+import { createClient } from "@/utils/supabase/client";
+import { listBills } from "@/utils/supabase/queries";
 
 interface BillComboboxProps {
   size?: "sm" | "default" | "lg";
@@ -27,13 +30,22 @@ const BillCombobox = ({
   className,
   walletId,
 }: BillComboboxProps) => {
-  const [bills] = useBills();
   const [, walletMap] = useWallets();
 
-  // Filter bills by wallet if provided
-  const filteredBills = !walletId
-    ? bills
-    : bills.filter((bill) => bill.wallet_id === walletId);
+  const { data: billsData, isLoading } = useQuery({
+    queryKey: ["bills", walletId],
+    queryFn: async () => {
+      const supabase = createClient();
+      const result = await listBills(supabase, { walletId });
+      if (result.error) throw result.error;
+      return result.data ?? [];
+    },
+  });
+
+  const bills = billsData ?? [];
+
+  // Filter bills by wallet if provided (client-side for now, but query handles it)
+  const filteredBills = bills;
 
   const billOptions = filteredBills
     .sort((a, b) => a.due_date.localeCompare(b.due_date))
@@ -66,6 +78,22 @@ const BillCombobox = ({
       currency: currency,
     }).format(cents / 100);
   };
+
+  if (isLoading) {
+    return (
+      <Combobox
+        variant={variant}
+        size={size}
+        icon={<ReceiptText className="size-4" />}
+        options={[]}
+        value=""
+        onChange={onChange}
+        placeholder="Loading bills..."
+        className={className}
+        disabled
+      />
+    );
+  }
 
   return (
     <Combobox

@@ -817,18 +817,30 @@ export const getCashflowBreakdown = async (
 // Bills queries
 export const listBills = async (
   client: TypedSupabaseClient,
-  params?: { walletId?: string },
+  params?: {
+    walletId?: string;
+    page?: number;
+    pageSize?: number;
+  },
 ) => {
   let query = client
     .from("bills")
-    .select("*")
-    .order("due_date", { ascending: true });
+    .select("*", { count: "exact" })
+    .order("due_date", { ascending: false }); // DESC to match bills-section
 
   if (params?.walletId) {
     query = query.eq("wallet_id", params.walletId);
   }
 
-  return query;
+  const page = params?.page ?? 0;
+  const pageSize = params?.pageSize ?? 50;
+
+  const { data, error, count } = await query.range(
+    page * pageSize,
+    (page + 1) * pageSize - 1,
+  );
+
+  return { data, error, count };
 };
 
 export const getBillWithPayments = async (

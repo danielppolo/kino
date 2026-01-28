@@ -8,7 +8,6 @@ import { TRANSFER_CATEGORIES } from "@/utils/constants";
 import { createClient } from "@/utils/supabase/client";
 import { FeatureFlags, parseFeatureFlags, DEFAULT_FEATURE_FLAGS } from "@/utils/types/feature-flags";
 import {
-  listBills,
   listCategories,
   listLabels,
   listTags,
@@ -17,7 +16,6 @@ import {
   listTransactionTemplates,
 } from "@/utils/supabase/queries";
 import {
-  Bill,
   Category,
   Label,
   Tag,
@@ -33,7 +31,6 @@ export interface CurrencyConversion {
 }
 
 interface SettingsContextType {
-  bills: Bill[];
   categories: Category[];
   labels: Label[];
   tags: Tag[];
@@ -137,20 +134,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
     },
   });
 
-  const { data: bills = [] } = useQuery<Bill[]>({
-    queryKey: ["bills"],
-    queryFn: async () => {
-      const supabase = await createClient();
-      const result = await listBills(supabase);
-      if (result.error) throw result.error;
-      return (result.data || []).sort((a, b) =>
-        a.due_date.localeCompare(b.due_date),
-      );
-    },
-  });
-
   const value: SettingsContextType = {
-    bills,
     categories,
     labels,
     tags,
@@ -281,20 +265,6 @@ export const useSettings = () => {
   }
 
   return context;
-};
-
-export const useBills = (
-  key: keyof Bill = "id",
-): [Bill[], Map<string, Bill>] => {
-  const context = useContext(SettingsContext);
-  if (context === undefined) {
-    throw new Error("useBills must be used within a SettingsProvider");
-  }
-
-  const list = context.bills;
-  const map = new Map(context.bills.map((bill) => [String(bill[key]), bill]));
-
-  return [list, map];
 };
 
 export const useFeatureFlags = (): FeatureFlags => {
