@@ -18,8 +18,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createClient } from "@/utils/supabase/client";
-import { updateUserPreferences } from "@/utils/supabase/mutations";
-import { FeatureFlags, parseFeatureFlags, DEFAULT_FEATURE_FLAGS } from "@/utils/types/feature-flags";
+import {
+  updateUserPreferences,
+  updateWorkspaceFeatureFlags,
+  updateWorkspaceBaseCurrency,
+} from "@/utils/supabase/mutations";
+import {
+  FeatureFlags,
+  parseFeatureFlags,
+  DEFAULT_FEATURE_FLAGS,
+} from "@/utils/types/feature-flags";
+import { useWorkspace } from "@/contexts/workspace-context";
 
 type PreferencesFormState = {
   userId: string | null;
@@ -30,6 +39,7 @@ type PreferencesFormState = {
 
 export default function Page() {
   const queryClient = useQueryClient();
+  const { activeWorkspace } = useWorkspace();
   const [formState, setFormState] = useState<PreferencesFormState>({
     userId: null,
     baseCurrency: "USD",
@@ -38,28 +48,37 @@ export default function Page() {
   });
 
   const { data: preferencesData, isLoading } = useQuery({
-    queryKey: ["user-preferences"],
+    queryKey: ["user-preferences", activeWorkspace?.id],
     queryFn: async () => {
       const supabase = createClient();
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      const { data, error } = await supabase
+
+      // Fetch user preferences (phone only)
+      const { data: userPrefs, error: prefsError } = await supabase
         .from("user_preferences")
-        .select("user_id, base_currency, phone, feature_flags")
+        .select("user_id, phone")
         .maybeSingle();
 
-      if (error) throw new Error(error.message);
+      if (prefsError) throw new Error(prefsError.message);
+
+      // Base currency and feature flags come from the workspace
+      const baseCurrency = (activeWorkspace?.base_currency ?? "USD") as
+        | "USD"
+        | "MXN";
+      const featureFlags = activeWorkspace?.feature_flags
+        ? parseFeatureFlags(activeWorkspace.feature_flags)
+        : DEFAULT_FEATURE_FLAGS;
 
       return {
-        userId: data?.user_id ?? user?.id ?? null,
-        baseCurrency: (data?.base_currency ?? "USD") as "USD" | "MXN",
-        phone: data?.phone ?? "",
-        featureFlags: data?.feature_flags
-          ? parseFeatureFlags(data.feature_flags)
-          : DEFAULT_FEATURE_FLAGS,
+        userId: userPrefs?.user_id ?? user?.id ?? null,
+        baseCurrency,
+        phone: userPrefs?.phone ?? "",
+        featureFlags,
       };
     },
+    enabled: !!activeWorkspace,
   });
 
   useEffect(() => {
@@ -77,17 +96,33 @@ export default function Page() {
       if (!formState.userId) {
         throw new Error("User not found");
       }
-      return updateUserPreferences({
+      if (!activeWorkspace) {
+        throw new Error("No active workspace");
+      }
+
+      // Update user preferences (phone only)
+      await updateUserPreferences({
         userId: formState.userId,
-        baseCurrency: formState.baseCurrency,
         phone: formState.phone.trim() ? formState.phone.trim() : null,
-        featureFlags: formState.featureFlags,
       });
+
+      // Update workspace base currency
+      await updateWorkspaceBaseCurrency(
+        activeWorkspace.id,
+        formState.baseCurrency,
+      );
+
+      // Update workspace feature flags
+      await updateWorkspaceFeatureFlags(
+        activeWorkspace.id,
+        formState.featureFlags,
+      );
     },
     onSuccess: () => {
       toast.success("Preferences updated successfully");
       queryClient.invalidateQueries({ queryKey: ["user-preferences"] });
-      window.location.reload(); // Reload to apply feature flag changes
+      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+      window.location.reload(); // Reload to apply changes
     },
     onError: (error: unknown) => {
       if (error instanceof Error) {
@@ -98,11 +133,13 @@ export default function Page() {
     },
   });
 
-  const isDirty = !preferencesData ? false : (
-    preferencesData.baseCurrency !== formState.baseCurrency ||
-    (preferencesData.phone ?? "") !== formState.phone ||
-    preferencesData.featureFlags.bills_enabled !== formState.featureFlags.bills_enabled
-  );
+  const isDirty =
+    !preferencesData
+      ? false
+      : preferencesData.baseCurrency !== formState.baseCurrency ||
+        (preferencesData.phone ?? "") !== formState.phone ||
+        preferencesData.featureFlags.bills_enabled !==
+          formState.featureFlags.bills_enabled;
 
   const handleSave = () => {
     updatePreferencesMutation.mutate();

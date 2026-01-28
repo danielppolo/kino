@@ -52,6 +52,7 @@ const SettingsContext = createContext<SettingsContextType | undefined>(
 
 interface SettingsProviderProps {
   children: ReactNode;
+  workspaceId: string;
   initialConversionRates: Record<string, CurrencyConversion>;
   initialBaseCurrency: string;
   initialFeatureFlags: FeatureFlags;
@@ -59,6 +60,7 @@ interface SettingsProviderProps {
 
 export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   children,
+  workspaceId,
   initialConversionRates,
   initialBaseCurrency,
   initialFeatureFlags,
@@ -75,65 +77,67 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   };
 
   const { data: categories = [] } = useSuspenseQuery<Category[]>({
-    queryKey: ["categories"],
+    queryKey: ["categories", workspaceId],
     queryFn: async () => {
       const supabase = await createClient();
-      const result = await listCategories(supabase);
+      const result = await listCategories(supabase, workspaceId);
       if (result.error) throw result.error;
       return (result.data || []).sort((a, b) => a.name.localeCompare(b.name));
     },
   });
 
   const { data: labels = [] } = useSuspenseQuery<Label[]>({
-    queryKey: ["labels"],
+    queryKey: ["labels", workspaceId],
     queryFn: async () => {
       const supabase = await createClient();
-      const result = await listLabels(supabase);
+      const result = await listLabels(supabase, workspaceId);
       if (result.error) throw result.error;
       return (result.data || []).sort((a, b) => a.name.localeCompare(b.name));
     },
   });
 
   const { data: tags = [] } = useSuspenseQuery<Tag[]>({
-    queryKey: ["tags"],
+    queryKey: ["tags", workspaceId],
     queryFn: async () => {
       const supabase = await createClient();
-      const result = await listTags(supabase);
+      const result = await listTags(supabase, workspaceId);
       if (result.error) throw result.error;
       return (result.data || []).sort((a, b) => a.title.localeCompare(b.title));
     },
   });
 
   const { data: templates = [] } = useQuery<TransactionTemplate[]>({
-    queryKey: ["transaction-templates"],
+    queryKey: ["transaction-templates", workspaceId],
     queryFn: async () => {
       const supabase = await createClient();
-      const result = await listTransactionTemplates(supabase);
+      const result = await listTransactionTemplates(supabase, workspaceId);
       if (result.error) throw result.error;
       return (result.data || []).sort((a, b) => a.name.localeCompare(b.name));
     },
   });
 
   const { data: views = [] } = useQuery<View[]>({
-    queryKey: ["views"],
+    queryKey: ["views", workspaceId],
     queryFn: async () => {
       const supabase = await createClient();
-      const result = await listViews(supabase);
+      const result = await listViews(supabase, workspaceId);
       if (result.error) throw result.error;
       return (result.data || []).sort((a, b) => a.name.localeCompare(b.name));
     },
   });
 
   const { data: wallets = [] } = useSuspenseQuery<Wallet[]>({
-    queryKey: ["wallets"],
+    queryKey: ["wallets", workspaceId],
     queryFn: async () => {
       const supabase = await createClient();
-      const result = await listWallets(supabase);
+      const result = await listWallets(supabase, workspaceId);
       if (result.error) throw result.error;
       return (result.data || []).sort((a, b) => a.name.localeCompare(b.name));
     },
   });
 
+  // Use conversion rates from WorkspaceProvider (passed as initialConversionRates)
+  // No need to fetch them again here
   const value: SettingsContextType = {
     categories,
     labels,

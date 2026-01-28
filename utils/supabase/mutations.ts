@@ -16,15 +16,18 @@ function chunk<T>(arr: T[], size: number): T[][] {
 export const createWallet = async ({
   name,
   currency,
+  workspaceId,
 }: {
   name: string;
   currency: string;
+  workspaceId: string;
 }) => {
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("insert_wallet_and_user_wallet", {
     wallet_currency: currency,
     wallet_name: name,
+    p_workspace_id: workspaceId,
   });
 
   if (error) throw new Error(error.message);
@@ -914,37 +917,196 @@ export const updateUserPhone = async (
 
 export const updateUserPreferences = async (params: {
   userId: string;
-  baseCurrency?: string;
   phone?: string | null;
-  featureFlags?: FeatureFlags;
 }) => {
   const supabase = await createClient();
 
   const updateData: {
     user_id: string;
-    base_currency?: string;
     phone?: string | null;
-    feature_flags?: FeatureFlags;
   } = {
     user_id: params.userId,
   };
 
-  if (params.baseCurrency !== undefined) {
-    updateData.base_currency = params.baseCurrency;
-  }
-
   if (params.phone !== undefined) {
     updateData.phone = params.phone;
-  }
-
-  if (params.featureFlags !== undefined) {
-    updateData.feature_flags = params.featureFlags as any;
   }
 
   const { data, error } = await supabase
     .from("user_preferences")
     .upsert(updateData, { onConflict: "user_id" })
     .select();
+
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+// ============================================================================
+// Workspace Mutations
+// ============================================================================
+
+export const createWorkspace = async (name: string, userId: string) => {
+  const supabase = await createClient();
+
+  // Create the workspace
+  const { data: workspace, error: workspaceError } = await supabase
+    .from("workspaces")
+    .insert({ name })
+    .select()
+    .single();
+
+  if (workspaceError) throw new Error(workspaceError.message);
+
+  // Add the user as owner
+  const { error: memberError } = await supabase
+    .from("workspace_members")
+    .insert({
+      workspace_id: workspace.id,
+      user_id: userId,
+      role: "owner",
+    });
+
+  if (memberError) throw new Error(memberError.message);
+
+  return workspace;
+};
+
+export const updateWorkspace = async (id: string, name: string) => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("workspaces")
+    .update({ name })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+export const updateWorkspaceFeatureFlags = async (
+  workspaceId: string,
+  featureFlags: FeatureFlags,
+) => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("workspaces")
+    .update({ feature_flags: featureFlags as any })
+    .eq("id", workspaceId)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+export const updateWorkspaceBaseCurrency = async (
+  workspaceId: string,
+  baseCurrency: string,
+) => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("workspaces")
+    .update({ base_currency: baseCurrency })
+    .eq("id", workspaceId)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+export const deleteWorkspace = async (id: string) => {
+  const supabase = await createClient();
+
+  const { error } = await supabase.from("workspaces").delete().eq("id", id);
+
+  if (error) throw new Error(error.message);
+};
+
+export const addWorkspaceMember = async (
+  workspaceId: string,
+  email: string,
+  role: "owner" | "editor" | "reader",
+) => {
+  const supabase = await createClient();
+
+  // First, look up the user by email
+  const { data: user, error: userError } = await supabase.rpc(
+    "lookup_user_by_email",
+    { user_email: email },
+  );
+
+  if (userError) throw new Error(userError.message);
+  if (!user || user.length === 0) {
+    throw new Error("No user found with that email address");
+  }
+
+  const userId = user[0].id;
+
+  // Add the user to the workspace
+  const { data, error } = await supabase
+    .from("workspace_members")
+    .insert({
+      workspace_id: workspaceId,
+      user_id: userId,
+      role,
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+export const updateWorkspaceMemberRole = async (
+  memberId: string,
+  role: "owner" | "editor" | "reader",
+) => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("workspace_members")
+    .update({ role })
+    .eq("id", memberId)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+export const removeWorkspaceMember = async (memberId: string) => {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("workspace_members")
+    .delete()
+    .eq("id", memberId);
+
+  if (error) throw new Error(error.message);
+};
+
+export const switchActiveWorkspace = async (
+  userId: string,
+  workspaceId: string,
+) => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("user_preferences")
+    .upsert(
+      {
+        user_id: userId,
+        active_workspace_id: workspaceId,
+      },
+      { onConflict: "user_id" },
+    )
+    .select()
+    .single();
 
   if (error) throw new Error(error.message);
   return data;

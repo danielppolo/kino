@@ -12,6 +12,7 @@ import {
   ViewGrid,
   Wallet,
   MultiplePages,
+  Building,
 } from "iconoir-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -43,6 +44,17 @@ const SettingsSidebar: React.FC = () => {
         <SidebarGroupLabel>Workspace</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === "/app/settings/workspaces"}
+              >
+                <Link href="/app/settings/workspaces">
+                  <Building className="size-4" />
+                  Workspaces
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild

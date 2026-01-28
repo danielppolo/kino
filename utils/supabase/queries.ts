@@ -104,27 +104,49 @@ export const listTransactions = async (
   return { data, error, count };
 };
 
-export const listLabels = async (client: TypedSupabaseClient) => {
-  return client.from("labels").select("*");
+export const listLabels = async (
+  client: TypedSupabaseClient,
+  workspaceId: string,
+) => {
+  return client.from("labels").select("*").eq("workspace_id", workspaceId);
 };
 
-export const listCategories = async (client: TypedSupabaseClient) => {
-  return client.from("categories").select("*");
+export const listCategories = async (
+  client: TypedSupabaseClient,
+  workspaceId: string,
+) => {
+  return client.from("categories").select("*").eq("workspace_id", workspaceId);
 };
 
-export const listWallets = async (client: TypedSupabaseClient) => {
-  return client.from("wallets").select("*");
+export const listWallets = async (
+  client: TypedSupabaseClient,
+  workspaceId: string,
+) => {
+  return client.from("wallets").select("*").eq("workspace_id", workspaceId);
 };
 
-export const listTags = async (client: TypedSupabaseClient) => {
-  return client.from("tags").select("*");
+export const listTags = async (
+  client: TypedSupabaseClient,
+  workspaceId: string,
+) => {
+  return client.from("tags").select("*").eq("workspace_id", workspaceId);
 };
 
-export const listViews = async (client: TypedSupabaseClient) => {
-  return client.from("views").select("*");
+export const listViews = async (
+  client: TypedSupabaseClient,
+  workspaceId: string,
+) => {
+  return client.from("views").select("*").eq("workspace_id", workspaceId);
 };
-export const listTransactionTemplates = async (client: TypedSupabaseClient) => {
-  return client.from("transaction_templates").select("*");
+
+export const listTransactionTemplates = async (
+  client: TypedSupabaseClient,
+  workspaceId: string,
+) => {
+  return client
+    .from("transaction_templates")
+    .select("*")
+    .eq("workspace_id", workspaceId);
 };
 
 type WalletMonthlyBalance = {
@@ -616,14 +638,21 @@ export const getCategoryTransactionCounts = async (
   client: TypedSupabaseClient,
   params?: {
     walletId?: string;
+    workspaceId?: string;
     type?: "income" | "expense";
   },
 ) => {
   // First get all categories of the specified type
-  const { data: categories, error: categoriesError } = await client
+  let query = client
     .from("categories")
     .select("id")
     .eq("type", params?.type || "expense");
+
+  if (params?.workspaceId) {
+    query = query.eq("workspace_id", params.workspaceId);
+  }
+
+  const { data: categories, error: categoriesError } = await query;
 
   if (categoriesError) {
     return { data: null, error: categoriesError };
@@ -672,12 +701,17 @@ export const getTagTransactionCounts = async (
   client: TypedSupabaseClient,
   params?: {
     walletId?: string;
+    workspaceId?: string;
   },
 ) => {
   // First get all tags
-  const { data: tags, error: tagsError } = await client
-    .from("tags")
-    .select("id");
+  let query = client.from("tags").select("id");
+
+  if (params?.workspaceId) {
+    query = query.eq("workspace_id", params.workspaceId);
+  }
+
+  const { data: tags, error: tagsError } = await query;
 
   if (tagsError) {
     return { data: null, error: tagsError };
