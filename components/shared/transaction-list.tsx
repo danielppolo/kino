@@ -31,6 +31,7 @@ import RowGroupHeader, { RowGroupHeaderLoading } from "./row-group-header";
 import TransactionRow from "./transaction-row";
 
 import { useTransactionForm } from "@/contexts/transaction-form-context";
+import { useWallets } from "@/contexts/settings-context";
 import useFilters from "@/hooks/use-filters";
 import { useSelection } from "@/hooks/use-selection";
 import { PAGE_SIZE } from "@/utils/constants";
@@ -58,10 +59,15 @@ const transactionRowHeight = 40;
 export default function TransactionList() {
   const filters = useFilters();
   const { open: formOpen, openForm } = useTransactionForm();
+  const [wallets] = useWallets();
   const [bulkOpen, setBulkOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const queryClient = useQueryClient();
+
+  // Get wallet IDs for workspace scoping
+  const workspaceWalletIds = wallets.map((w) => w.id);
+
   const {
     data,
     dataUpdatedAt,
@@ -70,13 +76,14 @@ export default function TransactionList() {
     isFetchingNextPage,
     status,
   } = useInfiniteQuery<TransactionPage, Error, InfiniteTransactionData>({
-    queryKey: ["transactions", filters],
+    queryKey: ["transactions", filters, workspaceWalletIds],
     queryFn: async ({ pageParam = 0 }) => {
       const supabase = createClient();
       const result = await listTransactions(supabase, {
         ...filters,
         page: pageParam as number,
         pageSize: PAGE_SIZE,
+        workspaceWalletIds,
       });
       if (result.error) {
         throw result.error;
