@@ -44,6 +44,8 @@ interface BillsListProps {
 
 interface SplitConfirmation {
   billId: string;
+  billDescription: string;
+  billDueDate: string;
   transactionId: string;
   transactionAmount: number;
   billRemainingAmount: number;
@@ -174,11 +176,15 @@ export default function BillsList({ walletId }: BillsListProps) {
   const splitAndLinkMutation = useMutation({
     mutationFn: async ({
       billId,
+      billDescription,
+      billDueDate,
       transactionId,
       splitAmount,
       otherTransactionIds,
     }: {
       billId: string;
+      billDescription: string;
+      billDueDate: string;
       transactionId: string;
       splitAmount: number;
       otherTransactionIds: string[];
@@ -187,6 +193,8 @@ export default function BillsList({ walletId }: BillsListProps) {
       const { matchingTransactionId } = await splitTransaction(
         transactionId,
         splitAmount,
+        billDescription,
+        billDueDate,
       );
 
       // Link all transactions (split one + others)
@@ -250,6 +258,8 @@ export default function BillsList({ walletId }: BillsListProps) {
       // Show confirmation dialog
       setSplitConfirmation({
         billId,
+        billDescription: bill.description,
+        billDueDate: bill.due_date,
         transactionId: transaction.id!,
         transactionAmount: transaction.amount_cents!,
         billRemainingAmount: remainingAmount,
@@ -268,6 +278,8 @@ export default function BillsList({ walletId }: BillsListProps) {
 
     splitAndLinkMutation.mutate({
       billId: splitConfirmation.billId,
+      billDescription: splitConfirmation.billDescription,
+      billDueDate: splitConfirmation.billDueDate,
       transactionId: splitConfirmation.transactionId,
       splitAmount: splitConfirmation.billRemainingAmount,
       otherTransactionIds: splitConfirmation.otherTransactionIds,

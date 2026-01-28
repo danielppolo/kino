@@ -20,6 +20,7 @@ import { TrendsChart } from "@/components/charts/trends-chart";
 import { TagCloudAnalyticsChart } from "@/components/charts/tag-cloud-analytics-chart";
 import { TransactionSizeDistributionChart } from "@/components/charts/transaction-size-distribution-chart";
 import { TransactionTypeDistributionChart } from "@/components/charts/transaction-type-distribution-chart";
+import { WalletNetBalanceLineChart } from "@/components/charts/wallet-net-balance-line-chart";
 import { Filters } from "@/utils/supabase/queries";
 
 interface PageParams {
@@ -151,6 +152,13 @@ async function InfographicsPage({ params, searchParams }: PageParams) {
       </div>
       <div className="md:col-span-2 lg:col-span-3">
         <BillDebtFlowChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
+        />
+      </div>
+      <div className="md:col-span-2 lg:col-span-3">
+        <WalletNetBalanceLineChart
           walletId={walletId}
           from={filters.from}
           to={filters.to}
