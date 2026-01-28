@@ -21,7 +21,7 @@ export interface Filters {
 
 export const listTransactions = async (
   client: TypedSupabaseClient,
-  params?: Filters & { page?: number; pageSize?: number },
+  params?: Filters & { page?: number; pageSize?: number; workspaceWalletIds?: string[] },
 ) => {
   let query = client.from("transaction_list").select("*", { count: "exact" });
 
@@ -60,6 +60,9 @@ export const listTransactions = async (
   // Filter by wallet_id if available
   if (params?.wallet_id) {
     query = query.eq("wallet_id", params.wallet_id);
+  } else if (params?.workspaceWalletIds && params.workspaceWalletIds.length > 0) {
+    // If no specific wallet but workspace wallet IDs provided, scope to those wallets
+    query = query.in("wallet_id", params.workspaceWalletIds);
   }
 
   // Filter by transfer_id if available

@@ -5,12 +5,15 @@ import Papa from "papaparse";
 import { Filters, listTransactions } from "@/utils/supabase/queries";
 import { createClient } from "@/utils/supabase/server";
 
-export async function exportTransactions(filters: Filters) {
+export async function exportTransactions(
+  filters: Filters,
+  workspaceWalletIds?: string[],
+) {
   const supabase = await createClient();
-  const { data: transactions, error } = await listTransactions(
-    supabase,
-    filters,
-  );
+  const { data: transactions, error } = await listTransactions(supabase, {
+    ...filters,
+    workspaceWalletIds,
+  });
 
   if (error) {
     return { error, data: null };

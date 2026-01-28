@@ -1,13 +1,20 @@
 "use client";
 
-import React, { useState } from "react";
-import { Plus, MoreVertical, Trash, Edit, Users } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { WorkspaceForm } from "@/components/shared/workspace-form";
 import PageHeader from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -15,48 +22,34 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useWorkspace } from "@/contexts/workspace-context";
-import {
-  createWorkspace,
-  updateWorkspace,
-  deleteWorkspace,
-} from "@/utils/supabase/mutations";
 import { createClient } from "@/utils/supabase/client";
+import {
+  updateWorkspaceFeatureFlags,
+  updateWorkspaceBaseCurrency,
+} from "@/utils/supabase/mutations";
+import {
+  FeatureFlags,
+  parseFeatureFlags,
+  DEFAULT_FEATURE_FLAGS,
+} from "@/utils/types/feature-flags";
+import { useWorkspace } from "@/contexts/workspace-context";
+
+type WorkspaceConfigFormState = {
+  baseCurrency: "USD" | "MXN";
+  featureFlags: FeatureFlags;
+};
 
 export default function WorkspacesPage() {
-  const router = useRouter();
-  const { workspaces, workspaceMembers, activeWorkspace, refetch } =
-    useWorkspace();
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingWorkspace, setEditingWorkspace] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
-  const [deletingWorkspaceId, setDeletingWorkspaceId] = useState<string | null>(
-    null,
-  );
-  const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
+  const { activeWorkspace, workspaceMembers } = useWorkspace();
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [formState, setFormState] = useState<WorkspaceConfigFormState>({
+    baseCurrency: "USD",
+    featureFlags: DEFAULT_FEATURE_FLAGS,
+  });
 
   // Get current user
-  const [currentUserId, setCurrentUserId] = React.useState<string>("");
-
-  React.useEffect(() => {
+  useEffect(() => {
     const getCurrentUser = async () => {
       const supabase = await createClient();
       const {
@@ -67,206 +60,194 @@ export default function WorkspacesPage() {
     getCurrentUser();
   }, []);
 
-  const isOwner = (workspaceId: string) => {
-    return workspaceMembers.some(
+  // Check if current user is owner
+  const isOwner =
+    activeWorkspace &&
+    workspaceMembers.some(
       (m) =>
-        m.workspace_id === workspaceId &&
+        m.workspace_id === activeWorkspace.id &&
         m.user_id === currentUserId &&
         m.role === "owner",
     );
-  };
 
-  const handleCreate = () => {
-    setEditingWorkspace(null);
-    setFormOpen(true);
-  };
+  // Initialize form state from workspace
+  useEffect(() => {
+    if (!activeWorkspace) return;
 
-  const handleEdit = (workspace: { id: string; name: string }) => {
-    setEditingWorkspace(workspace);
-    setFormOpen(true);
-  };
+    const baseCurrency = (activeWorkspace.base_currency ?? "USD") as
+      | "USD"
+      | "MXN";
+    const featureFlags = activeWorkspace.feature_flags
+      ? parseFeatureFlags(activeWorkspace.feature_flags)
+      : DEFAULT_FEATURE_FLAGS;
 
-  const handleSubmit = async (data: { name: string }) => {
-    setIsLoading(true);
-    try {
-      if (editingWorkspace) {
-        await updateWorkspace(editingWorkspace.id, data.name);
-      } else {
-        await createWorkspace(data.name, currentUserId);
+    setFormState({
+      baseCurrency,
+      featureFlags,
+    });
+  }, [activeWorkspace]);
+
+  const updateWorkspaceConfigMutation = useMutation({
+    mutationFn: async () => {
+      if (!activeWorkspace) {
+        throw new Error("No active workspace");
       }
-      await refetch();
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const handleDelete = async () => {
-    if (!deletingWorkspaceId) return;
+      // Update workspace base currency
+      await updateWorkspaceBaseCurrency(
+        activeWorkspace.id,
+        formState.baseCurrency,
+      );
 
-    // Check if this is the active workspace
-    if (deletingWorkspaceId === activeWorkspace?.id && workspaces.length === 1) {
-      toast.error("Cannot delete your only workspace");
-      setDeletingWorkspaceId(null);
+      // Update workspace feature flags
+      await updateWorkspaceFeatureFlags(
+        activeWorkspace.id,
+        formState.featureFlags,
+      );
+    },
+    onSuccess: () => {
+      toast.success("Workspace configuration updated successfully");
+      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+      queryClient.invalidateQueries({ queryKey: ["workspace-currency-conversions"] });
+      window.location.reload(); // Reload to apply changes
+    },
+    onError: (error: unknown) => {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to update workspace configuration");
+      }
+    },
+  });
+
+  const isDirty =
+    !activeWorkspace
+      ? false
+      : activeWorkspace.base_currency !== formState.baseCurrency ||
+        (activeWorkspace.feature_flags
+          ? parseFeatureFlags(activeWorkspace.feature_flags).bills_enabled !==
+            formState.featureFlags.bills_enabled
+          : DEFAULT_FEATURE_FLAGS.bills_enabled !==
+            formState.featureFlags.bills_enabled);
+
+  const handleSave = () => {
+    if (!isOwner) {
+      toast.error("Only workspace owners can update configuration");
       return;
     }
-
-    setIsLoading(true);
-    try {
-      await deleteWorkspace(deletingWorkspaceId);
-      await refetch();
-      toast.success("Workspace deleted!");
-
-      // If we deleted the active workspace, the context will switch automatically
-      if (deletingWorkspaceId === activeWorkspace?.id) {
-        router.refresh();
-      }
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to delete workspace",
-      );
-    } finally {
-      setIsLoading(false);
-      setDeletingWorkspaceId(null);
-    }
+    updateWorkspaceConfigMutation.mutate();
   };
 
+  if (!activeWorkspace) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <p className="text-muted-foreground">Loading workspace...</p>
+      </div>
+    );
+  }
+
   return (
-    <>
-      <PageHeader className="justify-between">
+    <div className="flex h-full flex-col">
+      <PageHeader>
         <div>
-          <h1 className="text-2xl font-bold">Workspaces</h1>
+          <h2 className="text-2xl font-bold">Workspace Configuration</h2>
           <p className="text-muted-foreground text-sm">
-            Manage your workspaces and switch between them
+            Configure settings for {activeWorkspace.name}
           </p>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="mr-2 size-4" />
-          Create Workspace
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={
+            updateWorkspaceConfigMutation.isPending || !isDirty || !isOwner
+          }
+        >
+          Save
         </Button>
       </PageHeader>
 
-      <div className="space-y-4 p-6">
-        {workspaces.map((workspace) => {
-          const canManage = isOwner(workspace.id);
-
-          return (
-            <Card key={workspace.id}>
+      <div className="flex-1 space-y-6 overflow-y-auto px-4 py-6">
+        <div className="max-w-2xl space-y-6">
+          {!isOwner && (
+            <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-900/10">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      {workspace.name}
-                      {workspace.id === activeWorkspace?.id && (
-                        <span className="bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs">
-                          Active
-                        </span>
-                      )}
-                    </CardTitle>
-                    <CardDescription>
-                      Created{" "}
-                      {new Date(workspace.created_at).toLocaleDateString()}
-                    </CardDescription>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        router.push("/app/settings/workspaces/members")
-                      }
-                    >
-                      <Users className="mr-2 size-4" />
-                      Members
-                    </Button>
-
-                    {canManage && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            disabled={isLoading}
-                          >
-                            <MoreVertical className="size-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => handleEdit(workspace)}
-                          >
-                            <Edit className="mr-2 size-4" />
-                            Rename
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => setDeletingWorkspaceId(workspace.id)}
-                          >
-                            <Trash className="mr-2 size-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                </div>
+                <CardTitle className="text-sm">Read-only</CardTitle>
+                <CardDescription>
+                  Only workspace owners can modify these settings
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground text-sm">
-                  {workspaceMembers.filter(
-                    (m) => m.workspace_id === workspace.id,
-                  ).length}{" "}
-                  member(s)
-                </p>
-              </CardContent>
             </Card>
-          );
-        })}
+          )}
 
-        {workspaces.length === 0 && (
           <Card>
-            <CardContent className="flex min-h-[200px] items-center justify-center">
-              <div className="text-center">
-                <p className="text-muted-foreground mb-4">
-                  No workspaces yet
-                </p>
-                <Button onClick={handleCreate}>
-                  <Plus className="mr-2 size-4" />
-                  Create Your First Workspace
-                </Button>
+            <CardHeader>
+              <CardTitle>Currency Settings</CardTitle>
+              <CardDescription>
+                Set the base currency for this workspace. All amounts will be
+                converted to this currency.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="base-currency">Base Currency</Label>
+                <Select
+                  value={formState.baseCurrency}
+                  onValueChange={(value) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      baseCurrency: value as "USD" | "MXN",
+                    }))
+                  }
+                  disabled={!isOwner}
+                >
+                  <SelectTrigger id="base-currency" className="w-[200px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USD">USD - US Dollar</SelectItem>
+                    <SelectItem value="MXN">MXN - Mexican Peso</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
-        )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Feature Flags</CardTitle>
+              <CardDescription>
+                Control which features are enabled in this workspace
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between space-x-2">
+                <div className="flex-1">
+                  <Label htmlFor="bills-enabled" className="text-sm font-medium">
+                    Bills Management
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Track and manage recurring and one-time bills
+                  </p>
+                </div>
+                <Switch
+                  id="bills-enabled"
+                  checked={formState.featureFlags.bills_enabled}
+                  onCheckedChange={(checked) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      featureFlags: {
+                        ...prev.featureFlags,
+                        bills_enabled: checked,
+                      },
+                    }))
+                  }
+                  disabled={!isOwner}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-
-      <WorkspaceForm
-        open={formOpen}
-        onOpenChange={setFormOpen}
-        workspace={editingWorkspace || undefined}
-        onSubmit={handleSubmit}
-        isLoading={isLoading}
-      />
-
-      <AlertDialog
-        open={!!deletingWorkspaceId}
-        onOpenChange={(open) => !open && setDeletingWorkspaceId(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Workspace</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this workspace? All wallets,
-              transactions, and data in this workspace will be permanently
-              deleted. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+    </div>
   );
 }
