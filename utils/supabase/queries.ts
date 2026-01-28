@@ -1173,7 +1173,7 @@ export const getBillDebtFlow = async (
 
   // Group debt increases by created_at month
   bills.forEach((bill) => {
-    const createdDate = new Date(bill.created_at);
+    const createdDate = new Date(bill.due_date);
     const month = `${createdDate.getFullYear()}-${String(createdDate.getMonth() + 1).padStart(2, "0")}-01`;
 
     // Apply date filters
@@ -2422,7 +2422,10 @@ export const getAverageMonthlySpendingVsIncome = async (
   conversionRates: Record<string, { rate: number }>,
   baseCurrency: string,
   walletMap: Map<string, { id: string; currency: string }>,
-): Promise<{ data: AverageMonthlySpendingVsIncomeResult | null; error: any }> => {
+): Promise<{
+  data: AverageMonthlySpendingVsIncomeResult | null;
+  error: any;
+}> => {
   const { data: monthlyStats, error: statsError } = await getMonthlyStats(
     client,
     params,
@@ -2433,10 +2436,7 @@ export const getAverageMonthlySpendingVsIncome = async (
   }
 
   // Group by month and aggregate across wallets
-  const monthGroups: Record<
-    string,
-    { income: number; spending: number }
-  > = {};
+  const monthGroups: Record<string, { income: number; spending: number }> = {};
 
   monthlyStats.forEach((stat) => {
     if (!monthGroups[stat.month]) {
