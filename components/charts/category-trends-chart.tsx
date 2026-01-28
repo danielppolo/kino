@@ -28,6 +28,7 @@ import { formatCurrency, parseMonthDate } from "@/utils/chart-helpers";
 import { ChartColors } from "@/utils/constants";
 import { createClient } from "@/utils/supabase/client";
 import { getCategoryTrends } from "@/utils/supabase/queries";
+import { StackOffsetToggle } from "./shared/stack-offset-toggle";
 
 interface CategoryTrendsChartProps {
   walletId?: string;
@@ -82,6 +83,7 @@ export function CategoryTrendsChart({
 
   const [wallets, walletMap] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
+  const [stackMode, setStackMode] = React.useState<"percentage" | "absolute">("percentage");
 
   const chartData: ChartDataPoint[] = React.useMemo(() => {
     if (!categoryData) return [];
@@ -270,11 +272,16 @@ export function CategoryTrendsChart({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Category Trends</CardTitle>
-        <CardDescription>
-          Top {type === "income" ? "income" : "expense"} categories over time in{" "}
-          {baseCurrency} (extreme outliers normalized)
-        </CardDescription>
+        <div className="flex items-start justify-between">
+          <div className="flex flex-col space-y-1.5">
+            <CardTitle>Category Trends</CardTitle>
+            <CardDescription>
+              Top {type === "income" ? "income" : "expense"} categories over time in{" "}
+              {baseCurrency} (extreme outliers normalized)
+            </CardDescription>
+          </div>
+          <StackOffsetToggle value={stackMode} onValueChange={setStackMode} />
+        </div>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
@@ -286,6 +293,7 @@ export function CategoryTrendsChart({
               top: 12,
               bottom: 12,
             }}
+            stackOffset={stackMode === "percentage" ? "expand" : undefined}
           >
             <CartesianGrid vertical={false} />
             <XAxis
@@ -299,7 +307,11 @@ export function CategoryTrendsChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => formatCurrency(value, baseCurrency)}
+              tickFormatter={(value) =>
+                stackMode === "percentage"
+                  ? `${(value * 100).toFixed(0)}%`
+                  : formatCurrency(value, baseCurrency)
+              }
               domain={[0, "auto"]}
             />
             <ChartTooltip
