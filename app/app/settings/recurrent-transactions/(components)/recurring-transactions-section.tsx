@@ -33,17 +33,8 @@ export default function RecurringTransactionsSection({
     },
   });
 
-  if (!data || data.length === 0) {
-    return (
-      <EmptyState
-        title="No transactions found"
-        description="Please try again or add a new transaction."
-      />
-    );
-  }
-
   // Sort by next_run_date || start_date
-  const sortedData = [...data].sort((a, b) => {
+  const sortedData = (data || []).sort((a, b) => {
     const dateA = a.next_run_date || a.start_date;
     const dateB = b.next_run_date || b.start_date;
     return new Date(dateA).getTime() - new Date(dateB).getTime();
@@ -55,6 +46,15 @@ export default function RecurringTransactionsSection({
     onEnter: onEdit,
     enabled: isActive,
   });
+
+  if (!data || data.length === 0) {
+    return (
+      <EmptyState
+        title="No transactions found"
+        description="Please try again or add a new transaction."
+      />
+    );
+  }
 
   return sortedData.map((transaction) => (
     <RecurringTransactionRow
