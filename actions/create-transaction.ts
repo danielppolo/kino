@@ -41,73 +41,56 @@ export const createTransaction = async (
     const { amount, type, id, currency, date, wallet_id, ...rest } =
       validatedData.data;
 
-    // Fetch user base currency preference
-    // If using service role client, get user_id from wallet via user_wallets
-    // Prefer an editor user if available
-    let userId: string | null = null;
-    if (supabaseClient) {
-      // Using service role client, need to get user_id from wallet
-      // Prefer an editor user, fallback to any user
-      const { data: userWallet, error: userWalletError } = await supabase
-        .from("user_wallets")
-        .select("user_id")
-        .eq("wallet_id", wallet_id)
-        .eq("role", "editor")
-        .limit(1)
-        .maybeSingle();
+    // Fetch workspace base currency from wallet
+    // First, get the workspace_id from the wallet
+    const { data: wallet, error: walletError } = await supabase
+      .from("wallets")
+      .select("workspace_id")
+      .eq("id", wallet_id)
+      .maybeSingle();
 
-      if (userWalletError) {
-        return {
-          success: false,
-          error: `Failed to fetch user wallet: ${userWalletError.message}`,
-          data: null,
-        };
-      }
-
-      // If no editor found, try any user
-      if (!userWallet) {
-        const { data: anyUserWallet, error: anyUserWalletError } =
-          await supabase
-            .from("user_wallets")
-            .select("user_id")
-            .eq("wallet_id", wallet_id)
-            .limit(1)
-            .maybeSingle();
-
-        if (anyUserWalletError) {
-          return {
-            success: false,
-            error: `Failed to fetch user wallet: ${anyUserWalletError.message}`,
-            data: null,
-          };
-        }
-
-        userId = anyUserWallet?.user_id || null;
-      } else {
-        userId = userWallet.user_id;
-      }
-    }
-
-    const { data: pref, error: prefError } = userId
-      ? await supabase
-          .from("user_preferences")
-          .select("base_currency")
-          .eq("user_id", userId)
-          .maybeSingle()
-      : await supabase
-          .from("user_preferences")
-          .select("base_currency")
-          .maybeSingle();
-
-    if (prefError) {
+    if (walletError) {
       return {
         success: false,
-        error: `Failed to fetch user preferences: ${prefError.message}`,
+        error: `Failed to fetch wallet: ${walletError.message}`,
         data: null,
       };
     }
 
-    const baseCurrency = pref?.base_currency;
+    if (!wallet || !wallet.workspace_id) {
+      return {
+        success: false,
+        error: `Wallet not found or has no associated workspace`,
+        data: null,
+      };
+    }
+
+    // Get base_currency from the workspace
+    const { data: workspace, error: workspaceError } = await supabase
+      .from("workspaces")
+      .select("base_currency")
+      .eq("id", wallet.workspace_id)
+      .maybeSingle();
+
+    if (workspaceError) {
+      return {
+        success: false,
+        error: `Failed to fetch workspace: ${workspaceError.message}`,
+        data: null,
+      };
+    }
+
+    if (!workspace) {
+      return {
+        success: false,
+        error: `Workspace not found`,
+        data: null,
+      };
+    }
+
+    // Type assertion needed because database types haven't been regenerated
+    // The base_currency column exists in the database (see migration 20260128000005)
+    const baseCurrency = (workspace as { base_currency?: string }).base_currency;
 
     // Fetch conversion rate to base currency only when needed
     let rate = 1;
@@ -144,7 +127,7 @@ export const createTransaction = async (
         date,
         amount_cents: signedAmount,
         base_amount_cents: signedBaseAmount,
-        conversion_rate_to_base: rate.toString(),
+        conversion_rate_to_base: rate,
       })
       .select();
 
