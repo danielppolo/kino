@@ -15,7 +15,6 @@ import { TrendsChart } from "@/components/charts/trends-chart";
 import { TagCloudAnalyticsChart } from "@/components/charts/tag-cloud-analytics-chart";
 import { TransactionSizeDistributionChart } from "@/components/charts/transaction-size-distribution-chart";
 import { TransactionTypeDistributionChart } from "@/components/charts/transaction-type-distribution-chart";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Filters } from "@/utils/supabase/queries";
 
 interface PageParams {
@@ -92,24 +91,20 @@ async function InfographicsPage({ searchParams }: PageParams) {
         />
       </div>
       <div className="col-span-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Expenses by Label</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <LabelPieChart from={filters.from} to={filters.to} type="expense" />
-          </CardContent>
-        </Card>
+        <LabelPieChart
+          from={filters.from}
+          to={filters.to}
+          type="expense"
+          title="Expenses by Label"
+        />
       </div>
       <div className="col-span-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Income by label</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <LabelPieChart from={filters.from} to={filters.to} type="income" />
-          </CardContent>
-        </Card>
+        <LabelPieChart
+          from={filters.from}
+          to={filters.to}
+          type="income"
+          title="Income by Label"
+        />
       </div>
 
       {/* Expense Analysis */}
