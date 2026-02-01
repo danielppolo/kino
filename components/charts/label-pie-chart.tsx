@@ -32,14 +32,16 @@ export default function LabelPieChart({
   title = "Label Distribution",
 }: LabelPieChartProps) {
   const { conversionRates, baseCurrency } = useCurrency();
-  const [, walletMap] = useWallets();
+  const [wallets, walletMap] = useWallets();
+  const workspaceWalletIds = wallets.map((w) => w.id);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["label-pie-chart", walletId, from, to, type],
+    queryKey: ["label-pie-chart", walletId, workspaceWalletIds, from, to, type],
     queryFn: async () => {
       const supabase = await createClient();
       const { data, error } = await getLabelPieChartData(supabase, {
         walletId,
+        workspaceWalletIds,
         from,
         to,
         type,

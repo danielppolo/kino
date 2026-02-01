@@ -49,14 +49,16 @@ export default function LabelAreaChart({
   title = "Label Trends",
 }: LabelAreaChartProps) {
   const [wallets, walletMap] = useWallets();
+  const workspaceWalletIds = wallets.map((w) => w.id);
   const { conversionRates, baseCurrency } = useCurrency();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["label-area-chart", walletId, from, to, type],
+    queryKey: ["label-area-chart", walletId, workspaceWalletIds, from, to, type],
     queryFn: async () => {
       const supabase = await createClient();
       const { data, error } = await getMonthlyLabelStats(supabase, {
         walletId,
+        workspaceWalletIds,
         from,
         to,
         type,

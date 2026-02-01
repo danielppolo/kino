@@ -218,6 +218,12 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({
         queryClient.invalidateQueries({
           queryKey: ["workspace-currency-conversions"],
         }),
+        queryClient.invalidateQueries({ queryKey: ["category-pie-chart"] }),
+        queryClient.invalidateQueries({ queryKey: ["label-pie-chart"] }),
+        queryClient.invalidateQueries({ queryKey: ["category-trends"] }),
+        queryClient.invalidateQueries({ queryKey: ["label-area-chart"] }),
+        queryClient.invalidateQueries({ queryKey: ["label-trends"] }),
+        queryClient.invalidateQueries({ queryKey: ["expense-concentration"] }),
       ]);
     } catch (error) {
       console.error("Failed to switch workspace:", error);

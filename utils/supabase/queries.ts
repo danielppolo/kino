@@ -377,6 +377,7 @@ export const getMonthlyCategoryStats = async (
   client: TypedSupabaseClient,
   params: {
     walletId?: string;
+    workspaceWalletIds?: string[];
     categoryId?: string;
     from?: string;
     to?: string;
@@ -401,6 +402,8 @@ export const getMonthlyCategoryStats = async (
 
     if (params.walletId) {
       query = query.eq("wallet_id", params.walletId);
+    } else if (params.workspaceWalletIds && params.workspaceWalletIds.length > 0) {
+      query = query.in("wallet_id", params.workspaceWalletIds);
     }
 
     if (params.categoryId) {
@@ -459,6 +462,7 @@ export const getMonthlyLabelStats = async (
   client: TypedSupabaseClient,
   params: {
     walletId?: string;
+    workspaceWalletIds?: string[];
     labelId?: string;
     from?: string;
     to?: string;
@@ -482,6 +486,8 @@ export const getMonthlyLabelStats = async (
 
     if (params.walletId) {
       query = query.eq("wallet_id", params.walletId);
+    } else if (params.workspaceWalletIds && params.workspaceWalletIds.length > 0) {
+      query = query.in("wallet_id", params.workspaceWalletIds);
     }
 
     if (params.labelId) {
@@ -540,6 +546,7 @@ export const getCategoryPieChartData = async (
   client: TypedSupabaseClient,
   params: {
     walletId?: string;
+    workspaceWalletIds?: string[];
     from?: string;
     to?: string;
     type: "income" | "expense" | "net";
@@ -564,6 +571,8 @@ export const getCategoryPieChartData = async (
   // Filter by wallet if specified
   if (params.walletId) {
     query = query.eq("wallet_id", params.walletId);
+  } else if (params.workspaceWalletIds && params.workspaceWalletIds.length > 0) {
+    query = query.in("wallet_id", params.workspaceWalletIds);
   }
 
   // Filter by date range if specified
@@ -591,6 +600,7 @@ export const getLabelPieChartData = async (
   client: TypedSupabaseClient,
   params: {
     walletId?: string;
+    workspaceWalletIds?: string[];
     from?: string;
     to?: string;
     type: "income" | "expense" | "net";
@@ -614,6 +624,8 @@ export const getLabelPieChartData = async (
   // Filter by wallet if specified
   if (params.walletId) {
     query = query.eq("wallet_id", params.walletId);
+  } else if (params.workspaceWalletIds && params.workspaceWalletIds.length > 0) {
+    query = query.in("wallet_id", params.workspaceWalletIds);
   }
 
   // Filter by date range if specified
@@ -1722,6 +1734,7 @@ export const getCategoryTrends = async (
   client: TypedSupabaseClient,
   params: {
     walletId?: string;
+    workspaceWalletIds?: string[];
     from?: string;
     to?: string;
     type?: "income" | "expense";
@@ -1729,6 +1742,7 @@ export const getCategoryTrends = async (
 ) => {
   const stats = await getMonthlyCategoryStats(client, {
     walletId: params.walletId,
+    workspaceWalletIds: params.workspaceWalletIds,
     from: params.from,
     to: params.to,
     type: params.type,
@@ -2069,6 +2083,7 @@ export const getExpenseConcentration = async (
   client: TypedSupabaseClient,
   params: {
     walletId?: string;
+    workspaceWalletIds?: string[];
     from?: string;
     to?: string;
     topN?: number;
@@ -2076,6 +2091,7 @@ export const getExpenseConcentration = async (
 ) => {
   const stats = await getMonthlyCategoryStats(client, {
     walletId: params.walletId,
+    workspaceWalletIds: params.workspaceWalletIds,
     from: params.from,
     to: params.to,
     type: "expense",
