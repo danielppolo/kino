@@ -6,6 +6,13 @@ import { Cell } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 
 import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
@@ -111,82 +118,136 @@ export default function LabelPieChart({
 
   if (isLoading) {
     return (
-      <div className="flex h-64 items-center justify-center">Loading...</div>
+      <Card>
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+          <CardDescription>
+            Distribution of {type} by label in {baseCurrency}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex h-64 items-center justify-center">
+            Loading...
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   if (error) {
     return (
-      <div className="flex h-64 items-center justify-center text-red-500">
-        Error loading chart data
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+          <CardDescription>
+            Distribution of {type} by label in {baseCurrency}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex h-64 items-center justify-center text-red-500">
+            Error loading chart data
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   if (!transformedData || transformedData.length === 0) {
     return (
-      <div className="flex h-64 items-center justify-center text-gray-500">
-        No data available for this period
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+          <CardDescription>
+            Distribution of {type} by label in {baseCurrency}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex h-64 items-center justify-center text-gray-500">
+            No data available for this period
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   const total = transformedData.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <div className="w-full">
-      <ChartContainer
-        config={chartConfig}
-        className="mx-auto aspect-square max-h-[250px]"
-      >
-        <PieChart>
-          <ChartTooltip
-            cursor={false}
-            content={({ active, payload }) => {
-              if (!active || !payload?.length) return null;
-              const data = payload[0].payload;
-              return (
-                <div className="bg-background rounded-lg border p-2 shadow-sm">
-                  <div className="grid gap-2">
-                    <p className="text-sm font-medium">{data.name}</p>
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>
+          Distribution of {type} by label in {baseCurrency}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ChartContainer config={chartConfig}>
+          <PieChart>
+            <ChartTooltip
+              content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+
+                const data = payload[0].payload;
+
+                return (
+                  <div className="bg-background rounded-lg border p-2 shadow-sm">
                     <div className="grid gap-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-muted-foreground text-sm">
-                          Amount:
-                        </span>
-                        <Money
-                          cents={data.value}
-                          currency={baseCurrency}
-                          className="text-sm"
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="h-2 w-2 rounded-full"
+                          style={{ backgroundColor: data.color }}
                         />
+                        <span className="text-sm font-medium">{data.name}</span>
                       </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-muted-foreground text-sm">
-                          Transactions:
-                        </span>
-                        <span className="text-sm">{data.transactionCount}</span>
+                      <div className="text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <span>Amount:</span>
+                          <Money
+                            cents={data.value}
+                            currency={baseCurrency}
+                          />
+                        </div>
+                        <div>Transactions: {data.transactionCount}</div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            }}
-          />
-          <Pie data={transformedData} dataKey="value" nameKey="name" stroke="0">
-            {transformedData.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={entry.color}
-                stroke={entry.color}
-              />
-            ))}
-          </Pie>
-        </PieChart>
-      </ChartContainer>
-      <div className="mt-4 text-sm text-gray-600">
-        Total: <Money cents={total} currency={baseCurrency} /> |{" "}
-        {transformedData.length} labels
-      </div>
-    </div>
+                );
+              }}
+            />
+            <Pie
+              data={transformedData}
+              dataKey="value"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={100}
+              paddingAngle={2}
+            >
+              {transformedData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Pie>
+          </PieChart>
+        </ChartContainer>
+        <div className="mt-4 grid gap-2">
+          {transformedData.map((item) => (
+            <div key={item.name} className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div
+                  className="h-2 w-2 rounded-full"
+                  style={{ backgroundColor: item.color }}
+                />
+                <span className="text-sm font-medium">{item.name}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">{((item.value / total) * 100).toFixed(1)}%</span>
+                <Money cents={item.value} currency={baseCurrency} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
