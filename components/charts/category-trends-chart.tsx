@@ -61,16 +61,21 @@ export function CategoryTrendsChart({
   to,
   type = "expense",
 }: CategoryTrendsChartProps) {
+  const [wallets, walletMap] = useWallets();
+  const workspaceWalletIds = wallets.map((w) => w.id);
+  const { conversionRates, baseCurrency } = useCurrency();
+
   const {
     data: categoryData,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["category-trends", walletId, from, to, type],
+    queryKey: ["category-trends", walletId, workspaceWalletIds, from, to, type],
     queryFn: async () => {
       const supabase = await createClient();
       const { data, error } = await getCategoryTrends(supabase, {
         walletId,
+        workspaceWalletIds,
         from,
         to,
         type,
@@ -80,9 +85,6 @@ export function CategoryTrendsChart({
       return data;
     },
   });
-
-  const [wallets, walletMap] = useWallets();
-  const { conversionRates, baseCurrency } = useCurrency();
   const [stackMode, setStackMode] = React.useState<"percentage" | "absolute">("percentage");
 
   const chartData: ChartDataPoint[] = React.useMemo(() => {

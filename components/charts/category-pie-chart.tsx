@@ -51,14 +51,16 @@ export default function CategoryPieChart({
   title = "Category Distribution",
 }: CategoryPieChartProps) {
   const { conversionRates, baseCurrency } = useCurrency();
-  const [, walletMap] = useWallets();
+  const [wallets, walletMap] = useWallets();
+  const workspaceWalletIds = wallets.map((w) => w.id);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["category-pie-chart", walletId, from, to, type],
+    queryKey: ["category-pie-chart", walletId, workspaceWalletIds, from, to, type],
     queryFn: async () => {
       const supabase = await createClient();
       const { data, error } = await getCategoryPieChartData(supabase, {
         walletId,
+        workspaceWalletIds,
         from,
         to,
         type,
