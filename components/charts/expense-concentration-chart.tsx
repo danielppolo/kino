@@ -18,7 +18,7 @@ import {
   ChartTooltip,
 } from "@/components/ui/chart";
 import { Money } from "@/components/ui/money";
-import { useCurrency } from "@/contexts/settings-context";
+import { useCurrency, useWallets } from "@/contexts/settings-context";
 import { ChartColors } from "@/utils/constants";
 import { createClient } from "@/utils/supabase/client";
 import { getExpenseConcentration } from "@/utils/supabase/queries";
@@ -46,16 +46,21 @@ export function ExpenseConcentrationChart({
   to,
   topN = 5,
 }: ExpenseConcentrationChartProps) {
+  const [wallets] = useWallets();
+  const workspaceWalletIds = wallets.map((w) => w.id);
+  const { baseCurrency } = useCurrency();
+
   const {
     data: concentrationData,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["expense-concentration", walletId, from, to, topN],
+    queryKey: ["expense-concentration", walletId, workspaceWalletIds, from, to, topN],
     queryFn: async () => {
       const supabase = await createClient();
       const { data, error } = await getExpenseConcentration(supabase, {
         walletId,
+        workspaceWalletIds,
         from,
         to,
         topN,
@@ -65,8 +70,6 @@ export function ExpenseConcentrationChart({
       return data;
     },
   });
-
-  const { baseCurrency } = useCurrency();
 
   const chartData = React.useMemo(() => {
     if (!concentrationData) return [];
