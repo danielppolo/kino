@@ -892,6 +892,48 @@ export const listBills = async (
   return { data, error, count };
 };
 
+// Recurrent bills queries
+export const listRecurrentBills = async (
+  client: TypedSupabaseClient,
+  params?: {
+    walletId?: string;
+    page?: number;
+    pageSize?: number;
+  },
+) => {
+  let query = client
+    .from("recurrent_bills")
+    .select("*", { count: "exact" })
+    .order("next_due_date", { ascending: false });
+
+  if (params?.walletId) {
+    query = query.eq("wallet_id", params.walletId);
+  }
+
+  const page = params?.page ?? 0;
+  const pageSize = params?.pageSize ?? 50;
+
+  const { data, error, count } = await query.range(
+    page * pageSize,
+    (page + 1) * pageSize - 1,
+  );
+
+  return { data, error, count };
+};
+
+export const getRecurrentBill = async (
+  client: TypedSupabaseClient,
+  recurrentBillId: string,
+) => {
+  const { data, error } = await client
+    .from("recurrent_bills")
+    .select("*")
+    .eq("id", recurrentBillId)
+    .single();
+
+  return { data, error };
+};
+
 export const getBillWithPayments = async (
   client: TypedSupabaseClient,
   billId: string,
