@@ -232,7 +232,7 @@ export default function BillsList({ walletId }: BillsListProps) {
   const handleCreateTransactionFromBill = (bill: BillWithPayments) => {
     const remainingAmount = bill.amount_cents - bill.paid_amount_cents;
     openForm({
-      type: "expense",
+      type: "income",
       walletId: bill.wallet_id,
       billPrefill: {
         billId: bill.id,
