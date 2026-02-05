@@ -39,8 +39,8 @@ const TagBadges = ({ transaction, className }: TagBadgesProps) => {
       {!!transaction.label_id && labelMap.get(transaction.label_id)?.color && (
         <Color
           size="sm"
-          onClick={() => handleLabelClick(transaction.label_id)}
-          color={labelMap.get(transaction.label_id)?.color}
+          onClick={() => handleLabelClick(transaction.label_id!)}
+          color={labelMap.get(transaction.label_id!)?.color ?? ""}
           className="mx-2 size-1.5"
         />
       )}

@@ -90,7 +90,6 @@ const BillCombobox = ({
         onChange={onChange}
         placeholder="Loading bills..."
         className={className}
-        disabled
       />
     );
   }
