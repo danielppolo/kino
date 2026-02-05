@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Merge, Plus, Trash2 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 
 import DeleteLabelsDialog from "./delete-labels-dialog";
 import MergeLabelsDialog from "./merge-labels-dialog";
@@ -27,6 +28,7 @@ export default function LabelSection() {
     Database["public"]["Tables"]["labels"]["Row"] | undefined
   >(undefined);
   const [labels] = useLabels();
+  const searchParams = useSearchParams();
 
   const {
     selected,
@@ -62,6 +64,12 @@ export default function LabelSection() {
     setMergeDialogOpen(false);
     clearSelection();
   };
+
+  useEffect(() => {
+    if (searchParams.get("new") !== "1") return;
+    setEditLabel(undefined);
+    setOpen(true);
+  }, [searchParams]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

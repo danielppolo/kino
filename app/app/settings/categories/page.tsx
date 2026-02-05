@@ -30,7 +30,9 @@ export default function Page() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeType = searchParams.get("type") || "expense";
-  const visibleCategories = categories.filter((category) => category.type === activeType);
+  const visibleCategories = categories.filter(
+    (category) => category.type === activeType,
+  );
 
   const {
     selected,
@@ -96,6 +98,12 @@ export default function Page() {
     params.set("type", value);
     router.push(`/app/settings/categories?${params.toString()}`);
   };
+
+  useEffect(() => {
+    if (searchParams.get("new") !== "1") return;
+    setSelectedCategory(null);
+    setOpen(true);
+  }, [searchParams]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
