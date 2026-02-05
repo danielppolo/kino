@@ -113,20 +113,27 @@ const ExpenseIncomeForm = ({
         filters,
       ]);
 
+      const amountCents =
+        newTransaction.type === "expense"
+          ? -Math.round(newTransaction.amount * 100)
+          : Math.round(newTransaction.amount * 100);
       const optimisticTransaction: TransactionList = {
         id: randomUUID(),
         wallet_id: newTransaction.wallet_id,
         category_id: newTransaction.category_id || null,
         label_id: newTransaction.label_id || null,
-        amount_cents:
-          newTransaction.type === "expense"
-            ? -Math.round(newTransaction.amount * 100)
-            : Math.round(newTransaction.amount * 100),
+        amount_cents: amountCents,
+        base_amount_cents: null,
+        created_at: null,
         currency: newTransaction.currency,
-        description: newTransaction.description ?? null,
         date: newTransaction.date,
-        type: newTransaction.type,
+        description: newTransaction.description ?? null,
+        note: null,
         tag_ids: newTransaction.tags ?? null,
+        tags: newTransaction.tags ?? null,
+        transfer_id: null,
+        transfer_wallet_id: null,
+        type: newTransaction.type,
       };
 
       queryClient.setQueryData<InfiniteTransactionData>(
@@ -170,17 +177,24 @@ const ExpenseIncomeForm = ({
       const saved = data?.data?.[0];
       if (!saved || !context?.optimisticTransaction) return;
 
+      const savedTags = (saved as { tags?: string[] | null }).tags ?? null;
       const updatedTransaction: TransactionList = {
         id: saved.id,
         wallet_id: saved.wallet_id,
         category_id: saved.category_id,
         label_id: saved.label_id ?? null,
         amount_cents: saved.amount_cents,
+        base_amount_cents: saved.base_amount_cents ?? null,
+        created_at: saved.created_at ?? null,
         currency: saved.currency,
-        description: saved.description ?? null,
         date: saved.date,
+        description: saved.description ?? null,
+        note: (saved as { note?: string | null }).note ?? null,
+        tag_ids: savedTags,
+        tags: savedTags,
+        transfer_id: (saved as { transfer_id?: string | null }).transfer_id ?? null,
+        transfer_wallet_id: null,
         type: saved.type,
-        tag_ids: (saved as { tags?: string[] | null }).tags ?? null,
       };
 
       queryClient.setQueryData<InfiniteTransactionData>(
@@ -331,7 +345,11 @@ const ExpenseIncomeForm = ({
     label_id: transaction.label_id ?? "",
     wallet_id: transaction.wallet_id,
     currency: transaction.currency,
-    tags: transaction.tag_ids ?? undefined,
+    tags:
+      (transaction as { tag_ids?: string[] | null; tags?: string[] | null })
+        .tag_ids ??
+      (transaction as { tags?: string[] | null }).tags ??
+      undefined,
     bill_id: "",
   });
 

@@ -31,7 +31,7 @@ const TransactionIcon: React.FC<TransactionIconProps> = ({
 
   return (
     <CategoryPicker
-      type={transaction.type}
+      type={transaction.type ?? undefined}
       value={transaction.category_id ?? undefined}
       onChange={(id: string) => {
         onUpdate(transaction, { category_id: id });

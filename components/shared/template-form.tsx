@@ -114,6 +114,7 @@ const TemplateForm = ({
     description: "",
     category_id: "",
     label_id: "",
+    currency: template?.currency ?? "",
     tags: [],
   };
 
@@ -146,9 +147,9 @@ const TemplateForm = ({
         description: values.description,
         category_id: values.category_id || null,
         label_id: values.label_id || null,
-        currency: values.currency,
+        currency: values.currency || "USD",
         tags: values.tags,
-        workspace_id: workspaceId,
+        workspace_id: workspaceId!,
       };
 
     return new Promise((resolve) => {
