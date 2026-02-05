@@ -391,17 +391,19 @@ function SidebarGroup({ className, ...props }: React.ComponentProps<"div">) {
 function SidebarGroupLabel({
   className,
   asChild = false,
+  ref,
   ...props
 }: React.ComponentProps<"div"> & { asChild?: boolean }) {
   const Comp = asChild ? Slot : "div";
 
   return (
     <Comp
+      ref={ref as React.Ref<HTMLDivElement>}
       data-slot="sidebar-group-label"
       data-sidebar="group-label"
       className={cn(
         "text-sidebar-foreground/70 ring-sidebar-ring flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium outline-hidden transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
-        "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
+        "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible:icon]:opacity-0",
         className,
       )}
       {...props}
@@ -412,12 +414,14 @@ function SidebarGroupLabel({
 function SidebarGroupAction({
   className,
   asChild = false,
+  ref,
   ...props
 }: React.ComponentProps<"button"> & { asChild?: boolean }) {
   const Comp = asChild ? Slot : "button";
 
   return (
     <Comp
+      ref={ref as React.Ref<HTMLButtonElement>}
       data-slot="sidebar-group-action"
       data-sidebar="group-action"
       className={cn(
@@ -505,15 +509,17 @@ function SidebarMenuButton({
 } & VariantProps<typeof sidebarMenuButtonVariants>) {
   const Comp = asChild ? Slot : "button";
   const { isMobile, state } = useSidebar();
+  const { ref, ...restProps } = props;
 
   const button = (
     <Comp
+      ref={ref as React.Ref<HTMLButtonElement>}
       data-slot="sidebar-menu-button"
       data-sidebar="menu-button"
       data-size={size}
       data-active={isActive}
       className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
-      {...props}
+      {...restProps}
     />
   );
 
@@ -544,6 +550,7 @@ function SidebarMenuAction({
   className,
   asChild = false,
   showOnHover = false,
+  ref,
   ...props
 }: React.ComponentProps<"button"> & {
   asChild?: boolean;
@@ -553,6 +560,7 @@ function SidebarMenuAction({
 
   return (
     <Comp
+      ref={ref as React.Ref<HTMLButtonElement>}
       data-slot="sidebar-menu-action"
       data-sidebar="menu-action"
       className={cn(
@@ -671,9 +679,11 @@ function SidebarMenuSubButton({
   isActive?: boolean;
 }) {
   const Comp = asChild ? Slot : "a";
+  const { ref, ...restProps } = props;
 
   return (
     <Comp
+      ref={ref as React.Ref<HTMLAnchorElement>}
       data-slot="sidebar-menu-sub-button"
       data-sidebar="menu-sub-button"
       data-size={size}
@@ -686,7 +696,7 @@ function SidebarMenuSubButton({
         "group-data-[collapsible=icon]:hidden",
         className,
       )}
-      {...props}
+      {...restProps}
     />
   );
 }

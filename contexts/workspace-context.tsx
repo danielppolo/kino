@@ -76,7 +76,13 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({
         .order("name");
 
       if (error) throw error;
-      return data || [];
+      const rows = (data || []) as Array<{ feature_flags?: unknown } & Omit<Workspace, "feature_flags">>;
+      return rows.map((w) => ({
+        ...w,
+        feature_flags: w.feature_flags
+          ? (w.feature_flags as Workspace["feature_flags"])
+          : null,
+      }));
     },
   });
 
@@ -103,12 +109,12 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({
   // Determine active workspace
   const activeWorkspaceId = userPreferences?.active_workspace_id;
   const activeWorkspace =
-    workspaces.find((w) => w.id === activeWorkspaceId) || workspaces[0] || null;
+    workspaces.find((w) => w.id === activeWorkspaceId) ||
+    workspaces[0] ||
+    null;
 
   // Fetch workspace members for the active workspace
-  const { data: workspaceMembers = [], refetch: refetchMembers } = useQuery<
-    WorkspaceMember[]
-  >({
+  const { data: workspaceMembersRaw = [], refetch: refetchMembers } = useQuery({
     queryKey: ["workspace-members", activeWorkspace?.id],
     queryFn: async () => {
       if (!activeWorkspace?.id) return [];
@@ -120,10 +126,11 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({
         .eq("workspace_id", activeWorkspace.id);
 
       if (error) throw error;
-      return data || [];
+      return (data || []) as WorkspaceMember[];
     },
     enabled: !!activeWorkspace?.id,
   });
+  const workspaceMembers = workspaceMembersRaw as WorkspaceMember[];
 
   // Fetch wallets for the active workspace
   const { data: wallets = [] } = useQuery({

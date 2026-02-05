@@ -8,6 +8,7 @@ import { Input } from "../ui/input";
 
 import { EntityForm } from "@/components/shared/entity-form";
 import CreatableMultiSelect from "@/components/ui/creatable-multi-select";
+import { useWorkspace } from "@/contexts/workspace-context";
 import {
   FormControl,
   FormField,
@@ -40,7 +41,8 @@ const CategoryForm = ({
   onSuccess,
   onOpenChange,
 }: CategoryFormProps) => {
-  const defaultValues: CategoryFormValues = {
+  const { activeWorkspace } = useWorkspace();
+  const defaultValues: Omit<CategoryFormValues, "workspace_id"> = {
     type,
     name: "",
     icon: ICONS[Math.floor(Math.random() * ICONS.length)],
@@ -50,8 +52,10 @@ const CategoryForm = ({
   const queryClient = useQueryClient();
 
   const createMutation = useMutation({
-    mutationFn: async (values: CategoryFormValues) => {
-      return await createCategory(values);
+    mutationFn: async (values: Omit<CategoryFormValues, "workspace_id">) => {
+      const workspaceId = activeWorkspace?.id;
+      if (!workspaceId) throw new Error("No workspace selected");
+      return await createCategory({ ...values, workspace_id: workspaceId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
