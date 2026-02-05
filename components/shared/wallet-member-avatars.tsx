@@ -86,7 +86,7 @@ export default function WalletMemberAvatars({
           wallet_id: m.wallet_id,
           role: m.role as "owner" | "editor" | "reader",
           email: m.email,
-          created_at: m.created_at,
+          created_at: m.created_at ?? "",
         }),
       )
     : [];

@@ -24,7 +24,7 @@ const TransactionDescription: React.FC<TransactionDescriptionProps> = ({
     walletsMap.get(transaction.transfer_wallet_id);
 
   if (transaction.type === "transfer" && counterPartyWallet) {
-    const isIncoming = transaction.amount_cents > 0;
+    const isIncoming = (transaction.amount_cents ?? 0) > 0;
     return (
       <div className="flex gap-1">
         <Text>{`${isIncoming ? "From" : "To"} ${counterPartyWallet.name}`}</Text>

@@ -101,7 +101,7 @@ export default function WalletMembersEditSection({
           role: m.role as "owner" | "editor" | "reader",
           email: m.email,
           phone: m.phone ?? null,
-          created_at: m.created_at,
+          created_at: m.created_at ?? "",
         }),
       )
     : [];
