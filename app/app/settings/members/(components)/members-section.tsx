@@ -21,6 +21,7 @@ type WalletMember = {
   wallet_id: string;
   role: "owner" | "editor" | "reader";
   email: string | null;
+  phone: string | null;
   created_at: string;
 };
 
@@ -68,33 +69,45 @@ export default function MembersSection({
   });
 
   // Build members map grouped by wallet
+  type WalletMemberRow = {
+    id: string;
+    user_id: string;
+    wallet_id: string;
+    role: string;
+    email: string | null;
+    phone?: string | null;
+    created_at: string;
+  };
   const membersByWallet = useMemo(() => {
     const result: Record<string, WalletMember[]> = {};
+    const data = allMembersData?.data as WalletMemberRow[] | undefined;
+    if (!Array.isArray(data)) return result;
 
-    if (allMembersData?.data) {
-      allMembersData.data.forEach((m: any) => {
-        if (!result[m.wallet_id]) {
-          result[m.wallet_id] = [];
-        }
-        result[m.wallet_id].push({
-          id: m.id,
-          user_id: m.user_id,
-          wallet_id: m.wallet_id,
-          role: m.role as "owner" | "editor" | "reader",
-          email: m.email,
-          created_at: m.created_at,
-        });
+    data.forEach((m: WalletMemberRow) => {
+      if (!result[m.wallet_id]) {
+        result[m.wallet_id] = [];
+      }
+      result[m.wallet_id].push({
+        id: m.id,
+        user_id: m.user_id,
+        wallet_id: m.wallet_id,
+        role: m.role as "owner" | "editor" | "reader",
+        email: m.email,
+        phone: m.phone ?? null,
+        created_at: m.created_at,
       });
-    }
+    });
 
     return result;
   }, [allMembersData]);
 
   const walletsMap = useMemo(() => {
     const map = new Map<string, Wallet>();
-    wallets.forEach((wallet) => {
-      map.set(wallet.id, wallet);
-    });
+    if (Array.isArray(wallets)) {
+      wallets.forEach((wallet) => {
+        map.set(wallet.id, wallet);
+      });
+    }
     return map;
   }, [wallets]);
 

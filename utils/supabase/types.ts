@@ -18,10 +18,23 @@ export type BillPayment = Database["public"]["Tables"]["bill_payments"]["Row"];
 export type RecurrentBill =
   Database["public"]["Tables"]["recurrent_bills"]["Row"];
 
+/** Subset of transaction fields returned by listBillsWithPayments for each payment */
+export interface BillPaymentTransaction {
+  id: string;
+  wallet_id: string;
+  category_id: string | null;
+  label_id: string | null;
+  amount_cents: number;
+  currency: string;
+  description: string | null;
+  date: string;
+  type: "income" | "expense" | "transfer";
+}
+
 export interface BillWithPayments extends Bill {
   payments: Array<{
     id: string;
-    transaction: TransactionList;
+    transaction: BillPaymentTransaction;
   }>;
   paid_amount_cents: number;
   payment_percentage: number;

@@ -72,7 +72,14 @@ export default function CategoryPieChart({
   });
 
   // Transform data with currency conversion
-  let transformedData = [];
+  type TransformedPieItem = {
+    name: string;
+    value: number;
+    color: string;
+    icon?: string;
+    transactionCount: number;
+  };
+  let transformedData: TransformedPieItem[] = [];
   if (data && data.length > 0) {
     // Convert the data to the format expected by the aggregation function
     const dataWithAmounts = data.map((item) => {

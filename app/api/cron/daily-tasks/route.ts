@@ -58,7 +58,7 @@ async function handle(request: NextRequest) {
 
       for (const r of recurrences || []) {
         const runDate = r.next_run_date || r.start_date;
-        if (!runDate) continue;
+        if (!runDate || !r.wallet_id || !r.label_id) continue;
 
         const endDate = r.end_date ? new Date(r.end_date) : null;
         let current = new Date(runDate);
@@ -71,12 +71,12 @@ async function handle(request: NextRequest) {
               amount: r.amount_cents / 100,
               type: r.type,
               date: dateStr,
-              description: r.description,
+              description: r.description ?? undefined,
               category_id: r.category_id,
-              label_id: r.label_id,
+              label_id: r.label_id ?? undefined,
               wallet_id: r.wallet_id,
               currency: r.currency,
-              tags: r.tags,
+              tags: r.tags ?? undefined,
             },
             supabase,
           );

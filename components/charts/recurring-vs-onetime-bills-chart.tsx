@@ -27,6 +27,7 @@ import { useCurrency, useWallets } from "@/contexts/settings-context";
 import { formatCurrency, parseMonthDate } from "@/utils/chart-helpers";
 import { createClient } from "@/utils/supabase/client";
 import { getRecurringVsOneTimeStats } from "@/utils/supabase/queries";
+import { Wallet } from "@/utils/supabase/types";
 
 interface RecurringVsOnetimeBillsChartProps {
   walletId?: string;
@@ -122,7 +123,7 @@ export function RecurringVsOnetimeBillsChart({
       );
   }, [billStats, conversionRates, walletMap]);
 
-  let visibleWallets;
+  let visibleWallets: Wallet[];
   if (walletId) {
     const wallet = walletMap.get(walletId);
     visibleWallets = wallet ? [wallet] : [];
@@ -152,7 +153,7 @@ export function RecurringVsOnetimeBillsChart({
 
   const calculatePercentageChange = () => {
     if (chartData.length < 2) return 0;
-    const current = visibleWallets.reduce((total, wallet) => {
+    const current = visibleWallets.reduce((total: number, wallet: Wallet) => {
       const recurring =
         (chartData[chartData.length - 1][
           `${wallet.id}_recurring`
@@ -163,7 +164,7 @@ export function RecurringVsOnetimeBillsChart({
         ] as number) || 0;
       return total + recurring + oneTime;
     }, 0);
-    const previous = visibleWallets.reduce((total, wallet) => {
+    const previous = visibleWallets.reduce((total: number, wallet: Wallet) => {
       const recurring =
         (chartData[chartData.length - 2][
           `${wallet.id}_recurring`
@@ -317,7 +318,7 @@ export function RecurringVsOnetimeBillsChart({
                                 <div className="flex items-center gap-2">
                                   <div
                                     className="h-2 w-2 rounded-full"
-                                    style={{ backgroundColor: wallet.color }}
+                                    style={{ backgroundColor: wallet.color ?? undefined }}
                                   />
                                   <span className="text-sm font-medium">
                                     {wallet.name}
