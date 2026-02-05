@@ -3,6 +3,7 @@ import React from "react";
 import { TransactionsHeader } from "./(components)/transactions-header";
 
 import TransactionForm from "@/components/shared/transaction-form";
+import { GlobalCommandPalette } from "@/components/shared/global-command-palette";
 import TransactionShortcuts from "@/components/shared/transaction-shortcuts";
 import { TransactionsSidebar } from "@/components/shared/transactions-sidebar";
 import { SidebarInset } from "@/components/ui/sidebar";
@@ -22,6 +23,7 @@ const Layout: React.FC<LayoutProps> = async ({ children }) => {
           {children}
         </main>
       </SidebarInset>
+      <GlobalCommandPalette />
       <TransactionForm />
       <TransactionShortcuts />
     </TransactionFormProvider>
