@@ -33,6 +33,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Separator } from "../ui/separator";
 import { Text } from "../ui/typography";
 
+import { useWorkspace } from "@/contexts/workspace-context";
 import { cn } from "@/lib/utils";
 import { Database } from "@/utils/supabase/database.types";
 import { createTag } from "@/utils/supabase/mutations";
@@ -93,12 +94,16 @@ const TagMultiSelect = React.forwardRef<HTMLButtonElement, TagMultiSelectProps>(
   ) => {
     const [open, setOpen] = React.useState(false);
     const [query, setQuery] = React.useState("");
+    const { activeWorkspace } = useWorkspace();
 
     const queryClient = useQueryClient();
     const createMutation = useMutation({
       mutationFn: async (title: string) => {
+        const workspaceId = activeWorkspace?.id;
+        if (!workspaceId) throw new Error("No workspace selected");
         const values: Database["public"]["Tables"]["tags"]["Insert"] = {
           title,
+          workspace_id: workspaceId,
         };
         const result = await createTag(values);
         return result[0];
@@ -220,7 +225,7 @@ const TagMultiSelect = React.forwardRef<HTMLButtonElement, TagMultiSelectProps>(
                   key={group}
                   heading={
                     <div className="flex items-center gap-2">
-                      {ICONS[group]}
+                      {group in ICONS ? ICONS[group as keyof typeof ICONS] : null}
                       <Text className="text-muted-foreground">{group}</Text>
                     </div>
                   }

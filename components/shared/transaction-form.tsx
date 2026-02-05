@@ -70,7 +70,7 @@ function TransactionForm() {
       <ExpenseIncomeForm
         open={open && (formType === "income" || formType === "expense")}
         onOpenChange={handleOpenChange}
-        type={formType}
+        type={formType === "transfer" ? "expense" : formType}
         walletId={walletId}
         initialData={initialData}
         onSuccess={() => {

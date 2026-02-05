@@ -74,11 +74,12 @@ const LinkTransferButton: React.FC<LinkTransferButtonProps> = ({
   const [selectedCurrency, setSelectedCurrency] = useState<string | null>(null);
 
   // Get unique currencies from wallets, excluding the current transaction's wallet currency
-  const transactionWallet = walletMap.get(transaction.wallet_id);
+  const walletId = transaction.wallet_id ?? "";
+  const transactionWallet = walletMap.get(walletId);
   const availableCurrencies = Array.from(
     new Set(
       wallets
-        .filter((wallet) => wallet.id !== transaction.wallet_id)
+        .filter((wallet) => wallet.id !== walletId)
         .map((wallet) => wallet.currency),
     ),
   );

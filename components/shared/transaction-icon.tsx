@@ -5,11 +5,14 @@ import { Button } from "../ui/button";
 import CategoryPicker from "./category-picker";
 import LinkTransferButton from "./link-transfer-button";
 
-import { Transaction } from "@/utils/supabase/types";
+import { TransactionList } from "@/utils/supabase/types";
 
 interface TransactionIconProps {
-  transaction: Transaction;
-  onUpdate: (transaction: Transaction, updates: Partial<Transaction>) => void;
+  transaction: TransactionList;
+  onUpdate: (
+    transaction: TransactionList,
+    updates: Partial<TransactionList>,
+  ) => void;
 }
 
 const TransactionIcon: React.FC<TransactionIconProps> = ({
@@ -17,7 +20,7 @@ const TransactionIcon: React.FC<TransactionIconProps> = ({
   onUpdate,
 }) => {
   if (transaction.type === "transfer") {
-    if (transaction.transfer_id)
+    if ("transfer_id" in transaction && transaction.transfer_id)
       return (
         <Button variant="ghost" size="sm" disabled>
           <ArrowRightLeft className="size-4" />
@@ -28,7 +31,7 @@ const TransactionIcon: React.FC<TransactionIconProps> = ({
 
   return (
     <CategoryPicker
-      type={transaction.type}
+      type={transaction.type ?? undefined}
       value={transaction.category_id ?? undefined}
       onChange={(id: string) => {
         onUpdate(transaction, { category_id: id });

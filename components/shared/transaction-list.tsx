@@ -165,7 +165,7 @@ export default function TransactionList() {
     openForm({
       type: transaction.type!,
       walletId: transaction.wallet_id!,
-      initialData: transaction as Transaction,
+      initialData: transaction as unknown as Transaction,
     });
   };
 
@@ -360,7 +360,7 @@ export default function TransactionList() {
         openForm({
           type: activeTransaction.type!,
           walletId: activeTransaction.wallet_id!,
-          initialData: activeTransaction as Transaction,
+          initialData: activeTransaction as unknown as Transaction,
         });
         return;
       }

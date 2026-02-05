@@ -118,7 +118,7 @@ export const updateWallet = async (
 
   const { data: result, error } = await supabase
     .from("wallets")
-    .upsert(wallet)
+    .upsert(wallet as Database["public"]["Tables"]["wallets"]["Insert"])
     .select();
   if (error) throw new Error(error.message);
   return result;
@@ -145,7 +145,7 @@ export const updateCategory = async (
 
   const { data: result, error } = await supabase
     .from("categories")
-    .upsert(category)
+    .upsert(category as Database["public"]["Tables"]["categories"]["Insert"])
     .select();
   if (error) throw new Error(error.message);
   return result;
@@ -169,7 +169,7 @@ export const updateLabel = async (
 
   const { data: result, error } = await supabase
     .from("labels")
-    .upsert(label)
+    .upsert(label as Database["public"]["Tables"]["labels"]["Insert"])
     .select();
   if (error) throw new Error(error.message);
   return result;
@@ -191,7 +191,7 @@ export const updateTag = async (
 
   const { data: result, error } = await supabase
     .from("tags")
-    .upsert(tag)
+    .upsert(tag as Database["public"]["Tables"]["tags"]["Insert"])
     .select();
   if (error) throw new Error(error.message);
   return result;
@@ -224,7 +224,7 @@ export const updateTransactionTemplate = async (
 
   const { data: result, error } = await supabase
     .from("transaction_templates")
-    .upsert(template)
+    .upsert(template as Database["public"]["Tables"]["transaction_templates"]["Insert"])
     .select();
   if (error) throw new Error(error.message);
   return result;
@@ -650,6 +650,56 @@ export const deleteBill = async (id: string) => {
 export const deleteBills = async (ids: string[]) => {
   const supabase = await createClient();
   const { error } = await supabase.from("bills").delete().in("id", ids);
+  if (error) throw new Error(error.message);
+};
+
+// Recurrent bills mutations
+export const createRecurrentBill = async (
+  data: Database["public"]["Tables"]["recurrent_bills"]["Insert"],
+) => {
+  const supabase = await createClient();
+
+  const { data: result, error } = await supabase
+    .from("recurrent_bills")
+    .insert(data)
+    .select();
+  if (error) throw new Error(error.message);
+  return result;
+};
+
+export const updateRecurrentBill = async (
+  data: Database["public"]["Tables"]["recurrent_bills"]["Update"],
+) => {
+  const supabase = await createClient();
+
+  if (!data.id) {
+    throw new Error("Recurrent bill ID is required for updates");
+  }
+
+  const { data: result, error } = await supabase
+    .from("recurrent_bills")
+    .update(data)
+    .eq("id", data.id)
+    .select();
+  if (error) throw new Error(error.message);
+  return result;
+};
+
+export const deleteRecurrentBill = async (id: string) => {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("recurrent_bills")
+    .delete()
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+};
+
+export const deleteRecurrentBills = async (ids: string[]) => {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("recurrent_bills")
+    .delete()
+    .in("id", ids);
   if (error) throw new Error(error.message);
 };
 

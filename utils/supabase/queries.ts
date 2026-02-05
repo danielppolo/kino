@@ -1,6 +1,6 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 
-import { TypedSupabaseClient } from "@/utils/supabase/types";
+import { BillWithPayments, TypedSupabaseClient } from "@/utils/supabase/types";
 
 export interface Filters {
   label_id?: string | undefined;
@@ -892,6 +892,48 @@ export const listBills = async (
   return { data, error, count };
 };
 
+// Recurrent bills queries
+export const listRecurrentBills = async (
+  client: TypedSupabaseClient,
+  params?: {
+    walletId?: string;
+    page?: number;
+    pageSize?: number;
+  },
+) => {
+  let query = client
+    .from("recurrent_bills")
+    .select("*", { count: "exact" })
+    .order("next_due_date", { ascending: false });
+
+  if (params?.walletId) {
+    query = query.eq("wallet_id", params.walletId);
+  }
+
+  const page = params?.page ?? 0;
+  const pageSize = params?.pageSize ?? 50;
+
+  const { data, error, count } = await query.range(
+    page * pageSize,
+    (page + 1) * pageSize - 1,
+  );
+
+  return { data, error, count };
+};
+
+export const getRecurrentBill = async (
+  client: TypedSupabaseClient,
+  recurrentBillId: string,
+) => {
+  const { data, error } = await client
+    .from("recurrent_bills")
+    .select("*")
+    .eq("id", recurrentBillId)
+    .single();
+
+  return { data, error };
+};
+
 export const getBillWithPayments = async (
   client: TypedSupabaseClient,
   billId: string,
@@ -1045,14 +1087,14 @@ export const listBillsWithPayments = async (
       ...bill,
       payments: billPayments.map((p) => ({
         id: p.id,
-        transaction: p.transactions,
+        transaction: p.transactions as BillWithPayments["payments"][number]["transaction"],
       })),
       paid_amount_cents: paidAmountCents,
       payment_percentage: paymentPercentage,
     };
   });
 
-  return { data: result, error: null };
+  return { data: result as BillWithPayments[], error: null };
 };
 
 export const getBillsForTransaction = async (
@@ -1091,9 +1133,10 @@ export const getAllWalletMembers = async (
   client: TypedSupabaseClient,
   walletIds: string[],
 ) => {
-  const { data, error } = await client.rpc("get_all_wallet_members", {
-    wallet_uuids: walletIds,
-  });
+  const { data, error } = await (client as unknown as { rpc: (name: string, args: { wallet_uuids: string[] }) => Promise<{ data: unknown; error: unknown }> }).rpc(
+    "get_all_wallet_members",
+    { wallet_uuids: walletIds },
+  );
 
   return { data, error };
 };
@@ -2185,22 +2228,24 @@ export const getBillsVsDiscretionarySpending = async (
     return { data: null, error: statsError };
   }
 
-  const result: BillsVsDiscretionaryData[] = monthlyStats.map((stat) => {
-    const bill = billStats.find(
-      (b) => b.month === stat.month && b.wallet_id === stat.wallet_id,
-    );
+  const result: BillsVsDiscretionaryData[] = monthlyStats
+    .filter((stat): stat is typeof stat & { wallet_id: string } => stat.wallet_id != null)
+    .map((stat) => {
+      const bill = billStats.find(
+        (b) => b.month === stat.month && b.wallet_id === stat.wallet_id,
+      );
 
-    const billExpenses = bill ? bill.total_paid_cents : 0;
-    const totalExpenses = Math.abs(stat.outcome_cents);
-    const discretionaryExpenses = Math.max(0, totalExpenses - billExpenses);
+      const billExpenses = bill ? bill.total_paid_cents : 0;
+      const totalExpenses = Math.abs(stat.outcome_cents);
+      const discretionaryExpenses = Math.max(0, totalExpenses - billExpenses);
 
-    return {
-      month: stat.month,
-      wallet_id: stat.wallet_id,
-      bill_expenses_cents: billExpenses,
-      discretionary_expenses_cents: discretionaryExpenses,
-    };
-  });
+      return {
+        month: stat.month,
+        wallet_id: stat.wallet_id,
+        bill_expenses_cents: billExpenses,
+        discretionary_expenses_cents: discretionaryExpenses,
+      };
+    });
 
   return { data: result, error: null };
 };
@@ -2240,23 +2285,25 @@ export const getCashFlowAfterBills = async (
     return { data: null, error: statsError };
   }
 
-  const result: CashFlowAfterBillsData[] = monthlyStats.map((stat) => {
-    const bill = billStats.find(
-      (b) => b.month === stat.month && b.wallet_id === stat.wallet_id,
-    );
+  const result: CashFlowAfterBillsData[] = monthlyStats
+    .filter((stat): stat is typeof stat & { wallet_id: string } => stat.wallet_id != null)
+    .map((stat) => {
+      const bill = billStats.find(
+        (b) => b.month === stat.month && b.wallet_id === stat.wallet_id,
+      );
 
-    const billExpenses = bill ? bill.total_paid_cents : 0;
-    const totalExpenses = Math.abs(stat.outcome_cents);
-    const otherExpenses = Math.max(0, totalExpenses - billExpenses);
-    const income = stat.income_cents;
-    const netAfterBills = income - billExpenses - otherExpenses;
+      const billExpenses = bill ? bill.total_paid_cents : 0;
+      const totalExpenses = Math.abs(stat.outcome_cents);
+      const otherExpenses = Math.max(0, totalExpenses - billExpenses);
+      const income = stat.income_cents;
+      const netAfterBills = income - billExpenses - otherExpenses;
 
-    return {
-      month: stat.month,
-      wallet_id: stat.wallet_id,
-      income_cents: income,
-      bills_cents: billExpenses,
-      other_expenses_cents: otherExpenses,
+      return {
+        month: stat.month,
+        wallet_id: stat.wallet_id,
+        income_cents: income,
+        bills_cents: billExpenses,
+        other_expenses_cents: otherExpenses,
       net_after_bills_cents: netAfterBills,
     };
   });

@@ -70,15 +70,26 @@ export default function WalletMemberAvatars({
     },
   });
 
-  const allMembers: WalletMember[] =
-    membersData?.data?.map((m) => ({
-      id: m.id,
-      user_id: m.user_id,
-      wallet_id: m.wallet_id,
-      role: m.role as "owner" | "editor" | "reader",
-      email: m.email,
-      created_at: m.created_at,
-    })) || [];
+  const raw = membersData?.data;
+  const allMembers: WalletMember[] = Array.isArray(raw)
+    ? raw.map(
+        (m: {
+          id: string;
+          user_id: string;
+          wallet_id: string;
+          role: string;
+          email: string | null;
+          created_at: string | null;
+        }) => ({
+          id: m.id,
+          user_id: m.user_id,
+          wallet_id: m.wallet_id,
+          role: m.role as "owner" | "editor" | "reader",
+          email: m.email,
+          created_at: m.created_at ?? "",
+        }),
+      )
+    : [];
 
   // Filter out current user from displayed avatars
   const members = allMembers.filter(

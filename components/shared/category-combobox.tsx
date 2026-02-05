@@ -8,6 +8,7 @@ import { Label } from "../ui/label";
 import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useCategories } from "@/contexts/settings-context";
+import { useWorkspace } from "@/contexts/workspace-context";
 import { ICONS } from "@/utils/constants";
 import { Database } from "@/utils/supabase/database.types";
 import { createCategory } from "@/utils/supabase/mutations";
@@ -35,6 +36,7 @@ const CategoryCombobox = ({
   placeholder = "Select category...",
   className,
 }: CategoryComboboxProps) => {
+  const { activeWorkspace } = useWorkspace();
   const [selectedType, setSelectedType] = React.useState<
     "income" | "expense" | undefined
   >(type === "income" || type === "expense" ? type : undefined);
@@ -64,11 +66,14 @@ const CategoryCombobox = ({
         throw new Error("Please select a category type first");
       }
 
+      const workspaceId = activeWorkspace?.id;
+      if (!workspaceId) throw new Error("No workspace selected");
       const values: Database["public"]["Tables"]["categories"]["Insert"] = {
         name,
         type: effectiveType,
         icon: ICONS[Math.floor(Math.random() * ICONS.length)],
         keywords: [],
+        workspace_id: workspaceId,
       };
       const result = await createCategory(values);
       return result[0];

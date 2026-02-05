@@ -41,7 +41,7 @@ import {
   updateWalletMemberRole,
   updateUserPhone,
 } from "@/utils/supabase/mutations";
-import { getWalletMembers } from "@/utils/supabase/queries";
+import { getAllWalletMembers } from "@/utils/supabase/queries";
 
 interface WalletMembersSectionProps {
   walletId: string;
@@ -88,12 +88,21 @@ export default function WalletMembersSection({
     queryKey: ["wallet-members", walletId],
     queryFn: async () => {
       const supabase = createClient();
-      return getWalletMembers(supabase, walletId);
+      return getAllWalletMembers(supabase, [walletId]);
     },
   });
 
+  type MemberRow = {
+    id: string;
+    user_id: string;
+    wallet_id: string;
+    role: string;
+    email: string | null;
+    phone?: string | null;
+    created_at: string;
+  };
   const members: WalletMember[] =
-    membersData?.data?.map((m) => ({
+    (membersData?.data as MemberRow[] | undefined)?.map((m: MemberRow) => ({
       id: m.id,
       user_id: m.user_id,
       wallet_id: m.wallet_id,

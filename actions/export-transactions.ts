@@ -19,6 +19,10 @@ export async function exportTransactions(
     return { error, data: null };
   }
 
+  if (!transactions || transactions.length === 0) {
+    return { data: "", error: null };
+  }
+
   const data = Papa.unparse({
     fields: Object.keys(transactions[0]),
     data: transactions,

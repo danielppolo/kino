@@ -26,6 +26,7 @@ import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import { parseMonthDate } from "@/utils/chart-helpers";
 import { createClient } from "@/utils/supabase/client";
+import { Wallet } from "@/utils/supabase/types";
 import { getBillBurdenRatio } from "@/utils/supabase/queries";
 
 interface BillBurdenRatioChartProps {
@@ -97,7 +98,7 @@ export function BillBurdenRatioChart({
       );
   }, [burdenData, walletMap]);
 
-  let visibleWallets;
+  let visibleWallets: Wallet[];
   if (walletId) {
     const wallet = walletMap.get(walletId);
     visibleWallets = wallet ? [wallet] : [];
@@ -124,7 +125,7 @@ export function BillBurdenRatioChart({
   const currentBurden = React.useMemo(() => {
     if (chartData.length === 0) return 0;
     const lastMonth = chartData[chartData.length - 1];
-    const total = visibleWallets.reduce((sum, wallet) => {
+    const total = visibleWallets.reduce((sum: number, wallet: Wallet) => {
       return sum + ((lastMonth[wallet.id] as number) || 0);
     }, 0);
     return visibleWallets.length > 0 ? total / visibleWallets.length : 0;
@@ -132,11 +133,11 @@ export function BillBurdenRatioChart({
 
   const calculatePercentageChange = () => {
     if (chartData.length < 2) return 0;
-    const current = visibleWallets.reduce((total, wallet) => {
+    const current = visibleWallets.reduce((total: number, wallet: Wallet) => {
       const ratio = (chartData[chartData.length - 1][wallet.id] as number) || 0;
       return total + ratio;
     }, 0) / visibleWallets.length;
-    const previous = visibleWallets.reduce((total, wallet) => {
+    const previous = visibleWallets.reduce((total: number, wallet: Wallet) => {
       const ratio = (chartData[chartData.length - 2][wallet.id] as number) || 0;
       return total + ratio;
     }, 0) / visibleWallets.length;
@@ -267,7 +268,7 @@ export function BillBurdenRatioChart({
                               <div className="flex items-center gap-2">
                                 <div
                                   className="h-2 w-2 rounded-full"
-                                  style={{ backgroundColor: wallet.color }}
+                                  style={{ backgroundColor: wallet.color ?? undefined }}
                                 />
                                 <span className="text-sm">{wallet.name}</span>
                               </div>

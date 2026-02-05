@@ -36,16 +36,13 @@ function Circle({
 
 const CategoryLabel: React.FC<CategoryLabelProps> = ({ transaction }) => {
   const [, categoriesMap] = useCategories();
-  const category =
-    !!transaction.category_id && categoriesMap.get(transaction.category_id);
+  const category = transaction.category_id
+    ? categoriesMap.get(transaction.category_id)
+    : undefined;
   const [, labelsMap] = useLabels();
-  const label = !!transaction.label_id && labelsMap.get(transaction.label_id);
-
-  return (
-    <Badge variant="outline">
-      <span className="text-xs">{category?.name}</span>
-    </Badge>
-  );
+  const label = transaction.label_id
+    ? labelsMap.get(transaction.label_id)
+    : undefined;
 
   if (transaction.type === "transfer") {
     return (
@@ -57,7 +54,7 @@ const CategoryLabel: React.FC<CategoryLabelProps> = ({ transaction }) => {
 
   return (
     <Circle color={label?.color ?? "gray"} className="text-xl">
-      <Icon name={category?.icon} />
+      <Icon name={category?.icon ?? "tag"} />
     </Circle>
   );
 };

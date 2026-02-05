@@ -22,6 +22,7 @@ import {
 } from "@/utils/supabase/mutations";
 import { Database } from "@/utils/supabase/database.types";
 import { TransactionTemplate } from "@/utils/supabase/types";
+import { useWorkspace } from "@/contexts/workspace-context";
 import { useTags } from "@/contexts/settings-context";
 import { Input } from "../ui/input";
 
@@ -54,6 +55,8 @@ const TemplateForm = ({
 }: TemplateFormProps) => {
   const queryClient = useQueryClient();
   const [availableTags] = useTags();
+  const { activeWorkspace } = useWorkspace();
+  const workspaceId = activeWorkspace?.id;
 
   const createMutation = useMutation({
     mutationFn: async (
@@ -104,11 +107,14 @@ const TemplateForm = ({
   const defaultValues: TemplateFormValues = {
     id: undefined,
     name: "",
-    amount: template ? Math.abs(template.amount_cents) / 100 : undefined,
+    amount: template
+      ? Math.abs(template.amount_cents ?? 0) / 100
+      : (0 as number),
     type,
     description: "",
     category_id: "",
     label_id: "",
+    currency: template?.currency ?? "",
     tags: [],
   };
 
@@ -117,12 +123,12 @@ const TemplateForm = ({
   ): TemplateFormValues => ({
     id: tpl.id,
     name: tpl.name,
-    amount: Math.abs(tpl.amount_cents) / 100,
-    type: tpl.type,
+    amount: Math.abs(tpl.amount_cents ?? 0) / 100,
+    type: tpl.type === "transfer" ? "expense" : tpl.type,
     description: tpl.description ?? undefined,
     category_id: tpl.category_id ?? "",
     label_id: tpl.label_id ?? "",
-    currency: tpl.currency,
+    currency: tpl.currency ?? "",
     tags: tpl.tags ?? undefined,
   });
 
@@ -141,8 +147,9 @@ const TemplateForm = ({
         description: values.description,
         category_id: values.category_id || null,
         label_id: values.label_id || null,
-        currency: values.currency,
+        currency: values.currency || "USD",
         tags: values.tags,
+        workspace_id: workspaceId!,
       };
 
     return new Promise((resolve) => {
@@ -157,7 +164,7 @@ const TemplateForm = ({
                   : "Failed to update template",
             }),
         });
-      } else {
+      } else if (workspaceId) {
         createMutation.mutate(payload, {
           onSuccess: () => resolve({}),
           onError: (error: unknown) =>
@@ -168,6 +175,8 @@ const TemplateForm = ({
                   : "Failed to create template",
             }),
         });
+      } else {
+        resolve({ error: "No workspace selected" });
       }
     });
   };
@@ -227,7 +236,12 @@ const TemplateForm = ({
           render={({ field }) => (
             <FormItem>
               <FormControl>
-                <CategoryCombobox {...field} type={type} className="w-full" />
+                <CategoryCombobox
+                  {...field}
+                  selectionType="combobox"
+                  type={type}
+                  className="w-full"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

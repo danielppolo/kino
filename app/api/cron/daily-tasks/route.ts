@@ -58,7 +58,7 @@ async function handle(request: NextRequest) {
 
       for (const r of recurrences || []) {
         const runDate = r.next_run_date || r.start_date;
-        if (!runDate) continue;
+        if (!runDate || !r.wallet_id || !r.label_id) continue;
 
         const endDate = r.end_date ? new Date(r.end_date) : null;
         let current = new Date(runDate);
@@ -71,12 +71,12 @@ async function handle(request: NextRequest) {
               amount: r.amount_cents / 100,
               type: r.type,
               date: dateStr,
-              description: r.description,
+              description: r.description ?? undefined,
               category_id: r.category_id,
-              label_id: r.label_id,
+              label_id: r.label_id ?? undefined,
               wallet_id: r.wallet_id,
               currency: r.currency,
-              tags: r.tags,
+              tags: r.tags ?? undefined,
             },
             supabase,
           );
@@ -108,54 +108,67 @@ async function handle(request: NextRequest) {
     try {
       const supabase = await createClient();
 
-      // Fetch all recurring bills where due_date <= today
+      // Fetch all recurrent bills where next_due_date <= today
       const today = new Date().toISOString().split("T")[0];
-      const { data: recurringBills, error: billsError } = await supabase
-        .from("bills")
+      const { data: recurrentBills, error: billsError } = await supabase
+        .from("recurrent_bills")
         .select("*")
-        .eq("is_recurring", true)
-        .lte("due_date", today);
+        .lte("next_due_date", today);
 
       if (billsError) {
         throw new Error(billsError.message);
       }
 
       let billsCreated = 0;
-      for (const bill of recurringBills || []) {
-        if (!bill.interval_type) continue;
+      for (const recurrentBill of recurrentBills || []) {
+        // Check if end_date has passed
+        if (recurrentBill.end_date) {
+          const endDate = new Date(recurrentBill.end_date);
+          const todayDate = new Date(today);
+          if (endDate < todayDate) {
+            continue; // Skip if end date has passed
+          }
+        }
+
+        if (!recurrentBill.next_due_date) {
+          continue; // Skip if no next_due_date set
+        }
 
         // Calculate the next due date
-        const currentDueDate = new Date(bill.due_date);
+        const currentDueDate = new Date(recurrentBill.next_due_date);
         const nextDueDate = calculateNextRunDate(
           currentDueDate,
-          bill.interval_type,
+          recurrentBill.interval_type,
         );
         const nextDueDateStr = nextDueDate.toISOString().split("T")[0];
 
-        // Create a new bill instance for the next period
+        // Create a new bill instance for the current period
         const { error: insertError } = await supabase.from("bills").insert({
-          wallet_id: bill.wallet_id,
-          description: bill.description,
-          amount_cents: bill.amount_cents,
-          currency: bill.currency,
-          due_date: nextDueDateStr,
-          is_recurring: false, // The generated instance is not recurring
-          recurring_bill_id: bill.id, // Link to the parent recurring bill
+          wallet_id: recurrentBill.wallet_id,
+          description: recurrentBill.description,
+          amount_cents: recurrentBill.amount_cents,
+          currency: recurrentBill.currency,
+          due_date: recurrentBill.next_due_date,
+          recurrent_bill_id: recurrentBill.id, // Link to the parent recurrent bill
         });
 
         if (insertError) {
-          console.error(`Failed to create bill instance: ${insertError.message}`);
+          console.error(
+            `Failed to create bill instance: ${insertError.message}`,
+          );
           continue;
         }
 
-        // Update the recurring bill's due date to the next occurrence
+        // Update the recurrent bill's next_due_date to the next occurrence
         const { error: updateError } = await supabase
-          .from("bills")
-          .update({ due_date: nextDueDateStr })
-          .eq("id", bill.id);
+          .from("recurrent_bills")
+          .update({ next_due_date: nextDueDateStr })
+          .eq("id", recurrentBill.id);
 
         if (updateError) {
-          console.error(`Failed to update recurring bill: ${updateError.message}`);
+          console.error(
+            `Failed to update recurrent bill: ${updateError.message}`,
+          );
         }
 
         billsCreated++;

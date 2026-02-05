@@ -27,6 +27,7 @@ import { useCurrency, useWallets } from "@/contexts/settings-context";
 import { formatCurrency, parseMonthDate } from "@/utils/chart-helpers";
 import { createClient } from "@/utils/supabase/client";
 import { getMonthlyBillStats } from "@/utils/supabase/queries";
+import { Wallet } from "@/utils/supabase/types";
 
 interface BillsHistoryChartProps {
   walletId?: string;
@@ -119,7 +120,7 @@ export function BillsHistoryChart({
   }, [monthlyBillStats, conversionRates, walletMap]);
 
   // Get visible wallets
-  let visibleWallets;
+  let visibleWallets: Wallet[];
   if (walletId) {
     const wallet = walletMap.get(walletId);
     visibleWallets = wallet ? [wallet] : [];
@@ -146,11 +147,11 @@ export function BillsHistoryChart({
   // Calculate percentage change
   const calculatePercentageChange = () => {
     if (chartData.length < 2) return 0;
-    const current = visibleWallets.reduce((total, wallet) => {
+    const current = visibleWallets.reduce((total: number, wallet: Wallet) => {
       const debt = (chartData[chartData.length - 1][wallet.id] as number) || 0;
       return total + debt;
     }, 0);
-    const previous = visibleWallets.reduce((total, wallet) => {
+    const previous = visibleWallets.reduce((total: number, wallet: Wallet) => {
       const debt = (chartData[chartData.length - 2][wallet.id] as number) || 0;
       return total + debt;
     }, 0);
@@ -164,7 +165,7 @@ export function BillsHistoryChart({
   const currentTotalDebt = React.useMemo(() => {
     if (chartData.length === 0) return 0;
     const lastMonth = chartData[chartData.length - 1];
-    return visibleWallets.reduce((total, wallet) => {
+    return visibleWallets.reduce((total: number, wallet: Wallet) => {
       return total + ((lastMonth[wallet.id] as number) || 0);
     }, 0);
   }, [chartData, visibleWallets]);
@@ -289,7 +290,7 @@ export function BillsHistoryChart({
                               <div className="flex items-center gap-2">
                                 <div
                                   className="h-2 w-2 rounded-full"
-                                  style={{ backgroundColor: wallet.color }}
+                                  style={{ backgroundColor: wallet.color ?? undefined }}
                                 />
                                 <span className="text-sm">{wallet.name}</span>
                               </div>

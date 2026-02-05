@@ -42,7 +42,7 @@ function TemplateSelect({ type }: { type: "income" | "expense" }) {
     <TemplateCombobox
       type={type}
       onSelect={(tpl) => {
-        setValue("amount", Math.abs(tpl.amount_cents) / 100);
+        setValue("amount", Math.abs(tpl.amount_cents ?? 0) / 100);
         setValue("description", tpl.description ?? "");
         setValue("category_id", tpl.category_id ?? "");
         setValue("label_id", tpl.label_id ?? "");
