@@ -92,6 +92,7 @@ export type Database = {
           id: string
           interval_type: string | null
           is_recurring: boolean | null
+          recurrent_bill_id: string | null
           recurring_bill_id: string | null
           wallet_id: string
         }
@@ -104,6 +105,7 @@ export type Database = {
           id?: string
           interval_type?: string | null
           is_recurring?: boolean | null
+          recurrent_bill_id?: string | null
           recurring_bill_id?: string | null
           wallet_id: string
         }
@@ -116,10 +118,18 @@ export type Database = {
           id?: string
           interval_type?: string | null
           is_recurring?: boolean | null
+          recurrent_bill_id?: string | null
           recurring_bill_id?: string | null
           wallet_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "bills_recurrent_bill_id_fkey"
+            columns: ["recurrent_bill_id"]
+            isOneToOne: false
+            referencedRelation: "recurrent_bills"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bills_recurring_bill_id_fkey"
             columns: ["recurring_bill_id"]
@@ -372,6 +382,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "monthly_stats_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurrent_bills: {
+        Row: {
+          amount_cents: number
+          created_at: string | null
+          currency: string
+          description: string
+          end_date: string | null
+          id: string
+          interval_type: string
+          next_due_date: string | null
+          start_date: string
+          wallet_id: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string | null
+          currency: string
+          description: string
+          end_date?: string | null
+          id?: string
+          interval_type: string
+          next_due_date?: string | null
+          start_date: string
+          wallet_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string | null
+          currency?: string
+          description?: string
+          end_date?: string | null
+          id?: string
+          interval_type?: string
+          next_due_date?: string | null
+          start_date?: string
+          wallet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurrent_bills_wallet_id_fkey"
             columns: ["wallet_id"]
             isOneToOne: false
             referencedRelation: "wallets"
@@ -661,9 +718,7 @@ export type Database = {
       user_preferences: {
         Row: {
           active_workspace_id: string | null
-          base_currency: string
           created_at: string
-          feature_flags: Json
           id: string
           phone: string | null
           updated_at: string
@@ -671,9 +726,7 @@ export type Database = {
         }
         Insert: {
           active_workspace_id?: string | null
-          base_currency?: string
           created_at?: string
-          feature_flags?: Json
           id?: string
           phone?: string | null
           updated_at?: string
@@ -681,9 +734,7 @@ export type Database = {
         }
         Update: {
           active_workspace_id?: string | null
-          base_currency?: string
           created_at?: string
-          feature_flags?: Json
           id?: string
           phone?: string | null
           updated_at?: string
@@ -908,19 +959,25 @@ export type Database = {
       }
       workspaces: {
         Row: {
+          base_currency: string
           created_at: string
+          feature_flags: Json | null
           id: string
           name: string
           updated_at: string
         }
         Insert: {
+          base_currency?: string
           created_at?: string
+          feature_flags?: Json | null
           id?: string
           name: string
           updated_at?: string
         }
         Update: {
+          base_currency?: string
           created_at?: string
+          feature_flags?: Json | null
           id?: string
           name?: string
           updated_at?: string
@@ -1054,6 +1111,10 @@ export type Database = {
           transaction_count: number
         }[]
       }
+      get_transfer_wallet_id: {
+        Args: { p_transaction_id: string; p_transfer_id: string }
+        Returns: string
+      }
       get_user_id_by_email: {
         Args: { user_email: string }
         Returns: {
@@ -1077,15 +1138,33 @@ export type Database = {
         Args: { required_role: string[]; workspace_uuid: string }
         Returns: boolean
       }
-      insert_wallet_and_user_wallet: {
-        Args: { wallet_currency: string; wallet_name: string }
-        Returns: {
-          wallet_id: string
-        }[]
-      }
+      insert_wallet_and_user_wallet:
+        | {
+            Args: { wallet_currency: string; wallet_name: string }
+            Returns: {
+              wallet_id: string
+            }[]
+          }
+        | {
+            Args: {
+              p_workspace_id: string
+              wallet_currency: string
+              wallet_name: string
+            }
+            Returns: {
+              wallet_id: string
+            }[]
+          }
       is_workspace_member: {
         Args: { workspace_uuid: string }
         Returns: boolean
+      }
+      lookup_user_by_email: {
+        Args: { user_email: string }
+        Returns: {
+          email: string
+          id: string
+        }[]
       }
     }
     Enums: {
