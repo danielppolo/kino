@@ -1133,7 +1133,7 @@ export const getAllWalletMembers = async (
   client: TypedSupabaseClient,
   walletIds: string[],
 ) => {
-  const { data, error } = await (client as { rpc: (name: string, args: { wallet_uuids: string[] }) => Promise<{ data: unknown; error: unknown }> }).rpc(
+  const { data, error } = await (client as unknown as { rpc: (name: string, args: { wallet_uuids: string[] }) => Promise<{ data: unknown; error: unknown }> }).rpc(
     "get_all_wallet_members",
     { wallet_uuids: walletIds },
   );
@@ -2228,22 +2228,24 @@ export const getBillsVsDiscretionarySpending = async (
     return { data: null, error: statsError };
   }
 
-  const result: BillsVsDiscretionaryData[] = monthlyStats.map((stat) => {
-    const bill = billStats.find(
-      (b) => b.month === stat.month && b.wallet_id === stat.wallet_id,
-    );
+  const result: BillsVsDiscretionaryData[] = monthlyStats
+    .filter((stat): stat is typeof stat & { wallet_id: string } => stat.wallet_id != null)
+    .map((stat) => {
+      const bill = billStats.find(
+        (b) => b.month === stat.month && b.wallet_id === stat.wallet_id,
+      );
 
-    const billExpenses = bill ? bill.total_paid_cents : 0;
-    const totalExpenses = Math.abs(stat.outcome_cents);
-    const discretionaryExpenses = Math.max(0, totalExpenses - billExpenses);
+      const billExpenses = bill ? bill.total_paid_cents : 0;
+      const totalExpenses = Math.abs(stat.outcome_cents);
+      const discretionaryExpenses = Math.max(0, totalExpenses - billExpenses);
 
-    return {
-      month: stat.month,
-      wallet_id: stat.wallet_id,
-      bill_expenses_cents: billExpenses,
-      discretionary_expenses_cents: discretionaryExpenses,
-    };
-  });
+      return {
+        month: stat.month,
+        wallet_id: stat.wallet_id,
+        bill_expenses_cents: billExpenses,
+        discretionary_expenses_cents: discretionaryExpenses,
+      };
+    });
 
   return { data: result, error: null };
 };
@@ -2283,23 +2285,25 @@ export const getCashFlowAfterBills = async (
     return { data: null, error: statsError };
   }
 
-  const result: CashFlowAfterBillsData[] = monthlyStats.map((stat) => {
-    const bill = billStats.find(
-      (b) => b.month === stat.month && b.wallet_id === stat.wallet_id,
-    );
+  const result: CashFlowAfterBillsData[] = monthlyStats
+    .filter((stat): stat is typeof stat & { wallet_id: string } => stat.wallet_id != null)
+    .map((stat) => {
+      const bill = billStats.find(
+        (b) => b.month === stat.month && b.wallet_id === stat.wallet_id,
+      );
 
-    const billExpenses = bill ? bill.total_paid_cents : 0;
-    const totalExpenses = Math.abs(stat.outcome_cents);
-    const otherExpenses = Math.max(0, totalExpenses - billExpenses);
-    const income = stat.income_cents;
-    const netAfterBills = income - billExpenses - otherExpenses;
+      const billExpenses = bill ? bill.total_paid_cents : 0;
+      const totalExpenses = Math.abs(stat.outcome_cents);
+      const otherExpenses = Math.max(0, totalExpenses - billExpenses);
+      const income = stat.income_cents;
+      const netAfterBills = income - billExpenses - otherExpenses;
 
-    return {
-      month: stat.month,
-      wallet_id: stat.wallet_id,
-      income_cents: income,
-      bills_cents: billExpenses,
-      other_expenses_cents: otherExpenses,
+      return {
+        month: stat.month,
+        wallet_id: stat.wallet_id,
+        income_cents: income,
+        bills_cents: billExpenses,
+        other_expenses_cents: otherExpenses,
       net_after_bills_cents: netAfterBills,
     };
   });

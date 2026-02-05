@@ -46,7 +46,13 @@ const CsvTransactionUploader = ({
 }: {
   fileInputRef: React.RefObject<HTMLInputElement>;
 }) => {
-  const { walletId } = useParams();
+  const params = useParams();
+  const walletId =
+    typeof params.walletId === "string"
+      ? params.walletId
+      : Array.isArray(params.walletId)
+        ? params.walletId?.[0]
+        : undefined;
   const [, categoriesMap] = useCategories("name");
   const [, labelsMap] = useLabels("name");
   const [open, setOpen] = useState(false);
@@ -61,18 +67,18 @@ const CsvTransactionUploader = ({
   const isCategory = (id?: string) => id && categoriesMap.has(id);
   const csvDisplayData = csvData.map((row: Row) => ({
     date: row.date,
-    type: row.type,
-    amount: row.amount ? Math.round(Number(row.amount) * 100) : undefined,
-    description: row.description,
+    type: row.type ?? "expense",
+    amount: row.amount != null ? Math.round(Number(row.amount) * 100) : 0,
+    description: row.description ?? "",
     category:
       isCategory(row.category) || options.missingCategory === "new"
-        ? row.category
+        ? row.category ?? "Other"
         : "Other",
     label:
       isLabel(row.label) || options.missingLabel === "new"
-        ? row.label
+        ? row.label ?? "Other"
         : "Other",
-    tags: row.tags?.split(",").map((tag) => tag.trim()),
+    tags: row.tags?.split(",").map((tag) => tag.trim()).filter(Boolean),
   }));
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,26 +105,30 @@ const CsvTransactionUploader = ({
   };
 
   const handleSubmit = async () => {
+    if (!walletId) {
+      toast.error("Wallet not found");
+      return;
+    }
     setIsSubmitting(true);
-    const transactions = csvData.map((row) => ({
-      amount: row.amount
-        ? row.type === "expense"
-          ? -Math.abs(row.amount)
-          : Math.abs(row.amount)
-        : undefined,
-      type: row.type,
-      description: row.description,
-      category: row.category,
-      label: row.label,
-      date: new Date(row.date.split("/").reverse().join("-"))
-        .toISOString()
-        .split("T")[0], // Parse DD/MM/YYYY to YYYY-MM-DD
-      tags: row.tags
-        ?.split(",")
-        .filter((tag) => tag.trim() !== "")
-        .map((tag) => tag.trim()),
-    }));
-
+    const transactions = csvData.map((row) => {
+      const dateStr = row.date.includes("/")
+        ? new Date(row.date.split("/").reverse().join("-"))
+            .toISOString()
+            .split("T")[0]
+        : row.date;
+      return {
+        date: dateStr,
+        amount: row.amount != null ? Math.abs(row.amount) : 0,
+        type: row.type ?? "expense",
+        description: row.description ?? "",
+        category: row.category ?? "Other",
+        label: row.label ?? "Other",
+        tags: row.tags
+          ?.split(",")
+          .filter((tag) => tag.trim() !== "")
+          .map((tag) => tag.trim()),
+      };
+    });
     const { error } = await importTransactions({
       walletId,
       transactions,

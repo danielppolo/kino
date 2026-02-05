@@ -38,7 +38,7 @@ import { getBillsForTransaction } from "@/utils/supabase/queries";
 import { Transaction, TransactionList } from "@/utils/supabase/types";
 
 interface TransactionPage {
-  data: Transaction[];
+  data: TransactionList[];
   error: null;
   count: number;
 }
@@ -98,7 +98,11 @@ const ExpenseIncomeForm = ({
       optimisticTransaction: TransactionList;
     }
   >({
-    mutationFn: createTransaction,
+    mutationFn: async (values) => {
+      const result = await createTransaction(values);
+      if (!result.success) throw new Error(result.error ?? "Failed to create transaction");
+      return { data: result.data ?? [] };
+    },
     onMutate: async (newTransaction) => {
       await queryClient.cancelQueries({
         queryKey: ["transactions", filters],
@@ -112,17 +116,17 @@ const ExpenseIncomeForm = ({
       const optimisticTransaction: TransactionList = {
         id: randomUUID(),
         wallet_id: newTransaction.wallet_id,
-        category_id: newTransaction.category_id,
-        label_id: newTransaction.label_id,
+        category_id: newTransaction.category_id || null,
+        label_id: newTransaction.label_id || null,
         amount_cents:
           newTransaction.type === "expense"
             ? -Math.round(newTransaction.amount * 100)
             : Math.round(newTransaction.amount * 100),
         currency: newTransaction.currency,
-        description: newTransaction.description,
+        description: newTransaction.description ?? null,
         date: newTransaction.date,
         type: newTransaction.type,
-        tag_ids: newTransaction.tags,
+        tag_ids: newTransaction.tags ?? null,
       };
 
       queryClient.setQueryData<InfiniteTransactionData>(
@@ -170,13 +174,13 @@ const ExpenseIncomeForm = ({
         id: saved.id,
         wallet_id: saved.wallet_id,
         category_id: saved.category_id,
-        label_id: saved.label_id ?? undefined,
+        label_id: saved.label_id ?? null,
         amount_cents: saved.amount_cents,
         currency: saved.currency,
-        description: saved.description ?? undefined,
+        description: saved.description ?? null,
         date: saved.date,
         type: saved.type,
-        tag_ids: saved.tag_ids ?? undefined,
+        tag_ids: (saved as { tags?: string[] | null }).tags ?? null,
       };
 
       queryClient.setQueryData<InfiniteTransactionData>(
@@ -237,7 +241,7 @@ const ExpenseIncomeForm = ({
       : billPrefill
         ? billPrefill.amount / 100
         : 0,
-    tags: initialData?.tag_ids ?? [],
+    tags: initialData?.tags ?? [],
     bill_id: billPrefill?.billId ?? "",
   };
 

@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 
 interface Transaction {
-  [key: string]: string | number | null | undefined;
+  [key: string]: string | number | string[] | null | undefined;
 }
 
 interface TransactionListPreviewProps {

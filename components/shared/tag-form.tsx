@@ -14,6 +14,7 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
+import { useWorkspace } from "@/contexts/workspace-context";
 import { Database } from "@/utils/supabase/database.types";
 import { createTag, deleteTag, updateTag } from "@/utils/supabase/mutations";
 import { Tag } from "@/utils/supabase/types";
@@ -28,10 +29,15 @@ interface TagFormProps {
 type TagFormValues = Database["public"]["Tables"]["tags"]["Insert"];
 
 const TagForm = ({ tag, onSuccess, open, onOpenChange }: TagFormProps) => {
+  const { activeWorkspace } = useWorkspace();
   const queryClient = useQueryClient();
 
   const createMutation = useMutation({
-    mutationFn: async (values: TagFormValues) => createTag(values),
+    mutationFn: async (values: Omit<TagFormValues, "workspace_id">) => {
+      const workspaceId = activeWorkspace?.id;
+      if (!workspaceId) throw new Error("No workspace selected");
+      return createTag({ ...values, workspace_id: workspaceId });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tags"] });
       onSuccess?.();
@@ -45,7 +51,7 @@ const TagForm = ({ tag, onSuccess, open, onOpenChange }: TagFormProps) => {
 
   const updateMutation = useMutation({
     mutationFn: async (values: TagFormValues) =>
-      updateTag({ ...values, id: tag?.id }),
+      updateTag({ ...values, id: tag?.id } as Database["public"]["Tables"]["tags"]["Update"]),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tags"] });
       onSuccess?.();
@@ -78,7 +84,7 @@ const TagForm = ({ tag, onSuccess, open, onOpenChange }: TagFormProps) => {
     updateMutation.isPending ||
     deleteMutation.isPending;
 
-  const defaultValues: TagFormValues = { title: "", group: "" };
+  const defaultValues: Omit<TagFormValues, "workspace_id"> & { workspace_id?: string } = { title: "", group: "" };
 
   const handleSubmit = (values: TagFormValues) => {
     // Trim the title field to remove leading and trailing spaces
@@ -89,14 +95,17 @@ const TagForm = ({ tag, onSuccess, open, onOpenChange }: TagFormProps) => {
 
     return new Promise<{ error?: string }>((resolve) => {
       if (tag) {
-        updateMutation.mutate(trimmedValues, {
-          onSuccess: () => resolve({}),
-          onError: (error: unknown) =>
-            resolve({
-              error:
-                error instanceof Error ? error.message : "Failed to update tag",
-            }),
-        });
+        updateMutation.mutate(
+          { ...trimmedValues, workspace_id: tag.workspace_id } as TagFormValues,
+          {
+            onSuccess: () => resolve({}),
+            onError: (error: unknown) =>
+              resolve({
+                error:
+                  error instanceof Error ? error.message : "Failed to update tag",
+              }),
+          },
+        );
       } else {
         createMutation.mutate(trimmedValues, {
           onSuccess: () => resolve({}),
