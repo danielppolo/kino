@@ -57,6 +57,7 @@ export function TrendsChart({
   title,
 }: TrendsChartProps) {
   const [wallets, walletMap] = useWallets();
+  const workspaceWalletIds = wallets.map((w) => w.id);
   const { conversionRates, baseCurrency } = useCurrency();
 
   // Fetch data based on variant
@@ -65,13 +66,14 @@ export function TrendsChart({
     isLoading,
     error,
   } = useQuery({
-    queryKey: [variant === "categories" ? "category-trends" : "label-trends", walletId, from, to, type],
+    queryKey: [variant === "categories" ? "category-trends" : "label-trends", walletId, workspaceWalletIds, from, to, type],
     queryFn: async () => {
       const supabase = await createClient();
 
       if (variant === "categories") {
         const { data, error } = await getCategoryTrends(supabase, {
           walletId,
+          workspaceWalletIds,
           from,
           to,
           type: type === "net" ? "expense" : type, // categories don't support net
@@ -81,6 +83,7 @@ export function TrendsChart({
       } else {
         const { data, error } = await getMonthlyLabelStats(supabase, {
           walletId,
+          workspaceWalletIds,
           from,
           to,
           type,
