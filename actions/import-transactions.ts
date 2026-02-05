@@ -3,6 +3,7 @@ import { v4 as randomUUID } from "uuid";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 import { COLORS, ICONS } from "@/utils/constants";
+import { Database } from "@/utils/supabase/database.types";
 import { createClient } from "@/utils/supabase/client";
 
 interface ImportTransaction {
@@ -229,9 +230,10 @@ export const importTransactions = async ({
     });
   }
 
+  type TransactionInsert = Database["public"]["Tables"]["transactions"]["Insert"];
   const { error, data } = await supabase
     .from("transactions")
-    .upsert(transactionData)
+    .upsert(transactionData as TransactionInsert[])
     .select();
 
   if (error) {

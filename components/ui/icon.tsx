@@ -1,4 +1,4 @@
-import { ElementType } from "react";
+import React, { ElementType } from "react";
 import { LucideProps } from "lucide-react";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import dynamic from "next/dynamic";
@@ -13,13 +13,15 @@ const loaded: Partial<Record<keyof typeof dynamicIconImports, ElementType>> =
   {};
 
 export const LazyIcon = ({ name, ...props }: IconProps) => {
-  return null;
-  loaded[name as keyof typeof dynamicIconImports] ||= dynamic(
-    dynamicIconImports[name as keyof typeof dynamicIconImports],
-  );
+  if (!loaded[name as keyof typeof dynamicIconImports]) {
+    loaded[name as keyof typeof dynamicIconImports] = dynamic(
+      dynamicIconImports[name as keyof typeof dynamicIconImports],
+    ) as ElementType;
+  }
   const LucideIcon = loaded[name as keyof typeof dynamicIconImports];
-
-  return LucideIcon ? <LucideIcon {...props} /> : null;
+  if (!LucideIcon) return null;
+  const Component = LucideIcon as React.ComponentType<LucideProps>;
+  return <Component {...props} />;
 };
 
 export const Icon = ({ name, className }: IconProps) => {

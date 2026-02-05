@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { DrawerDialog } from "@/components/ui/drawer-dialog";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { useWorkspace } from "@/contexts/workspace-context";
 import { createView } from "@/utils/supabase/mutations";
 
 interface SaveViewDialogProps {
@@ -22,14 +23,17 @@ interface ViewFormValues {
 }
 
 export default function SaveViewDialog({ open, onOpenChange }: SaveViewDialogProps) {
+  const { activeWorkspace } = useWorkspace();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const form = useForm<ViewFormValues>({ defaultValues: { name: "" } });
 
   const mutation = useMutation({
     mutationFn: async (values: ViewFormValues) => {
+      const workspaceId = activeWorkspace?.id;
+      if (!workspaceId) throw new Error("No workspace selected");
       const query_params = searchParams.toString();
-      await createView({ name: values.name, query_params });
+      await createView({ name: values.name, query_params, workspace_id: workspaceId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["views"] });

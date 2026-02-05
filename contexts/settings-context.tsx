@@ -170,10 +170,11 @@ export const useCategories = (
   }
 
   const list = context.categories;
+  const withTransfer = context.categories.concat(
+    TRANSFER_CATEGORIES.map((c) => ({ ...c, workspace_id: "" })),
+  );
   const map = new Map(
-    context.categories
-      .concat(TRANSFER_CATEGORIES)
-      .map((category) => [String(category[key]), category]),
+    withTransfer.map((category) => [String(category[key]), category]),
   );
 
   return [list, map];

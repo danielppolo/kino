@@ -141,7 +141,7 @@ export function TransferFlowDiagramChart({
                     {fromWallet && (
                       <div
                         className="h-2 w-2 rounded-full"
-                        style={{ backgroundColor: fromWallet.color }}
+                        style={{ backgroundColor: fromWallet.color ?? undefined }}
                       />
                     )}
                     <span className="text-sm font-medium truncate">
@@ -153,7 +153,7 @@ export function TransferFlowDiagramChart({
                     {toWallet && (
                       <div
                         className="h-2 w-2 rounded-full"
-                        style={{ backgroundColor: toWallet.color }}
+                        style={{ backgroundColor: toWallet.color ?? undefined }}
                       />
                     )}
                     <span className="text-sm font-medium truncate">

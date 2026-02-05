@@ -13,9 +13,9 @@ interface StatsProps {
 const Stats: React.FC<StatsProps> = (props) => {
   const [stats, setStats] = useState({ total: 0, in: 0, out: 0 });
 
-  const calculateStats = (data) => {
+  const calculateStats = (data: { amount_cents: number }[]) => {
     const stats = data.reduce(
-      (acc, transaction) => {
+      (acc: { total: number; in: number; out: number }, transaction: { amount_cents: number }) => {
         acc.total += transaction.amount_cents;
         if (transaction.amount_cents > 0) {
           acc.in += transaction.amount_cents;

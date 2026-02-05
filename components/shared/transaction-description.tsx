@@ -5,10 +5,10 @@ import React from "react";
 import { Text } from "../ui/typography";
 
 import { useCategories, useWallets } from "@/contexts/settings-context";
-import { Transaction } from "@/utils/supabase/types";
+import { TransactionList } from "@/utils/supabase/types";
 
 interface TransactionDescriptionProps {
-  transaction: Transaction;
+  transaction: TransactionList;
 }
 
 const TransactionDescription: React.FC<TransactionDescriptionProps> = ({
@@ -24,7 +24,7 @@ const TransactionDescription: React.FC<TransactionDescriptionProps> = ({
     walletsMap.get(transaction.transfer_wallet_id);
 
   if (transaction.type === "transfer" && counterPartyWallet) {
-    const isIncoming = transaction.amount_cents > 0;
+    const isIncoming = (transaction.amount_cents ?? 0) > 0;
     return (
       <div className="flex gap-1">
         <Text>{`${isIncoming ? "From" : "To"} ${counterPartyWallet.name}`}</Text>
@@ -33,9 +33,13 @@ const TransactionDescription: React.FC<TransactionDescriptionProps> = ({
     );
   }
 
+  const categoryName =
+    category && typeof category === "object" && "name" in category
+      ? (category as { name: string }).name
+      : "";
   return (
     <div className="flex gap-1">
-      <Text>{category?.name}</Text>
+      <Text>{categoryName}</Text>
       <Text className="text-muted-foreground">{transaction.description}</Text>
     </div>
   );

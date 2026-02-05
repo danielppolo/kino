@@ -18,7 +18,7 @@ export default function WalletFilter() {
           key={wallet.id}
           href={`/app/transactions/${wallet.id}?${searchParams.toString()}`}
         >
-          <MenuItem active={walletId === wallet.id} label={wallet.name} />
+          <MenuItem active={walletId === wallet.id}>{wallet.name}</MenuItem>
         </Link>
       ))}
     </Menu>

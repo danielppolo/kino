@@ -229,6 +229,18 @@ export default function BillsList({ walletId }: BillsListProps) {
     });
   };
 
+  const handleCreateTransactionFromBill = (bill: BillWithPayments) => {
+    const remainingAmount = bill.amount_cents - bill.paid_amount_cents;
+    openForm({
+      type: "income",
+      walletId: bill.wallet_id,
+      billPrefill: {
+        billId: bill.id,
+        amount: remainingAmount,
+      },
+    });
+  };
+
   const getAvailableTransactionsForBill = (bill: BillWithPayments) => {
     if (!unassociatedTransactions) return [];
 
@@ -249,7 +261,7 @@ export default function BillsList({ walletId }: BillsListProps) {
     // Find if any transaction needs to be split
     const transactionNeedingSplit = transactionIds.find((id) => {
       const transaction = allIncomeTransactions?.find((t) => t.id === id);
-      return transaction && transaction.amount_cents > remainingAmount;
+      return transaction && (transaction.amount_cents ?? 0) > remainingAmount;
     });
 
     if (transactionNeedingSplit) {
@@ -341,7 +353,7 @@ export default function BillsList({ walletId }: BillsListProps) {
                         <div className="shrink-0">
                           <TransactionAmount
                             className="text-right"
-                            amount={payment.transaction.amount_cents!}
+                            amount={payment.transaction.amount_cents ?? 0}
                             currency={payment.transaction.currency!}
                           />
                         </div>
@@ -394,6 +406,14 @@ export default function BillsList({ walletId }: BillsListProps) {
                           : ""}
                       </span>
                     )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCreateTransactionFromBill(bill)}
+                      className="w-full"
+                    >
+                      Create transaction
+                    </Button>
                   </div>
                 )}
               </div>

@@ -21,6 +21,7 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
+import { useWorkspace } from "@/contexts/workspace-context";
 import { COLORS } from "@/utils/constants";
 import { Database } from "@/utils/supabase/database.types";
 import { createWallet, updateWallet } from "@/utils/supabase/mutations";
@@ -34,6 +35,7 @@ interface WalletFormProps {
 type WalletFormValues = Database["public"]["Tables"]["wallets"]["Insert"];
 
 const WalletForm = ({ onSuccess, wallet }: WalletFormProps) => {
+  const { activeWorkspace } = useWorkspace();
   const isEditing = !!wallet;
 
   const form = useForm<WalletFormValues>({
@@ -49,7 +51,13 @@ const WalletForm = ({ onSuccess, wallet }: WalletFormProps) => {
 
   const createMutation = useMutation({
     mutationFn: async (walletData: WalletFormValues) => {
-      return await createWallet(walletData);
+      const workspaceId = activeWorkspace?.id;
+      if (!workspaceId) throw new Error("No workspace selected");
+      return await createWallet({
+        name: walletData.name,
+        currency: walletData.currency,
+        workspaceId,
+      });
     },
     onSuccess: () => {
       toast.success("Wallet added!");

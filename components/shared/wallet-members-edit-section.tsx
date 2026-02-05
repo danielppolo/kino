@@ -83,16 +83,28 @@ export default function WalletMembersEditSection({
     },
   });
 
-  const members: WalletMember[] =
-    membersData?.data?.map((m) => ({
-      id: m.id,
-      user_id: m.user_id,
-      wallet_id: m.wallet_id,
-      role: m.role as "owner" | "editor" | "reader",
-      email: m.email,
-      phone: m.phone ?? null,
-      created_at: m.created_at,
-    })) || [];
+  const raw = membersData?.data;
+  const members: WalletMember[] = Array.isArray(raw)
+    ? raw.map(
+        (m: {
+          id: string;
+          user_id: string;
+          wallet_id: string;
+          role: string;
+          email: string | null;
+          phone: string | null;
+          created_at: string | null;
+        }) => ({
+          id: m.id,
+          user_id: m.user_id,
+          wallet_id: m.wallet_id,
+          role: m.role as "owner" | "editor" | "reader",
+          email: m.email,
+          phone: m.phone ?? null,
+          created_at: m.created_at ?? "",
+        }),
+      )
+    : [];
 
   useEffect(() => {
     const nextPhones = members.reduce<Record<string, string>>((acc, member) => {

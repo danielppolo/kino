@@ -28,11 +28,13 @@ async function InfographicsPage({ searchParams }: PageParams) {
 
   // Fetch feature flags
   const supabase = await createClient();
-  const { data: preferences } = await supabase
+  const { data: rawPrefs } = await supabase
     .from("user_preferences")
-    .select("feature_flags")
+    .select("*")
     .maybeSingle();
 
+  type PrefsWithFlags = { feature_flags?: unknown };
+  const preferences = rawPrefs as PrefsWithFlags | null;
   const featureFlags = preferences?.feature_flags
     ? parseFeatureFlags(preferences.feature_flags)
     : DEFAULT_FEATURE_FLAGS;
