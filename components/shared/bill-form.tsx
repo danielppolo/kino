@@ -30,14 +30,18 @@ import {
 } from "@/components/ui/form";
 import { useWallets } from "@/contexts/settings-context";
 import { Database } from "@/utils/supabase/database.types";
-import { createBill, updateBill } from "@/utils/supabase/mutations";
-import { Bill } from "@/utils/supabase/types";
+import {
+  createRecurrentBill,
+  updateRecurrentBill,
+} from "@/utils/supabase/mutations";
+
+type RecurrentBill = Database["public"]["Tables"]["recurrent_bills"]["Row"];
 
 interface BillFormProps {
   onSuccess?: () => void;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  bill?: Bill;
+  recurrentBill?: RecurrentBill;
   defaultWalletId?: string;
 }
 
@@ -46,8 +50,8 @@ interface BillFormValues {
   wallet_ids: string[];
   description: string;
   amount: string;
-  due_date: string;
-  is_recurring: boolean;
+  start_date: string;
+  end_date: string;
   interval_type: string;
 }
 
@@ -55,10 +59,10 @@ const BillForm = ({
   onSuccess,
   open,
   onOpenChange,
-  bill,
+  recurrentBill,
   defaultWalletId,
 }: BillFormProps) => {
-  const isEdit = !!bill;
+  const isEdit = !!recurrentBill;
   const [wallets] = useWallets();
   const queryClient = useQueryClient();
 
@@ -68,26 +72,35 @@ const BillForm = ({
 
   const form = useForm<BillFormValues>({
     defaultValues: {
-      wallet_id: bill?.wallet_id ?? defaultWallet?.id ?? "",
-      wallet_ids: bill?.wallet_id ? [bill.wallet_id] : defaultWallet?.id ? [defaultWallet.id] : [],
-      description: bill?.description ?? "",
-      amount: bill ? (Math.abs(bill.amount_cents) / 100).toString() : "",
-      due_date: bill?.due_date ?? new Date().toISOString().split("T")[0],
-      is_recurring: bill?.is_recurring ?? false,
-      interval_type: bill?.interval_type ?? "monthly",
+      wallet_id:
+        recurrentBill?.wallet_id ?? defaultWallet?.id ?? "",
+      wallet_ids: recurrentBill?.wallet_id
+        ? [recurrentBill.wallet_id]
+        : defaultWallet?.id
+          ? [defaultWallet.id]
+          : [],
+      description: recurrentBill?.description ?? "",
+      amount: recurrentBill
+        ? (Math.abs(recurrentBill.amount_cents) / 100).toString()
+        : "",
+      start_date:
+        recurrentBill?.start_date ??
+        new Date().toISOString().split("T")[0],
+      end_date: recurrentBill?.end_date ?? "",
+      interval_type: recurrentBill?.interval_type ?? "monthly",
     },
   });
 
   useEffect(() => {
-    if (bill) {
+    if (recurrentBill) {
       form.reset({
-        wallet_id: bill.wallet_id,
-        wallet_ids: [bill.wallet_id],
-        description: bill.description,
-        amount: (Math.abs(bill.amount_cents) / 100).toString(),
-        due_date: bill.due_date,
-        is_recurring: bill.is_recurring ?? false,
-        interval_type: bill.interval_type ?? "monthly",
+        wallet_id: recurrentBill.wallet_id,
+        wallet_ids: [recurrentBill.wallet_id],
+        description: recurrentBill.description,
+        amount: (Math.abs(recurrentBill.amount_cents) / 100).toString(),
+        start_date: recurrentBill.start_date,
+        end_date: recurrentBill.end_date ?? "",
+        interval_type: recurrentBill.interval_type,
       });
     } else if (defaultWallet) {
       form.reset({
@@ -95,14 +108,12 @@ const BillForm = ({
         wallet_ids: [defaultWallet.id],
         description: "",
         amount: "",
-        due_date: new Date().toISOString().split("T")[0],
-        is_recurring: false,
+        start_date: new Date().toISOString().split("T")[0],
+        end_date: "",
         interval_type: "monthly",
       });
     }
-  }, [bill, defaultWallet, form]);
-
-  const isRecurring = form.watch("is_recurring");
+  }, [recurrentBill, defaultWallet, form]);
 
   const selectedWalletId = form.watch("wallet_id");
   const selectedWalletIds = form.watch("wallet_ids");
@@ -124,35 +135,42 @@ const BillForm = ({
 
   const createMutation = useMutation({
     mutationFn: async (values: BillFormValues) => {
-      const walletIds = values.wallet_ids.length > 0 ? values.wallet_ids : [values.wallet_id];
+      const walletIds =
+        values.wallet_ids.length > 0 ? values.wallet_ids : [values.wallet_id];
       const results = await Promise.all(
         walletIds.map(async (walletId) => {
           const wallet = wallets.find((w) => w.id === walletId);
-          const data: Database["public"]["Tables"]["bills"]["Insert"] = {
-            wallet_id: walletId,
-            description: values.description,
-            amount_cents: Math.round(parseFloat(values.amount) * 100),
-            currency: wallet?.currency ?? "USD",
-            due_date: values.due_date,
-            is_recurring: values.is_recurring,
-            interval_type: values.is_recurring ? values.interval_type : null,
-          };
-          return await createBill(data);
-        })
+          const data: Database["public"]["Tables"]["recurrent_bills"]["Insert"] =
+            {
+              wallet_id: walletId,
+              description: values.description,
+              amount_cents: Math.round(parseFloat(values.amount) * 100),
+              currency: wallet?.currency ?? "USD",
+              start_date: values.start_date,
+              end_date: values.end_date || null,
+              interval_type: values.interval_type,
+              next_due_date: values.start_date,
+            };
+          return await createRecurrentBill(data);
+        }),
       );
       return results;
     },
     onSuccess: (results) => {
-      queryClient.invalidateQueries({ queryKey: ["bills"] });
+      queryClient.invalidateQueries({ queryKey: ["recurrent-bills"] });
       const count = results.length;
-      toast.success(count === 1 ? "Bill added successfully!" : `${count} bills added successfully!`);
+      toast.success(
+        count === 1
+          ? "Recurrent bill added successfully!"
+          : `${count} recurrent bills added successfully!`,
+      );
       onSuccess?.();
     },
     onError(error: unknown) {
       if (error instanceof Error) {
         toast.error(error.message);
       } else {
-        toast.error("Failed to add bill");
+        toast.error("Failed to add recurrent bill");
       }
     },
   });
@@ -160,28 +178,28 @@ const BillForm = ({
   const updateMutation = useMutation({
     mutationFn: async (values: BillFormValues) => {
       const wallet = wallets.find((w) => w.id === values.wallet_id);
-      const data: Database["public"]["Tables"]["bills"]["Update"] = {
-        id: bill!.id,
+      const data: Database["public"]["Tables"]["recurrent_bills"]["Update"] = {
+        id: recurrentBill!.id,
         wallet_id: values.wallet_id,
         description: values.description,
         amount_cents: Math.round(parseFloat(values.amount) * 100),
         currency: wallet?.currency ?? "USD",
-        due_date: values.due_date,
-        is_recurring: values.is_recurring,
-        interval_type: values.is_recurring ? values.interval_type : null,
+        start_date: values.start_date,
+        end_date: values.end_date || null,
+        interval_type: values.interval_type,
       };
-      return await updateBill(data);
+      return await updateRecurrentBill(data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["bills"] });
-      toast.success("Bill updated successfully!");
+      queryClient.invalidateQueries({ queryKey: ["recurrent-bills"] });
+      toast.success("Recurrent bill updated successfully!");
       onSuccess?.();
     },
     onError(error: unknown) {
       if (error instanceof Error) {
         toast.error(error.message);
       } else {
-        toast.error("Failed to update bill");
+        toast.error("Failed to update recurrent bill");
       }
     },
   });
@@ -198,7 +216,7 @@ const BillForm = ({
 
   return (
     <DrawerDialog
-      title={isEdit ? "Edit Bill" : "Add Bill"}
+      title={isEdit ? "Edit Recurrent Bill" : "Add Recurrent Bill"}
       open={open}
       onOpenChange={onOpenChange}
     >
@@ -305,11 +323,11 @@ const BillForm = ({
 
           <FormField
             control={form.control}
-            name="due_date"
-            rules={{ required: "Due date is required" }}
+            name="start_date"
+            rules={{ required: "Start date is required" }}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Due Date</FormLabel>
+                <FormLabel>Start Date</FormLabel>
                 <FormControl>
                   <DaterPicker
                     value={field.value}
@@ -325,49 +343,46 @@ const BillForm = ({
 
           <FormField
             control={form.control}
-            name="is_recurring"
+            name="end_date"
             render={({ field }) => (
-              <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                <div className="space-y-0.5">
-                  <FormLabel className="text-base">Recurring</FormLabel>
-                  <p className="text-muted-foreground text-sm">
-                    Auto-create new bills on schedule
-                  </p>
-                </div>
+              <FormItem>
+                <FormLabel>End Date (Optional)</FormLabel>
                 <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
+                  <DaterPicker
+                    value={field.value || undefined}
+                    onChange={(date) => field.onChange(date || "")}
+                    variant="outline"
+                    className="w-full"
                   />
                 </FormControl>
+                <FormMessage />
               </FormItem>
             )}
           />
 
-          {isRecurring && (
-            <FormField
-              control={form.control}
-              name="interval_type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Repeat Every</FormLabel>
-                  <FormControl>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select interval" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="daily">Daily</SelectItem>
-                        <SelectItem value="weekly">Weekly</SelectItem>
-                        <SelectItem value="monthly">Monthly</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
+          <FormField
+            control={form.control}
+            name="interval_type"
+            rules={{ required: "Interval is required" }}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Repeat Every</FormLabel>
+                <FormControl>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select interval" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily">Daily</SelectItem>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <Button type="submit" size="sm" className="w-full" disabled={isLoading}>
             {isLoading ? "Saving..." : isEdit ? "Save Changes" : "Save"}

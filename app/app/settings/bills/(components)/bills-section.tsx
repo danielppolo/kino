@@ -14,25 +14,25 @@ import { Text } from "@/components/ui/typography";
 import { useKeyboardListNavigation } from "@/hooks/use-keyboard-list-navigation";
 import { useSelection } from "@/hooks/use-selection";
 import { canUseGlobalShortcuts } from "@/utils/keyboard-shortcuts";
-import { Bill } from "@/utils/supabase/types";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { createClient } from "@/utils/supabase/client";
-import { listBills } from "@/utils/supabase/queries";
+import { listRecurrentBills } from "@/utils/supabase/queries";
 import { PAGE_SIZE } from "@/utils/constants";
 import { RowLoading } from "@/components/ui/row";
+import type { Database } from "@/utils/supabase/database.types";
+
+type RecurrentBill = Database["public"]["Tables"]["recurrent_bills"]["Row"];
 
 interface BillsSectionProps {
-  type: "future" | "past";
-  isActive: boolean;
-  onEdit: (bill: Bill) => void;
+  onEdit: (bill: RecurrentBill) => void;
 }
 
 interface GroupedBills {
   date: string;
-  bills: Bill[];
+  bills: RecurrentBill[];
 }
 
-export default function BillsSection({ type, onEdit }: BillsSectionProps) {
+export default function BillsSection({ onEdit }: BillsSectionProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -43,10 +43,10 @@ export default function BillsSection({ type, onEdit }: BillsSectionProps) {
     isFetchingNextPage,
     status,
   } = useInfiniteQuery({
-    queryKey: ["bills", type],
+    queryKey: ["recurrent-bills"],
     queryFn: async ({ pageParam = 0 }) => {
       const supabase = createClient();
-      const result = await listBills(supabase, {
+      const result = await listRecurrentBills(supabase, {
         page: pageParam as number,
         pageSize: PAGE_SIZE,
       });
@@ -64,21 +64,8 @@ export default function BillsSection({ type, onEdit }: BillsSectionProps) {
     },
   });
 
-  // Flatten pages and filter by type
-  const allBills = data?.pages.flatMap((page) => page.data) ?? [];
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const bills = allBills.filter((bill) => {
-    const billDate = new Date(bill.due_date);
-    billDate.setHours(0, 0, 0, 0);
-
-    if (type === "future") {
-      return billDate >= today;
-    } else {
-      return billDate < today;
-    }
-  });
+  // Flatten pages - no filtering needed, show all recurrent bills
+  const bills = data?.pages.flatMap((page) => page.data) ?? [];
 
   const {
     selected,
@@ -111,22 +98,25 @@ export default function BillsSection({ type, onEdit }: BillsSectionProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedCount]);
 
-  const toggleSelect = (bill: Bill, shiftKey = false) => {
+  const toggleSelect = (bill: RecurrentBill, shiftKey = false) => {
     toggleSelection(bill.id, shiftKey);
   };
 
-  // Sort bills by due date descending
-  const sortedBills = [...bills].sort((a, b) =>
-    b.due_date.localeCompare(a.due_date),
-  );
+  // Sort bills by next_due_date descending
+  const sortedBills = [...bills].sort((a, b) => {
+    const dateA = a.next_due_date || a.start_date;
+    const dateB = b.next_due_date || b.start_date;
+    return dateB.localeCompare(dateA);
+  });
 
-  // Group bills by due date
+  // Group bills by next_due_date (or start_date if next_due_date is null)
   const groupedBills: GroupedBills[] = sortedBills.reduce((acc, bill) => {
-    const existing = acc.find((group) => group.date === bill.due_date);
+    const date = bill.next_due_date || bill.start_date;
+    const existing = acc.find((group) => group.date === date);
     if (existing) {
       existing.bills.push(bill);
     } else {
-      acc.push({ date: bill.due_date, bills: [bill] });
+      acc.push({ date, bills: [bill] });
     }
     return acc;
   }, [] as GroupedBills[]);
@@ -174,16 +164,12 @@ export default function BillsSection({ type, onEdit }: BillsSectionProps) {
   }
 
   if (sortedBills.length === 0) {
-    const emptyMessage =
-      type === "future"
-        ? "No future bills found"
-        : "No past bills found";
-    const emptyDescription =
-      type === "future"
-        ? "Add your first bill to track your payment responsibilities."
-        : "Past bills will appear here.";
-
-    return <EmptyState title={emptyMessage} description={emptyDescription} />;
+    return (
+      <EmptyState
+        title="No recurrent bills found"
+        description="Add your first recurrent bill to track your payment responsibilities."
+      />
+    );
   }
 
   return (
@@ -197,10 +183,17 @@ export default function BillsSection({ type, onEdit }: BillsSectionProps) {
           </div>
           {group.bills.map((bill) => {
             const isSelected = selected.includes(bill.id);
+            // Convert RecurrentBill to Bill-like format for BillRow
+            const billForRow = {
+              ...bill,
+              due_date: bill.next_due_date || bill.start_date,
+              is_recurring: true,
+              interval_type: bill.interval_type,
+            } as any;
             return (
               <BillRow
                 key={bill.id}
-                bill={bill}
+                bill={billForRow}
                 onClick={() => {
                   setActiveId(bill.id);
                   onEdit(bill);

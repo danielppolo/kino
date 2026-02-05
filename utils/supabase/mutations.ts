@@ -653,6 +653,56 @@ export const deleteBills = async (ids: string[]) => {
   if (error) throw new Error(error.message);
 };
 
+// Recurrent bills mutations
+export const createRecurrentBill = async (
+  data: Database["public"]["Tables"]["recurrent_bills"]["Insert"],
+) => {
+  const supabase = await createClient();
+
+  const { data: result, error } = await supabase
+    .from("recurrent_bills")
+    .insert(data)
+    .select();
+  if (error) throw new Error(error.message);
+  return result;
+};
+
+export const updateRecurrentBill = async (
+  data: Database["public"]["Tables"]["recurrent_bills"]["Update"],
+) => {
+  const supabase = await createClient();
+
+  if (!data.id) {
+    throw new Error("Recurrent bill ID is required for updates");
+  }
+
+  const { data: result, error } = await supabase
+    .from("recurrent_bills")
+    .update(data)
+    .eq("id", data.id)
+    .select();
+  if (error) throw new Error(error.message);
+  return result;
+};
+
+export const deleteRecurrentBill = async (id: string) => {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("recurrent_bills")
+    .delete()
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+};
+
+export const deleteRecurrentBills = async (ids: string[]) => {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("recurrent_bills")
+    .delete()
+    .in("id", ids);
+  if (error) throw new Error(error.message);
+};
+
 export const linkTransactionToBill = async (
   billId: string,
   transactionId: string,

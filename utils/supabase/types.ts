@@ -15,6 +15,8 @@ export type TransactionTemplate =
   Database["public"]["Tables"]["transaction_templates"]["Row"];
 export type Bill = Database["public"]["Tables"]["bills"]["Row"];
 export type BillPayment = Database["public"]["Tables"]["bill_payments"]["Row"];
+export type RecurrentBill =
+  Database["public"]["Tables"]["recurrent_bills"]["Row"];
 
 export interface BillWithPayments extends Bill {
   payments: Array<{

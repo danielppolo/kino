@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { deleteBills } from "@/utils/supabase/mutations";
+import { deleteRecurrentBills } from "@/utils/supabase/mutations";
 
 interface DeleteBillsDialogProps {
   selected: string[];
@@ -34,12 +34,13 @@ export default function DeleteBillsDialog({
 
   const mutation = useMutation({
     mutationFn: async () => {
-      await deleteBills(selected);
+      await deleteRecurrentBills(selected);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["recurrent-bills"] });
       queryClient.invalidateQueries({ queryKey: ["bills"] });
       queryClient.invalidateQueries({ queryKey: ["bills-with-payments"] });
-      toast.success(`${selected.length} bill${selected.length === 1 ? "" : "s"} deleted`);
+      toast.success(`${selected.length} recurrent bill${selected.length === 1 ? "" : "s"} deleted`);
       onOpenChange(false);
       onSuccess?.();
     },
