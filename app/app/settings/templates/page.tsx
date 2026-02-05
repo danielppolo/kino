@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -43,6 +43,12 @@ export default function Page() {
 
   const currentType =
     (searchParams.get("type") as "income" | "expense") || "expense";
+
+  useEffect(() => {
+    if (searchParams.get("new") !== "1") return;
+    setEditTemplate(undefined);
+    setOpen(true);
+  }, [searchParams]);
 
   return (
     <>
