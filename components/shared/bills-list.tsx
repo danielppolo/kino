@@ -229,6 +229,18 @@ export default function BillsList({ walletId }: BillsListProps) {
     });
   };
 
+  const handleCreateTransactionFromBill = (bill: BillWithPayments) => {
+    const remainingAmount = bill.amount_cents - bill.paid_amount_cents;
+    openForm({
+      type: "expense",
+      walletId: bill.wallet_id,
+      billPrefill: {
+        billId: bill.id,
+        amount: remainingAmount,
+      },
+    });
+  };
+
   const getAvailableTransactionsForBill = (bill: BillWithPayments) => {
     if (!unassociatedTransactions) return [];
 
@@ -394,6 +406,14 @@ export default function BillsList({ walletId }: BillsListProps) {
                           : ""}
                       </span>
                     )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCreateTransactionFromBill(bill)}
+                      className="w-full"
+                    >
+                      Create transaction
+                    </Button>
                   </div>
                 )}
               </div>

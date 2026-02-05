@@ -27,6 +27,7 @@ import {
   useTags,
   useWallets,
 } from "@/contexts/settings-context";
+import { useTransactionForm } from "@/contexts/transaction-form-context";
 import useFilters from "@/hooks/use-filters";
 import { createClient } from "@/utils/supabase/client";
 import {
@@ -86,6 +87,7 @@ const ExpenseIncomeForm = ({
   const [availableTags] = useTags();
   const [addAnother, setAddAnother] = useState(false);
   const queryClient = useQueryClient();
+  const { billPrefill } = useTransactionForm();
 
   const { mutateAsync, isPending } = useMutation<
     { data: Transaction[] },
@@ -230,9 +232,13 @@ const ExpenseIncomeForm = ({
     description: "",
     category_id: "",
     label_id: "",
-    amount: initialData ? Math.abs(initialData.amount_cents) / 100 : 0,
+    amount: initialData
+      ? Math.abs(initialData.amount_cents) / 100
+      : billPrefill
+        ? billPrefill.amount / 100
+        : 0,
     tags: initialData?.tag_ids ?? [],
-    bill_id: "",
+    bill_id: billPrefill?.billId ?? "",
   };
 
   const handleSubmit = async (values: ExpenseIncomeFormValues) => {
