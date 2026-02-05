@@ -19,6 +19,7 @@ const CategoryFilter = () => {
 
   return (
     <CategoryCombobox
+      selectionType="combobox"
       size="sm"
       icon={<Cone className="size-4" />}
       variant={categoryId ? "secondary" : "ghost"}

@@ -261,7 +261,7 @@ export default function BillsList({ walletId }: BillsListProps) {
     // Find if any transaction needs to be split
     const transactionNeedingSplit = transactionIds.find((id) => {
       const transaction = allIncomeTransactions?.find((t) => t.id === id);
-      return transaction && transaction.amount_cents > remainingAmount;
+      return transaction && (transaction.amount_cents ?? 0) > remainingAmount;
     });
 
     if (transactionNeedingSplit) {
@@ -353,7 +353,7 @@ export default function BillsList({ walletId }: BillsListProps) {
                         <div className="shrink-0">
                           <TransactionAmount
                             className="text-right"
-                            amount={payment.transaction.amount_cents!}
+                            amount={payment.transaction.amount_cents ?? 0}
                             currency={payment.transaction.currency!}
                           />
                         </div>

@@ -1,6 +1,6 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 
-import { TypedSupabaseClient } from "@/utils/supabase/types";
+import { BillWithPayments, TypedSupabaseClient } from "@/utils/supabase/types";
 
 export interface Filters {
   label_id?: string | undefined;
@@ -1087,14 +1087,14 @@ export const listBillsWithPayments = async (
       ...bill,
       payments: billPayments.map((p) => ({
         id: p.id,
-        transaction: p.transactions,
+        transaction: p.transactions as BillWithPayments["payments"][number]["transaction"],
       })),
       paid_amount_cents: paidAmountCents,
       payment_percentage: paymentPercentage,
     };
   });
 
-  return { data: result, error: null };
+  return { data: result as BillWithPayments[], error: null };
 };
 
 export const getBillsForTransaction = async (
@@ -1133,9 +1133,10 @@ export const getAllWalletMembers = async (
   client: TypedSupabaseClient,
   walletIds: string[],
 ) => {
-  const { data, error } = await client.rpc("get_all_wallet_members", {
-    wallet_uuids: walletIds,
-  });
+  const { data, error } = await (client as { rpc: (name: string, args: { wallet_uuids: string[] }) => Promise<{ data: unknown; error: unknown }> }).rpc(
+    "get_all_wallet_members",
+    { wallet_uuids: walletIds },
+  );
 
   return { data, error };
 };

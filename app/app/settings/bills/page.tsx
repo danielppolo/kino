@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { CalendarPlus, Plus, Repeat } from "lucide-react";
 
 import BillsSection from "./(components)/bills-section";
 
 import BillForm from "@/components/shared/bill-form";
+import RecurrentBillForm from "@/components/shared/recurrent-bill-form";
 import PageHeader from "@/components/shared/page-header";
 import { TooltipButton } from "@/components/ui/tooltip-button";
 import type { Database } from "@/utils/supabase/database.types";
@@ -13,22 +14,35 @@ import type { Database } from "@/utils/supabase/database.types";
 type RecurrentBill = Database["public"]["Tables"]["recurrent_bills"]["Row"];
 
 export default function Page() {
-  const [open, setOpen] = useState(false);
+  const [billFormOpen, setBillFormOpen] = useState(false);
+  const [recurrentFormOpen, setRecurrentFormOpen] = useState(false);
   const [editBill, setEditBill] = useState<RecurrentBill | undefined>(undefined);
 
-  const handleAdd = () => {
-    setEditBill(undefined);
-    setOpen(true);
+  const handleAddBill = () => {
+    setBillFormOpen(true);
   };
 
-  const handleEdit = (bill: RecurrentBill) => {
+  const handleAddRecurrent = () => {
+    setEditBill(undefined);
+    setRecurrentFormOpen(true);
+  };
+
+  const handleEditRecurrent = (bill: RecurrentBill) => {
     setEditBill(bill);
-    setOpen(true);
+    setRecurrentFormOpen(true);
   };
 
-  const handleClose = () => {
-    setOpen(false);
+  const handleRecurrentFormClose = () => {
+    setRecurrentFormOpen(false);
     setEditBill(undefined);
+  };
+
+  const handleBillFormSuccess = () => {
+    setBillFormOpen(false);
+  };
+
+  const handleRecurrentFormSuccess = () => {
+    handleRecurrentFormClose();
   };
 
   return (
@@ -38,24 +52,37 @@ export default function Page() {
           <TooltipButton
             size="sm"
             variant="outline"
-            tooltip="Add recurrent bill"
-            onClick={handleAdd}
+            tooltip="Add one-off bill"
+            onClick={handleAddBill}
           >
-            <Plus className="size-4" />
+            <CalendarPlus className="size-4" />
+          </TooltipButton>
+          <TooltipButton
+            size="sm"
+            variant="outline"
+            tooltip="Add recurrent bill"
+            onClick={handleAddRecurrent}
+          >
+            <Repeat className="size-4" />
           </TooltipButton>
         </div>
       </PageHeader>
       <div style={{ height: "calc(100vh - 44px)", overflow: "auto" }}>
-        <BillsSection onEdit={handleEdit} />
+        <BillsSection onEdit={handleEditRecurrent} />
       </div>
 
       <BillForm
-        open={open}
-        onOpenChange={setOpen}
-        onSuccess={handleClose}
+        open={billFormOpen}
+        onOpenChange={setBillFormOpen}
+        onSuccess={handleBillFormSuccess}
+      />
+
+      <RecurrentBillForm
+        open={recurrentFormOpen}
+        onOpenChange={setRecurrentFormOpen}
+        onSuccess={handleRecurrentFormSuccess}
         recurrentBill={editBill}
       />
     </>
   );
 }
-

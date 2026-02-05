@@ -25,6 +25,7 @@ type WalletMember = {
   wallet_id: string;
   role: "owner" | "editor" | "reader";
   email: string | null;
+  phone: string | null;
   created_at: string;
 };
 
@@ -57,24 +58,34 @@ export default function MembersPage() {
     enabled: walletIds.length > 0,
   });
 
+  type WalletMemberRow = {
+    id: string;
+    user_id: string;
+    wallet_id: string;
+    role: string;
+    email: string | null;
+    phone?: string | null;
+    created_at: string;
+  };
   const { allMemberIds, membersMap } = useMemo(() => {
     const ids: string[] = [];
     const map = new Map<string, WalletMember>();
+    const data = allMembersData?.data as WalletMemberRow[] | undefined;
+    if (!Array.isArray(data)) return { allMemberIds: ids, membersMap: map };
 
-    if (allMembersData?.data) {
-      allMembersData.data.forEach((m: any) => {
-        const member: WalletMember = {
-          id: m.id,
-          user_id: m.user_id,
-          wallet_id: m.wallet_id,
-          role: m.role as "owner" | "editor" | "reader",
-          email: m.email,
-          created_at: m.created_at,
-        };
-        ids.push(m.id);
-        map.set(m.id, member);
-      });
-    }
+    data.forEach((m: WalletMemberRow) => {
+      const member: WalletMember = {
+        id: m.id,
+        user_id: m.user_id,
+        wallet_id: m.wallet_id,
+        role: m.role as "owner" | "editor" | "reader",
+        email: m.email,
+        phone: m.phone ?? null,
+        created_at: m.created_at,
+      };
+      ids.push(m.id);
+      map.set(m.id, member);
+    });
 
     return { allMemberIds: ids, membersMap: map };
   }, [allMembersData]);

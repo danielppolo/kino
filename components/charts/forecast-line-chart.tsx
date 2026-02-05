@@ -42,6 +42,7 @@ import {
   getWalletMonthlyBalances,
   listRecurringTransactions,
 } from "@/utils/supabase/queries";
+import { Wallet } from "@/utils/supabase/types";
 
 interface ForecastLineChartProps {
   walletId?: string;
@@ -220,7 +221,7 @@ export function ForecastLineChart({
   );
 
   // Get visible wallets
-  let visibleWallets;
+  let visibleWallets: Wallet[];
   if (walletId) {
     const wallet = walletMap.get(walletId);
     visibleWallets = wallet ? [wallet] : [];
@@ -229,10 +230,13 @@ export function ForecastLineChart({
     visibleWallets = Array.from(walletMap.values()).filter((w) => walletIds.has(w.id));
   }
 
-  // Calculate forecast using advanced strategies
+  // Calculate forecast using advanced strategies (filter out null wallet_id for type)
+  const filteredMonthlyStats = (monthlyStats ?? []).filter(
+    (s) => s.wallet_id != null,
+  ) as MonthlyStats[];
   const forecastData = calculateAdvancedForecast(
     historicalData,
-    monthlyStats ?? [],
+    filteredMonthlyStats,
     recurringTransactions ?? [],
     visibleWallets,
     conversionRates,
@@ -242,17 +246,17 @@ export function ForecastLineChart({
   );
 
   // Combine historical and forecast data
-  let combinedData = [];
+  type ChartPointWithForecast = ChartDataPoint & { isForecast?: boolean };
+  let combinedData: ChartPointWithForecast[] = [];
   if (historicalData.length > 0) {
-    const lastHistoricalMonth = historicalData[historicalData.length - 1].month;
-    const combined = [...historicalData];
+    const combined: ChartPointWithForecast[] = [...historicalData];
 
     // Mark forecast data points
     forecastData.forEach((point) => {
       combined.push({
         ...point,
         isForecast: true,
-      });
+      } as ChartPointWithForecast);
     });
 
     combinedData = combined;
@@ -260,7 +264,7 @@ export function ForecastLineChart({
 
   // Calculate total balance for chart display
   const historical = historicalData.map((point, index) => {
-    const total = visibleWallets.reduce((sum, wallet) => {
+    const total = visibleWallets.reduce((sum: number, wallet: Wallet) => {
       const balance = (point[wallet.id] as number | undefined) || 0;
       return sum + balance;
     }, 0);
@@ -275,7 +279,7 @@ export function ForecastLineChart({
   });
 
   const forecast = forecastData.map((point) => {
-    const total = visibleWallets.reduce((sum, wallet) => {
+    const total = visibleWallets.reduce((sum: number, wallet: Wallet) => {
       const balance = (point[wallet.id] as number | undefined) || 0;
       return sum + balance;
     }, 0);

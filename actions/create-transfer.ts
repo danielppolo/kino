@@ -58,9 +58,10 @@ export async function createTransferTransaction(
     ),
   ];
 
+  type TransactionInsert = Database["public"]["Tables"]["transactions"]["Insert"];
   const { data, error } = await supabase
     .from("transactions")
-    .insert(transactionsToInsert)
+    .insert(transactionsToInsert as TransactionInsert[])
     .select();
 
   if (error) {
