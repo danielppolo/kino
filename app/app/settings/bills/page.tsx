@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { CalendarPlus, Plus, Repeat } from "lucide-react";
+import { useEffect, useState } from "react";
+import { CalendarPlus, Repeat } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 
 import BillsSection from "./(components)/bills-section";
 
@@ -16,7 +17,24 @@ type RecurrentBill = Database["public"]["Tables"]["recurrent_bills"]["Row"];
 export default function Page() {
   const [billFormOpen, setBillFormOpen] = useState(false);
   const [recurrentFormOpen, setRecurrentFormOpen] = useState(false);
-  const [editBill, setEditBill] = useState<RecurrentBill | undefined>(undefined);
+  const [editBill, setEditBill] = useState<RecurrentBill | undefined>(
+    undefined,
+  );
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const action = searchParams.get("new");
+
+    if (action === "bill") {
+      setBillFormOpen(true);
+      return;
+    }
+
+    if (action === "recurrent") {
+      setEditBill(undefined);
+      setRecurrentFormOpen(true);
+    }
+  }, [searchParams]);
 
   const handleAddBill = () => {
     setBillFormOpen(true);
