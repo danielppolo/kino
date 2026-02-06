@@ -12,6 +12,7 @@ import { Textarea } from "../ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import Color from "./color";
 import CurrencyPicker from "./currency-picker";
+import { WalletTypeIcon, getWalletTypeLabel } from "./wallet-type-icon";
 
 import { SubmitButton } from "@/components/submit-button";
 import {
@@ -33,6 +34,8 @@ interface WalletFormProps {
 }
 
 type WalletFormValues = Database["public"]["Tables"]["wallets"]["Insert"];
+const WALLET_TYPE_OPTIONS: Array<Database["public"]["Enums"]["wallet_type"]> =
+  ["bank_account", "card", "cash"];
 
 const WalletForm = ({ onSuccess, wallet }: WalletFormProps) => {
   const { activeWorkspace } = useWorkspace();
@@ -42,6 +45,7 @@ const WalletForm = ({ onSuccess, wallet }: WalletFormProps) => {
     defaultValues: {
       name: wallet?.name || "",
       currency: wallet?.currency || "MXN",
+      wallet_type: wallet?.wallet_type || "bank_account",
       color: wallet?.color || COLORS[0],
       notes: wallet?.notes || "",
     },
@@ -56,6 +60,7 @@ const WalletForm = ({ onSuccess, wallet }: WalletFormProps) => {
       return await createWallet({
         name: walletData.name,
         currency: walletData.currency,
+        walletType: walletData.wallet_type,
         workspaceId,
       });
     },
@@ -80,6 +85,7 @@ const WalletForm = ({ onSuccess, wallet }: WalletFormProps) => {
         id: wallet.id,
         name: walletData.name,
         currency: walletData.currency,
+        wallet_type: walletData.wallet_type,
         color: walletData.color,
         notes: walletData.notes,
       });
@@ -174,6 +180,38 @@ const WalletForm = ({ onSuccess, wallet }: WalletFormProps) => {
                   disabled={isEditing}
                   className="w-full"
                 />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="wallet_type"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <ToggleGroup
+                  type="single"
+                  value={field.value || "bank_account"}
+                  onValueChange={(value) => {
+                    if (!value) return;
+                    field.onChange(value);
+                  }}
+                  className="grid w-full grid-cols-3"
+                >
+                  {WALLET_TYPE_OPTIONS.map((walletType) => (
+                    <ToggleGroupItem
+                      key={walletType}
+                      value={walletType}
+                      className="gap-2"
+                    >
+                      <WalletTypeIcon walletType={walletType} className="size-4" />
+                      {getWalletTypeLabel(walletType)}
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
               </FormControl>
               <FormMessage />
             </FormItem>
