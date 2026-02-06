@@ -16,6 +16,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { SidebarWrapper } from "./sidebar-wrapper";
 import { TransactionLink } from "./transaction-link";
+import { WalletTypeIcon } from "./wallet-type-icon";
 
 import { Kbd } from "@/components/ui/kbd";
 import { Money } from "@/components/ui/money";
@@ -172,6 +173,10 @@ export function TransactionsSidebar() {
                         to={toDate}
                         shortcut={shortcut}
                       >
+                        <WalletTypeIcon
+                          walletType={wallet.wallet_type}
+                          className="text-muted-foreground mr-2 size-4"
+                        />
                         <span className="flex-1">{wallet.name}</span>
 
                         <span className="relative inline-flex min-w-fit items-center justify-center">
