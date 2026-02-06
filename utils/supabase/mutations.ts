@@ -16,10 +16,12 @@ function chunk<T>(arr: T[], size: number): T[][] {
 export const createWallet = async ({
   name,
   currency,
+  walletType,
   workspaceId,
 }: {
   name: string;
   currency: string;
+  walletType: Database["public"]["Enums"]["wallet_type"];
   workspaceId: string;
 }) => {
   const supabase = await createClient();
@@ -27,6 +29,7 @@ export const createWallet = async ({
   const { data, error } = await supabase.rpc("insert_wallet_and_user_wallet", {
     wallet_currency: currency,
     wallet_name: name,
+    p_wallet_type: walletType,
     p_workspace_id: workspaceId,
   });
 
