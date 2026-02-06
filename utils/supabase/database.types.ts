@@ -891,6 +891,7 @@ export type Database = {
           notes: string | null
           position: number | null
           visible: boolean
+          wallet_type: Database["public"]["Enums"]["wallet_type"]
           workspace_id: string
         }
         Insert: {
@@ -902,6 +903,7 @@ export type Database = {
           notes?: string | null
           position?: number | null
           visible?: boolean
+          wallet_type?: Database["public"]["Enums"]["wallet_type"]
           workspace_id: string
         }
         Update: {
@@ -913,6 +915,7 @@ export type Database = {
           notes?: string | null
           position?: number | null
           visible?: boolean
+          wallet_type?: Database["public"]["Enums"]["wallet_type"]
           workspace_id?: string
         }
         Relationships: [
@@ -1147,6 +1150,7 @@ export type Database = {
           }
         | {
             Args: {
+              p_wallet_type?: Database["public"]["Enums"]["wallet_type"]
               p_workspace_id: string
               wallet_currency: string
               wallet_name: string
@@ -1168,6 +1172,7 @@ export type Database = {
       }
     }
     Enums: {
+      wallet_type: "bank_account" | "card" | "cash"
       transaction_type_enum: "income" | "expense" | "transfer"
     }
     CompositeTypes: {
@@ -1804,6 +1809,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      wallet_type: ["bank_account", "card", "cash"],
       transaction_type_enum: ["income", "expense", "transfer"],
     },
   },

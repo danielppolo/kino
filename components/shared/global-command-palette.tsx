@@ -23,7 +23,6 @@ import {
   Repeat,
   Settings,
   Sun,
-  Wallet,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
@@ -42,6 +41,10 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
+import {
+  WalletTypeIcon,
+  getWalletTypeLabel,
+} from "@/components/shared/wallet-type-icon";
 import { useSettings, useWallets } from "@/contexts/settings-context";
 import { useTransactionForm } from "@/contexts/transaction-form-context";
 import { useWorkspace } from "@/contexts/workspace-context";
@@ -311,7 +314,7 @@ export function GlobalCommandPalette() {
           {wallets.map((wallet) => (
             <CommandItem
               key={wallet.id}
-              value={`Wallet ${wallet.name} ${wallet.currency}`}
+              value={`Wallet ${wallet.name} ${wallet.currency} ${getWalletTypeLabel(wallet.wallet_type)}`}
               onSelect={() =>
                 closeAndRun(() => {
                   const href = buildTransactionUrl({
@@ -325,7 +328,10 @@ export function GlobalCommandPalette() {
                 })
               }
             >
-              <Wallet className="mr-2 size-4" />
+              <WalletTypeIcon
+                walletType={wallet.wallet_type}
+                className="mr-2 size-4"
+              />
               {wallet.name}
               <span className="text-muted-foreground ml-2 text-xs">
                 {wallet.currency}
@@ -404,7 +410,7 @@ export function GlobalCommandPalette() {
               closeAndRun(() => router.push("/app/settings/wallets"))
             }
           >
-            <Wallet className="mr-2 size-4" />
+            <WalletTypeIcon className="mr-2 size-4" />
             Wallets
           </CommandItem>
           <CommandItem
