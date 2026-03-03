@@ -1005,9 +1005,9 @@ export const getBillWithPayments = async (
 
 export const listBillsWithPayments = async (
   client: TypedSupabaseClient,
-  params?: { walletId?: string },
+  params?: { walletId?: string; from?: string; to?: string },
 ) => {
-  // Get all bills
+  // Scope bills by wallet and/or date range so downstream IN clauses stay small
   let billsQuery = client
     .from("bills")
     .select("*")
@@ -1016,10 +1016,17 @@ export const listBillsWithPayments = async (
   if (params?.walletId) {
     billsQuery = billsQuery.eq("wallet_id", params.walletId);
   }
+  if (params?.from) {
+    billsQuery = billsQuery.gte("due_date", params.from);
+  }
+  if (params?.to) {
+    billsQuery = billsQuery.lte("due_date", params.to);
+  }
 
   const { data: bills, error: billsError } = await billsQuery;
 
   if (billsError) {
+    console.error("Error listing bills with payments:", billsError);
     return { data: null, error: billsError };
   }
 
@@ -1027,36 +1034,47 @@ export const listBillsWithPayments = async (
     return { data: [], error: null };
   }
 
-  // Get all payments for these bills
   const billIds = bills.map((b) => b.id);
-  const { data: payments, error: paymentsError } = await client
+
+  const { data: billPaymentRows, error: paymentsError } = await client
     .from("bill_payments")
-    .select(
-      `
-      id,
-      bill_id,
-      transaction_id,
-      transactions:transaction_id (
-        id,
-        wallet_id,
-        category_id,
-        label_id,
-        amount_cents,
-        currency,
-        description,
-        date,
-        type
-      )
-    `,
-    )
+    .select("id, bill_id, transaction_id")
     .in("bill_id", billIds);
 
   if (paymentsError) {
+    console.error("Error listing payments:", paymentsError);
     return { data: null, error: paymentsError };
   }
 
+  const transactionIds = (billPaymentRows ?? [])
+    .map((p) => p.transaction_id)
+    .filter((id): id is string => id != null);
+
+  const transactionMap: Record<string, BillWithPayments["payments"][number]["transaction"]> = {};
+
+  if (transactionIds.length > 0) {
+    const { data: txRows, error: txError } = await client
+      .from("transactions")
+      .select("id, wallet_id, category_id, label_id, amount_cents, currency, description, date, type")
+      .in("id", transactionIds);
+
+    if (txError) {
+      console.error("Error listing transactions:", txError);
+      return { data: null, error: txError };
+    }
+
+    for (const tx of txRows ?? []) {
+      transactionMap[tx.id] = tx as BillWithPayments["payments"][number]["transaction"];
+    }
+  }
+
+  const payments = (billPaymentRows ?? []).map((p) => ({
+    ...p,
+    transactions: p.transaction_id ? (transactionMap[p.transaction_id] ?? null) : null,
+  }));
+
   // Group payments by bill_id
-  const paymentsByBill = (payments ?? []).reduce(
+  const paymentsByBill = payments.reduce(
     (acc, payment) => {
       if (!acc[payment.bill_id]) {
         acc[payment.bill_id] = [];
@@ -1071,7 +1089,7 @@ export const listBillsWithPayments = async (
   const result = bills.map((bill) => {
     const billPayments = paymentsByBill[bill.id] ?? [];
     const paidAmountCents = billPayments.reduce((sum, payment) => {
-      const transaction = payment.transactions as any;
+      const transaction = payment.transactions;
       if (transaction) {
         return sum + Math.abs(transaction.amount_cents || 0);
       }
@@ -1198,6 +1216,8 @@ export const getMonthlyBillStats = async (
   // Get all bills with payments
   const { data: bills, error } = await listBillsWithPayments(client, {
     walletId: params.walletId,
+    from: params.from,
+    to: params.to,
   });
 
   if (error || !bills) {
@@ -1265,6 +1285,8 @@ export const getBillDebtFlow = async (
   // Get all bills with payments
   const { data: bills, error } = await listBillsWithPayments(client, {
     walletId: params.walletId,
+    from: params.from,
+    to: params.to,
   });
 
   if (error || !bills) {
@@ -1374,6 +1396,8 @@ export const getBillPaymentTimeline = async (
 ) => {
   const { data: bills, error } = await listBillsWithPayments(client, {
     walletId: params.walletId,
+    from: params.from,
+    to: params.to,
   });
 
   if (error || !bills) {
@@ -1459,6 +1483,8 @@ export const getRecurringVsOneTimeStats = async (
 ) => {
   const { data: bills, error } = await listBillsWithPayments(client, {
     walletId: params.walletId,
+    from: params.from,
+    to: params.to,
   });
 
   if (error || !bills) {
@@ -1609,6 +1635,8 @@ export const getBillVelocity = async (
 ) => {
   const { data: bills, error } = await listBillsWithPayments(client, {
     walletId: params.walletId,
+    from: params.from,
+    to: params.to,
   });
 
   if (error || !bills) {
@@ -2666,6 +2694,8 @@ export const getWalletNetBalance = async (
   // Get all bills with payments
   const { data: bills, error } = await listBillsWithPayments(client, {
     walletId: params.walletId,
+    from: params.from,
+    to: params.to,
   });
 
   if (error || !bills) {
