@@ -173,10 +173,6 @@ export function TransactionsSidebar() {
                         to={toDate}
                         shortcut={shortcut}
                       >
-                        <WalletTypeIcon
-                          walletType={wallet.wallet_type}
-                          className="text-muted-foreground mr-2 size-4"
-                        />
                         <span className="flex-1">{wallet.name}</span>
 
                         <span className="relative inline-flex min-w-fit items-center justify-center">
