@@ -7,6 +7,7 @@ import { Check, ChevronsUpDown } from "lucide-react";
 import { Money } from "@/components/ui/money";
 import {
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
@@ -75,12 +76,13 @@ export function SidebarHeaderMenu() {
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-              disabled={isLoading || isSwitching}
-            >
+          <SidebarMenuButton
+            asChild
+            size="lg"
+            className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            disabled={isLoading || isSwitching}
+          >
+            <Link href="/app/transactions">
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="font-display truncate">{workspaceName}</span>
                 <Money
@@ -95,8 +97,15 @@ export function SidebarHeaderMenu() {
                   </span>
                 )}
               </div>
-              <ChevronsUpDown className="ml-auto size-4" />
-            </SidebarMenuButton>
+            </Link>
+          </SidebarMenuButton>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuAction
+              disabled={isLoading || isSwitching}
+              aria-label="Open workspace switcher"
+            >
+              <ChevronsUpDown className="size-4" />
+            </SidebarMenuAction>
           </DropdownMenuTrigger>
           <DropdownMenuContent
             className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
