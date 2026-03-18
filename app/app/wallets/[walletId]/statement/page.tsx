@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ walletId: string }>;
-  searchParams: Promise<{ from?: string; to?: string }>;
+  searchParams: Promise<{ from?: string; to?: string; type?: string }>;
 }
 
 function billStatus(percentage: number): string {
@@ -21,7 +21,10 @@ function billStatus(percentage: number): string {
 export default async function WalletStatementPage({ params, searchParams }: PageProps) {
   const supabase = await createClient();
   const { walletId } = await params;
-  const { from: fromParam, to: toParam } = await searchParams;
+  const { from: fromParam, to: toParam, type: typeParam } = await searchParams;
+  const statementType = (
+    typeParam === "transactions" || typeParam === "bills" ? typeParam : "all"
+  ) as "all" | "transactions" | "bills";
 
   // Default: current year
   const now = new Date();
@@ -120,7 +123,7 @@ export default async function WalletStatementPage({ params, searchParams }: Page
         <div className="mb-6 flex items-center justify-between print:hidden">
           <span className="text-xs text-muted-foreground">Account Statement</span>
           <div className="flex items-center gap-3">
-            <DateRangeForm walletId={walletId} from={from} to={to} />
+            <DateRangeForm walletId={walletId} from={from} to={to} statementType={statementType} />
             <PrintButton />
           </div>
         </div>
@@ -160,7 +163,7 @@ export default async function WalletStatementPage({ params, searchParams }: Page
         </div>
 
         {/* Section 1 — Transactions */}
-        <div className="mb-6">
+        {(statementType === "all" || statementType === "transactions") && <div className="mb-6">
           <h2 className="mb-2 border-b pb-1 text-xs font-bold uppercase tracking-widest text-gray-700">
             Transactions
           </h2>
@@ -188,18 +191,24 @@ export default async function WalletStatementPage({ params, searchParams }: Page
                     <td className="py-1 pr-3 capitalize text-gray-500">{tx.type ?? "—"}</td>
                     <td className="py-1 pr-3 text-right tabular-nums text-red-700">
                       {tx.type === "expense"
-                        ? formatCents(tx.amount_cents ?? 0, tx.currency ?? wallet.currency)
+                        ? (tx.amount_cents ?? 0) === 0
+                          ? <span className="text-black">—</span>
+                          : formatCents(tx.amount_cents ?? 0, tx.currency ?? wallet.currency)
                         : ""}
                     </td>
                     <td className="py-1 pr-3 text-right tabular-nums text-green-700">
                       {tx.type === "income"
-                        ? formatCents(tx.amount_cents ?? 0, tx.currency ?? wallet.currency)
+                        ? (tx.amount_cents ?? 0) === 0
+                          ? <span className="text-black">—</span>
+                          : formatCents(tx.amount_cents ?? 0, tx.currency ?? wallet.currency)
                         : ""}
                     </td>
                     <td className="py-1 text-right tabular-nums">
                       {tx.type === "transfer"
                         ? "—"
-                        : formatCents(tx.running, wallet.currency)}
+                        : tx.running === 0
+                          ? <span className="text-black">—</span>
+                          : formatCents(tx.running, wallet.currency)}
                     </td>
                   </tr>
                 ))}
@@ -208,8 +217,10 @@ export default async function WalletStatementPage({ params, searchParams }: Page
           )}
         </div>
 
+        }
+
         {/* Section 2 — Bills */}
-        <div className="mb-6">
+        {(statementType === "all" || statementType === "bills") && <div className="mb-6">
           <h2 className="mb-2 border-b pb-1 text-xs font-bold uppercase tracking-widest text-gray-700">
             Bills
           </h2>
@@ -236,13 +247,13 @@ export default async function WalletStatementPage({ params, searchParams }: Page
                       <td className="py-1 pr-3 tabular-nums">{bill.due_date}</td>
                       <td className="py-1 pr-3">{bill.description}</td>
                       <td className="py-1 pr-3 text-right tabular-nums">
-                        {formatCents(bill.amount_cents, bill.currency)}
+                        {bill.amount_cents === 0 ? "—" : formatCents(bill.amount_cents, bill.currency)}
                       </td>
                       <td className="py-1 pr-3 text-right tabular-nums text-green-700">
-                        {formatCents(bill.paid_amount_cents, bill.currency)}
+                        {bill.paid_amount_cents === 0 ? <span className="text-black">—</span> : formatCents(bill.paid_amount_cents, bill.currency)}
                       </td>
                       <td className="py-1 pr-3 text-right tabular-nums text-red-700">
-                        {formatCents(remaining, bill.currency)}
+                        {remaining === 0 ? <span className="text-black">—</span> : formatCents(remaining, bill.currency)}
                       </td>
                       <td
                         className={`py-1 text-right font-medium ${
@@ -261,7 +272,7 @@ export default async function WalletStatementPage({ params, searchParams }: Page
               </tbody>
             </table>
           )}
-        </div>
+        </div>}
 
         {/* Section 3 — Summary */}
         <div className="mb-6">
@@ -269,28 +280,30 @@ export default async function WalletStatementPage({ params, searchParams }: Page
             Summary
           </h2>
           <div className="grid grid-cols-2 gap-x-8 text-xs">
-            <div className="space-y-1">
-              <div className="flex justify-between border-b border-gray-100 py-1">
-                <span className="text-gray-600">Total Credits (Income)</span>
-                <span className="tabular-nums text-green-700 font-medium">
-                  {formatCents(totalIncomeCents, wallet.currency)}
-                </span>
+            {statementType !== "bills" && (
+              <div className="space-y-1">
+                <div className="flex justify-between border-b border-gray-100 py-1">
+                  <span className="text-gray-600">Total Credits (Income)</span>
+                  <span className="tabular-nums text-green-700 font-medium">
+                    {formatCents(totalIncomeCents, wallet.currency)}
+                  </span>
+                </div>
+                <div className="flex justify-between border-b border-gray-100 py-1">
+                  <span className="text-gray-600">Total Debits (Expenses)</span>
+                  <span className="tabular-nums text-red-700 font-medium">
+                    {formatCents(totalExpenseCents, wallet.currency)}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1 font-bold">
+                  <span>Net (Credits − Debits)</span>
+                  <span
+                    className={`tabular-nums ${netCents >= 0 ? "text-green-700" : "text-red-700"}`}
+                  >
+                    {formatCents(netCents, wallet.currency)}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between border-b border-gray-100 py-1">
-                <span className="text-gray-600">Total Debits (Expenses)</span>
-                <span className="tabular-nums text-red-700 font-medium">
-                  {formatCents(totalExpenseCents, wallet.currency)}
-                </span>
-              </div>
-              <div className="flex justify-between py-1 font-bold">
-                <span>Net (Credits − Debits)</span>
-                <span
-                  className={`tabular-nums ${netCents >= 0 ? "text-green-700" : "text-red-700"}`}
-                >
-                  {formatCents(netCents, wallet.currency)}
-                </span>
-              </div>
-            </div>
+            )}
             <div className="space-y-1">
               <div className="flex justify-between border-b border-gray-100 py-1">
                 <span className="text-gray-600">Total Bills Owed</span>
