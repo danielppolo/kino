@@ -1,6 +1,8 @@
 "use client";
 
 import React from "react";
+import { MoreHorizontal, FileText } from "lucide-react";
+import Link from "next/link";
 
 import { Text } from "../ui/typography";
 import UNAMDonation from "../UNAMDonation";
@@ -8,6 +10,12 @@ import Color from "./color";
 import SelectableRow from "./selectable-row";
 import ToggleWalletVisibility from "./toggle-wallet-visibility";
 import WalletMemberAvatars from "./wallet-member-avatars";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 
 import { Wallet } from "@/utils/supabase/types";
 
@@ -53,6 +61,24 @@ export function WalletRow({
             clickable={false}
           />
           <ToggleWalletVisibility wallet={wallet} />
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              asChild
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground">
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link href={`/app/wallets/${wallet.id}/statement`} className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  View Statement
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </SelectableRow>
