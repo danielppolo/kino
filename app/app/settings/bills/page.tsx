@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CalendarPlus, Repeat } from "lucide-react";
+import { CalendarPlus, Printer, Repeat } from "lucide-react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 import BillsSection from "./(components)/bills-section";
@@ -67,6 +68,16 @@ export default function Page() {
     <>
       <PageHeader>
         <div className="flex gap-2">
+          <TooltipButton
+            size="sm"
+            variant="outline"
+            tooltip="Print bills"
+            asChild
+          >
+            <Link href="/app/settings/bills/print">
+              <Printer className="size-4" />
+            </Link>
+          </TooltipButton>
           <TooltipButton
             size="sm"
             variant="outline"
