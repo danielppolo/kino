@@ -16,6 +16,7 @@ export interface CurrencyConversion {
 export interface Workspace {
   id: string;
   name: string;
+  icon: string | null;
   base_currency: string;
   feature_flags: FeatureFlags | null;
   created_at: string;
