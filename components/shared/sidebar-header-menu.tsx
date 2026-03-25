@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTotalBalance } from "@/hooks/use-total-balance";
 import { useWorkspace } from "@/contexts/workspace-context";
-import { cn } from "@/lib/utils";
 
 export function SidebarHeaderMenu() {
   const { totalBalance, baseCurrency, showOwedInBalance } = useTotalBalance();
@@ -42,6 +41,7 @@ export function SidebarHeaderMenu() {
 
   const workspaceName = activeWorkspace?.name || "Loading...";
   const hasMultipleWorkspaces = workspaces.length > 1;
+  const workspaceIcon = activeWorkspace?.icon || workspaceName.charAt(0);
 
   // Single workspace - show simple button
   if (!hasMultipleWorkspaces) {
@@ -50,6 +50,9 @@ export function SidebarHeaderMenu() {
         <SidebarMenuItem>
           <SidebarMenuButton asChild size="lg">
             <Link href="/app/transactions">
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground">
+                {workspaceIcon}
+              </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="font-display truncate">{workspaceName}</span>
                 <Money
@@ -83,6 +86,9 @@ export function SidebarHeaderMenu() {
             disabled={isLoading || isSwitching}
           >
             <Link href="/app/transactions">
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground">
+                {workspaceIcon}
+              </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="font-display truncate">{workspaceName}</span>
                 <Money
@@ -120,12 +126,15 @@ export function SidebarHeaderMenu() {
                 className="cursor-pointer gap-2 p-2"
                 disabled={isSwitching}
               >
-                <div className="flex size-6 items-center justify-center">
-                  {workspace.id === activeWorkspace?.id && (
-                    <Check className="size-4" />
-                  )}
+                <div className="flex size-6 items-center justify-center rounded-md border">
+                  <span className="text-xs font-semibold">
+                    {workspace.icon || workspace.name.charAt(0)}
+                  </span>
                 </div>
-                <div className="font-medium">{workspace.name}</div>
+                <div className="flex-1 font-medium">{workspace.name}</div>
+                {workspace.id === activeWorkspace?.id && (
+                  <Check className="size-4" />
+                )}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
