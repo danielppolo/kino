@@ -3,8 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { Check, ChevronsUpDown } from "lucide-react";
+import dynamicIconImports from "lucide-react/dynamicIconImports";
 
 import { Money } from "@/components/ui/money";
+import { LazyIcon } from "@/components/ui/icon";
 import {
   SidebarMenu,
   SidebarMenuAction,
@@ -19,6 +21,33 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTotalBalance } from "@/hooks/use-total-balance";
 import { useWorkspace } from "@/contexts/workspace-context";
+
+function WorkspaceGlyph({
+  icon,
+  name,
+  compact = false,
+}: {
+  icon: string | null;
+  name: string;
+  compact?: boolean;
+}) {
+  const initial = name.charAt(0);
+  const slug = icon?.trim();
+  if (slug && slug in dynamicIconImports) {
+    return (
+      <LazyIcon
+        name={slug}
+        className={compact ? "size-3.5" : "size-4"}
+        aria-hidden
+      />
+    );
+  }
+  return (
+    <span className={compact ? "text-xs font-semibold" : "text-sm font-semibold"}>
+      {initial}
+    </span>
+  );
+}
 
 export function SidebarHeaderMenu() {
   const { totalBalance, baseCurrency, showOwedInBalance } = useTotalBalance();
@@ -41,7 +70,6 @@ export function SidebarHeaderMenu() {
 
   const workspaceName = activeWorkspace?.name || "Loading...";
   const hasMultipleWorkspaces = workspaces.length > 1;
-  const workspaceIcon = activeWorkspace?.icon || workspaceName.charAt(0);
 
   // Single workspace - show simple button
   if (!hasMultipleWorkspaces) {
@@ -50,8 +78,11 @@ export function SidebarHeaderMenu() {
         <SidebarMenuItem>
           <SidebarMenuButton asChild size="lg">
             <Link href="/app/transactions">
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground">
-                {workspaceIcon}
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary font-semibold text-sidebar-primary-foreground">
+                <WorkspaceGlyph
+                  icon={activeWorkspace?.icon ?? null}
+                  name={workspaceName}
+                />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="font-display truncate">{workspaceName}</span>
@@ -86,8 +117,11 @@ export function SidebarHeaderMenu() {
             disabled={isLoading || isSwitching}
           >
             <Link href="/app/transactions">
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground">
-                {workspaceIcon}
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary font-semibold text-sidebar-primary-foreground">
+                <WorkspaceGlyph
+                  icon={activeWorkspace?.icon ?? null}
+                  name={workspaceName}
+                />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="font-display truncate">{workspaceName}</span>
@@ -127,9 +161,11 @@ export function SidebarHeaderMenu() {
                 disabled={isSwitching}
               >
                 <div className="flex size-6 items-center justify-center rounded-md border">
-                  <span className="text-xs font-semibold">
-                    {workspace.icon || workspace.name.charAt(0)}
-                  </span>
+                  <WorkspaceGlyph
+                    icon={workspace.icon}
+                    name={workspace.name}
+                    compact
+                  />
                 </div>
                 <div className="flex-1 font-medium">{workspace.name}</div>
                 {workspace.id === activeWorkspace?.id && (
