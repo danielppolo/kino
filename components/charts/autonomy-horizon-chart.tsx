@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { format } from "date-fns";
 import {
   Area,
@@ -15,6 +15,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -25,6 +26,7 @@ import {
   ChartLegendContent,
   ChartTooltip,
 } from "@/components/ui/chart";
+import { Slider } from "@/components/ui/slider";
 import { Money } from "@/components/ui/money";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import {
@@ -40,23 +42,17 @@ interface AutonomyHorizonChartProps {
   walletId?: string;
   from?: string;
   to?: string;
-  /** Minimum balance (in base currency) below which forced re-entry is assumed. Defaults to 0. */
-  coercionFloor?: number;
   /** How many months to project forward. Defaults to 36. */
   horizonMonths?: number;
 }
 
 const chartConfig: ChartConfig = {
   balance: {
-    label: "Current trajectory",
+    label: "With income (forecast)",
     color: "#3b82f6",
   },
-  optimistic: {
-    label: "−20% burn",
-    color: "#22c55e",
-  },
-  pessimistic: {
-    label: "+20% burn",
+  noIncome: {
+    label: "No income",
     color: "#ef4444",
   },
 };
@@ -65,11 +61,14 @@ export function AutonomyHorizonChart({
   walletId,
   from,
   to,
-  coercionFloor = 0,
   horizonMonths = 36,
 }: AutonomyHorizonChartProps) {
   const [wallets, walletMap] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
+
+  // User-controlled monthly burn rate (in base currency, dollars not cents).
+  // Initialised from the API's trimmed-mean once loaded.
+  const [monthlyBurnRate, setMonthlyBurnRate] = useState<number | null>(null);
 
   const { data: monthlyBalances, isLoading: loadingBalances } = useQuery({
     queryKey: ["autonomy-horizon-balances", walletId, from, to],
@@ -85,7 +84,6 @@ export function AutonomyHorizonChart({
     },
   });
 
-  // ARIMA forecast — server-side, cached 1 hour
   const { data: forecastData, isLoading: loadingForecast } = useQuery({
     queryKey: ["autonomy-arima", walletId, baseCurrency],
     queryFn: async (): Promise<ForecastApiResponse> => {
@@ -107,7 +105,16 @@ export function AutonomyHorizonChart({
     staleTime: 60 * 60 * 1000,
   });
 
+  // Seed the burn rate from the API once on first load, snapped to the nearest 10k step
+  useEffect(() => {
+    if (forecastData && monthlyBurnRate === null) {
+      const snapped = Math.round(forecastData.avgMonthlyBurn / 10000) * 10000;
+      setMonthlyBurnRate(Math.min(100000, Math.max(0, snapped)));
+    }
+  }, [forecastData, monthlyBurnRate]);
+
   const isLoading = loadingBalances || loadingForecast;
+  const effectiveBurnRate = monthlyBurnRate ?? forecastData?.avgMonthlyBurn ?? 0;
 
   const chartData = useMemo(() => {
     if (!monthlyBalances || !forecastData || monthlyBalances.length === 0) {
@@ -127,7 +134,6 @@ export function AutonomyHorizonChart({
       ? [walletId]
       : Array.from(new Set(monthlyBalances.map((b) => b.wallet_id)));
 
-    // Sum all wallets into a single total balance per historical month
     const historicalPoints = historicalTotals.map((point) => ({
       month: point.month,
       balance: walletIds.reduce(
@@ -136,33 +142,36 @@ export function AutonomyHorizonChart({
       ),
     }));
 
-    // Build historical result rows (no scenario bands yet)
-    const result = historicalPoints.map((p) => ({
-      month: p.month,
-      balance: p.balance,
-      optimistic: undefined as number | undefined,
-      pessimistic: undefined as number | undefined,
-      isForecast: false,
-    }));
-
     const lastBalance =
       historicalPoints.length > 0
         ? historicalPoints[historicalPoints.length - 1].balance
         : 0;
 
-    // Burn delta for scenario bands — 20% of the server-computed avg burn rate
-    const burnDelta = forecastData.avgMonthlyBurn * 0.2;
+    // Anchor the ARIMA forecast to the actual current balance (same fix as
+    // forecast-line-chart: shift all values so the first forecast point equals
+    // the bridge, preserving the slope throughout).
+    const firstForecastRaw = forecastData.forecast[0]?.value ?? lastBalance;
+    const anchorDelta = lastBalance - firstForecastRaw;
 
-    // ARIMA returns absolute balance forecasts.
-    // Derive cumulative optimistic/pessimistic by adding/subtracting burnDelta
-    // per month from the ARIMA base trajectory.
+    // Historical rows — bridge the last point for both series
+    const result: {
+      month: string;
+      balance: number;
+      noIncome: number | undefined;
+      isForecast: boolean;
+    }[] = historicalPoints.map((p, i) => ({
+      month: p.month,
+      balance: p.balance,
+      noIncome: i === historicalPoints.length - 1 ? p.balance : undefined,
+      isForecast: false,
+    }));
+
+    // Forecast rows
     forecastData.forecast.forEach((p, i) => {
-      const cumDelta = burnDelta * (i + 1);
       result.push({
         month: p.month,
-        balance: Math.max(0, p.value),
-        optimistic: Math.max(0, p.value + cumDelta),
-        pessimistic: Math.max(0, p.value - cumDelta),
+        balance: Math.max(0, p.value + anchorDelta),
+        noIncome: Math.max(0, lastBalance - effectiveBurnRate * (i + 1)),
         isForecast: true,
       });
     });
@@ -175,10 +184,17 @@ export function AutonomyHorizonChart({
     baseCurrency,
     walletMap,
     walletId,
+    effectiveBurnRate,
   ]);
 
-  const todayKey = format(new Date(), "yyyy-MM-dd");
+  // Runway: first forecast month where no-income balance hits zero
+  const runwayMonth = useMemo(() => {
+    const forecastPoints = chartData.filter((p) => p.isForecast);
+    const hit = forecastPoints.find((p) => (p.noIncome ?? Infinity) <= 0);
+    return hit?.month ?? null;
+  }, [chartData]);
 
+  const todayKey = format(new Date(), "yyyy-MM-dd");
   const methodLabel = forecastData?.metadata.method ?? null;
 
   if (isLoading) {
@@ -186,14 +202,10 @@ export function AutonomyHorizonChart({
       <Card>
         <CardHeader>
           <CardTitle>Autonomy Horizon</CardTitle>
-          <CardDescription>
-            Projected runway — how long until forced re-entry?
-          </CardDescription>
+          <CardDescription>Projected runway at current burn rate</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
-            Loading...
-          </div>
+          <div className="flex h-64 items-center justify-center">Loading...</div>
         </CardContent>
       </Card>
     );
@@ -204,9 +216,7 @@ export function AutonomyHorizonChart({
       <Card>
         <CardHeader>
           <CardTitle>Autonomy Horizon</CardTitle>
-          <CardDescription>
-            Projected runway — how long until forced re-entry?
-          </CardDescription>
+          <CardDescription>Projected runway at current burn rate</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex h-64 items-center justify-center text-gray-500">
@@ -220,16 +230,40 @@ export function AutonomyHorizonChart({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-4">
           <div>
             <CardTitle>Autonomy Horizon</CardTitle>
             <CardDescription>
-              {horizonMonths}-month runway — three scenarios at current, −20%
-              and +20% burn rate ({baseCurrency})
+              {horizonMonths}-month runway — ARIMA trajectory vs. zero-income
+              burn-down ({baseCurrency})
             </CardDescription>
           </div>
+          <div className="flex flex-col gap-1.5 min-w-56">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground text-sm">Monthly spend</span>
+              <span className="text-sm font-medium tabular-nums">
+                <Money
+                  cents={Math.round(effectiveBurnRate * 100)}
+                  currency={baseCurrency}
+                />
+              </span>
+            </div>
+            <Slider
+              min={0}
+              max={100000}
+              step={10000}
+              value={[effectiveBurnRate]}
+              onValueChange={([v]) => setMonthlyBurnRate(v)}
+            />
+            <div className="text-muted-foreground flex justify-between text-xs">
+              <span>0</span>
+              <span>
+                {formatCurrency(100000, baseCurrency)}
+              </span>
+            </div>
+          </div>
           {methodLabel && (
-            <span className="text-muted-foreground rounded border px-2 py-0.5 text-xs font-mono">
+            <span className="text-muted-foreground rounded border px-2 py-0.5 text-xs font-mono self-start">
               {methodLabel}
             </span>
           )}
@@ -242,17 +276,13 @@ export function AutonomyHorizonChart({
             margin={{ left: 12, right: 12, top: 12, bottom: 12 }}
           >
             <defs>
-              <linearGradient id="gradOpt" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#22c55e" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+              <linearGradient id="gradBase" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15} />
+                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
               </linearGradient>
-              <linearGradient id="gradPess" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="gradNoIncome" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#ef4444" stopOpacity={0.15} />
                 <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="gradBase" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid vertical={false} />
@@ -275,38 +305,27 @@ export function AutonomyHorizonChart({
                 if (!active || !payload?.length) return null;
                 const base = payload.find((p) => p.dataKey === "balance")
                   ?.value as number | undefined;
-                const opt = payload.find((p) => p.dataKey === "optimistic")
-                  ?.value as number | undefined;
-                const pess = payload.find((p) => p.dataKey === "pessimistic")
+                const noInc = payload.find((p) => p.dataKey === "noIncome")
                   ?.value as number | undefined;
                 return (
-                  <div className="bg-background rounded-lg border p-2 shadow-sm min-w-36">
+                  <div className="bg-background rounded-lg border p-2 shadow-sm min-w-40">
                     <div className="text-sm font-medium mb-1">
                       {format(parseMonthDate(label), "MMMM yyyy")}
                     </div>
                     {base !== undefined && (
                       <div className="flex justify-between gap-4 text-sm">
-                        <span className="text-muted-foreground">Base</span>
+                        <span className="text-[#3b82f6]">With income</span>
                         <Money
                           cents={Math.round(base * 100)}
                           currency={baseCurrency}
                         />
                       </div>
                     )}
-                    {opt !== undefined && (
+                    {noInc !== undefined && (
                       <div className="flex justify-between gap-4 text-sm">
-                        <span className="text-[#22c55e]">−20% burn</span>
+                        <span className="text-[#ef4444]">No income</span>
                         <Money
-                          cents={Math.round(opt * 100)}
-                          currency={baseCurrency}
-                        />
-                      </div>
-                    )}
-                    {pess !== undefined && (
-                      <div className="flex justify-between gap-4 text-sm">
-                        <span className="text-[#ef4444]">+20% burn</span>
-                        <Money
-                          cents={Math.round(pess * 100)}
+                          cents={Math.round(noInc * 100)}
                           currency={baseCurrency}
                         />
                       </div>
@@ -315,21 +334,7 @@ export function AutonomyHorizonChart({
                 );
               }}
             />
-            {/* Coercion floor */}
-            {coercionFloor >= 0 && (
-              <ReferenceLine
-                y={coercionFloor}
-                stroke="#ef4444"
-                strokeWidth={1.5}
-                strokeDasharray="6 3"
-                label={{
-                  value: "coercion floor",
-                  position: "insideTopRight",
-                  fontSize: 10,
-                  fill: "#ef4444",
-                }}
-              />
-            )}
+
             {/* Today marker */}
             <ReferenceLine
               x={todayKey}
@@ -342,11 +347,27 @@ export function AutonomyHorizonChart({
                 fill: "#6b7280",
               }}
             />
+
+            {/* Runway marker — where no-income line hits zero */}
+            {runwayMonth && (
+              <ReferenceLine
+                x={runwayMonth}
+                stroke="#ef4444"
+                strokeDasharray="4 2"
+                label={{
+                  value: "runway end",
+                  position: "insideTopRight",
+                  fontSize: 10,
+                  fill: "#ef4444",
+                }}
+              />
+            )}
+
             <Area
-              dataKey="pessimistic"
-              name="+20% burn"
+              dataKey="noIncome"
+              name="No income"
               type="monotone"
-              fill="url(#gradPess)"
+              fill="url(#gradNoIncome)"
               stroke="#ef4444"
               strokeWidth={1.5}
               strokeDasharray="4 4"
@@ -354,29 +375,35 @@ export function AutonomyHorizonChart({
               connectNulls={false}
             />
             <Area
-              dataKey="optimistic"
-              name="−20% burn"
-              type="monotone"
-              fill="url(#gradOpt)"
-              stroke="#22c55e"
-              strokeWidth={1.5}
-              strokeDasharray="4 4"
-              dot={false}
-              connectNulls={false}
-            />
-            <Area
               dataKey="balance"
-              name="Current trajectory"
+              name="With income (forecast)"
               type="monotone"
               fill="url(#gradBase)"
               stroke="#3b82f6"
               strokeWidth={2}
               dot={false}
+              connectNulls={false}
             />
             <ChartLegend content={<ChartLegendContent />} />
           </AreaChart>
         </ChartContainer>
       </CardContent>
+      {runwayMonth && (
+        <CardFooter>
+          <p className="text-muted-foreground text-sm">
+            At{" "}
+            <Money
+              cents={Math.round(effectiveBurnRate * 100)}
+              currency={baseCurrency}
+            />{" "}
+            /month with no income, runway ends{" "}
+            <span className="text-foreground font-medium">
+              {format(parseMonthDate(runwayMonth), "MMMM yyyy")}
+            </span>
+            .
+          </p>
+        </CardFooter>
+      )}
     </Card>
   );
 }
