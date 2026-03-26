@@ -98,6 +98,9 @@ importers:
       '@types/lodash':
         specifier: ^4.17.21
         version: 4.17.21
+      arima:
+        specifier: ^0.2.8
+        version: 0.2.8
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -2067,6 +2070,9 @@ packages:
   aria-query@5.3.2:
     resolution: {integrity: sha512-COROpnaoap1E2F000S62r6A60uHZnmlvomhfyT2DlTcrY1OrBKn2UhH7qn5wTC9zMvD0AY7csdPSNwKP+7WiQw==}
     engines: {node: '>= 0.4'}
+
+  arima@0.2.8:
+    resolution: {integrity: sha512-3O8yqnyPb5IPJj4kbfVsTfOPQQdInyqbQTTMbL6HFfegp6ygRfzyuxUB4glepz/5IMeVw0FkHavJaBQbZKfmhQ==}
 
   array-buffer-byte-length@1.0.2:
     resolution: {integrity: sha512-LHE+8BuR7RYGDKvnrmcuSq3tDcKv9OFEXQt/HpbZhY7V6h0zlUXutnAD82GiFx9rdieCMjkvtcsPqBwgUl1Iiw==}
@@ -5746,6 +5752,8 @@ snapshots:
       tslib: 2.8.1
 
   aria-query@5.3.2: {}
+
+  arima@0.2.8: {}
 
   array-buffer-byte-length@1.0.2:
     dependencies:
