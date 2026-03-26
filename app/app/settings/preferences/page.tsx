@@ -229,6 +229,29 @@ export default function Page() {
                 }
               />
             </div>
+            <div className="flex items-center justify-between space-x-2">
+              <div className="flex-1">
+                <Label htmlFor="autonomy-enabled" className="text-sm font-medium">
+                  Autonomy Framework
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Show autonomy and financial independence charts in infographics
+                </p>
+              </div>
+              <Switch
+                id="autonomy-enabled"
+                checked={formState.featureFlags.infographics_autonomy_enabled}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    featureFlags: {
+                      ...prev.featureFlags,
+                      infographics_autonomy_enabled: checked,
+                    },
+                  }))
+                }
+              />
+            </div>
           </div>
         </div>
       </div>

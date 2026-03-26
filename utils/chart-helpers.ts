@@ -347,6 +347,149 @@ export function calculateTrimmedMean(
 }
 
 /**
+ * Winsorize a series by clamping extreme values at Tukey IQR fences.
+ *
+ * Reduces the influence of one-time economic shocks (large purchases, windfalls)
+ * on trend forecasts without removing data points entirely.
+ *
+ * @param values - Monthly net cash flow series
+ * @param factor - IQR multiplier for fence (default 1.5 = standard Tukey fences)
+ */
+export function winsorize(values: number[], factor: number = 1.5): number[] {
+  if (values.length < 4) return values;
+  const sorted = [...values].sort((a, b) => a - b);
+  const q1 = sorted[Math.floor(sorted.length * 0.25)];
+  const q3 = sorted[Math.floor(sorted.length * 0.75)];
+  const iqr = q3 - q1;
+  const lower = q1 - factor * iqr;
+  const upper = q3 + factor * iqr;
+  return values.map((v) => Math.max(lower, Math.min(upper, v)));
+}
+
+/**
+ * Detect the start of the most recent economic recovery phase.
+ *
+ * Identifies a significant balance trough caused by an economic shock (large debt,
+ * major purchase). If such a trough is found and the balance is now recovering,
+ * returns the trough index so callers can train forecasts only on the post-shock
+ * recovery segment — making the forecast reflect the current trajectory, not the shock.
+ *
+ * @param netSeries - Monthly net cash flow (income − expenses)
+ * @param balanceSeries - Cumulative balance per month (same length and order as netSeries)
+ * @param minDropRatio - Fractional balance drop required to count as a shock (default 0.3 = 30%)
+ * @param minRecoveryMonths - Minimum post-trough months needed before applying windowing
+ * @returns Index into netSeries to start training from, or 0 if no shock detected
+ */
+export function findRecoveryStartIndex(
+  netSeries: number[],
+  balanceSeries: number[],
+  minDropRatio: number = 0.3,
+  minRecoveryMonths: number = 6,
+): number {
+  if (balanceSeries.length < minRecoveryMonths + 2) return 0;
+
+  // Find the global balance minimum (deepest trough)
+  let troughIdx = 0;
+  let troughVal = balanceSeries[0];
+  for (let i = 1; i < balanceSeries.length; i++) {
+    if (balanceSeries[i] < troughVal) {
+      troughVal = balanceSeries[i];
+      troughIdx = i;
+    }
+  }
+
+  // Trough must be in the interior — not at the very start or too close to the end
+  if (troughIdx < 2 || balanceSeries.length - troughIdx < minRecoveryMonths) return 0;
+
+  // Find the peak prior to the trough
+  let peakVal = balanceSeries[0];
+  for (let i = 0; i < troughIdx; i++) {
+    if (balanceSeries[i] > peakVal) peakVal = balanceSeries[i];
+  }
+
+  // Check the drop was significant
+  const isNegativeTrough = troughVal < 0;
+  const isLargeDrop =
+    peakVal > 0 && (peakVal - troughVal) / Math.abs(peakVal) >= minDropRatio;
+
+  if (!isNegativeTrough && !isLargeDrop) return 0;
+
+  // Confirm the balance is currently recovering (above trough)
+  if (balanceSeries[balanceSeries.length - 1] <= troughVal) return 0;
+
+  return troughIdx;
+}
+
+/**
+ * Forecast using Holt-Winters Triple Exponential Smoothing (additive seasonality).
+ *
+ * Captures level + trend + seasonal patterns. Suitable for monthly financial data
+ * with period=12 (yearly seasonality) or any recurring cycle.
+ *
+ * Falls back to Exponential Weighted Moving Average when fewer than 2 full seasons
+ * of data are available.
+ *
+ * @param values - Historical time series (e.g. monthly net cash flows)
+ * @param horizon - Number of steps to forecast
+ * @param m - Seasonal period (default 12 for monthly data)
+ * @returns Array of `horizon` forecasted values
+ */
+export function forecastHoltWinters(
+  values: number[],
+  horizon: number,
+  m: number = 12,
+): number[] {
+  if (horizon <= 0) return [];
+  if (values.length === 0) return Array(horizon).fill(0);
+
+  // Fall back to EWMA for insufficient data (need ≥ 2 full seasons)
+  if (values.length < 2 * m) {
+    const alpha = 0.3;
+    let level = values[0];
+    let trend = values.length > 1 ? values[1] - values[0] : 0;
+    for (let i = 1; i < values.length; i++) {
+      const prevLevel = level;
+      level = alpha * values[i] + (1 - alpha) * (level + trend);
+      trend = 0.1 * (level - prevLevel) + 0.9 * trend;
+    }
+    return Array.from({ length: horizon }, (_, h) => level + (h + 1) * trend);
+  }
+
+  const alpha = 0.3; // level smoothing
+  const beta = 0.1;  // trend smoothing
+  const gamma = 0.2; // seasonal smoothing
+
+  // --- Initialization ---
+  // Level: mean of first season
+  const season1Mean = values.slice(0, m).reduce((s, v) => s + v, 0) / m;
+  // Trend: average slope across first two seasons
+  const season2Mean = values.slice(m, 2 * m).reduce((s, v) => s + v, 0) / m;
+  let L = season1Mean;
+  let b = (season2Mean - season1Mean) / m;
+
+  // Seasonal indices: additive deviation from level in first season
+  const S: number[] = values.slice(0, m).map((v) => v - season1Mean);
+
+  // --- Smoothing pass over all historical data ---
+  for (let i = 0; i < values.length; i++) {
+    const si = i % m; // index into current seasonal cycle
+    const prevL = L;
+    L = alpha * (values[i] - S[si]) + (1 - alpha) * (L + b);
+    b = beta * (L - prevL) + (1 - beta) * b;
+    S[si] = gamma * (values[i] - L) + (1 - gamma) * S[si];
+  }
+
+  // --- Forecast ---
+  const n = values.length;
+  return Array.from({ length: horizon }, (_, h) => {
+    const si = (n + h) % m;
+    const forecast = L + (h + 1) * b + S[si];
+    // Guard against NaN/Inf from degenerate data
+    return Number.isFinite(forecast) ? forecast : 0;
+  });
+}
+
+/**
  * Safely parse a month date string (YYYY-MM-DD) without timezone issues.
  *
  * Month dates from the database are in YYYY-MM-DD format representing the first day

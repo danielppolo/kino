@@ -3,6 +3,7 @@
  */
 export interface FeatureFlags {
   bills_enabled: boolean;
+  infographics_autonomy_enabled: boolean;
   // Future flags:
   // analytics_enabled?: boolean;
   // ai_insights_enabled?: boolean;
@@ -10,6 +11,7 @@ export interface FeatureFlags {
 
 export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   bills_enabled: true,
+  infographics_autonomy_enabled: true,
 };
 
 /**
@@ -22,11 +24,12 @@ export function isValidFeatureFlags(flags: unknown): flags is FeatureFlags {
 }
 
 /**
- * Safely parse feature flags from database JSON
+ * Safely parse feature flags from database JSON.
+ * Merges with defaults so newly-added flags are enabled even for existing workspaces.
  */
 export function parseFeatureFlags(json: unknown): FeatureFlags {
   if (isValidFeatureFlags(json)) {
-    return json;
+    return { ...DEFAULT_FEATURE_FLAGS, ...json };
   }
   return { ...DEFAULT_FEATURE_FLAGS };
 }

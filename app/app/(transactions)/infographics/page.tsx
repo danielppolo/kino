@@ -31,37 +31,45 @@ export const dynamic = "force-dynamic";
 async function InfographicsPage({ searchParams }: PageParams) {
   const filters = await searchParams;
 
-  // Fetch feature flags
+  // Fetch feature flags from the active workspace
   const supabase = await createClient();
-  const { data: rawPrefs } = await supabase
-    .from("user_preferences")
-    .select("*")
-    .maybeSingle();
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: member } = user
+    ? await supabase
+        .from("workspace_members")
+        .select("workspace_id, workspaces(feature_flags)")
+        .eq("user_id", user.id)
+        .maybeSingle()
+    : { data: null };
 
-  type PrefsWithFlags = { feature_flags?: unknown };
-  const preferences = rawPrefs as PrefsWithFlags | null;
-  const featureFlags = preferences?.feature_flags
-    ? parseFeatureFlags(preferences.feature_flags)
+  type WorkspaceWithFlags = { feature_flags?: unknown };
+  const workspace = member?.workspaces as WorkspaceWithFlags | null;
+  const featureFlags = workspace?.feature_flags
+    ? parseFeatureFlags(workspace.feature_flags)
     : DEFAULT_FEATURE_FLAGS;
 
   return (
     <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
       {/* Autonomy Framework */}
-      <div className="md:col-span-2 lg:col-span-4">
-        <AutonomyHorizonChart from={filters.from} to={filters.to} />
-      </div>
-      <div className="md:col-span-2 lg:col-span-2">
-        <FreedomMultiplierChart from={filters.from} to={filters.to} />
-      </div>
-      <div className="md:col-span-2 lg:col-span-2">
-        <SufficiencyRatioChart from={filters.from} to={filters.to} />
-      </div>
-      <div className="md:col-span-2 lg:col-span-2">
-        <BurnRateDriftChart from={filters.from} to={filters.to} />
-      </div>
-      <div className="md:col-span-2 lg:col-span-2">
-        <ExplorationCapitalChart from={filters.from} to={filters.to} />
-      </div>
+      {featureFlags.infographics_autonomy_enabled && (
+        <>
+          <div className="md:col-span-2 lg:col-span-4">
+            <AutonomyHorizonChart from={filters.from} to={filters.to} />
+          </div>
+          <div className="md:col-span-2 lg:col-span-2">
+            <FreedomMultiplierChart from={filters.from} to={filters.to} />
+          </div>
+          <div className="md:col-span-2 lg:col-span-2">
+            <SufficiencyRatioChart from={filters.from} to={filters.to} />
+          </div>
+          <div className="md:col-span-2 lg:col-span-2">
+            <BurnRateDriftChart from={filters.from} to={filters.to} />
+          </div>
+          <div className="md:col-span-2 lg:col-span-2">
+            <ExplorationCapitalChart from={filters.from} to={filters.to} />
+          </div>
+        </>
+      )}
 
       {/* Overview & Forecasting */}
       <div className="md:col-span-2 lg:col-span-4">
