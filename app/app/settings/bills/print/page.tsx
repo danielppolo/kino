@@ -64,9 +64,9 @@ export default async function BillsPrintPage({ searchParams }: PageProps) {
   }));
 
   // Years derived from actual bills (desc), used for the year shortcut
-  const availableYears = [
-    ...new Set(dropdownGroups.map((g) => parseInt(g.key.slice(0, 4)))),
-  ].sort((a, b) => b - a);
+  const availableYears = Array.from(
+    new Set(dropdownGroups.map((g) => parseInt(g.key.slice(0, 4)))),
+  ).sort((a, b) => b - a);
 
   // Priority: manual cols > year shortcut
   const manualKeys = colsParam ? colsParam.split(",").filter(Boolean) : [];

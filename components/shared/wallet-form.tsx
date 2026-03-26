@@ -60,7 +60,7 @@ const WalletForm = ({ onSuccess, wallet }: WalletFormProps) => {
       return await createWallet({
         name: walletData.name,
         currency: walletData.currency,
-        walletType: walletData.wallet_type,
+        walletType: walletData.wallet_type ?? "bank_account",
         workspaceId,
       });
     },

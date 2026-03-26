@@ -1,6 +1,7 @@
 import { createClient } from "./client";
 import { Database } from "./database.types";
 import { FeatureFlags } from "@/utils/types/feature-flags";
+import { FinanceMemory } from "@/utils/types/finance-memory";
 
 const BATCH_SIZE = 20;
 
@@ -1064,6 +1065,23 @@ export const updateWorkspaceBaseCurrency = async (
   const { data, error } = await supabase
     .from("workspaces")
     .update({ base_currency: baseCurrency })
+    .eq("id", workspaceId)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+export const updateWorkspaceFinanceMemory = async (
+  workspaceId: string,
+  financeMemory: FinanceMemory,
+) => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("workspaces")
+    .update({ finance_memory: financeMemory as any })
     .eq("id", workspaceId)
     .select()
     .single();

@@ -964,6 +964,7 @@ export type Database = {
         Row: {
           base_currency: string
           created_at: string
+          finance_memory: Json | null
           feature_flags: Json | null
           id: string
           icon: string | null
@@ -973,6 +974,7 @@ export type Database = {
         Insert: {
           base_currency?: string
           created_at?: string
+          finance_memory?: Json | null
           feature_flags?: Json | null
           id?: string
           icon?: string | null
@@ -982,6 +984,7 @@ export type Database = {
         Update: {
           base_currency?: string
           created_at?: string
+          finance_memory?: Json | null
           feature_flags?: Json | null
           id?: string
           icon?: string | null
