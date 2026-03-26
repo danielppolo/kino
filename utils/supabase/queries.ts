@@ -1576,76 +1576,38 @@ export const getTransactionTypeDistribution = async (
     to?: string;
   },
 ) => {
-  const PAGE_SIZE = 1000;
-  let page = 0;
-  let hasMore = true;
-  let allTransactions: any[] = [];
-
-  while (hasMore) {
-    let query = client
-      .from("transaction_list")
-      .select("*")
-      .order("date", { ascending: true })
-      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-
-    if (params.walletId) {
-      query = query.eq("wallet_id", params.walletId);
-    }
-
-    if (params.from) {
-      query = query.gte("date", params.from);
-    }
-
-    if (params.to) {
-      query = query.lte("date", params.to);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      return { data: null, error };
-    }
-
-    if (data) {
-      allTransactions = [...allTransactions, ...data];
-    }
-
-    hasMore = data?.length === PAGE_SIZE;
-    page++;
-  }
-
-  const monthlyData: Record<string, TransactionTypeData> = {};
-
-  allTransactions.forEach((transaction) => {
-    const date = new Date(transaction.date);
-    const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
-
-    const key = `${transaction.wallet_id}-${month}`;
-
-    if (!monthlyData[key]) {
-      monthlyData[key] = {
-        month,
-        wallet_id: transaction.wallet_id,
-        income_cents: 0,
-        expense_cents: 0,
-        transfer_cents: 0,
-      };
-    }
-
-    if (transaction.type === "income") {
-      monthlyData[key].income_cents += Math.abs(transaction.amount_cents);
-    } else if (transaction.type === "expense") {
-      monthlyData[key].expense_cents += Math.abs(transaction.amount_cents);
-    } else if (transaction.type === "transfer") {
-      monthlyData[key].transfer_cents += Math.abs(transaction.amount_cents);
-    }
+  const { data, error } = await (client as any).rpc("get_monthly_type_stats", {
+    p_wallet_id: params.walletId ?? null,
+    p_from: params.from ?? null,
+    p_to: params.to ?? null,
   });
 
-  const result = Object.values(monthlyData).sort((a, b) =>
-    a.month.localeCompare(b.month),
-  );
+  if (error) return { data: null, error };
 
-  return { data: result, error: null };
+  // Group RPC rows (one per month/wallet/type) back into the existing shape
+  // so the chart component needs no changes.
+  const monthlyData: Record<string, TransactionTypeData> = {};
+  (data as Array<{ month: string; wallet_id: string; type: string; amount_cents: number }>)
+    .forEach((row) => {
+      const key = `${row.wallet_id}-${row.month}`;
+      if (!monthlyData[key]) {
+        monthlyData[key] = {
+          month: row.month,
+          wallet_id: row.wallet_id,
+          income_cents: 0,
+          expense_cents: 0,
+          transfer_cents: 0,
+        };
+      }
+      if (row.type === "income") monthlyData[key].income_cents += row.amount_cents;
+      else if (row.type === "expense") monthlyData[key].expense_cents += row.amount_cents;
+      else if (row.type === "transfer") monthlyData[key].transfer_cents += row.amount_cents;
+    });
+
+  return {
+    data: Object.values(monthlyData).sort((a, b) => a.month.localeCompare(b.month)),
+    error: null,
+  };
 };
 
 export interface BillVelocityData {
@@ -1885,64 +1847,22 @@ export const getTagCloudAnalytics = async (
     to?: string;
   },
 ) => {
-  const PAGE_SIZE = 1000;
-  let page = 0;
-  let hasMore = true;
-  let allTransactions: any[] = [];
-
-  while (hasMore) {
-    let query = client
-      .from("transaction_list")
-      .select("*")
-      .order("date", { ascending: true })
-      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-
-    if (params.walletId) {
-      query = query.eq("wallet_id", params.walletId);
-    }
-
-    if (params.from) {
-      query = query.gte("date", params.from);
-    }
-
-    if (params.to) {
-      query = query.lte("date", params.to);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      return { data: null, error };
-    }
-
-    if (data) {
-      allTransactions = [...allTransactions, ...data];
-    }
-
-    hasMore = data?.length === PAGE_SIZE;
-    page++;
-  }
-
-  const tagStats: Record<string, TagCloudData> = {};
-
-  allTransactions.forEach((transaction) => {
-    if (!transaction.tag_ids || !Array.isArray(transaction.tag_ids)) return;
-
-    transaction.tag_ids.forEach((tag: string) => {
-      if (!tagStats[tag]) {
-        tagStats[tag] = {
-          tag,
-          count: 0,
-          total_amount_cents: 0,
-        };
-      }
-
-      tagStats[tag].count += 1;
-      tagStats[tag].total_amount_cents += Math.abs(transaction.amount_cents);
-    });
+  const { data, error } = await (client as any).rpc("get_tag_cloud_analytics", {
+    p_wallet_id: params.walletId ?? null,
+    p_from: params.from ?? null,
+    p_to: params.to ?? null,
   });
 
-  const result = Object.values(tagStats).sort((a, b) => b.count - a.count);
+  if (error) return { data: null, error };
+
+  // Map RPC field names to the existing TagCloudData shape so the chart is unchanged.
+  const result: TagCloudData[] = (
+    data as Array<{ tag_id: string; tag_title: string; transaction_count: number; total_amount_cents: number }>
+  ).map((row) => ({
+    tag: row.tag_id,
+    count: row.transaction_count,
+    total_amount_cents: row.total_amount_cents,
+  }));
 
   return { data: result, error: null };
 };
@@ -1962,80 +1882,26 @@ export const getTransactionSizeDistribution = async (
     type?: "income" | "expense";
   },
 ) => {
-  const PAGE_SIZE = 1000;
-  let page = 0;
-  let hasMore = true;
-  let allTransactions: any[] = [];
+  const { data, error } = await (client as any).rpc(
+    "get_transaction_size_distribution",
+    {
+      p_wallet_id: params.walletId ?? null,
+      p_from: params.from ?? null,
+      p_to: params.to ?? null,
+      p_type: params.type ?? null,
+    },
+  );
 
-  while (hasMore) {
-    let query = client
-      .from("transaction_list")
-      .select("*")
-      .order("date", { ascending: true })
-      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+  if (error) return { data: null, error };
 
-    if (params.walletId) {
-      query = query.eq("wallet_id", params.walletId);
-    }
-
-    if (params.from) {
-      query = query.gte("date", params.from);
-    }
-
-    if (params.to) {
-      query = query.lte("date", params.to);
-    }
-
-    if (params.type) {
-      query = query.eq("type", params.type);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      return { data: null, error };
-    }
-
-    if (data) {
-      allTransactions = [...allTransactions, ...data];
-    }
-
-    hasMore = data?.length === PAGE_SIZE;
-    page++;
-  }
-
-  const ranges = [
-    { min: 0, max: 1000, label: "$0-$10" },
-    { min: 1000, max: 5000, label: "$10-$50" },
-    { min: 5000, max: 10000, label: "$50-$100" },
-    { min: 10000, max: 50000, label: "$100-$500" },
-    { min: 50000, max: 100000, label: "$500-$1000" },
-    { min: 100000, max: Infinity, label: "$1000+" },
-  ];
-
-  const distribution: Record<string, TransactionSizeData> = {};
-
-  ranges.forEach((range) => {
-    distribution[range.label] = {
-      range: range.label,
-      count: 0,
-      total_amount_cents: 0,
-    };
-  });
-
-  allTransactions.forEach((transaction) => {
-    const amount = Math.abs(transaction.amount_cents);
-
-    for (const range of ranges) {
-      if (amount >= range.min && amount < range.max) {
-        distribution[range.label].count += 1;
-        distribution[range.label].total_amount_cents += amount;
-        break;
-      }
-    }
-  });
-
-  const result = Object.values(distribution);
+  // Map RPC field names to the existing TransactionSizeData shape.
+  const result: TransactionSizeData[] = (
+    data as Array<{ range: string; transaction_count: number; total_amount_cents: number }>
+  ).map((row) => ({
+    range: row.range,
+    count: row.transaction_count,
+    total_amount_cents: row.total_amount_cents,
+  }));
 
   return { data: result, error: null };
 };
@@ -2054,68 +1920,16 @@ export const getCurrencyExposure = async (
     to?: string;
   },
 ) => {
-  const PAGE_SIZE = 1000;
-  let page = 0;
-  let hasMore = true;
-  let allTransactions: any[] = [];
-
-  while (hasMore) {
-    let query = client
-      .from("transaction_list")
-      .select("*")
-      .order("date", { ascending: true })
-      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-
-    if (params.walletId) {
-      query = query.eq("wallet_id", params.walletId);
-    }
-
-    if (params.from) {
-      query = query.gte("date", params.from);
-    }
-
-    if (params.to) {
-      query = query.lte("date", params.to);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      return { data: null, error };
-    }
-
-    if (data) {
-      allTransactions = [...allTransactions, ...data];
-    }
-
-    hasMore = data?.length === PAGE_SIZE;
-    page++;
-  }
-
-  const currencyStats: Record<string, CurrencyExposureData> = {};
-
-  allTransactions.forEach((transaction) => {
-    const currency = transaction.currency || "USD";
-
-    if (!currencyStats[currency]) {
-      currencyStats[currency] = {
-        currency,
-        transaction_count: 0,
-        total_amount_cents: 0,
-      };
-    }
-
-    currencyStats[currency].transaction_count += 1;
-    currencyStats[currency].total_amount_cents += Math.abs(
-      transaction.amount_cents,
-    );
+  const { data, error } = await (client as any).rpc("get_currency_exposure", {
+    p_wallet_id: params.walletId ?? null,
+    p_from: params.from ?? null,
+    p_to: params.to ?? null,
   });
 
-  const result = Object.values(currencyStats).sort(
-    (a, b) => b.total_amount_cents - a.total_amount_cents,
-  );
+  if (error) return { data: null, error };
 
-  return { data: result, error: null };
+  // RPC already returns the CurrencyExposureData shape — no transformation needed.
+  return { data: data as CurrencyExposureData[], error: null };
 };
 
 export interface BillsBurdenData {

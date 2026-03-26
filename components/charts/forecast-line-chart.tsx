@@ -28,19 +28,19 @@ import { Money } from "@/components/ui/money";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import {
   calculateMonthlyTotals,
-  calculateWeightedTrend,
-  forecastIncomeExpense,
+  findRecoveryStartIndex,
+  forecastHoltWinters,
   formatCurrency,
   parseMonthDate,
-  projectRecurringTransactions,
+  winsorize,
   type ChartDataPoint,
   type MonthlyStats,
 } from "@/utils/chart-helpers";
+import { convertCurrency } from "@/utils/currency-conversion";
 import { createClient } from "@/utils/supabase/client";
 import {
   getMonthlyStats,
   getWalletMonthlyBalances,
-  listRecurringTransactions,
 } from "@/utils/supabase/queries";
 import { Wallet } from "@/utils/supabase/types";
 
@@ -50,93 +50,90 @@ interface ForecastLineChartProps {
   to?: string;
 }
 
+// How many months of history to train on. 36 months (3 seasons) gives Holt-Winters
+// enough data for seasonality while keeping the trend grounded in recent behavior.
+const FORECAST_TRAINING_WINDOW = 36;
+
 /**
- * Calculate advanced forecast using multiple strategies:
- * 1. Weighted recent data trend
- * 2. Income/expense decomposition
- * 3. Recurring transactions
+ * Calculate forecast using Holt-Winters Triple Exponential Smoothing.
+ *
+ * Mirrors the AutonomyHorizonChart approach: aggregate all wallets into a single
+ * combined net series, run one HW model, then apply projected changes cumulatively
+ * from the last known total balance. Training is capped at the last 36 months so
+ * the trend reflects recent behavior, not decade-old growth patterns.
  */
 function calculateAdvancedForecast(
   historicalData: ChartDataPoint[],
   monthlyStats: MonthlyStats[],
-  recurringTransactions: any[],
   visibleWallets: Array<{ id: string }>,
   conversionRates: Record<string, { rate: number }>,
   baseCurrency: string,
   walletMap: Map<string, any>,
-  walletId?: string,
 ): ChartDataPoint[] {
   if (historicalData.length < 2) {
     return [];
   }
 
-  const forecastData: ChartDataPoint[] = [];
   const lastDataPoint = historicalData[historicalData.length - 1];
-  const lastMonth = new Date(lastDataPoint.month);
+  const lastMonth = parseMonthDate(lastDataPoint.month);
 
-  // Strategy 1: Weighted recent data trend
-  const weightedTrends = calculateWeightedTrend(
-    historicalData,
-    visibleWallets,
-    12,
+  // Aggregate combined net (income − expenses) across all visible wallets per month
+  const walletIdSet = new Set(visibleWallets.map((w) => w.id));
+  const byMonth: Record<string, number> = {};
+  monthlyStats.forEach((stat) => {
+    if (!walletIdSet.has(stat.wallet_id)) return;
+    if (!byMonth[stat.month]) byMonth[stat.month] = 0;
+    const w = walletMap.get(stat.wallet_id);
+    const currency = w?.currency ?? baseCurrency;
+    const incomeBase = convertCurrency(stat.income_cents, currency, baseCurrency, conversionRates);
+    const expenseBase = convertCurrency(stat.outcome_cents, currency, baseCurrency, conversionRates);
+    byMonth[stat.month] += (incomeBase - expenseBase) / 100;
+  });
+
+  const sortedMonths = Object.keys(byMonth).sort(
+    (a, b) => new Date(a).getTime() - new Date(b).getTime(),
+  );
+  const rawNetSeries = sortedMonths.map((m) => byMonth[m]).slice(-FORECAST_TRAINING_WINDOW);
+
+  // Build a proxy cumulative balance from the net series for shock detection.
+  // This captures the same trough pattern as the actual balance without requiring
+  // a separate query — if a big expense hit in month N the cumulative dips there too.
+  let cum = 0;
+  const proxyCumBalance = rawNetSeries.map((net) => {
+    cum += net;
+    return cum;
+  });
+
+  // If there was an economic shock followed by recovery, train only on the
+  // post-shock segment so the forecast reflects the current trajectory.
+  const recoveryIdx = findRecoveryStartIndex(rawNetSeries, proxyCumBalance);
+  const windowedSeries = recoveryIdx > 0 ? rawNetSeries.slice(recoveryIdx) : rawNetSeries;
+
+  // Winsorize to dampen remaining one-time outliers before Holt-Winters.
+  const netSeries = winsorize(windowedSeries);
+
+  const projectedNetChanges = forecastHoltWinters(netSeries, 12);
+
+  // Starting total balance = sum of all visible wallets at the last historical point
+  let currentTotal = visibleWallets.reduce(
+    (sum, wallet) => sum + ((lastDataPoint[wallet.id] as number | undefined) ?? 0),
+    0,
   );
 
-  // Strategy 3: Income/expense decomposition
-  const incomeExpenseForecast = forecastIncomeExpense(
-    monthlyStats,
-    conversionRates,
-    baseCurrency,
-    walletMap,
-    12,
-    walletId,
-  );
+  // Apply projected net changes cumulatively; distribute total evenly across wallet
+  // keys so the existing render step (which sums per-wallet values) still works.
+  const walletCount = visibleWallets.length || 1;
+  const forecastData: ChartDataPoint[] = [];
 
-  // Strategy 2: Recurring transactions projection
-  const recurringProjections = projectRecurringTransactions(
-    recurringTransactions,
-    conversionRates,
-    baseCurrency,
-    walletMap,
-    lastMonth,
-    12,
-    walletId,
-  );
-
-  // Generate forecast for next 12 months
   for (let i = 1; i <= 12; i++) {
     const forecastMonth = addMonths(lastMonth, i);
     const monthKey = format(forecastMonth, "yyyy-MM-dd");
-    const forecastPoint: ChartDataPoint = {
-      month: monthKey,
-    };
-
+    currentTotal += projectedNetChanges[i - 1] ?? 0;
+    const perWallet = currentTotal / walletCount;
+    const forecastPoint: ChartDataPoint = { month: monthKey };
     visibleWallets.forEach((wallet) => {
-      const lastBalance =
-        (lastDataPoint[wallet.id] as number | undefined) || 0;
-
-      // Base forecast from weighted trend
-      const weightedChange = weightedTrends[wallet.id] || 0;
-      let forecastBalance = lastBalance + weightedChange * i;
-
-      // Add income/expense decomposition (if available)
-      // This adjusts the forecast based on separate income/expense trends
-      if (monthlyStats.length > 0) {
-        // Apply income/expense changes proportionally
-        const netChange =
-          incomeExpenseForecast.avgIncomeChange -
-          incomeExpenseForecast.avgExpenseChange;
-        forecastBalance += netChange * i;
-      }
-
-      // Add recurring transactions for this month
-      const recurringForMonth = recurringProjections[monthKey];
-      if (recurringForMonth && recurringForMonth[wallet.id]) {
-        forecastBalance += recurringForMonth[wallet.id];
-      }
-
-      forecastPoint[wallet.id] = forecastBalance;
+      forecastPoint[wallet.id] = perWallet;
     });
-
     forecastData.push(forecastPoint);
   }
 
@@ -171,46 +168,24 @@ export function ForecastLineChart({
     },
   });
 
-  // Fetch monthly stats for income/expense decomposition
+  // Fetch ALL monthly stats without date filter — the forecast model needs full history
+  // regardless of what date range the user is currently viewing.
   const {
     data: monthlyStats,
     isLoading: isLoadingStats,
     error: statsError,
   } = useQuery({
-    queryKey: ["forecast-line-chart-stats", walletId, from, to],
+    queryKey: ["forecast-line-chart-stats", walletId],
     queryFn: async () => {
       const supabase = await createClient();
-      const { data, error } = await getMonthlyStats(supabase, {
-        walletId,
-        from,
-        to,
-      });
-
+      const { data, error } = await getMonthlyStats(supabase, { walletId });
       if (error) throw error;
       return data;
     },
   });
 
-  // Fetch recurring transactions
-  const {
-    data: recurringTransactions,
-    isLoading: isLoadingRecurring,
-    error: recurringError,
-  } = useQuery({
-    queryKey: ["forecast-line-chart-recurring", walletId],
-    queryFn: async () => {
-      const supabase = await createClient();
-      const { data, error } = await listRecurringTransactions(supabase, {
-        walletId,
-      });
-
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  const isLoading = isLoadingBalances || isLoadingStats || isLoadingRecurring;
-  const error = balancesError || statsError || recurringError;
+  const isLoading = isLoadingBalances || isLoadingStats;
+  const error = balancesError || statsError;
 
   const historicalData = calculateMonthlyTotals(
     monthlyBalances ?? [],
@@ -237,12 +212,10 @@ export function ForecastLineChart({
   const forecastData = calculateAdvancedForecast(
     historicalData,
     filteredMonthlyStats,
-    recurringTransactions ?? [],
     visibleWallets,
     conversionRates,
     baseCurrency,
     walletMap,
-    walletId,
   );
 
   // Combine historical and forecast data

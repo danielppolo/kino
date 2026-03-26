@@ -31,9 +31,11 @@ import { useCurrency, useWallets } from "@/contexts/settings-context";
 import {
   calculateMonthlyTotals,
   calculateTrimmedMean,
-  calculateWeightedTrend,
+  findRecoveryStartIndex,
+  forecastHoltWinters,
   formatCurrency,
   parseMonthDate,
+  winsorize,
 } from "@/utils/chart-helpers";
 import { convertCurrency } from "@/utils/currency-conversion";
 import { createClient } from "@/utils/supabase/client";
@@ -148,13 +150,25 @@ export function AutonomyHorizonChart({
       byMonth[s.month] += net;
     });
 
-    const netChanges = Object.keys(byMonth)
-      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
-      .map((m) => byMonth[m]);
+    const sortedNetMonths = Object.keys(byMonth).sort(
+      (a, b) => new Date(a).getTime() - new Date(b).getTime(),
+    );
 
-    // Base monthly net change (trimmed mean of recent 12)
-    const recent = netChanges.slice(-12);
-    const baseChange = calculateTrimmedMean(recent);
+    // Align net series with balance series so shock detection uses actual balances.
+    const histBalanceMap = new Map(historicalPoints.map((p) => [p.month, p.balance]));
+    const alignedBalance = sortedNetMonths.map((m) => histBalanceMap.get(m) ?? 0);
+    const alignedNet = sortedNetMonths.map((m) => byMonth[m]);
+
+    // If there was an economic shock followed by a recovery, train only on the
+    // post-shock segment — the forecast will reflect the recovery trajectory.
+    const recoveryIdx = findRecoveryStartIndex(alignedNet, alignedBalance);
+    const windowedNet = recoveryIdx > 0 ? alignedNet.slice(recoveryIdx) : alignedNet;
+
+    // Winsorize to dampen any remaining one-time outliers before Holt-Winters.
+    const cleanedNet = winsorize(windowedNet);
+
+    // Project net changes with Holt-Winters (captures level + trend + seasonality)
+    const projectedNetChanges = forecastHoltWinters(cleanedNet, horizonMonths);
 
     // Monthly burn = trimmed mean of |expense|
     const allExpenses = monthlyStats
@@ -218,11 +232,13 @@ export function AutonomyHorizonChart({
       const forecastMonth = addMonths(lastMonth, i);
       const monthKey = format(forecastMonth, "yyyy-MM-dd");
 
-      balCurrent += baseChange;
+      // Season-aware net change for this specific future month
+      const monthNet = projectedNetChanges[i - 1] ?? 0;
+      balCurrent += monthNet;
       // Optimistic: burn -20% → net change improves by burnDelta
-      balOpt += baseChange + burnDelta;
+      balOpt += monthNet + burnDelta;
       // Pessimistic: burn +20% → net change worsens by burnDelta
-      balPess += baseChange - burnDelta;
+      balPess += monthNet - burnDelta;
 
       result.push({
         month: monthKey,
