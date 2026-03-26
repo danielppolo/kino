@@ -53,6 +53,7 @@ export function InfographicsTabs({
           {autonomyEnabled && (
             <TabsTrigger value="autonomy">Autonomy</TabsTrigger>
           )}
+          <TabsTrigger value="chat">Chat</TabsTrigger>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
           <TabsTrigger value="labels">Labels</TabsTrigger>
@@ -95,15 +96,18 @@ export function InfographicsTabs({
           </TabsContent>
         )}
 
+        <TabsContent value="chat">
+          <div className="grid grid-cols-1 gap-4 p-4">
+            <FinanceCopilotCard
+              from={filters.from}
+              to={filters.to}
+              scopeLabel="the active workspace"
+            />
+          </div>
+        </TabsContent>
+
         <TabsContent value="overview">
           <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
-            <div className="md:col-span-2 lg:col-span-4">
-              <FinanceCopilotCard
-                from={filters.from}
-                to={filters.to}
-                scopeLabel="the active workspace"
-              />
-            </div>
             <div className="md:col-span-2 lg:col-span-4">
               <ForecastLineChart from={filters.from} to={filters.to} />
             </div>

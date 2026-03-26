@@ -221,6 +221,9 @@ interface OpenAIFunctionCall {
   call_id: string;
 }
 
+const OPENAI_MAX_RETRIES = 3;
+const RETRYABLE_OPENAI_STATUSES = new Set([408, 409, 429, 500, 502, 503, 504]);
+
 function extractFunctionCalls(payload: OpenAIResponsePayload) {
   return (payload.output ?? []).filter(
     (item): item is OpenAIFunctionCall =>
@@ -271,6 +274,32 @@ function parseReply(outputText: string) {
   }
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function buildPromptBriefing(briefing: Awaited<ReturnType<typeof buildFinancialBriefing>>["briefing"]) {
+  return {
+    scope: briefing.scope,
+    currentPosition: briefing.currentPosition,
+    historical: {
+      monthsAvailable: briefing.historical.monthsAvailable,
+      monthlyNet: briefing.historical.monthlyNet.slice(-6),
+      trailing: briefing.historical.trailing,
+    },
+    forecast: {
+      trainingMonths: briefing.forecast.trainingMonths,
+      confidence: briefing.forecast.confidence,
+      recoveryDetected: briefing.forecast.recoveryDetected,
+      currentBalanceCents: briefing.forecast.currentBalanceCents,
+      months: briefing.forecast.months.slice(0, 3),
+    },
+    composition: briefing.composition,
+    recentTransactions: briefing.recentTransactions.slice(0, 4),
+    notableSignals: briefing.notableSignals,
+  };
+}
+
 function normalizeToolArgs(value: unknown): unknown {
   if (value === null) return undefined;
   if (Array.isArray(value)) {
@@ -290,17 +319,112 @@ function normalizeToolArgs(value: unknown): unknown {
 async function createOpenAIResponse(
   body: Record<string, unknown>,
 ): Promise<{ ok: boolean; status: number; payload: OpenAIResponsePayload }> {
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify(body),
-  });
+  let lastPayload: OpenAIResponsePayload = {};
+  let lastStatus = 500;
 
-  const payload = (await response.json()) as OpenAIResponsePayload;
-  return { ok: response.ok, status: response.status, payload };
+  for (let attempt = 0; attempt < OPENAI_MAX_RETRIES; attempt += 1) {
+    try {
+      const response = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(30000),
+      });
+
+      const payload = (await response.json()) as OpenAIResponsePayload;
+      if (
+        response.ok ||
+        !RETRYABLE_OPENAI_STATUSES.has(response.status) ||
+        attempt === OPENAI_MAX_RETRIES - 1
+      ) {
+        return { ok: response.ok, status: response.status, payload };
+      }
+
+      lastPayload = payload;
+      lastStatus = response.status;
+    } catch (error) {
+      if (attempt === OPENAI_MAX_RETRIES - 1) {
+        return {
+          ok: false,
+          status: 599,
+          payload: {
+            error: {
+              message:
+                error instanceof Error
+                  ? error.message
+                  : "OpenAI request failed before receiving a response.",
+            },
+          },
+        };
+      }
+    }
+
+    await sleep(400 * (attempt + 1));
+  }
+
+  return { ok: false, status: lastStatus, payload: lastPayload };
+}
+
+async function createFallbackOpenAIResponse(params: {
+  model: string;
+  previousResponseId?: string;
+  history: Array<{ role: "user" | "assistant"; content: string }>;
+  message: string;
+  briefing: Awaited<ReturnType<typeof buildFinancialBriefing>>["briefing"];
+}) {
+  const slimBriefing = buildPromptBriefing(params.briefing);
+
+  return createOpenAIResponse({
+    model: params.model,
+    ...(params.previousResponseId
+      ? { previous_response_id: params.previousResponseId }
+      : {}),
+    input: [
+      {
+        role: "system",
+        content: [
+          {
+            type: "input_text",
+            text: [
+              buildFinanceSystemPrompt(params.briefing),
+              "Do not call tools in this fallback path. Answer only from the provided briefing.",
+            ].join(" "),
+          },
+        ],
+      },
+      ...params.history.map((message) => ({
+        role: message.role,
+        content: [{ type: "input_text", text: message.content }],
+      })),
+      {
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: [
+              `User question: ${params.message}`,
+              "",
+              "Compact financial briefing JSON:",
+              JSON.stringify(slimBriefing),
+            ].join("\n"),
+          },
+        ],
+      },
+    ],
+    store: true,
+    max_output_tokens: 1000,
+    text: {
+      format: {
+        type: "json_schema",
+        name: "finance_copilot_reply",
+        strict: true,
+        schema: replyJsonSchema,
+      },
+    },
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -369,6 +493,16 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    if (!ok) {
+      ({ ok, payload } = await createFallbackOpenAIResponse({
+        model,
+        previousResponseId: body.previousResponseId,
+        history: body.history,
+        message: body.message,
+        briefing,
+      }));
+    }
 
     if (!ok) {
       return NextResponse.json(
@@ -443,14 +577,28 @@ export async function POST(request: NextRequest) {
       payload = nextResponse.payload;
 
       if (!ok) {
-        return NextResponse.json(
-          {
-            error:
-              payload?.error?.message ||
-              "OpenAI request failed after finance tool execution.",
-          },
-          { status: 502 },
-        );
+        const fallbackResponse = await createFallbackOpenAIResponse({
+          model,
+          previousResponseId:
+            typeof payload.id === "string" ? payload.id : body.previousResponseId,
+          history: body.history,
+          message: body.message,
+          briefing,
+        });
+
+        ok = fallbackResponse.ok;
+        payload = fallbackResponse.payload;
+
+        if (!ok) {
+          return NextResponse.json(
+            {
+              error:
+                payload?.error?.message ||
+                "OpenAI request failed after finance tool execution.",
+            },
+            { status: 502 },
+          );
+        }
       }
     }
 
