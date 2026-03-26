@@ -4,7 +4,9 @@ import { z } from "zod";
 
 import {
   buildFinancialBriefing,
+  buildFinanceIntentPrompt,
   buildFinanceSystemPrompt,
+  detectFinanceIntent,
   executeFinanceTool,
   type FinanceChatReply,
 } from "@/utils/ai/finance-copilot";
@@ -25,9 +27,35 @@ const RequestSchema = z.object({
 });
 
 const ReplySchema = z.object({
+  intent: z.enum([
+    "decision",
+    "risk",
+    "diagnosis",
+    "forecast",
+    "comparison",
+    "general",
+  ]),
   answer: z.string(),
+  summary: z.string(),
   confidence: z.enum(["low", "medium", "high"]),
-  recommendations: z.array(z.string()).max(4),
+  decision: z
+    .object({
+      recommendation: z.string(),
+      tradeoff: z.string(),
+      impactWindow: z.string(),
+      whatCouldChange: z.string(),
+    })
+    .nullable()
+    .optional(),
+  analysis: z
+    .object({
+      drivers: z.array(z.string()).max(5),
+      assumptions: z.array(z.string()).max(4),
+      forecastSignals: z.array(z.string()).max(4),
+      missingData: z.array(z.string()).max(4),
+    })
+    .nullable()
+    .optional(),
   risks: z.array(z.string()).max(4),
   evidence: z
     .array(
@@ -45,12 +73,77 @@ const replyJsonSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
+    intent: {
+      type: "string",
+      enum: [
+        "decision",
+        "risk",
+        "diagnosis",
+        "forecast",
+        "comparison",
+        "general",
+      ],
+    },
     answer: { type: "string" },
+    summary: { type: "string" },
     confidence: { type: "string", enum: ["low", "medium", "high"] },
-    recommendations: {
-      type: "array",
-      items: { type: "string" },
-      maxItems: 4,
+    decision: {
+      anyOf: [
+        {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            recommendation: { type: "string" },
+            tradeoff: { type: "string" },
+            impactWindow: { type: "string" },
+            whatCouldChange: { type: "string" },
+          },
+          required: [
+            "recommendation",
+            "tradeoff",
+            "impactWindow",
+            "whatCouldChange",
+          ],
+        },
+        { type: "null" },
+      ],
+    },
+    analysis: {
+      anyOf: [
+        {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            drivers: {
+              type: "array",
+              items: { type: "string" },
+              maxItems: 5,
+            },
+            assumptions: {
+              type: "array",
+              items: { type: "string" },
+              maxItems: 4,
+            },
+            forecastSignals: {
+              type: "array",
+              items: { type: "string" },
+              maxItems: 4,
+            },
+            missingData: {
+              type: "array",
+              items: { type: "string" },
+              maxItems: 4,
+            },
+          },
+          required: [
+            "drivers",
+            "assumptions",
+            "forecastSignals",
+            "missingData",
+          ],
+        },
+        { type: "null" },
+      ],
     },
     risks: {
       type: "array",
@@ -78,9 +171,12 @@ const replyJsonSchema = {
     },
   },
   required: [
+    "intent",
     "answer",
+    "summary",
     "confidence",
-    "recommendations",
+    "decision",
+    "analysis",
     "risks",
     "evidence",
     "followUpQuestions",
@@ -257,9 +353,12 @@ function extractOutputText(payload: any) {
 
 function buildFallbackReply(answer: string): FinanceChatReply {
   return {
+    intent: "general",
     answer,
+    summary: answer,
     confidence: "low",
-    recommendations: [],
+    decision: null,
+    analysis: null,
     risks: [],
     evidence: [],
     followUpQuestions: [],
@@ -372,6 +471,7 @@ async function createOpenAIResponse(
 
 async function createFallbackOpenAIResponse(params: {
   model: string;
+  intentPrompt: string;
   previousResponseId?: string;
   history: Array<{ role: "user" | "assistant"; content: string }>;
   message: string;
@@ -392,6 +492,7 @@ async function createFallbackOpenAIResponse(params: {
             type: "input_text",
             text: [
               buildFinanceSystemPrompt(params.briefing),
+              params.intentPrompt,
               "Do not call tools in this fallback path. Answer only from the provided briefing.",
             ].join(" "),
           },
@@ -446,6 +547,8 @@ export async function POST(request: NextRequest) {
       timezone: body.timezone,
     });
     const { briefing } = toolContext;
+    const detectedIntent = detectFinanceIntent(body.message);
+    const intentPrompt = buildFinanceIntentPrompt(detectedIntent);
     const model =
       process.env.OPENAI_FINANCE_MODEL || process.env.OPENAI_MODEL || "gpt-5.4";
 
@@ -460,7 +563,7 @@ export async function POST(request: NextRequest) {
           content: [
             {
               type: "input_text",
-              text: buildFinanceSystemPrompt(briefing),
+              text: [buildFinanceSystemPrompt(briefing), intentPrompt].join(" "),
             },
           ],
         },
@@ -502,6 +605,7 @@ export async function POST(request: NextRequest) {
         previousResponseId: body.previousResponseId,
         history: body.history,
         message: body.message,
+        intentPrompt,
         briefing,
       }));
     }
@@ -587,6 +691,7 @@ export async function POST(request: NextRequest) {
               : body.previousResponseId,
           history: body.history,
           message: body.message,
+          intentPrompt,
           briefing,
         });
 
