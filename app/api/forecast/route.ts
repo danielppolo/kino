@@ -134,12 +134,28 @@ const _computeForecast = unstable_cache(
       };
     }
 
-    const rawBalanceSeries = sortedMonths
+    // Detect if the last balance record belongs to the current (still-open) month.
+    // wallet_monthly_balances is updated in real-time by triggers, so the current month
+    // has a partial balance (only days elapsed so far).  Its delta vs. the previous month
+    // would be artificially small (incomplete month), which skews ARIMA training.
+    // We keep it as the projection anchor but exclude it from the delta training series.
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+    const lastSortedMonth = sortedMonths[sortedMonths.length - 1];
+    const isPartialMonth = lastSortedMonth === currentMonthKey;
+
+    // The anchor is the latest known balance (partial month is fine as a starting point).
+    const currentBalance = balanceByMonth[lastSortedMonth];
+
+    // Training uses only complete months so deltas represent full monthly cash flows.
+    const completeMonths = isPartialMonth ? sortedMonths.slice(0, -1) : sortedMonths;
+
+    const rawBalanceSeries = completeMonths
       .map((m) => balanceByMonth[m])
       .slice(-TRAINING_WINDOW);
 
     // Align net series to the same window for shock/recovery detection
-    const rawNetSeries = sortedMonths
+    const rawNetSeries = completeMonths
       .map((m) => netByMonth[m] ?? 0)
       .slice(-TRAINING_WINDOW);
 
@@ -150,21 +166,36 @@ const _computeForecast = unstable_cache(
       ? rawBalanceSeries.slice(recoveryIdx)
       : rawBalanceSeries;
 
-    // Winsorize interior points only — preserve the last value (actual current balance)
-    // so ARIMA projects from the true current state, not a clipped one.
-    const lastTrainingValue = trainingSeries[trainingSeries.length - 1];
-    const cleanedSeries = [
-      ...winsorize(trainingSeries.slice(0, -1)),
-      lastTrainingValue,
-    ];
+    // Train on the monthly-delta series rather than absolute balances.
+    // Absolute-value ARIMA predicts mean-reversion toward the historical average,
+    // causing a flat forecast when the current balance differs from that average.
+    // Delta-based ARIMA captures cash-flow patterns (income/expense cycles) and
+    // projects them forward from the ACTUAL current balance — no mean-reversion artefact.
+    const rawDeltas = trainingSeries.slice(1).map((v, i) => v - trainingSeries[i]);
 
-    // Normalize for ARIMA numerical stability (large absolute values can cause issues)
-    const scale = Math.max(1, ...cleanedSeries.map(Math.abs));
-    const normalizedSeries = cleanedSeries.map((v) => v / scale);
+    // Need at least 3 deltas to fit a model
+    if (rawDeltas.length < 3) {
+      return {
+        forecast: [],
+        avgMonthlyBurn,
+        metadata: {
+          trainingMonths: trainingSeries.length,
+          method: "insufficient-data",
+          recoveryDetected,
+        },
+      };
+    }
 
-    // Run Auto-ARIMA; use seasonal variant if we have ≥ 24 months
-    const useSeasonal = cleanedSeries.length >= 24;
-    let predictions: number[];
+    // Winsorize deltas to suppress one-off large transfers
+    const cleanedDeltas = winsorize(rawDeltas);
+
+    // Normalize for ARIMA numerical stability
+    const scale = Math.max(1, ...cleanedDeltas.map(Math.abs));
+    const normalizedDeltas = cleanedDeltas.map((d) => d / scale);
+
+    // Run Auto-ARIMA on the delta series; use seasonal variant if we have ≥ 24 deltas
+    const useSeasonal = cleanedDeltas.length >= 24;
+    let predictedDeltas: number[];
     let errors: number[];
     let method: string;
 
@@ -174,37 +205,35 @@ const _computeForecast = unstable_cache(
         s: useSeasonal ? 12 : 0,
         verbose: false,
       });
-      arima.train(normalizedSeries);
+      arima.train(normalizedDeltas);
       const result = arima.predict(horizon) as [number[], number[]];
-      predictions = result[0].map((v) => v * scale);
+      predictedDeltas = result[0].map((v) => v * scale);
       errors = result[1].map((v) => Math.abs(v) * scale);
-      method = useSeasonal ? "auto-SARIMA[12]" : "auto-ARIMA";
+      method = useSeasonal ? "auto-SARIMA[12]-delta" : "auto-ARIMA-delta";
     } catch {
-      // Fallback: project last observed slope
-      const n = cleanedSeries.length;
-      const last = cleanedSeries[n - 1];
-      const slope = n > 1 ? last - cleanedSeries[n - 2] : 0;
-      predictions = Array.from(
-        { length: horizon },
-        (_, i) => last + slope * (i + 1),
-      );
-      errors = Array(horizon).fill(Math.abs(last) * 0.1);
+      // Fallback: repeat the trimmed-mean delta (linear extrapolation)
+      const avgDelta = calculateTrimmedMean(rawDeltas);
+      predictedDeltas = Array(horizon).fill(avgDelta);
+      errors = Array(horizon).fill(Math.abs(avgDelta) * 0.5 + Math.abs(currentBalance) * 0.02);
       method = "linear-fallback";
     }
 
-    // Build output months by advancing from the last known balance month
+    // Apply predicted deltas cumulatively from the actual current balance
     const lastMonth = sortedMonths[sortedMonths.length - 1];
     const [ly, lm] = lastMonth.split("-").map(Number);
 
-    const forecast: ForecastPoint[] = predictions.map((value, i) => {
+    let running = currentBalance;
+    const forecast: ForecastPoint[] = predictedDeltas.map((delta, i) => {
+      running += delta;
       const d = new Date(ly, lm - 1 + i + 1, 1);
       const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-      const err = errors[i] ?? 0;
+      // Accumulate errors (uncertainty grows over time)
+      const cumulativeErr = errors.slice(0, i + 1).reduce((s, e) => s + e, 0);
       return {
         month,
-        value,
-        lower: value - Z_95 * err,
-        upper: value + Z_95 * err,
+        value: running,
+        lower: running - Z_95 * cumulativeErr,
+        upper: running + Z_95 * cumulativeErr,
       };
     });
 
@@ -212,7 +241,7 @@ const _computeForecast = unstable_cache(
       forecast,
       avgMonthlyBurn,
       metadata: {
-        trainingMonths: cleanedSeries.length,
+        trainingMonths: cleanedDeltas.length,
         method,
         recoveryDetected,
       },
