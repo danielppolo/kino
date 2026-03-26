@@ -25,6 +25,13 @@ import {
 } from "@/utils/supabase/queries";
 import { createClient } from "@/utils/supabase/server";
 import type { Wallet } from "@/utils/supabase/types";
+import {
+  type FinanceMemory,
+  type FinanceMemoryDerivedContext,
+  type FinanceMemoryProfile,
+  createEmptyFinanceMemory,
+  parseFinanceMemory,
+} from "@/utils/types/finance-memory";
 
 export interface FinanceChatEvidence {
   label: string;
@@ -147,6 +154,29 @@ export interface FinancialBriefing {
     amountInBaseCents: number;
   }>;
   notableSignals: string[];
+  memory: {
+    profile: FinanceMemoryProfile;
+    derivedContext: FinanceMemoryDerivedContext;
+    localizationContext: {
+      countryOfResidence: string | null;
+      taxRegion: string | null;
+      preferredLanguage: string | null;
+      basePlanningCurrency: string;
+      heldCurrencies: string[];
+      accessibleMarkets: string[];
+      accessibleInstruments: string[];
+      brokeragePlatforms: string[];
+      accountTypes: string[];
+      riskTolerance: string | null;
+      investmentGoals: string[];
+      liquidityNeeds: string | null;
+      timeHorizon: string | null;
+      constraints: string[];
+      knownLimitations: string[];
+      freshnessNote: string;
+      missingProfileFields: string[];
+    };
+  };
 }
 
 interface WorkspaceContext {
@@ -154,6 +184,7 @@ interface WorkspaceContext {
     id: string;
     name: string;
     base_currency: string | null;
+    finance_memory: FinanceMemory | null;
   };
   wallets: Wallet[];
 }
@@ -219,7 +250,7 @@ export function detectFinanceIntent(message: string): FinanceChatIntent {
   const normalized = message.toLowerCase();
 
   if (
-    /\b(can i|should i|is it safe|afford|worth it|cut first|reduce|increase spending|safe to spend)\b/.test(
+    /\b(can i|should i|is it safe|afford|worth it|cut first|reduce|increase spending|safe to spend|invest|investment|portfolio|allocate|allocation|buy now|buy next|etf|bond|stock)\b/.test(
       normalized,
     )
   ) {
@@ -290,6 +321,192 @@ function toBaseCents(
   return convertCurrency(amountCents, currency, baseCurrency, conversionRates);
 }
 
+function walletTypeLabel(walletType: Wallet["wallet_type"]) {
+  if (walletType === "bank_account") return "Bank accounts";
+  if (walletType === "card") return "Cards";
+  return "Cash";
+}
+
+function deriveFinanceMemoryContext(params: {
+  briefing: Omit<FinancialBriefing, "memory">;
+  visibleWallets: Wallet[];
+  storedMemory: FinanceMemory;
+}) {
+  const { briefing, visibleWallets, storedMemory } = params;
+  const walletTypes = Array.from(
+    new Set(visibleWallets.map((wallet) => wallet.wallet_type)),
+  );
+
+  const walletTypeTotals = new Map<string, number>();
+  briefing.currentPosition.balanceByWallet.forEach((wallet) => {
+    const walletType =
+      visibleWallets.find((item) => item.id === wallet.walletId)?.wallet_type ??
+      "bank_account";
+    walletTypeTotals.set(
+      walletType,
+      (walletTypeTotals.get(walletType) ?? 0) + wallet.balanceInBaseCents,
+    );
+  });
+
+  const totalBalance = briefing.currentPosition.totalBalanceCents || 1;
+  const observedAssetExposureSummary = Array.from(walletTypeTotals.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([walletType, balanceCents]) => ({
+      label: walletTypeLabel(walletType as Wallet["wallet_type"]),
+      detail: `${Math.round((balanceCents / totalBalance) * 100)}% of tracked balance is held in ${walletTypeLabel(walletType as Wallet["wallet_type"]).toLowerCase()}.`,
+    }));
+
+  const currenciesHeld = Array.from(
+    new Set([
+      ...briefing.currentPosition.balanceByWallet.map((wallet) => wallet.currency),
+      ...briefing.composition.currencyExposure.map((item) => item.currency),
+    ]),
+  );
+
+  const incomeStabilitySignals: string[] = [];
+  const liquidityPressureSignals: string[] = [];
+  const recentBehavioralNotes = [...briefing.notableSignals];
+
+  if (
+    briefing.historical.trailing.avgIncomeCents > 0 &&
+    briefing.historical.trailing.netVolatilityCents <=
+      briefing.historical.trailing.avgIncomeCents * 0.25
+  ) {
+    incomeStabilitySignals.push(
+      "Income has been relatively stable compared with recent monthly volatility.",
+    );
+  } else if (briefing.historical.trailing.netVolatilityCents > 0) {
+    incomeStabilitySignals.push(
+      "Recent monthly net cash flow has been volatile, which lowers confidence in long-horizon investing decisions.",
+    );
+  }
+
+  if (briefing.historical.trailing.last3MonthsNetCents < 0) {
+    liquidityPressureSignals.push(
+      "The last 3 months are net negative, so liquidity needs may matter more than long-duration investments.",
+    );
+  }
+
+  if ((briefing.composition.latestBillBurdenPercent ?? 0) >= 40) {
+    liquidityPressureSignals.push(
+      "Bill burden is elevated relative to income, which can limit investable surplus.",
+    );
+  }
+
+  if (
+    briefing.forecast.months.at(-1)?.projectedBalanceCents !== undefined &&
+    (briefing.forecast.months.at(-1)?.projectedBalanceCents ?? 0) <
+      briefing.forecast.currentBalanceCents
+  ) {
+    liquidityPressureSignals.push(
+      "The current forecast trends below the present balance, so investment suggestions should account for downside liquidity risk.",
+    );
+  }
+
+  let cashVsInvestedBias: string | null = null;
+  if (
+    walletTypes.every((walletType) =>
+      ["bank_account", "card", "cash"].includes(walletType),
+    )
+  ) {
+    cashVsInvestedBias =
+      "Tracked assets are mostly cash and spending-account oriented; explicit investment custody is not modeled in current wallets.";
+  }
+
+  const nextDerived: FinanceMemoryDerivedContext = {
+    currencies_held: currenciesHeld,
+    wallet_types: walletTypes,
+    observed_asset_exposure_summary: observedAssetExposureSummary,
+    observed_instrument_patterns:
+      storedMemory.derived_context.observed_instrument_patterns,
+    observed_country_market_bias:
+      storedMemory.derived_context.observed_country_market_bias,
+    cash_vs_invested_bias: cashVsInvestedBias,
+    income_stability_signals: incomeStabilitySignals,
+    liquidity_pressure_signals: liquidityPressureSignals,
+    recent_behavioral_notes: recentBehavioralNotes,
+    last_derived_at: new Date().toISOString(),
+  };
+
+  const mergedMemory: FinanceMemory = {
+    ...storedMemory,
+    derived_context: nextDerived,
+    derived_updated_at: nextDerived.last_derived_at,
+    provenance: {
+      profile: "user_declared",
+      derived_context: "system_derived",
+    },
+  };
+
+  const profile = mergedMemory.profile;
+  const missingProfileFields = [
+    profile.country_of_residence ? null : "country_of_residence",
+    profile.markets_accessible.length > 0 ? null : "markets_accessible",
+    profile.instruments_accessible.length > 0 ? null : "instruments_accessible",
+    profile.risk_tolerance ? null : "risk_tolerance",
+    profile.time_horizon ? null : "time_horizon",
+  ].filter(Boolean) as string[];
+
+  return {
+    memory: mergedMemory,
+    localizationContext: {
+      countryOfResidence: profile.country_of_residence,
+      taxRegion: profile.tax_region,
+      preferredLanguage: profile.preferred_language,
+      basePlanningCurrency:
+        profile.base_planning_currency ?? briefing.scope.baseCurrency,
+      heldCurrencies: currenciesHeld,
+      accessibleMarkets: profile.markets_accessible,
+      accessibleInstruments: profile.instruments_accessible,
+      brokeragePlatforms: profile.brokerage_platforms,
+      accountTypes: profile.account_types,
+      riskTolerance: profile.risk_tolerance,
+      investmentGoals: profile.investment_goals,
+      liquidityNeeds: profile.liquidity_needs,
+      timeHorizon: profile.time_horizon,
+      constraints: profile.constraints,
+      knownLimitations: profile.known_limitations,
+      freshnessNote:
+        "Market-access and instrument context is profile-based memory and may be stale or incomplete.",
+      missingProfileFields,
+    },
+  };
+}
+
+async function syncWorkspaceFinanceMemory(
+  client: Awaited<ReturnType<typeof createClient>>,
+  workspaceId: string,
+  previousMemory: FinanceMemory | null,
+  nextMemory: FinanceMemory,
+) {
+  const previousComparable = previousMemory
+    ? {
+        ...previousMemory.derived_context,
+        last_derived_at: null,
+      }
+    : null;
+  const nextComparable = {
+    ...nextMemory.derived_context,
+    last_derived_at: null,
+  };
+
+  if (
+    previousMemory &&
+    JSON.stringify(previousComparable) === JSON.stringify(nextComparable)
+  ) {
+    return;
+  }
+
+  const { error } = await client
+    .from("workspaces")
+    .update({ finance_memory: nextMemory as any })
+    .eq("id", workspaceId);
+
+  if (error) {
+    console.warn("Finance memory sync failed", error);
+  }
+}
+
 async function resolveWorkspaceContext(): Promise<WorkspaceContext> {
   const supabase = await createClient();
   const {
@@ -309,7 +526,7 @@ async function resolveWorkspaceContext(): Promise<WorkspaceContext> {
         .maybeSingle(),
       supabase
         .from("workspace_members")
-        .select("workspace_id, workspaces(id, name, base_currency)")
+        .select("workspace_id, workspaces(id, name, base_currency, finance_memory)")
         .eq("user_id", user.id),
     ]);
 
@@ -323,6 +540,7 @@ async function resolveWorkspaceContext(): Promise<WorkspaceContext> {
         id: string;
         name: string;
         base_currency: string | null;
+        finance_memory?: unknown;
       } | null;
     }> | null) ?? [];
 
@@ -339,7 +557,12 @@ async function resolveWorkspaceContext(): Promise<WorkspaceContext> {
   if (walletsResult.error) throw walletsResult.error;
 
   return {
-    workspace: activeMembership.workspaces,
+    workspace: {
+      ...activeMembership.workspaces,
+      finance_memory: activeMembership.workspaces.finance_memory
+        ? parseFinanceMemory(activeMembership.workspaces.finance_memory)
+        : null,
+    },
     wallets: walletsResult.data ?? [],
   };
 }
@@ -544,14 +767,14 @@ function buildForecastSummary(
 
   return {
     trainingMonths,
-    confidence,
+    confidence: confidence as "low" | "medium" | "high",
     recoveryDetected: recoveryIdx > 0,
     currentBalanceCents,
     months,
   };
 }
 
-function buildNotableSignals(briefing: FinancialBriefing) {
+function buildNotableSignals(briefing: Omit<FinancialBriefing, "memory">) {
   const signals: string[] = [];
 
   if (briefing.historical.trailing.last3MonthsNetCents < 0) {
@@ -784,7 +1007,7 @@ export async function buildFinancialBriefing(
 
   const trailingNetSeries = monthlySeries.map((item) => item.netCents);
 
-  const briefing: FinancialBriefing = {
+  const briefingBase: Omit<FinancialBriefing, "memory"> = {
     generatedAt: new Date().toISOString(),
     scope: {
       workspaceId: context.workspace.id,
@@ -857,7 +1080,30 @@ export async function buildFinancialBriefing(
     notableSignals: [],
   };
 
-  briefing.notableSignals = buildNotableSignals(briefing);
+  briefingBase.notableSignals = buildNotableSignals(briefingBase);
+
+  const storedMemory = context.workspace.finance_memory ?? createEmptyFinanceMemory();
+  const memoryContext = deriveFinanceMemoryContext({
+    briefing: briefingBase,
+    visibleWallets,
+    storedMemory,
+  });
+
+  const briefing: FinancialBriefing = {
+    ...briefingBase,
+    memory: {
+      profile: memoryContext.memory.profile,
+      derivedContext: memoryContext.memory.derived_context,
+      localizationContext: memoryContext.localizationContext,
+    },
+  };
+
+  await syncWorkspaceFinanceMemory(
+    supabase,
+    context.workspace.id,
+    context.workspace.finance_memory,
+    memoryContext.memory,
+  );
 
   return {
     briefing,
@@ -1089,6 +1335,7 @@ export async function executeFinanceTool(
 }
 
 export function buildFinanceSystemPrompt(briefing: FinancialBriefing) {
+  const localization = briefing.memory.localizationContext;
   return [
     "You are a finance copilot inside a personal/workspace finance product.",
     "Be evidence-first, concise, and advisory-only.",
@@ -1097,8 +1344,27 @@ export function buildFinanceSystemPrompt(briefing: FinancialBriefing) {
     "If the data is insufficient or uncertain, say so plainly.",
     "Always quantify claims when possible and cite the most relevant evidence.",
     "Use tools when the user asks for transaction-level causes, forecast detail, bill detail, or category drilldowns.",
+    "Tailor investment and market suggestions to the declared accessible markets and instruments only.",
+    "Treat stored market-access context as profile memory, not guaranteed live brokerage availability.",
+    "Never imply legal, tax, or regulatory certainty from stored memory.",
+    "For investment questions, explain fit, tradeoffs, currency exposure, and liquidity implications before naming candidate instruments.",
+    "If localized profile memory is missing, say what is missing and answer more generally.",
     `Base currency: ${briefing.scope.baseCurrency}.`,
     `Timezone: ${briefing.scope.timezone}.`,
+    `Country of residence: ${localization.countryOfResidence ?? "unknown"}.`,
+    `Tax region: ${localization.taxRegion ?? "unknown"}.`,
+    `Held currencies: ${localization.heldCurrencies.join(", ") || "unknown"}.`,
+    `Accessible markets: ${localization.accessibleMarkets.join(", ") || "not provided"}.`,
+    `Accessible instruments: ${localization.accessibleInstruments.join(", ") || "not provided"}.`,
+    `Brokerage platforms: ${localization.brokeragePlatforms.join(", ") || "not provided"}.`,
+    `Account types: ${localization.accountTypes.join(", ") || "not provided"}.`,
+    `Risk tolerance: ${localization.riskTolerance ?? "not provided"}.`,
+    `Liquidity needs: ${localization.liquidityNeeds ?? "not provided"}.`,
+    `Time horizon: ${localization.timeHorizon ?? "not provided"}.`,
+    `Investment goals: ${localization.investmentGoals.join(", ") || "not provided"}.`,
+    `Constraints: ${localization.constraints.join(", ") || "none declared"}.`,
+    `Known limitations: ${localization.knownLimitations.join(", ") || "none declared"}.`,
+    localization.freshnessNote,
     "Return JSON matching the requested schema.",
   ].join(" ");
 }

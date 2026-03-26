@@ -6,6 +6,7 @@ import { createClient } from "@/utils/supabase/client";
 import { switchActiveWorkspace } from "@/utils/supabase/mutations";
 import { listWallets } from "@/utils/supabase/queries";
 import { FeatureFlags } from "@/utils/types/feature-flags";
+import { FinanceMemory, parseFinanceMemory } from "@/utils/types/finance-memory";
 
 export interface CurrencyConversion {
   rate: number;
@@ -19,6 +20,7 @@ export interface Workspace {
   icon: string | null;
   base_currency: string;
   feature_flags: FeatureFlags | null;
+  finance_memory: FinanceMemory | null;
   created_at: string;
   updated_at: string;
 }
@@ -77,11 +79,19 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({
         .order("name");
 
       if (error) throw error;
-      const rows = (data || []) as Array<{ feature_flags?: unknown } & Omit<Workspace, "feature_flags">>;
+      const rows = (data || []) as Array<
+        {
+          feature_flags?: unknown;
+          finance_memory?: unknown;
+        } & Omit<Workspace, "feature_flags" | "finance_memory">
+      >;
       return rows.map((w) => ({
         ...w,
         feature_flags: w.feature_flags
           ? (w.feature_flags as Workspace["feature_flags"])
+          : null,
+        finance_memory: w.finance_memory
+          ? parseFinanceMemory(w.finance_memory)
           : null,
       }));
     },

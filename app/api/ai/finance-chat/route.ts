@@ -398,6 +398,11 @@ function buildPromptBriefing(
     composition: briefing.composition,
     recentTransactions: briefing.recentTransactions.slice(0, 4),
     notableSignals: briefing.notableSignals,
+    memory: {
+      profile: briefing.memory.profile,
+      derivedContext: briefing.memory.derivedContext,
+      localizationContext: briefing.memory.localizationContext,
+    },
   };
 }
 
@@ -540,13 +545,22 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = RequestSchema.parse(await request.json());
-    const toolContext = await buildFinancialBriefing({
+    const briefingResult = await buildFinancialBriefing({
       walletId: body.walletId,
       from: body.from,
       to: body.to,
       timezone: body.timezone,
     });
-    const { briefing } = toolContext;
+    const { briefing } = briefingResult;
+    const toolContext = {
+      ...briefingResult,
+      scope: {
+        walletId: body.walletId,
+        from: body.from,
+        to: body.to,
+        timezone: body.timezone,
+      },
+    };
     const detectedIntent = detectFinanceIntent(body.message);
     const intentPrompt = buildFinanceIntentPrompt(detectedIntent);
     const model =
@@ -563,7 +577,9 @@ export async function POST(request: NextRequest) {
           content: [
             {
               type: "input_text",
-              text: [buildFinanceSystemPrompt(briefing), intentPrompt].join(" "),
+              text: [buildFinanceSystemPrompt(briefing), intentPrompt].join(
+                " ",
+              ),
             },
           ],
         },

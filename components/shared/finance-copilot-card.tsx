@@ -114,7 +114,7 @@ function detectClientIntent(message: string): ChatIntent {
   const normalized = message.toLowerCase();
 
   if (
-    /\b(can i|should i|is it safe|afford|worth it|cut first|reduce|increase spending|safe to spend)\b/.test(
+    /\b(can i|should i|is it safe|afford|worth it|cut first|reduce|increase spending|safe to spend|invest|investment|portfolio|allocate|allocation|buy now|buy next|etf|bond|stock)\b/.test(
       normalized,
     )
   ) {
