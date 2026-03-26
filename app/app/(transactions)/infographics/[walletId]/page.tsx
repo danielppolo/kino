@@ -21,7 +21,6 @@ import { TagCloudAnalyticsChart } from "@/components/charts/tag-cloud-analytics-
 import { TransactionSizeDistributionChart } from "@/components/charts/transaction-size-distribution-chart";
 import { TransactionTypeDistributionChart } from "@/components/charts/transaction-type-distribution-chart";
 import { WalletNetBalanceLineChart } from "@/components/charts/wallet-net-balance-line-chart";
-import { FinanceCopilotCard } from "@/components/shared/finance-copilot-card";
 import { Filters } from "@/utils/supabase/queries";
 
 interface PageParams {
@@ -37,15 +36,6 @@ async function InfographicsPage({ params, searchParams }: PageParams) {
 
   return (
     <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3">
-      <div className="md:col-span-2 lg:col-span-3">
-        <FinanceCopilotCard
-          walletId={walletId}
-          from={filters.from}
-          to={filters.to}
-          scopeLabel="this wallet"
-        />
-      </div>
-
       {/* Overview */}
       <div className="md:col-span-2 lg:col-span-3">
         <AccumulatedAreaChart

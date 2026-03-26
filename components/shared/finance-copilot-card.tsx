@@ -1,37 +1,26 @@
 "use client";
 
-import { Fragment, useMemo, useState, useTransition } from "react";
+import {
+  Fragment,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 
 import {
   AlertCircle,
   ArrowUpRight,
   Bot,
-  ChevronRight,
-  CircleDollarSign,
-  Database,
-  Info,
   Loader2,
-  type LucideIcon,
-  ShieldAlert,
+  SendHorizonal,
   Sparkles,
-  Target,
-  Wallet,
+  User2,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
@@ -106,23 +95,6 @@ function formatMoney(cents: number, currency: string) {
   }).format(cents / 100);
 }
 
-function SectionTitle({
-  icon: Icon,
-  title,
-}: {
-  icon: LucideIcon;
-  title: string;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <Icon className="size-4 text-primary" />
-      <Text strong className="text-sm">
-        {title}
-      </Text>
-    </div>
-  );
-}
-
 function renderInlineMarkdown(text: string) {
   const segments = text.split(/(`[^`]+`|\*\*[^*]+\*\*)/g);
 
@@ -131,7 +103,7 @@ function renderInlineMarkdown(text: string) {
       return (
         <code
           key={`${segment}-${index}`}
-          className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.9em]"
+          className="rounded bg-background/80 px-1.5 py-0.5 font-mono text-[0.9em]"
         >
           {segment.slice(1, -1)}
         </code>
@@ -285,18 +257,14 @@ function MarkdownContent({
           return (
             <pre
               key={blockIndex}
-              className="overflow-x-auto rounded-lg border border-border/70 bg-background px-3 py-2 text-xs"
+              className="overflow-x-auto rounded-2xl border border-border/70 bg-background/80 px-3 py-2 text-xs"
             >
               <code>{block.content}</code>
             </pre>
           );
         }
 
-        return (
-          <p key={blockIndex}>
-            {renderInlineMarkdown(block.content)}
-          </p>
-        );
+        return <p key={blockIndex}>{renderInlineMarkdown(block.content)}</p>;
       })}
     </div>
   );
@@ -316,11 +284,21 @@ export function FinanceCopilotCard({
     null,
   );
   const [isPending, startTransition] = useTransition();
+  const threadRef = useRef<HTMLDivElement | null>(null);
 
   const suggestedPrompts = useMemo(
     () => (walletId ? WALLET_PROMPTS : WORKSPACE_PROMPTS),
     [walletId],
   );
+
+  useEffect(() => {
+    const container = threadRef.current;
+    if (!container) return;
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [messages, isPending]);
 
   const sendMessage = (message: string) => {
     const trimmed = message.trim();
@@ -377,7 +355,8 @@ export function FinanceCopilotCard({
       } catch (sendError) {
         setMessages((current) =>
           current.filter(
-            (_, index) => !(index === current.length - 1 && current[index]?.content === trimmed),
+            (_, index) =>
+              !(index === current.length - 1 && current[index]?.content === trimmed),
           ),
         );
         setError(
@@ -391,78 +370,102 @@ export function FinanceCopilotCard({
 
   return (
     <TooltipProvider delayDuration={150}>
-      <Card className="border-border/70 bg-gradient-to-br from-card via-card to-muted/30">
-        <CardHeader className="gap-3">
-          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <Bot className="size-4" />
+      <div className="flex h-full min-h-0 flex-col bg-background">
+        <div
+          ref={threadRef}
+          className="flex-1 space-y-6 overflow-y-auto px-4 py-5 [content-visibility:auto] md:px-6"
+        >
+          {messages.length === 0 ? (
+            <div className="mx-auto flex max-w-3xl flex-col gap-6 py-8">
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Bot className="size-5" />
+                  </div>
+                  <div>
+                    <Text strong className="text-base">
+                      Finance Copilot
+                    </Text>
+                    <Text muted className="text-sm">
+                      Advisory chat for {scopeLabel}
+                    </Text>
+                  </div>
                 </div>
-                <CardTitle className="text-xl">Finance Copilot</CardTitle>
-              </div>
-              <CardDescription className="max-w-3xl text-sm text-muted-foreground">
-                Ask about runway, burn rate, forecast risk, spending tradeoffs, or
-                category cuts. Answers stay advisory, structured, and grounded in
-                the analytics context for {scopeLabel}.
-              </CardDescription>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">
-                {walletId ? "Wallet scope" : "Workspace scope"}
-              </Badge>
-              {from && to ? (
-                <Badge variant="secondary">
-                  {from} to {to}
-                </Badge>
-              ) : (
-                <Badge variant="secondary">All available history</Badge>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.75fr)_minmax(320px,0.95fr)]">
-            <div className="space-y-5">
-              {messages.length === 0 ? (
-                <div className="grid gap-3 md:grid-cols-2">
-                  {suggestedPrompts.map((prompt) => (
-                    <button
-                      key={prompt}
-                      type="button"
-                      className="rounded-xl border border-border/70 bg-background/70 p-4 text-left transition-colors hover:bg-accent"
-                      onClick={() => sendMessage(prompt)}
-                      disabled={isPending}
-                    >
-                      <div className="flex items-center gap-2 text-sm font-medium">
-                        <Sparkles className="size-4 text-primary" />
-                        {prompt}
-                      </div>
-                      <Text muted className="mt-1 text-xs leading-5">
-                        Use this as a starting question.
-                      </Text>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="max-h-[620px] space-y-4 overflow-y-auto pr-1 [content-visibility:auto]">
-                  {messages.map((message, index) => (
-                    <div
-                      key={`${message.role}-${index}`}
-                      className={cn(
-                        "rounded-2xl border p-4 md:p-5",
-                        message.role === "user"
-                          ? "ml-auto max-w-3xl border-primary/20 bg-primary/5"
-                          : "max-w-4xl border-border/70 bg-background/85 shadow-sm",
+                <Text className="max-w-2xl text-sm leading-6 text-muted-foreground">
+                  Ask about runway, forecast risk, spending tradeoffs, category
+                  cuts, or the recent drivers behind cash flow changes.
+                </Text>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline">
+                    {walletId ? "Wallet scope" : "Workspace scope"}
+                  </Badge>
+                  {from && to ? (
+                    <Badge variant="secondary">
+                      {from} to {to}
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">All available history</Badge>
+                  )}
+                  {briefingSummary ? (
+                    <Badge variant="outline">
+                      Balance{" "}
+                      {formatMoney(
+                        briefingSummary.totalBalanceCents,
+                        briefingSummary.baseCurrency,
                       )}
-                    >
-                      <div className="mb-3 flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          <Text strong className="text-sm">
-                            {message.role === "user" ? "You" : "Copilot"}
-                          </Text>
+                    </Badge>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {suggestedPrompts.map((prompt) => (
+                  <Button
+                    key={prompt}
+                    type="button"
+                    variant="outline"
+                    className="h-auto whitespace-normal rounded-full px-4 py-2 text-left"
+                    onClick={() => sendMessage(prompt)}
+                    disabled={isPending}
+                  >
+                    <Sparkles className="mr-2 size-4 shrink-0 text-primary" />
+                    {prompt}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="mx-auto flex max-w-4xl flex-col gap-6">
+              {messages.map((message, index) => {
+                const isUser = message.role === "user";
+
+                return (
+                  <div
+                    key={`${message.role}-${index}`}
+                    className={cn(
+                      "flex w-full gap-3",
+                      isUser ? "justify-end" : "justify-start",
+                    )}
+                  >
+                    {!isUser ? (
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <Bot className="size-5" />
+                      </div>
+                    ) : null}
+
+                    <div className="max-w-[min(82%,48rem)] space-y-3">
+                      <div
+                        className={cn(
+                          "rounded-3xl px-4 py-3 shadow-sm",
+                          isUser
+                            ? "rounded-br-md bg-primary text-primary-foreground"
+                            : "rounded-bl-md border border-border/70 bg-muted/45",
+                        )}
+                      >
+                        <div className="mb-2 flex items-center gap-2 text-xs">
+                          <span className="font-medium">
+                            {isUser ? "You" : "Copilot"}
+                          </span>
                           {message.reply ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -471,8 +474,9 @@ export function FinanceCopilotCard({
                                     variant={confidenceVariant(
                                       message.reply.confidence,
                                     )}
+                                    className="rounded-full text-[10px]"
                                   >
-                                    Confidence: {message.reply.confidence}
+                                    {message.reply.confidence} confidence
                                   </Badge>
                                 </div>
                               </TooltipTrigger>
@@ -483,14 +487,22 @@ export function FinanceCopilotCard({
                             </Tooltip>
                           ) : null}
                         </div>
+
+                        {isUser ? (
+                          <Text className="whitespace-pre-wrap text-sm leading-6 text-primary-foreground">
+                            {message.content}
+                          </Text>
+                        ) : message.reply ? (
+                          <MarkdownContent content={message.reply.answer} />
+                        ) : (
+                          <Text className="whitespace-pre-wrap text-sm leading-6">
+                            {message.content}
+                          </Text>
+                        )}
                       </div>
 
-                      {message.role === "user" ? (
-                        <Text className="whitespace-pre-wrap text-sm leading-6">
-                          {message.content}
-                        </Text>
-                      ) : message.reply ? (
-                        <div className="space-y-4">
+                      {message.reply ? (
+                        <div className="space-y-3 px-1">
                           {message.reply.evidence.length > 0 ? (
                             <div className="flex flex-wrap gap-2">
                               {message.reply.evidence.map((item) => (
@@ -499,7 +511,7 @@ export function FinanceCopilotCard({
                                     <div className="inline-flex">
                                       <Badge
                                         variant="outline"
-                                        className="cursor-default rounded-full px-3 py-1 text-[11px] tracking-[0.08em]"
+                                        className="cursor-default rounded-full px-3 py-1 text-[11px] tracking-[0.04em]"
                                       >
                                         {item.label}: {item.value}
                                       </Badge>
@@ -513,61 +525,21 @@ export function FinanceCopilotCard({
                             </div>
                           ) : null}
 
-                          <div className="rounded-xl border border-border/70 bg-muted/30 p-4">
-                            <SectionTitle icon={Bot} title="Answer" />
-                            <MarkdownContent
-                              content={message.reply.answer}
-                              className="mt-2"
-                            />
-                          </div>
-
-                          {message.reply.evidence.length > 0 ? (
-                            <Collapsible defaultOpen>
-                              <div className="rounded-xl border border-border/70 bg-background/70 p-4">
-                                <CollapsibleTrigger className="group flex w-full items-center justify-between text-left">
-                                  <SectionTitle
-                                    icon={Database}
-                                    title="Why This Answer"
-                                  />
-                                  <ChevronRight className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-90" />
-                                </CollapsibleTrigger>
-                                <CollapsibleContent className="pt-3">
-                                  <div className="grid gap-3 md:grid-cols-2">
-                                    {message.reply.evidence.map((item) => (
-                                      <div
-                                        key={`${item.label}-${item.value}-detail`}
-                                        className="rounded-lg border border-border/70 bg-muted/40 p-3"
-                                      >
-                                        <Text muted className="text-[11px] uppercase">
-                                          {item.label}
-                                        </Text>
-                                        <Text strong className="mt-1 text-sm">
-                                          {item.value}
-                                        </Text>
-                                        <Text muted className="mt-1 text-xs leading-5">
-                                          {item.detail}
-                                        </Text>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </CollapsibleContent>
-                              </div>
-                            </Collapsible>
-                          ) : null}
-
-                          {message.reply.risks.length > 0 ? (
-                            <div className="rounded-xl border border-amber-200/60 bg-amber-50/40 p-4 dark:border-amber-900/40 dark:bg-amber-950/20">
-                              <SectionTitle
-                                icon={ShieldAlert}
-                                title="Risks And Watch-outs"
-                              />
-                              <div className="mt-3 space-y-2">
-                                {message.reply.risks.map((item) => (
+                          {message.reply.recommendations.length > 0 ? (
+                            <div className="space-y-2">
+                              <Text
+                                strong
+                                className="text-xs uppercase tracking-[0.16em] text-muted-foreground"
+                              >
+                                Next Moves
+                              </Text>
+                              <div className="space-y-2">
+                                {message.reply.recommendations.map((item) => (
                                   <div
                                     key={item}
                                     className="flex gap-2 text-sm text-muted-foreground"
                                   >
-                                    <AlertCircle className="mt-0.5 size-4 shrink-0 text-amber-500" />
+                                    <ArrowUpRight className="mt-0.5 size-4 shrink-0 text-primary" />
                                     <span>{item}</span>
                                   </div>
                                 ))}
@@ -575,16 +547,21 @@ export function FinanceCopilotCard({
                             </div>
                           ) : null}
 
-                          {message.reply.recommendations.length > 0 ? (
-                            <div className="rounded-xl border border-border/70 bg-background/70 p-4">
-                              <SectionTitle icon={Target} title="Next Moves" />
-                              <div className="mt-3 space-y-2">
-                                {message.reply.recommendations.map((item) => (
+                          {message.reply.risks.length > 0 ? (
+                            <div className="space-y-2">
+                              <Text
+                                strong
+                                className="text-xs uppercase tracking-[0.16em] text-muted-foreground"
+                              >
+                                Risks
+                              </Text>
+                              <div className="space-y-2">
+                                {message.reply.risks.map((item) => (
                                   <div
                                     key={item}
                                     className="flex gap-2 text-sm text-muted-foreground"
                                   >
-                                    <ArrowUpRight className="mt-0.5 size-4 shrink-0 text-primary" />
+                                    <AlertCircle className="mt-0.5 size-4 shrink-0 text-amber-500" />
                                     <span>{item}</span>
                                   </div>
                                 ))}
@@ -605,6 +582,7 @@ export function FinanceCopilotCard({
                                       size="sm"
                                       onClick={() => sendMessage(question)}
                                       disabled={isPending}
+                                      className="rounded-full"
                                     >
                                       {question}
                                     </Button>
@@ -614,172 +592,108 @@ export function FinanceCopilotCard({
                             </>
                           ) : null}
                         </div>
-                      ) : (
-                        <Text className="whitespace-pre-wrap text-sm leading-6">
-                          {message.content}
-                        </Text>
-                      )}
+                      ) : null}
                     </div>
-                  ))}
 
-                  {isPending ? (
-                    <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
-                      <div className="mb-3 flex items-center gap-2 text-sm font-medium">
-                        <Loader2 className="size-4 animate-spin text-primary" />
-                        Copilot is reasoning over your history and forecast
+                    {isUser ? (
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                        <User2 className="size-5" />
                       </div>
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-4/5" />
-                        <Skeleton className="h-4 w-3/5" />
-                        <Skeleton className="h-24 w-full" />
-                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+
+              {isPending ? (
+                <div className="flex w-full justify-start gap-3">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Bot className="size-5" />
+                  </div>
+                  <div className="w-full max-w-2xl rounded-3xl rounded-bl-md border border-border/70 bg-muted/45 px-4 py-3 shadow-sm">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-medium">
+                      <Loader2 className="size-4 animate-spin text-primary" />
+                      Copilot is reasoning over your history and forecast
                     </div>
-                  ) : null}
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-4/5" />
+                      <Skeleton className="h-4 w-3/5" />
+                      <Skeleton className="h-24 w-full" />
+                    </div>
+                  </div>
                 </div>
-              )}
+              ) : null}
+            </div>
+          )}
+        </div>
 
-              <div className="space-y-3 rounded-2xl border border-border/70 bg-background/80 p-4">
-                <Textarea
-                  value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
-                  placeholder="Ask a financial question tied to your history or forecast..."
-                  className="min-h-[104px] resize-none border-0 bg-transparent px-0 py-0 shadow-none focus-visible:ring-0"
-                  onKeyDown={(event) => {
-                    if (
-                      (event.metaKey || event.ctrlKey) &&
-                      event.key === "Enter"
-                    ) {
-                      event.preventDefault();
-                      sendMessage(draft);
-                    }
-                  }}
-                />
-
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <Text muted className="text-xs leading-5">
-                    The copilot is advisory-only. It should not replace tax,
-                    legal, or professional financial advice.
-                  </Text>
-                  <Button
-                    type="button"
-                    onClick={() => sendMessage(draft)}
-                    disabled={isPending || !draft.trim()}
-                  >
-                    {isPending ? "Thinking..." : "Ask Copilot"}
-                  </Button>
-                </div>
-
-                {error ? (
-                  <Text destructive className="text-sm">
-                    {error}
-                  </Text>
-                ) : null}
+        <div className="border-t border-border/70 bg-background/95 px-4 py-4 backdrop-blur md:px-6">
+          <div className="mx-auto max-w-4xl space-y-3">
+            {briefingSummary ? (
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline">{briefingSummary.scopeLabel}</Badge>
+                <Badge variant="secondary">
+                  Balance{" "}
+                  {formatMoney(
+                    briefingSummary.totalBalanceCents,
+                    briefingSummary.baseCurrency,
+                  )}
+                </Badge>
+                <Badge variant="secondary">
+                  Owed{" "}
+                  {formatMoney(
+                    briefingSummary.totalOwedCents,
+                    briefingSummary.baseCurrency,
+                  )}
+                </Badge>
+                {briefingSummary.notableSignals.slice(0, 2).map((signal) => (
+                  <Badge key={signal} variant="outline" className="max-w-full">
+                    {signal}
+                  </Badge>
+                ))}
               </div>
+            ) : null}
+
+            <div className="flex items-end gap-3">
+              <Textarea
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                placeholder="Ask a financial question tied to your history or forecast..."
+                className="min-h-[72px] resize-none rounded-3xl border-border/70 bg-muted/30 px-4 py-3 shadow-none focus-visible:ring-1"
+                onKeyDown={(event) => {
+                  if (
+                    (event.metaKey || event.ctrlKey) &&
+                    event.key === "Enter"
+                  ) {
+                    event.preventDefault();
+                    sendMessage(draft);
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                onClick={() => sendMessage(draft)}
+                disabled={isPending || !draft.trim()}
+                size="icon"
+                className="size-12 rounded-full"
+              >
+                <SendHorizonal className="size-4" />
+              </Button>
             </div>
 
-            <div className="space-y-4 xl:sticky xl:top-4 xl:self-start">
-              <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <SectionTitle icon={Info} title="Context Used" />
-                  <Badge variant="outline">
-                    {briefingSummary?.baseCurrency || "USD"}
-                  </Badge>
-                </div>
-
-                <div className="mt-4 grid gap-3">
-                  <div className="rounded-xl border border-border/70 bg-muted/30 p-3">
-                    <div className="flex items-center gap-2">
-                      <Wallet className="size-4 text-primary" />
-                      <Text strong className="text-sm">
-                        Scope
-                      </Text>
-                    </div>
-                    <Text muted className="mt-2 text-xs leading-5">
-                      {briefingSummary?.scopeLabel || scopeLabel}
-                    </Text>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                    <div className="rounded-xl border border-border/70 bg-muted/30 p-3">
-                      <div className="flex items-center gap-2">
-                        <CircleDollarSign className="size-4 text-primary" />
-                        <Text strong className="text-sm">
-                          Total balance
-                        </Text>
-                      </div>
-                      <Text className="mt-2 text-sm">
-                        {briefingSummary
-                          ? formatMoney(
-                              briefingSummary.totalBalanceCents,
-                              briefingSummary.baseCurrency,
-                            )
-                          : "Ask a question to load"}
-                      </Text>
-                    </div>
-
-                    <div className="rounded-xl border border-border/70 bg-muted/30 p-3">
-                      <div className="flex items-center gap-2">
-                        <ShieldAlert className="size-4 text-primary" />
-                        <Text strong className="text-sm">
-                          Total owed
-                        </Text>
-                      </div>
-                      <Text className="mt-2 text-sm">
-                        {briefingSummary
-                          ? formatMoney(
-                              briefingSummary.totalOwedCents,
-                              briefingSummary.baseCurrency,
-                            )
-                          : "Ask a question to load"}
-                      </Text>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
-                <SectionTitle icon={Database} title="Notable Signals" />
-                <div className="mt-3 space-y-2">
-                  {(briefingSummary?.notableSignals.length
-                    ? briefingSummary.notableSignals
-                    : [
-                        "The copilot will pin notable balance, risk, and forecast signals here after the first response.",
-                      ]
-                  ).map((signal) => (
-                    <div
-                      key={signal}
-                      className="rounded-lg border border-border/70 bg-muted/30 p-3"
-                    >
-                      <Text muted className="text-xs leading-5">
-                        {signal}
-                      </Text>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
-                <SectionTitle icon={Sparkles} title="Suggested Questions" />
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {suggestedPrompts.map((prompt) => (
-                    <Button
-                      key={`side-${prompt}`}
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => sendMessage(prompt)}
-                      disabled={isPending}
-                      className="h-auto whitespace-normal py-2 text-left"
-                    >
-                      {prompt}
-                    </Button>
-                  ))}
-                </div>
-              </div>
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <Text muted className="text-xs leading-5">
+                The copilot is advisory-only. It should not replace tax, legal,
+                or professional financial advice.
+              </Text>
+              {error ? (
+                <Text destructive className="text-sm">
+                  {error}
+                </Text>
+              ) : null}
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </TooltipProvider>
   );
 }

@@ -24,6 +24,7 @@ export function TransactionsHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isCopilotRoute = pathname.startsWith("/app/copilot");
 
   useEffect(() => {
     if (!bills_enabled) return;
@@ -43,6 +44,10 @@ export function TransactionsHeader() {
     const query = current.toString();
     router.replace(query ? `${pathname}?${query}` : pathname);
   };
+
+  if (isCopilotRoute) {
+    return null;
+  }
 
   return (
     <>

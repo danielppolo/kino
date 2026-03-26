@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { endOfMonth, format, startOfMonth } from "date-fns";
-import { X } from "lucide-react";
+import { Bot, X } from "lucide-react";
 import Link from "next/link";
 import {
   useParams,
@@ -78,6 +78,13 @@ export function TransactionsSidebar() {
   const walletShortcutTargets = Object.entries(walletsByCurrency).flatMap(
     ([, currencyWallets]) => currencyWallets,
   );
+  const copilotParams = new URLSearchParams(searchParams.toString());
+  copilotParams.set("from", fromDate);
+  copilotParams.set("to", toDate);
+  const copilotQuery = copilotParams.toString();
+  const copilotHref = walletId
+    ? `/app/copilot/${walletId}${copilotQuery ? `?${copilotQuery}` : ""}`
+    : `/app/copilot${copilotQuery ? `?${copilotQuery}` : ""}`;
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -112,6 +119,24 @@ export function TransactionsSidebar() {
 
   return (
     <SidebarWrapper>
+      <SidebarGroup>
+        <SidebarGroupLabel>Assistant</SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname.includes("/copilot")}
+              >
+                <Link href={copilotHref}>
+                  Copilot
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+
       {views.length > 0 && (
         <SidebarGroup>
           <SidebarGroupLabel>Views</SidebarGroupLabel>

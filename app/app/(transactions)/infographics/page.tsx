@@ -37,7 +37,6 @@ async function InfographicsPage({ searchParams }: PageParams) {
     : DEFAULT_FEATURE_FLAGS;
 
   const validTabs = [
-    "chat",
     "overview",
     "transactions",
     "labels",
