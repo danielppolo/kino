@@ -230,7 +230,7 @@ export function AutonomyHorizonChart({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start justify-between gap-8">
           <div>
             <CardTitle>Autonomy Horizon</CardTitle>
             <CardDescription>
@@ -257,16 +257,9 @@ export function AutonomyHorizonChart({
             />
             <div className="text-muted-foreground flex justify-between text-xs">
               <span>0</span>
-              <span>
-                {formatCurrency(100000, baseCurrency)}
-              </span>
+              <span>{formatCurrency(100000, baseCurrency)}</span>
             </div>
           </div>
-          {methodLabel && (
-            <span className="text-muted-foreground rounded border px-2 py-0.5 text-xs font-mono self-start">
-              {methodLabel}
-            </span>
-          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -388,22 +381,34 @@ export function AutonomyHorizonChart({
           </AreaChart>
         </ChartContainer>
       </CardContent>
-      {runwayMonth && (
-        <CardFooter>
-          <p className="text-muted-foreground text-sm">
-            At{" "}
-            <Money
-              cents={Math.round(effectiveBurnRate * 100)}
-              currency={baseCurrency}
-            />{" "}
-            /month with no income, runway ends{" "}
-            <span className="text-foreground font-medium">
-              {format(parseMonthDate(runwayMonth), "MMMM yyyy")}
+      <CardFooter className="flex items-end justify-between gap-8">
+        <p className="text-muted-foreground text-sm">
+          {runwayMonth ? (
+            <>
+              At{" "}
+              <Money
+                cents={Math.round(effectiveBurnRate * 100)}
+                currency={baseCurrency}
+              />{" "}
+              /month with no income, runway ends{" "}
+              <span className="text-foreground font-medium">
+                {format(parseMonthDate(runwayMonth), "MMMM yyyy")}
+              </span>
+              .
+            </>
+          ) : (
+            <span>
+              Runway exceeds the {horizonMonths}-month horizon at this burn
+              rate.
             </span>
-            .
-          </p>
-        </CardFooter>
-      )}
+          )}
+          {methodLabel && (
+            <span className="text-muted-foreground ml-2 rounded border px-2 py-0.5 text-xs font-mono align-middle">
+              {methodLabel}
+            </span>
+          )}
+        </p>
+      </CardFooter>
     </Card>
   );
 }
