@@ -826,17 +826,13 @@ export function FinanceCopilotCard({
                 </Button>
               </div>
 
-              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                <Text muted className="text-xs leading-5">
-                  The copilot is advisory-only. It should not replace tax, legal,
-                  or professional financial advice.
-                </Text>
                 {error ? (
-                  <Text destructive className="text-sm">
-                    {error}
-                  </Text>
+                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <Text destructive className="text-sm">
+                      {error}
+                    </Text>
+                  </div>
                 ) : null}
-              </div>
             </div>
           </div>
         </div>
