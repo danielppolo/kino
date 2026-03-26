@@ -15,13 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { createClient } from "@/utils/supabase/client";
 import {
   updateWorkspaceFeatureFlags,
@@ -48,7 +41,6 @@ export default function WorkspacesPage() {
     featureFlags: DEFAULT_FEATURE_FLAGS,
   });
 
-  // Get current user
   useEffect(() => {
     const getCurrentUser = async () => {
       const supabase = await createClient();
@@ -60,7 +52,6 @@ export default function WorkspacesPage() {
     getCurrentUser();
   }, []);
 
-  // Check if current user is owner
   const isOwner =
     activeWorkspace &&
     workspaceMembers.some(
@@ -70,7 +61,6 @@ export default function WorkspacesPage() {
         m.role === "owner",
     );
 
-  // Initialize form state from workspace
   useEffect(() => {
     if (!activeWorkspace) return;
 
@@ -81,35 +71,20 @@ export default function WorkspacesPage() {
       ? parseFeatureFlags(activeWorkspace.feature_flags)
       : DEFAULT_FEATURE_FLAGS;
 
-    setFormState({
-      baseCurrency,
-      featureFlags,
-    });
+    setFormState({ baseCurrency, featureFlags });
   }, [activeWorkspace]);
 
   const updateWorkspaceConfigMutation = useMutation({
     mutationFn: async () => {
-      if (!activeWorkspace) {
-        throw new Error("No active workspace");
-      }
-
-      // Update workspace base currency
-      await updateWorkspaceBaseCurrency(
-        activeWorkspace.id,
-        formState.baseCurrency,
-      );
-
-      // Update workspace feature flags
-      await updateWorkspaceFeatureFlags(
-        activeWorkspace.id,
-        formState.featureFlags,
-      );
+      if (!activeWorkspace) throw new Error("No active workspace");
+      await updateWorkspaceBaseCurrency(activeWorkspace.id, formState.baseCurrency);
+      await updateWorkspaceFeatureFlags(activeWorkspace.id, formState.featureFlags);
     },
     onSuccess: () => {
       toast.success("Workspace configuration updated successfully");
       queryClient.invalidateQueries({ queryKey: ["workspaces"] });
       queryClient.invalidateQueries({ queryKey: ["workspace-currency-conversions"] });
-      window.location.reload(); // Reload to apply changes
+      window.location.reload();
     },
     onError: (error: unknown) => {
       if (error instanceof Error) {
@@ -158,74 +133,64 @@ export default function WorkspacesPage() {
         <Button
           size="sm"
           onClick={handleSave}
-          disabled={
-            updateWorkspaceConfigMutation.isPending || !isDirty || !isOwner
-          }
+          disabled={updateWorkspaceConfigMutation.isPending || !isDirty || !isOwner}
         >
           Save
         </Button>
       </PageHeader>
 
-      <div className="flex-1 space-y-6 overflow-y-auto px-4 py-6">
-        <div className="max-w-2xl space-y-6">
+      <div className="flex-1 overflow-y-auto px-4 py-6">
+        <div className="max-w-2xl space-y-8">
           {!isOwner && (
-            <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-900/10">
-              <CardHeader>
-                <CardTitle className="text-sm">Read-only</CardTitle>
-                <CardDescription>
-                  Only workspace owners can modify these settings
-                </CardDescription>
-              </CardHeader>
-            </Card>
+            <p className="text-sm text-yellow-600 dark:text-yellow-400">
+              Only workspace owners can modify these settings.
+            </p>
           )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Currency Settings</CardTitle>
-              <CardDescription>
-                Set the base currency for this workspace. All amounts will be
-                converted to this currency.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="base-currency">Base Currency</Label>
-                <Select
-                  value={formState.baseCurrency}
-                  onValueChange={(value) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      baseCurrency: value as "USD" | "MXN",
-                    }))
-                  }
-                  disabled={!isOwner}
-                >
-                  <SelectTrigger id="base-currency" className="w-[200px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="USD">USD - US Dollar</SelectItem>
-                    <SelectItem value="MXN">MXN - Mexican Peso</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
+          <section className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium">Currency</h3>
+              <p className="text-muted-foreground text-sm">
+                Base currency for this workspace. All amounts will be converted to this currency.
+              </p>
+            </div>
+            <Select
+              value={formState.baseCurrency}
+              onValueChange={(value) =>
+                setFormState((prev) => ({
+                  ...prev,
+                  baseCurrency: value as "USD" | "MXN",
+                }))
+              }
+              disabled={!isOwner}
+            >
+              <SelectTrigger id="base-currency" className="w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="USD">USD - US Dollar</SelectItem>
+                <SelectItem value="MXN">MXN - Mexican Peso</SelectItem>
+              </SelectContent>
+            </Select>
+          </section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Feature Flags</CardTitle>
-              <CardDescription>
-                Control which features are enabled in this workspace
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between space-x-2">
-                <div className="flex-1">
+          <div className="border-t" />
+
+          <section className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium">Features</h3>
+              <p className="text-muted-foreground text-sm">
+                Control which features are enabled in this workspace.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
                   <Label htmlFor="bills-enabled" className="text-sm font-medium">
                     Bills Management
                   </Label>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     Track and manage recurring and one-time bills
                   </p>
                 </div>
@@ -235,21 +200,19 @@ export default function WorkspacesPage() {
                   onCheckedChange={(checked) =>
                     setFormState((prev) => ({
                       ...prev,
-                      featureFlags: {
-                        ...prev.featureFlags,
-                        bills_enabled: checked,
-                      },
+                      featureFlags: { ...prev.featureFlags, bills_enabled: checked },
                     }))
                   }
                   disabled={!isOwner}
                 />
               </div>
-              <div className="flex items-center justify-between space-x-2">
-                <div className="flex-1">
+
+              <div className="flex items-center justify-between">
+                <div>
                   <Label htmlFor="autonomy-enabled" className="text-sm font-medium">
                     Autonomy Framework
                   </Label>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     Show autonomy and financial independence charts in infographics
                   </p>
                 </div>
@@ -268,8 +231,8 @@ export default function WorkspacesPage() {
                   disabled={!isOwner}
                 />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </section>
         </div>
       </div>
     </div>
