@@ -21,7 +21,11 @@ export interface Filters {
 
 export const listTransactions = async (
   client: TypedSupabaseClient,
-  params?: Filters & { page?: number; pageSize?: number; workspaceWalletIds?: string[] },
+  params?: Filters & {
+    page?: number;
+    pageSize?: number;
+    workspaceWalletIds?: string[];
+  },
 ) => {
   let query = client.from("transaction_list").select("*", { count: "exact" });
 
@@ -60,7 +64,10 @@ export const listTransactions = async (
   // Filter by wallet_id if available
   if (params?.wallet_id) {
     query = query.eq("wallet_id", params.wallet_id);
-  } else if (params?.workspaceWalletIds && params.workspaceWalletIds.length > 0) {
+  } else if (
+    params?.workspaceWalletIds &&
+    params.workspaceWalletIds.length > 0
+  ) {
     // If no specific wallet but workspace wallet IDs provided, scope to those wallets
     query = query.in("wallet_id", params.workspaceWalletIds);
   }
@@ -367,8 +374,6 @@ export const getTotalExpenses = async (
     0,
   );
 
-  console.log("totalExpenses", totalExpenses);
-
   return { data: totalExpenses, error: null } as const;
 };
 
@@ -402,7 +407,10 @@ export const getMonthlyCategoryStats = async (
 
     if (params.walletId) {
       query = query.eq("wallet_id", params.walletId);
-    } else if (params.workspaceWalletIds && params.workspaceWalletIds.length > 0) {
+    } else if (
+      params.workspaceWalletIds &&
+      params.workspaceWalletIds.length > 0
+    ) {
       query = query.in("wallet_id", params.workspaceWalletIds);
     }
 
@@ -486,7 +494,10 @@ export const getMonthlyLabelStats = async (
 
     if (params.walletId) {
       query = query.eq("wallet_id", params.walletId);
-    } else if (params.workspaceWalletIds && params.workspaceWalletIds.length > 0) {
+    } else if (
+      params.workspaceWalletIds &&
+      params.workspaceWalletIds.length > 0
+    ) {
       query = query.in("wallet_id", params.workspaceWalletIds);
     }
 
@@ -571,7 +582,10 @@ export const getCategoryPieChartData = async (
   // Filter by wallet if specified
   if (params.walletId) {
     query = query.eq("wallet_id", params.walletId);
-  } else if (params.workspaceWalletIds && params.workspaceWalletIds.length > 0) {
+  } else if (
+    params.workspaceWalletIds &&
+    params.workspaceWalletIds.length > 0
+  ) {
     query = query.in("wallet_id", params.workspaceWalletIds);
   }
 
@@ -624,7 +638,10 @@ export const getLabelPieChartData = async (
   // Filter by wallet if specified
   if (params.walletId) {
     query = query.eq("wallet_id", params.walletId);
-  } else if (params.workspaceWalletIds && params.workspaceWalletIds.length > 0) {
+  } else if (
+    params.workspaceWalletIds &&
+    params.workspaceWalletIds.length > 0
+  ) {
     query = query.in("wallet_id", params.workspaceWalletIds);
   }
 
@@ -1050,12 +1067,17 @@ export const listBillsWithPayments = async (
     .map((p) => p.transaction_id)
     .filter((id): id is string => id != null);
 
-  const transactionMap: Record<string, BillWithPayments["payments"][number]["transaction"]> = {};
+  const transactionMap: Record<
+    string,
+    BillWithPayments["payments"][number]["transaction"]
+  > = {};
 
   if (transactionIds.length > 0) {
     const { data: txRows, error: txError } = await client
       .from("transactions")
-      .select("id, wallet_id, category_id, label_id, amount_cents, currency, description, date, type")
+      .select(
+        "id, wallet_id, category_id, label_id, amount_cents, currency, description, date, type",
+      )
       .in("id", transactionIds);
 
     if (txError) {
@@ -1064,13 +1086,16 @@ export const listBillsWithPayments = async (
     }
 
     for (const tx of txRows ?? []) {
-      transactionMap[tx.id] = tx as BillWithPayments["payments"][number]["transaction"];
+      transactionMap[tx.id] =
+        tx as BillWithPayments["payments"][number]["transaction"];
     }
   }
 
   const payments = (billPaymentRows ?? []).map((p) => ({
     ...p,
-    transactions: p.transaction_id ? (transactionMap[p.transaction_id] ?? null) : null,
+    transactions: p.transaction_id
+      ? (transactionMap[p.transaction_id] ?? null)
+      : null,
   }));
 
   // Group payments by bill_id
@@ -1105,7 +1130,8 @@ export const listBillsWithPayments = async (
       ...bill,
       payments: billPayments.map((p) => ({
         id: p.id,
-        transaction: p.transactions as BillWithPayments["payments"][number]["transaction"],
+        transaction:
+          p.transactions as BillWithPayments["payments"][number]["transaction"],
       })),
       paid_amount_cents: paidAmountCents,
       payment_percentage: paymentPercentage,
@@ -1151,10 +1177,14 @@ export const getAllWalletMembers = async (
   client: TypedSupabaseClient,
   walletIds: string[],
 ) => {
-  const { data, error } = await (client as unknown as { rpc: (name: string, args: { wallet_uuids: string[] }) => Promise<{ data: unknown; error: unknown }> }).rpc(
-    "get_all_wallet_members",
-    { wallet_uuids: walletIds },
-  );
+  const { data, error } = await (
+    client as unknown as {
+      rpc: (
+        name: string,
+        args: { wallet_uuids: string[] },
+      ) => Promise<{ data: unknown; error: unknown }>;
+    }
+  ).rpc("get_all_wallet_members", { wallet_uuids: walletIds });
 
   return { data, error };
 };
@@ -2257,7 +2287,10 @@ export const getBillsVsDiscretionarySpending = async (
   }
 
   const result: BillsVsDiscretionaryData[] = monthlyStats
-    .filter((stat): stat is typeof stat & { wallet_id: string } => stat.wallet_id != null)
+    .filter(
+      (stat): stat is typeof stat & { wallet_id: string } =>
+        stat.wallet_id != null,
+    )
     .map((stat) => {
       const bill = billStats.find(
         (b) => b.month === stat.month && b.wallet_id === stat.wallet_id,
@@ -2314,7 +2347,10 @@ export const getCashFlowAfterBills = async (
   }
 
   const result: CashFlowAfterBillsData[] = monthlyStats
-    .filter((stat): stat is typeof stat & { wallet_id: string } => stat.wallet_id != null)
+    .filter(
+      (stat): stat is typeof stat & { wallet_id: string } =>
+        stat.wallet_id != null,
+    )
     .map((stat) => {
       const bill = billStats.find(
         (b) => b.month === stat.month && b.wallet_id === stat.wallet_id,
@@ -2332,9 +2368,9 @@ export const getCashFlowAfterBills = async (
         income_cents: income,
         bills_cents: billExpenses,
         other_expenses_cents: otherExpenses,
-      net_after_bills_cents: netAfterBills,
-    };
-  });
+        net_after_bills_cents: netAfterBills,
+      };
+    });
 
   return { data: result, error: null };
 };
