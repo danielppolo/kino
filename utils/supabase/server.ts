@@ -1,8 +1,19 @@
 import { cookies } from "next/headers";
 
 import { createServerClient } from "@supabase/ssr";
+import { createClient as createSupabaseJsClient } from "@supabase/supabase-js";
 
 import { Database } from "./database.types";
+
+/** Service-role client without reading cookies — safe inside `unstable_cache` and other static scopes. */
+export const createServiceRoleClient = () =>
+  createSupabaseJsClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+    },
+  );
 
 export const createClient = async () => {
   const cookieStore = await cookies();

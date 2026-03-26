@@ -1,10 +1,11 @@
 "use client";
 
-import { addMonths, format } from "date-fns";
+import { format } from "date-fns";
 import {
   CartesianGrid,
   Line,
   LineChart,
+  ReferenceArea,
   ReferenceLine,
   XAxis,
   YAxis,
@@ -28,21 +29,13 @@ import { Money } from "@/components/ui/money";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import {
   calculateMonthlyTotals,
-  findRecoveryStartIndex,
-  forecastHoltWinters,
   formatCurrency,
   parseMonthDate,
-  winsorize,
-  type ChartDataPoint,
-  type MonthlyStats,
 } from "@/utils/chart-helpers";
-import { convertCurrency } from "@/utils/currency-conversion";
 import { createClient } from "@/utils/supabase/client";
-import {
-  getMonthlyStats,
-  getWalletMonthlyBalances,
-} from "@/utils/supabase/queries";
+import { getWalletMonthlyBalances } from "@/utils/supabase/queries";
 import { Wallet } from "@/utils/supabase/types";
+import type { ForecastApiResponse } from "@/app/api/forecast/route";
 
 interface ForecastLineChartProps {
   walletId?: string;
@@ -50,105 +43,15 @@ interface ForecastLineChartProps {
   to?: string;
 }
 
-// How many months of history to train on. 36 months (3 seasons) gives Holt-Winters
-// enough data for seasonality while keeping the trend grounded in recent behavior.
-const FORECAST_TRAINING_WINDOW = 36;
-
-/**
- * Calculate forecast using Holt-Winters Triple Exponential Smoothing.
- *
- * Mirrors the AutonomyHorizonChart approach: aggregate all wallets into a single
- * combined net series, run one HW model, then apply projected changes cumulatively
- * from the last known total balance. Training is capped at the last 36 months so
- * the trend reflects recent behavior, not decade-old growth patterns.
- */
-function calculateAdvancedForecast(
-  historicalData: ChartDataPoint[],
-  monthlyStats: MonthlyStats[],
-  visibleWallets: Array<{ id: string }>,
-  conversionRates: Record<string, { rate: number }>,
-  baseCurrency: string,
-  walletMap: Map<string, any>,
-): ChartDataPoint[] {
-  if (historicalData.length < 2) {
-    return [];
-  }
-
-  const lastDataPoint = historicalData[historicalData.length - 1];
-  const lastMonth = parseMonthDate(lastDataPoint.month);
-
-  // Aggregate combined net (income − expenses) across all visible wallets per month
-  const walletIdSet = new Set(visibleWallets.map((w) => w.id));
-  const byMonth: Record<string, number> = {};
-  monthlyStats.forEach((stat) => {
-    if (!walletIdSet.has(stat.wallet_id)) return;
-    if (!byMonth[stat.month]) byMonth[stat.month] = 0;
-    const w = walletMap.get(stat.wallet_id);
-    const currency = w?.currency ?? baseCurrency;
-    const incomeBase = convertCurrency(stat.income_cents, currency, baseCurrency, conversionRates);
-    const expenseBase = convertCurrency(stat.outcome_cents, currency, baseCurrency, conversionRates);
-    byMonth[stat.month] += (incomeBase - expenseBase) / 100;
-  });
-
-  const sortedMonths = Object.keys(byMonth).sort(
-    (a, b) => new Date(a).getTime() - new Date(b).getTime(),
-  );
-  const rawNetSeries = sortedMonths.map((m) => byMonth[m]).slice(-FORECAST_TRAINING_WINDOW);
-
-  // Build a proxy cumulative balance from the net series for shock detection.
-  // This captures the same trough pattern as the actual balance without requiring
-  // a separate query — if a big expense hit in month N the cumulative dips there too.
-  let cum = 0;
-  const proxyCumBalance = rawNetSeries.map((net) => {
-    cum += net;
-    return cum;
-  });
-
-  // If there was an economic shock followed by recovery, train only on the
-  // post-shock segment so the forecast reflects the current trajectory.
-  const recoveryIdx = findRecoveryStartIndex(rawNetSeries, proxyCumBalance);
-  const windowedSeries = recoveryIdx > 0 ? rawNetSeries.slice(recoveryIdx) : rawNetSeries;
-
-  // Winsorize to dampen remaining one-time outliers before Holt-Winters.
-  const netSeries = winsorize(windowedSeries);
-
-  const projectedNetChanges = forecastHoltWinters(netSeries, 12);
-
-  // Starting total balance = sum of all visible wallets at the last historical point
-  let currentTotal = visibleWallets.reduce(
-    (sum, wallet) => sum + ((lastDataPoint[wallet.id] as number | undefined) ?? 0),
-    0,
-  );
-
-  // Apply projected net changes cumulatively; distribute total evenly across wallet
-  // keys so the existing render step (which sums per-wallet values) still works.
-  const walletCount = visibleWallets.length || 1;
-  const forecastData: ChartDataPoint[] = [];
-
-  for (let i = 1; i <= 12; i++) {
-    const forecastMonth = addMonths(lastMonth, i);
-    const monthKey = format(forecastMonth, "yyyy-MM-dd");
-    currentTotal += projectedNetChanges[i - 1] ?? 0;
-    const perWallet = currentTotal / walletCount;
-    const forecastPoint: ChartDataPoint = { month: monthKey };
-    visibleWallets.forEach((wallet) => {
-      forecastPoint[wallet.id] = perWallet;
-    });
-    forecastData.push(forecastPoint);
-  }
-
-  return forecastData;
-}
-
 export function ForecastLineChart({
   walletId,
   from,
   to,
 }: ForecastLineChartProps) {
-  const [, walletMap] = useWallets();
+  const [wallets, walletMap] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
 
-  // Fetch monthly balances
+  // Historical monthly balances (for the left-hand portion of the chart)
   const {
     data: monthlyBalances,
     isLoading: isLoadingBalances,
@@ -162,31 +65,43 @@ export function ForecastLineChart({
         from,
         to,
       });
-
       if (error) throw error;
       return data;
     },
   });
 
-  // Fetch ALL monthly stats without date filter — the forecast model needs full history
-  // regardless of what date range the user is currently viewing.
+  // ARIMA forecast from the server — cached server-side for 1 hour
   const {
-    data: monthlyStats,
-    isLoading: isLoadingStats,
-    error: statsError,
+    data: forecastData,
+    isLoading: isLoadingForecast,
+    error: forecastError,
   } = useQuery({
-    queryKey: ["forecast-line-chart-stats", walletId],
-    queryFn: async () => {
-      const supabase = await createClient();
-      const { data, error } = await getMonthlyStats(supabase, { walletId });
-      if (error) throw error;
-      return data;
+    queryKey: ["forecast-arima", walletId, baseCurrency],
+    queryFn: async (): Promise<ForecastApiResponse> => {
+      const workspaceWalletIds = wallets.map((w) => w.id);
+      const res = await fetch("/api/forecast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          walletId: walletId ?? null,
+          walletIds: workspaceWalletIds,
+          horizon: 12,
+          baseCurrency,
+          conversionRates,
+        }),
+      });
+      if (!res.ok) throw new Error("Forecast API failed");
+      return res.json();
     },
+    // Don't re-fetch just because conversionRates reference changed — they're
+    // stable within a session and the server caches by value anyway.
+    staleTime: 60 * 60 * 1000, // 1 hour
   });
 
-  const isLoading = isLoadingBalances || isLoadingStats;
-  const error = balancesError || statsError;
+  const isLoading = isLoadingBalances || isLoadingForecast;
+  const error = balancesError || forecastError;
 
+  // Historical totals (per-wallet breakdown for tooltip)
   const historicalData = calculateMonthlyTotals(
     monthlyBalances ?? [],
     conversionRates,
@@ -195,104 +110,94 @@ export function ForecastLineChart({
     walletId,
   );
 
-  // Get visible wallets
+  // Visible wallets
   let visibleWallets: Wallet[];
   if (walletId) {
     const wallet = walletMap.get(walletId);
     visibleWallets = wallet ? [wallet] : [];
   } else {
     const walletIds = new Set(monthlyBalances?.map((b) => b.wallet_id) ?? []);
-    visibleWallets = Array.from(walletMap.values()).filter((w) => walletIds.has(w.id));
+    visibleWallets = Array.from(walletMap.values()).filter((w) =>
+      walletIds.has(w.id),
+    );
   }
 
-  // Calculate forecast using advanced strategies (filter out null wallet_id for type)
-  const filteredMonthlyStats = (monthlyStats ?? []).filter(
-    (s) => s.wallet_id != null,
-  ) as MonthlyStats[];
-  const forecastData = calculateAdvancedForecast(
-    historicalData,
-    filteredMonthlyStats,
-    visibleWallets,
-    conversionRates,
-    baseCurrency,
-    walletMap,
-  );
+  // Build chart data: historical (solid line) + ARIMA forecast (dashed line)
+  type ChartPoint = {
+    month: string;
+    total: number | null;
+    forecast: number | null;
+    lower: number | null;
+    upper: number | null;
+    isForecast: boolean;
+  };
 
-  // Combine historical and forecast data
-  type ChartPointWithForecast = ChartDataPoint & { isForecast?: boolean };
-  let combinedData: ChartPointWithForecast[] = [];
-  if (historicalData.length > 0) {
-    const combined: ChartPointWithForecast[] = [...historicalData];
-
-    // Mark forecast data points
-    forecastData.forEach((point) => {
-      combined.push({
-        ...point,
-        isForecast: true,
-      } as ChartPointWithForecast);
-    });
-
-    combinedData = combined;
-  }
-
-  // Calculate total balance for chart display
-  const historical = historicalData.map((point, index) => {
-    const total = visibleWallets.reduce((sum: number, wallet: Wallet) => {
-      const balance = (point[wallet.id] as number | undefined) || 0;
-      return sum + balance;
-    }, 0);
-    // Add forecast value to the last historical point for connection
-    const isLastHistorical = index === historicalData.length - 1;
+  const historical: ChartPoint[] = historicalData.map((point, index) => {
+    const total = visibleWallets.reduce(
+      (sum: number, wallet: Wallet) =>
+        sum + ((point[wallet.id] as number | undefined) || 0),
+      0,
+    );
+    const isLast = index === historicalData.length - 1;
     return {
       month: point.month,
       total,
-      forecast: isLastHistorical ? total : null,
+      // Bridge: duplicate the last historical value onto the forecast key so
+      // the dashed line starts exactly where the solid line ends.
+      forecast: isLast ? total : null,
+      lower: null,
+      upper: null,
       isForecast: false,
     };
   });
 
-  const forecast = forecastData.map((point) => {
-    const total = visibleWallets.reduce((sum: number, wallet: Wallet) => {
-      const balance = (point[wallet.id] as number | undefined) || 0;
-      return sum + balance;
-    }, 0);
-    return {
-      month: point.month,
-      total: null,
-      forecast: total,
-      isForecast: true,
-    };
-  });
+  const forecast: ChartPoint[] = (forecastData?.forecast ?? []).map((p) => ({
+    month: p.month,
+    total: null,
+    forecast: p.value,
+    lower: p.lower,
+    upper: p.upper,
+    isForecast: true,
+  }));
 
-  const chartData = [...historical, ...forecast];
+  const chartData: ChartPoint[] = [...historical, ...forecast];
 
   const chartConfig: ChartConfig = {
     total: {
       label: "Total Balance",
       color: "hsl(var(--chart-1))",
     },
+    forecast: {
+      label: "Forecast",
+      color: "hsl(var(--chart-1))",
+    },
   };
 
-  // Find the last historical month for the reference line
-  const lastHistoricalMonth = historicalData.length === 0 ? null : historicalData[historicalData.length - 1].month;
+  // x-value of the "today" reference line = last historical month
+  const lastHistoricalMonth =
+    historicalData.length === 0
+      ? null
+      : historicalData[historicalData.length - 1].month;
+
+  // ── Forecast method badge text ──────────────────────────────────────────
+  const methodLabel = forecastData?.metadata.method
+    ? forecastData.metadata.method
+    : null;
+
+  const title = walletId ? "Wallet Forecast" : "Accumulated Forecast";
+  const description = walletId
+    ? `Forecasting balance 1 year ahead in ${baseCurrency}`
+    : `Forecasting total balance 1 year ahead in ${baseCurrency}`;
 
   if (isLoading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>
-            {walletId ? "Wallet Forecast" : "Accumulated Forecast"}
-          </CardTitle>
-          <CardDescription>
-            {walletId
-              ? `Forecasting balance 1 year ahead in ${baseCurrency}`
-              : `Forecasting total balance 1 year ahead in ${baseCurrency}`}
-          </CardDescription>
+          <CardTitle>{title}</CardTitle>
+          <CardDescription>{description}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
-            Loading...
-          </div>
+          <div className="flex h-64 items-center justify-center">Loading...</div>
         </CardContent>
       </Card>
     );
@@ -302,14 +207,8 @@ export function ForecastLineChart({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>
-            {walletId ? "Wallet Forecast" : "Accumulated Forecast"}
-          </CardTitle>
-          <CardDescription>
-            {walletId
-              ? `Forecasting balance 1 year ahead in ${baseCurrency}`
-              : `Forecasting total balance 1 year ahead in ${baseCurrency}`}
-          </CardDescription>
+          <CardTitle>{title}</CardTitle>
+          <CardDescription>{description}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex h-64 items-center justify-center text-red-500">
@@ -324,14 +223,8 @@ export function ForecastLineChart({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>
-            {walletId ? "Wallet Forecast" : "Accumulated Forecast"}
-          </CardTitle>
-          <CardDescription>
-            {walletId
-              ? `Forecasting balance 1 year ahead in ${baseCurrency}`
-              : `Forecasting total balance 1 year ahead in ${baseCurrency}`}
-          </CardDescription>
+          <CardTitle>{title}</CardTitle>
+          <CardDescription>{description}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex h-64 items-center justify-center text-gray-500">
@@ -345,25 +238,23 @@ export function ForecastLineChart({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>
-          {walletId ? "Wallet Forecast" : "Accumulated Forecast"}
-        </CardTitle>
-        <CardDescription>
-          {walletId
-            ? `Forecasting balance 1 year ahead in ${baseCurrency}`
-            : `Forecasting total balance 1 year ahead in ${baseCurrency}`}
-        </CardDescription>
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle>{title}</CardTitle>
+            <CardDescription>{description}</CardDescription>
+          </div>
+          {methodLabel && (
+            <span className="text-muted-foreground rounded border px-2 py-0.5 text-xs font-mono">
+              {methodLabel}
+            </span>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
           <LineChart
             data={chartData}
-            margin={{
-              left: 12,
-              right: 12,
-              top: 12,
-              bottom: 12,
-            }}
+            margin={{ left: 12, right: 12, top: 12, bottom: 12 }}
           >
             <CartesianGrid vertical={false} />
             <XAxis
@@ -371,7 +262,9 @@ export function ForecastLineChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => format(parseMonthDate(value), "MMM yyyy")}
+              tickFormatter={(value) =>
+                format(parseMonthDate(value), "MMM yyyy")
+              }
             />
             <YAxis
               tickLine={false}
@@ -379,50 +272,79 @@ export function ForecastLineChart({
               tickMargin={8}
               tickFormatter={(value) => formatCurrency(value, baseCurrency)}
             />
+
+            {/* 95% confidence band — only over forecast points */}
+            {forecast.map((p, i) => {
+              const next = forecast[i + 1];
+              if (p.lower == null || p.upper == null) return null;
+              return (
+                <ReferenceArea
+                  key={p.month}
+                  x1={p.month}
+                  x2={next?.month ?? p.month}
+                  y1={p.lower}
+                  y2={p.upper}
+                  fill="hsl(var(--chart-1))"
+                  fillOpacity={0.07}
+                  strokeOpacity={0}
+                />
+              );
+            })}
+
             <ChartTooltip
               cursor={false}
-              labelFormatter={(value) => format(parseMonthDate(value), "MMMM yyyy")}
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
 
-                // Find the value from either total or forecast
-                const totalPayload = payload.find((p) => p.dataKey === "total");
-                const forecastPayload = payload.find(
+                const totalEntry = payload.find((p) => p.dataKey === "total");
+                const forecastEntry = payload.find(
                   (p) => p.dataKey === "forecast",
                 );
-                const dataPoint = totalPayload || forecastPayload;
-                const isForecast = (dataPoint?.payload as any)?.isForecast;
-                const value =
-                  (dataPoint?.value as number) ||
-                  (forecastPayload?.value as number) ||
-                  0;
+                const entry = totalEntry || forecastEntry;
+                const isForecast = (entry?.payload as ChartPoint)?.isForecast;
+                const value = (entry?.value as number) ?? 0;
+                const lower = (entry?.payload as ChartPoint)?.lower;
+                const upper = (entry?.payload as ChartPoint)?.upper;
 
                 return (
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
-                    <div className="grid gap-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium">
-                          {format(parseMonthDate(label), "MMMM yyyy")}
-                        </span>
+                    <div className="grid gap-1.5">
+                      <span className="text-sm font-medium">
+                        {format(parseMonthDate(label), "MMMM yyyy")}
+                      </span>
+                      <div className="flex items-center justify-between gap-4">
                         <span
-                          className={`text-sm font-medium ${
-                            isForecast ? "text-muted-foreground" : ""
-                          }`}
+                          className={`text-sm ${isForecast ? "text-muted-foreground" : ""}`}
                         >
-                          {isForecast && (
-                            <span className="mr-1 text-xs">(Forecast)</span>
-                          )}
+                          {isForecast ? "Forecast" : "Balance"}
+                        </span>
+                        <span className="text-sm font-medium">
                           <Money
                             cents={Math.round(value * 100)}
                             currency={baseCurrency}
                           />
                         </span>
                       </div>
+                      {isForecast && lower != null && upper != null && (
+                        <div className="text-muted-foreground text-xs">
+                          95% CI:{" "}
+                          <Money
+                            cents={Math.round(lower * 100)}
+                            currency={baseCurrency}
+                          />{" "}
+                          —{" "}
+                          <Money
+                            cents={Math.round(upper * 100)}
+                            currency={baseCurrency}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
               }}
             />
+
             {lastHistoricalMonth && (
               <ReferenceLine
                 x={lastHistoricalMonth}
@@ -431,7 +353,8 @@ export function ForecastLineChart({
                 label={{ value: "Today", position: "top" }}
               />
             )}
-            {/* Historical line - solid */}
+
+            {/* Historical — solid */}
             <Line
               type="monotone"
               dataKey="total"
@@ -442,7 +365,7 @@ export function ForecastLineChart({
               connectNulls={false}
               isAnimationActive={false}
             />
-            {/* Forecast line - dashed */}
+            {/* ARIMA forecast — dashed */}
             <Line
               type="monotone"
               dataKey="forecast"
@@ -461,4 +384,3 @@ export function ForecastLineChart({
     </Card>
   );
 }
-

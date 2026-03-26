@@ -1,12 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
-import { addMonths, format } from "date-fns";
+import { format } from "date-fns";
 import {
   Area,
   AreaChart,
   CartesianGrid,
-  Line,
   ReferenceLine,
   XAxis,
   YAxis,
@@ -30,19 +29,12 @@ import { Money } from "@/components/ui/money";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import {
   calculateMonthlyTotals,
-  calculateTrimmedMean,
-  findRecoveryStartIndex,
-  forecastHoltWinters,
   formatCurrency,
   parseMonthDate,
-  winsorize,
 } from "@/utils/chart-helpers";
-import { convertCurrency } from "@/utils/currency-conversion";
 import { createClient } from "@/utils/supabase/client";
-import {
-  getMonthlyStats,
-  getWalletMonthlyBalances,
-} from "@/utils/supabase/queries";
+import { getWalletMonthlyBalances } from "@/utils/supabase/queries";
+import type { ForecastApiResponse } from "@/app/api/forecast/route";
 
 interface AutonomyHorizonChartProps {
   walletId?: string;
@@ -76,7 +68,7 @@ export function AutonomyHorizonChart({
   coercionFloor = 0,
   horizonMonths = 36,
 }: AutonomyHorizonChartProps) {
-  const [, walletMap] = useWallets();
+  const [wallets, walletMap] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
 
   const { data: monthlyBalances, isLoading: loadingBalances } = useQuery({
@@ -93,24 +85,32 @@ export function AutonomyHorizonChart({
     },
   });
 
-  const { data: monthlyStats, isLoading: loadingStats } = useQuery({
-    queryKey: ["autonomy-horizon-stats", walletId, from, to],
-    queryFn: async () => {
-      const supabase = await createClient();
-      const { data, error } = await getMonthlyStats(supabase, {
-        walletId,
-        from,
-        to,
+  // ARIMA forecast — server-side, cached 1 hour
+  const { data: forecastData, isLoading: loadingForecast } = useQuery({
+    queryKey: ["autonomy-arima", walletId, baseCurrency],
+    queryFn: async (): Promise<ForecastApiResponse> => {
+      const workspaceWalletIds = wallets.map((w) => w.id);
+      const res = await fetch("/api/forecast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          walletId: walletId ?? null,
+          walletIds: workspaceWalletIds,
+          horizon: horizonMonths,
+          baseCurrency,
+          conversionRates,
+        }),
       });
-      if (error) throw error;
-      return data;
+      if (!res.ok) throw new Error("Forecast API failed");
+      return res.json();
     },
+    staleTime: 60 * 60 * 1000,
   });
 
-  const isLoading = loadingBalances || loadingStats;
+  const isLoading = loadingBalances || loadingForecast;
 
   const chartData = useMemo(() => {
-    if (!monthlyBalances || !monthlyStats || monthlyBalances.length === 0) {
+    if (!monthlyBalances || !forecastData || monthlyBalances.length === 0) {
       return [];
     }
 
@@ -121,14 +121,13 @@ export function AutonomyHorizonChart({
       walletMap,
       walletId,
     );
-
     if (historicalTotals.length === 0) return [];
 
     const walletIds = walletId
       ? [walletId]
       : Array.from(new Set(monthlyBalances.map((b) => b.wallet_id)));
 
-    // Sum all wallets into a single total balance per month
+    // Sum all wallets into a single total balance per historical month
     const historicalPoints = historicalTotals.map((point) => ({
       month: point.month,
       balance: walletIds.reduce(
@@ -137,84 +136,7 @@ export function AutonomyHorizonChart({
       ),
     }));
 
-    // Compute average monthly net change (weighted trend) using a simplified version
-    // using the per-month stats for income/expense
-    const byMonth: Record<string, number> = {};
-    monthlyStats.forEach((s) => {
-      if (!byMonth[s.month]) byMonth[s.month] = 0;
-      const wallet = walletMap.get(s.wallet_id ?? "");
-      const currency = wallet?.currency ?? baseCurrency;
-      const net =
-        convertCurrency(s.net_cents, currency, baseCurrency, conversionRates) /
-        100;
-      byMonth[s.month] += net;
-    });
-
-    const sortedNetMonths = Object.keys(byMonth).sort(
-      (a, b) => new Date(a).getTime() - new Date(b).getTime(),
-    );
-
-    // Align net series with balance series so shock detection uses actual balances.
-    const histBalanceMap = new Map(historicalPoints.map((p) => [p.month, p.balance]));
-    const alignedBalance = sortedNetMonths.map((m) => histBalanceMap.get(m) ?? 0);
-    const alignedNet = sortedNetMonths.map((m) => byMonth[m]);
-
-    // If there was an economic shock followed by a recovery, train only on the
-    // post-shock segment — the forecast will reflect the recovery trajectory.
-    const recoveryIdx = findRecoveryStartIndex(alignedNet, alignedBalance);
-    const windowedNet = recoveryIdx > 0 ? alignedNet.slice(recoveryIdx) : alignedNet;
-
-    // Winsorize to dampen any remaining one-time outliers before Holt-Winters.
-    const cleanedNet = winsorize(windowedNet);
-
-    // Project net changes with Holt-Winters (captures level + trend + seasonality)
-    const projectedNetChanges = forecastHoltWinters(cleanedNet, horizonMonths);
-
-    // Monthly burn = trimmed mean of |expense|
-    const allExpenses = monthlyStats
-      .filter((s) => s.outcome_cents !== 0)
-      .map((s) => {
-        const wallet = walletMap.get(s.wallet_id ?? "");
-        const currency = wallet?.currency ?? baseCurrency;
-        return (
-          Math.abs(
-            convertCurrency(
-              s.outcome_cents,
-              currency,
-              baseCurrency,
-              conversionRates,
-            ),
-          ) / 100
-        );
-      });
-
-    // Group by month for proper monthly totals
-    const expByMonth: Record<string, number> = {};
-    monthlyStats.forEach((s) => {
-      if (!expByMonth[s.month]) expByMonth[s.month] = 0;
-      const wallet = walletMap.get(s.wallet_id ?? "");
-      const currency = wallet?.currency ?? baseCurrency;
-      expByMonth[s.month] +=
-        Math.abs(
-          convertCurrency(s.outcome_cents, currency, baseCurrency, conversionRates),
-        ) / 100;
-    });
-    const monthlyBurns = Object.values(expByMonth).filter((v) => v > 0);
-    const avgBurn = calculateTrimmedMean(monthlyBurns);
-
-    // Burn reduction/increase for scenarios
-    const burnDelta = avgBurn * 0.2; // 20% of avg monthly burn
-
-    // Last known balance
-    const lastBalance =
-      historicalPoints.length > 0
-        ? historicalPoints[historicalPoints.length - 1].balance
-        : 0;
-    const lastMonth = new Date(
-      historicalPoints[historicalPoints.length - 1].month,
-    );
-
-    // Build historical data
+    // Build historical result rows (no scenario bands yet)
     const result = historicalPoints.map((p) => ({
       month: p.month,
       balance: p.balance,
@@ -223,44 +145,41 @@ export function AutonomyHorizonChart({
       isForecast: false,
     }));
 
-    // Build forecast data
-    let balCurrent = lastBalance;
-    let balOpt = lastBalance;
-    let balPess = lastBalance;
+    const lastBalance =
+      historicalPoints.length > 0
+        ? historicalPoints[historicalPoints.length - 1].balance
+        : 0;
 
-    for (let i = 1; i <= horizonMonths; i++) {
-      const forecastMonth = addMonths(lastMonth, i);
-      const monthKey = format(forecastMonth, "yyyy-MM-dd");
+    // Burn delta for scenario bands — 20% of the server-computed avg burn rate
+    const burnDelta = forecastData.avgMonthlyBurn * 0.2;
 
-      // Season-aware net change for this specific future month
-      const monthNet = projectedNetChanges[i - 1] ?? 0;
-      balCurrent += monthNet;
-      // Optimistic: burn -20% → net change improves by burnDelta
-      balOpt += monthNet + burnDelta;
-      // Pessimistic: burn +20% → net change worsens by burnDelta
-      balPess += monthNet - burnDelta;
-
+    // ARIMA returns absolute balance forecasts.
+    // Derive cumulative optimistic/pessimistic by adding/subtracting burnDelta
+    // per month from the ARIMA base trajectory.
+    forecastData.forecast.forEach((p, i) => {
+      const cumDelta = burnDelta * (i + 1);
       result.push({
-        month: monthKey,
-        balance: Math.max(0, balCurrent),
-        optimistic: Math.max(0, balOpt),
-        pessimistic: Math.max(0, balPess),
+        month: p.month,
+        balance: Math.max(0, p.value),
+        optimistic: Math.max(0, p.value + cumDelta),
+        pessimistic: Math.max(0, p.value - cumDelta),
         isForecast: true,
       });
-    }
+    });
 
     return result;
   }, [
     monthlyBalances,
-    monthlyStats,
+    forecastData,
     conversionRates,
     baseCurrency,
     walletMap,
     walletId,
-    horizonMonths,
   ]);
 
   const todayKey = format(new Date(), "yyyy-MM-dd");
+
+  const methodLabel = forecastData?.metadata.method ?? null;
 
   if (isLoading) {
     return (
@@ -272,7 +191,9 @@ export function AutonomyHorizonChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">Loading...</div>
+          <div className="flex h-64 items-center justify-center">
+            Loading...
+          </div>
         </CardContent>
       </Card>
     );
@@ -299,11 +220,20 @@ export function AutonomyHorizonChart({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Autonomy Horizon</CardTitle>
-        <CardDescription>
-          {horizonMonths}-month runway — three scenarios at current, −20% and
-          +20% burn rate ({baseCurrency})
-        </CardDescription>
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle>Autonomy Horizon</CardTitle>
+            <CardDescription>
+              {horizonMonths}-month runway — three scenarios at current, −20%
+              and +20% burn rate ({baseCurrency})
+            </CardDescription>
+          </div>
+          {methodLabel && (
+            <span className="text-muted-foreground rounded border px-2 py-0.5 text-xs font-mono">
+              {methodLabel}
+            </span>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
