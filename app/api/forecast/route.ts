@@ -150,8 +150,13 @@ const _computeForecast = unstable_cache(
       ? rawBalanceSeries.slice(recoveryIdx)
       : rawBalanceSeries;
 
-    // Winsorize remaining one-time outliers
-    const cleanedSeries = winsorize(trainingSeries);
+    // Winsorize interior points only — preserve the last value (actual current balance)
+    // so ARIMA projects from the true current state, not a clipped one.
+    const lastTrainingValue = trainingSeries[trainingSeries.length - 1];
+    const cleanedSeries = [
+      ...winsorize(trainingSeries.slice(0, -1)),
+      lastTrainingValue,
+    ];
 
     // Normalize for ARIMA numerical stability (large absolute values can cause issues)
     const scale = Math.max(1, ...cleanedSeries.map(Math.abs));
