@@ -29,6 +29,11 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
@@ -385,29 +390,181 @@ function SectionList({
   title,
   icon: Icon,
   items,
+  tone = "default",
 }: {
   title: string;
   icon: typeof BrainCircuit;
   items: string[];
+  tone?: "default" | "warning";
 }) {
   if (items.length === 0) return null;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <Icon className="size-4 text-primary" />
-        <Text strong className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+        <div
+          className={cn(
+            "flex size-7 items-center justify-center rounded-full border",
+            tone === "warning"
+              ? "border-amber-300/70 bg-amber-100/80 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300"
+              : "border-primary/20 bg-primary/10 text-primary",
+          )}
+        >
+          <Icon className="size-3.5" />
+        </div>
+        <Text strong className="text-xs uppercase text-muted-foreground">
           {title}
         </Text>
       </div>
-      <div className="space-y-2">
+      <div className="grid gap-2">
         {items.map((item) => (
-          <div key={item} className="flex gap-2 text-sm text-muted-foreground">
-            <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary/70" />
-            <span>{item}</span>
+          <div
+            key={item}
+            className={cn(
+              "rounded-2xl border px-3 py-2.5 text-sm leading-6",
+              tone === "warning"
+                ? "border-amber-200/80 bg-amber-50/80 text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100"
+                : "border-border/70 bg-background/75 text-foreground/90",
+            )}
+          >
+            {item}
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function InsightSurface({
+  eyebrow,
+  title,
+  icon: Icon,
+  className,
+  children,
+  badge,
+}: {
+  eyebrow?: string;
+  title: string;
+  icon: typeof BrainCircuit;
+  className?: string;
+  children: React.ReactNode;
+  badge?: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "overflow-hidden rounded-[24px] border shadow-sm",
+        className,
+      )}
+    >
+      <div className="border-b border-black/5 bg-gradient-to-r from-background/80 via-background/70 to-background/40 px-4 py-3 dark:border-white/5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-current/10 bg-background/80">
+              <Icon className="size-4" />
+            </div>
+            <div className="min-w-0 space-y-0.5">
+              {eyebrow ? (
+                <Text strong className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                  {eyebrow}
+                </Text>
+              ) : null}
+              <Text strong className="text-sm">
+                {title}
+              </Text>
+            </div>
+          </div>
+          {badge}
+        </div>
+      </div>
+      <div className="px-4 py-4">{children}</div>
+    </div>
+  );
+}
+
+function KeyValueTile({
+  label,
+  value,
+  icon: Icon,
+  tone = "default",
+}: {
+  label: string;
+  value: string;
+  icon: typeof BrainCircuit;
+  tone?: "default" | "warning" | "success";
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border p-3",
+        tone === "warning"
+          ? "border-amber-200/80 bg-amber-50/80 dark:border-amber-900/40 dark:bg-amber-950/25"
+          : tone === "success"
+            ? "border-emerald-200/80 bg-emerald-50/80 dark:border-emerald-900/40 dark:bg-emerald-950/25"
+            : "border-border/70 bg-background/75",
+      )}
+    >
+      <div className="mb-2 flex items-center gap-2">
+        <div
+          className={cn(
+            "flex size-8 items-center justify-center rounded-xl",
+            tone === "warning"
+              ? "bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300"
+              : tone === "success"
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300"
+                : "bg-primary/10 text-primary",
+          )}
+        >
+          <Icon className="size-4" />
+        </div>
+        <Text strong className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+          {label}
+        </Text>
+      </div>
+      <Text className="text-sm leading-6">{value}</Text>
+    </div>
+  );
+}
+
+function RiskStack({
+  title,
+  items,
+  emptyText,
+}: {
+  title?: string;
+  items: string[];
+  emptyText?: string;
+}) {
+  return (
+    <div className="space-y-3">
+      {title ? (
+        <Text strong className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+          {title}
+        </Text>
+      ) : null}
+      {items.length > 0 ? (
+        <div className="space-y-2.5">
+          {items.map((item) => (
+            <div
+              key={item}
+              className="rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50 to-background px-3.5 py-3 text-sm leading-6 text-amber-950 shadow-sm dark:border-amber-900/50 dark:from-amber-950/35 dark:to-background dark:text-amber-100"
+            >
+              <div className="flex gap-3">
+                <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300">
+                  <AlertCircle className="size-4" />
+                </div>
+                <span>{item}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : emptyText ? (
+        <div className="rounded-2xl border border-dashed border-border/70 bg-background/60 px-4 py-3">
+          <Text muted className="text-sm leading-6">
+            {emptyText}
+          </Text>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -640,43 +797,53 @@ export function FinanceCopilotCard({
                             </Text>
                           ) : reply ? (
                             <div className="space-y-3">
-                              <div className="space-y-1">
-                                <Text strong className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                                  Bottom Line
+                              <InsightSurface
+                                eyebrow={intentLabel(reply.intent)}
+                                title="Bottom Line"
+                                icon={Gauge}
+                                className="border-primary/20 bg-gradient-to-br from-primary/10 via-background/95 to-background text-foreground"
+                                badge={
+                                  <Badge
+                                    variant={confidenceVariant(reply.confidence)}
+                                    className="rounded-full px-2.5 py-1 text-[10px]"
+                                  >
+                                    {reply.confidence} confidence
+                                  </Badge>
+                                }
+                              >
+                                <Text className="text-sm leading-7">
+                                  {reply.summary}
                                 </Text>
-                                <Text className="text-sm leading-6">{reply.summary}</Text>
-                              </div>
+                              </InsightSurface>
 
                               {reply.decision ? (
-                                <div className="space-y-2 rounded-2xl border border-border/70 bg-background/55 p-3">
-                                  <div className="flex items-center gap-2">
-                                    <Scale className="size-4 text-primary" />
-                                    <Text strong className="text-sm">
-                                      Recommendation
-                                    </Text>
+                                <InsightSurface
+                                  title="Decision Factors"
+                                  icon={Scale}
+                                  className="border-border/70 bg-background/70 text-foreground"
+                                >
+                                  <div className="grid gap-3 md:grid-cols-2">
+                                    <KeyValueTile
+                                      label="Recommendation"
+                                      value={reply.decision.recommendation}
+                                      icon={Scale}
+                                      tone="success"
+                                    />
+                                    <KeyValueTile
+                                      label="Impact Window"
+                                      value={reply.decision.impactWindow}
+                                      icon={CalendarRange}
+                                    />
                                   </div>
-                                  <Text className="text-sm leading-6">
-                                    {reply.decision.recommendation}
-                                  </Text>
-                                  <div className="grid gap-2 pt-1 md:grid-cols-2">
-                                    <div>
-                                      <Text strong className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
-                                        Tradeoff
-                                      </Text>
-                                      <Text className="mt-1 text-sm leading-6">
-                                        {reply.decision.tradeoff}
-                                      </Text>
-                                    </div>
-                                    <div>
-                                      <Text strong className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
-                                        Impact Window
-                                      </Text>
-                                      <Text className="mt-1 text-sm leading-6">
-                                        {reply.decision.impactWindow}
-                                      </Text>
-                                    </div>
+                                  <div className="mt-3">
+                                    <KeyValueTile
+                                      label="Tradeoff"
+                                      value={reply.decision.tradeoff}
+                                      icon={ArrowUpRight}
+                                      tone="warning"
+                                    />
                                   </div>
-                                </div>
+                                </InsightSurface>
                               ) : null}
 
                               <MarkdownContent
@@ -724,22 +891,7 @@ export function FinanceCopilotCard({
                             ) : null}
 
                             {reply.risks.length > 0 ? (
-                              <div className="space-y-2">
-                                <Text strong className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                                  Watch-outs
-                                </Text>
-                                <div className="space-y-2">
-                                  {reply.risks.map((item) => (
-                                    <div
-                                      key={item}
-                                      className="flex gap-2 text-sm text-muted-foreground"
-                                    >
-                                      <AlertCircle className="mt-0.5 size-4 shrink-0 text-amber-500" />
-                                      <span>{item}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
+                              <RiskStack title="Watch-outs" items={reply.risks} />
                             ) : null}
 
                             {reply.followUpQuestions.length > 0 ? (
@@ -839,28 +991,45 @@ export function FinanceCopilotCard({
 
         <aside className="hidden border-l border-border/70 bg-muted/20 xl:flex xl:min-h-0 xl:flex-col">
           <div className="space-y-5 overflow-y-auto p-5">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Gauge className="size-4 text-primary" />
-                <Text strong className="text-sm">
-                  Bottom Line
-                </Text>
-              </div>
-              <Text className="text-sm leading-6">
-                {latestReply?.summary ||
-                  "Ask a question to see the latest recommendation, diagnosis, or forecast bottom line."}
-              </Text>
-              {latestReply ? (
-                <div className="flex flex-wrap gap-2 pt-1">
-                  <Badge variant="outline">{intentLabel(latestReply.intent)}</Badge>
-                  <Badge variant={confidenceVariant(latestReply.confidence)}>
-                    {latestReply.confidence} confidence
-                  </Badge>
+            <Card className="overflow-hidden rounded-[28px] border-primary/15 bg-gradient-to-br from-primary/10 via-background to-background shadow-sm">
+              <CardHeader className="space-y-4 p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-11 items-center justify-center rounded-2xl bg-primary/12 text-primary">
+                      <Gauge className="size-5" />
+                    </div>
+                    <div className="space-y-1">
+                      <Text strong className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                        Latest read
+                      </Text>
+                      <CardTitle className="text-base">Bottom Line</CardTitle>
+                    </div>
+                  </div>
+                  {latestReply ? (
+                    <Badge
+                      variant={confidenceVariant(latestReply.confidence)}
+                      className="rounded-full px-2.5 py-1 text-[10px]"
+                    >
+                      {latestReply.confidence}
+                    </Badge>
+                  ) : null}
                 </div>
-              ) : null}
-            </div>
-
-            <Separator />
+                <Text className="text-sm leading-7">
+                  {latestReply?.summary ||
+                    "Ask a question to see the latest recommendation, diagnosis, or forecast bottom line."}
+                </Text>
+                {latestReply ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline" className="rounded-full px-3 py-1">
+                      {intentLabel(latestReply.intent)}
+                    </Badge>
+                    <Badge variant="secondary" className="rounded-full px-3 py-1">
+                      {walletId ? "Wallet scope" : "Workspace scope"}
+                    </Badge>
+                  </div>
+                ) : null}
+              </CardHeader>
+            </Card>
 
             <div className="space-y-3">
               <div className="flex items-center gap-2">
@@ -913,39 +1082,38 @@ export function FinanceCopilotCard({
                   Decision Factors
                 </Text>
               </div>
-              <div className="space-y-3 rounded-2xl border border-border/70 bg-background/70 p-4">
+              <div className="space-y-3 rounded-[24px] border border-border/70 bg-background/70 p-4 shadow-sm">
                 {latestReply?.decision ? (
                   <div className="space-y-3">
-                    <div>
-                      <Text strong className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                        Recommendation
-                      </Text>
-                      <Text className="mt-1 text-sm leading-6">
-                        {latestReply.decision.recommendation}
-                      </Text>
-                    </div>
-                    <div>
-                      <Text strong className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                        Tradeoff
-                      </Text>
-                      <Text className="mt-1 text-sm leading-6">
-                        {latestReply.decision.tradeoff}
-                      </Text>
-                    </div>
-                    <div>
-                      <Text strong className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                        Impact Window
-                      </Text>
-                      <Text className="mt-1 text-sm leading-6">
-                        {latestReply.decision.impactWindow}
-                      </Text>
+                    <div className="grid gap-3">
+                      <KeyValueTile
+                        label="Recommendation"
+                        value={latestReply.decision.recommendation}
+                        icon={Scale}
+                        tone="success"
+                      />
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <KeyValueTile
+                          label="Tradeoff"
+                          value={latestReply.decision.tradeoff}
+                          icon={ArrowUpRight}
+                          tone="warning"
+                        />
+                        <KeyValueTile
+                          label="Impact Window"
+                          value={latestReply.decision.impactWindow}
+                          icon={CalendarRange}
+                        />
+                      </div>
                     </div>
                   </div>
                 ) : (
-                  <Text muted className="text-sm leading-6">
+                  <div className="rounded-2xl border border-dashed border-border/70 bg-background/60 px-4 py-3">
+                    <Text muted className="text-sm leading-6">
                     Decision framing appears here when the assistant is answering a
                     recommendation-style question.
-                  </Text>
+                    </Text>
+                  </div>
                 )}
 
                 {latestReply?.analysis?.drivers?.length ? (
@@ -979,7 +1147,7 @@ export function FinanceCopilotCard({
                       key={`${item.label}-${item.value}`}
                       className="rounded-2xl border border-border/70 bg-background/70 p-4"
                     >
-                      <Text strong className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                      <Text strong className="text-xs uppercase text-muted-foreground">
                         {item.label}
                       </Text>
                       <Text className="mt-1 text-sm">{item.value}</Text>
@@ -1005,25 +1173,18 @@ export function FinanceCopilotCard({
                   Watch-outs
                 </Text>
               </div>
-              <div className="space-y-3 rounded-2xl border border-border/70 bg-background/70 p-4">
-                {latestReply?.risks.length ? (
-                  latestReply.risks.map((risk) => (
-                    <div key={risk} className="flex gap-2 text-sm text-muted-foreground">
-                      <AlertCircle className="mt-0.5 size-4 shrink-0 text-amber-500" />
-                      <span>{risk}</span>
-                    </div>
-                  ))
-                ) : (
-                  <Text muted className="text-sm leading-6">
-                    Risks and uncertainty notes will appear here when relevant.
-                  </Text>
-                )}
+              <div className="space-y-4 rounded-[24px] border border-border/70 bg-background/70 p-4 shadow-sm">
+                <RiskStack
+                  items={latestReply?.risks ?? []}
+                  emptyText="Risks and uncertainty notes will appear here when relevant."
+                />
 
                 {latestReply?.analysis?.assumptions?.length ? (
                   <SectionList
                     title="Assumptions"
                     icon={CircleHelp}
                     items={latestReply.analysis.assumptions}
+                    tone="warning"
                   />
                 ) : null}
 
@@ -1032,6 +1193,7 @@ export function FinanceCopilotCard({
                     title="Missing Data"
                     icon={FileWarning}
                     items={latestReply.analysis.missingData}
+                    tone="warning"
                   />
                 ) : null}
 
