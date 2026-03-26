@@ -151,12 +151,22 @@ export function ForecastLineChart({
     };
   });
 
+  // Shift the entire forecast series so the first forecast point equals the bridge value.
+  // ARIMA's first raw prediction covers the remaining days of the current month plus the
+  // next full month, so it may land slightly below the partial-month balance shown at the
+  // bridge.  Shifting by anchorDelta preserves the slope (month-over-month deltas are
+  // unchanged) while eliminating the visual gap at the transition.
+  const lastHistoricalTotal =
+    historical.length > 0 ? (historical[historical.length - 1].total ?? 0) : 0;
+  const firstForecastRaw = forecastData?.forecast[0]?.value ?? lastHistoricalTotal;
+  const anchorDelta = lastHistoricalTotal - firstForecastRaw;
+
   const forecast: ChartPoint[] = (forecastData?.forecast ?? []).map((p) => ({
     month: p.month,
     total: null,
-    forecast: p.value,
-    lower: p.lower,
-    upper: p.upper,
+    forecast: p.value + anchorDelta,
+    lower: p.lower + anchorDelta,
+    upper: p.upper + anchorDelta,
     isForecast: true,
   }));
 
