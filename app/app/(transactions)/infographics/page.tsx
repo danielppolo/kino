@@ -1,6 +1,11 @@
 import React from "react";
 
 import { AccumulatedAreaChart } from "@/components/charts/accumulated-area-chart";
+import { AutonomyHorizonChart } from "@/components/charts/autonomy-horizon-chart";
+import { BurnRateDriftChart } from "@/components/charts/burn-rate-drift-chart";
+import { ExplorationCapitalChart } from "@/components/charts/exploration-capital-chart";
+import { FreedomMultiplierChart } from "@/components/charts/freedom-multiplier-chart";
+import { SufficiencyRatioChart } from "@/components/charts/sufficiency-ratio-chart";
 import {
   parseFeatureFlags,
   DEFAULT_FEATURE_FLAGS,
@@ -41,6 +46,23 @@ async function InfographicsPage({ searchParams }: PageParams) {
 
   return (
     <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Autonomy Framework */}
+      <div className="md:col-span-2 lg:col-span-4">
+        <AutonomyHorizonChart from={filters.from} to={filters.to} />
+      </div>
+      <div className="md:col-span-2 lg:col-span-2">
+        <FreedomMultiplierChart from={filters.from} to={filters.to} />
+      </div>
+      <div className="md:col-span-2 lg:col-span-2">
+        <SufficiencyRatioChart from={filters.from} to={filters.to} />
+      </div>
+      <div className="md:col-span-2 lg:col-span-2">
+        <BurnRateDriftChart from={filters.from} to={filters.to} />
+      </div>
+      <div className="md:col-span-2 lg:col-span-2">
+        <ExplorationCapitalChart from={filters.from} to={filters.to} />
+      </div>
+
       {/* Overview & Forecasting */}
       <div className="md:col-span-2 lg:col-span-4">
         <ForecastLineChart from={filters.from} to={filters.to} />

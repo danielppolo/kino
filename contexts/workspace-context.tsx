@@ -205,9 +205,6 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({
     initialData: {},
   });
 
-
-  console.log(conversionRates);
-
   const handleSwitchWorkspace = async (workspaceId: string) => {
     try {
       await switchActiveWorkspace(userId, workspaceId);

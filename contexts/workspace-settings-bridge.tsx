@@ -8,6 +8,7 @@ import {
   parseFeatureFlags,
   DEFAULT_FEATURE_FLAGS,
 } from "@/utils/types/feature-flags";
+import { AppLoadingSkeleton } from "@/components/shared/app-loading-skeleton";
 
 interface WorkspaceSettingsBridgeProps {
   children: ReactNode;
@@ -19,7 +20,7 @@ export const WorkspaceSettingsBridge: React.FC<
   const { activeWorkspace, conversionRates, isLoading } = useWorkspace();
 
   if (isLoading || !activeWorkspace) {
-    return <div>Loading workspace...</div>;
+    return <AppLoadingSkeleton />;
   }
 
   // Get feature flags from the workspace
