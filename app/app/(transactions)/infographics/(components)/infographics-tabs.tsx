@@ -16,6 +16,7 @@ import { SufficiencyRatioChart } from "@/components/charts/sufficiency-ratio-cha
 import { TagCloudAnalyticsChart } from "@/components/charts/tag-cloud-analytics-chart";
 import { TransactionSizeDistributionChart } from "@/components/charts/transaction-size-distribution-chart";
 import { TransactionTypeDistributionChart } from "@/components/charts/transaction-type-distribution-chart";
+import { FinanceCopilotCard } from "@/components/shared/finance-copilot-card";
 import { TrendsChart } from "@/components/charts/trends-chart";
 import PageHeader from "@/components/shared/page-header";
 import {
@@ -96,6 +97,13 @@ export function InfographicsTabs({
 
         <TabsContent value="overview">
           <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="md:col-span-2 lg:col-span-4">
+              <FinanceCopilotCard
+                from={filters.from}
+                to={filters.to}
+                scopeLabel="the active workspace"
+              />
+            </div>
             <div className="md:col-span-2 lg:col-span-4">
               <ForecastLineChart from={filters.from} to={filters.to} />
             </div>

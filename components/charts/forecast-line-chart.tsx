@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { format } from "date-fns";
 import {
   CartesianGrid,
@@ -17,6 +18,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -26,6 +28,14 @@ import {
   ChartTooltip,
 } from "@/components/ui/chart";
 import { Money } from "@/components/ui/money";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import {
   calculateMonthlyTotals,
@@ -51,7 +61,10 @@ export function ForecastLineChart({
   const [wallets, walletMap] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
 
-  // Historical monthly balances (for the left-hand portion of the chart)
+  const [forecastMode, setForecastMode] = useState<"with-income" | "no-income">("with-income");
+  const [horizonYears, setHorizonYears] = useState(1);
+  const horizonMonths = horizonYears * 12;
+
   const {
     data: monthlyBalances,
     isLoading: isLoadingBalances,
@@ -70,13 +83,12 @@ export function ForecastLineChart({
     },
   });
 
-  // ARIMA forecast from the server — cached server-side for 1 hour
   const {
     data: forecastData,
     isLoading: isLoadingForecast,
     error: forecastError,
   } = useQuery({
-    queryKey: ["forecast-arima", walletId, baseCurrency],
+    queryKey: ["forecast-arima", walletId, baseCurrency, horizonMonths],
     queryFn: async (): Promise<ForecastApiResponse> => {
       const workspaceWalletIds = wallets.map((w) => w.id);
       const res = await fetch("/api/forecast", {
@@ -85,7 +97,7 @@ export function ForecastLineChart({
         body: JSON.stringify({
           walletId: walletId ?? null,
           walletIds: workspaceWalletIds,
-          horizon: 12,
+          horizon: horizonMonths,
           baseCurrency,
           conversionRates,
         }),
@@ -93,15 +105,12 @@ export function ForecastLineChart({
       if (!res.ok) throw new Error("Forecast API failed");
       return res.json();
     },
-    // Don't re-fetch just because conversionRates reference changed — they're
-    // stable within a session and the server caches by value anyway.
-    staleTime: 60 * 60 * 1000, // 1 hour
+    staleTime: 60 * 60 * 1000,
   });
 
   const isLoading = isLoadingBalances || isLoadingForecast;
   const error = balancesError || forecastError;
 
-  // Historical totals (per-wallet breakdown for tooltip)
   const historicalData = calculateMonthlyTotals(
     monthlyBalances ?? [],
     conversionRates,
@@ -110,7 +119,6 @@ export function ForecastLineChart({
     walletId,
   );
 
-  // Visible wallets
   let visibleWallets: Wallet[];
   if (walletId) {
     const wallet = walletMap.get(walletId);
@@ -122,7 +130,6 @@ export function ForecastLineChart({
     );
   }
 
-  // Build chart data: historical (solid line) + ARIMA forecast (dashed line)
   type ChartPoint = {
     month: string;
     total: number | null;
@@ -142,8 +149,6 @@ export function ForecastLineChart({
     return {
       month: point.month,
       total,
-      // Bridge: duplicate the last historical value onto the forecast key so
-      // the dashed line starts exactly where the solid line ends.
       forecast: isLast ? total : null,
       lower: null,
       upper: null,
@@ -151,17 +156,14 @@ export function ForecastLineChart({
     };
   });
 
-  // Shift the entire forecast series so the first forecast point equals the bridge value.
-  // ARIMA's first raw prediction covers the remaining days of the current month plus the
-  // next full month, so it may land slightly below the partial-month balance shown at the
-  // bridge.  Shifting by anchorDelta preserves the slope (month-over-month deltas are
-  // unchanged) while eliminating the visual gap at the transition.
   const lastHistoricalTotal =
     historical.length > 0 ? (historical[historical.length - 1].total ?? 0) : 0;
+
+  // With-income: ARIMA delta forecast anchored to current balance
   const firstForecastRaw = forecastData?.forecast[0]?.value ?? lastHistoricalTotal;
   const anchorDelta = lastHistoricalTotal - firstForecastRaw;
 
-  const forecast: ChartPoint[] = (forecastData?.forecast ?? []).map((p) => ({
+  const withIncomeForecast: ChartPoint[] = (forecastData?.forecast ?? []).map((p) => ({
     month: p.month,
     total: null,
     forecast: p.value + anchorDelta,
@@ -170,7 +172,19 @@ export function ForecastLineChart({
     isForecast: true,
   }));
 
-  const chartData: ChartPoint[] = [...historical, ...forecast];
+  // No-income: straight burn-down from current balance at avg monthly spend
+  const avgBurn = forecastData?.avgMonthlyBurn ?? 0;
+  const noIncomeForecast: ChartPoint[] = (forecastData?.forecast ?? []).map((p, i) => ({
+    month: p.month,
+    total: null,
+    forecast: Math.max(0, lastHistoricalTotal - avgBurn * (i + 1)),
+    lower: null,
+    upper: null,
+    isForecast: true,
+  }));
+
+  const activeForecast = forecastMode === "with-income" ? withIncomeForecast : noIncomeForecast;
+  const chartData: ChartPoint[] = [...historical, ...activeForecast];
 
   const chartConfig: ChartConfig = {
     total: {
@@ -178,26 +192,25 @@ export function ForecastLineChart({
       color: "hsl(var(--chart-1))",
     },
     forecast: {
-      label: "Forecast",
-      color: "hsl(var(--chart-1))",
+      label: forecastMode === "with-income" ? "Forecast (with income)" : "Forecast (no income)",
+      color: forecastMode === "with-income" ? "hsl(var(--chart-1))" : "#ef4444",
     },
   };
 
-  // x-value of the "today" reference line = last historical month
   const lastHistoricalMonth =
     historicalData.length === 0
       ? null
       : historicalData[historicalData.length - 1].month;
 
-  // ── Forecast method badge text ──────────────────────────────────────────
-  const methodLabel = forecastData?.metadata.method
-    ? forecastData.metadata.method
-    : null;
+  const methodLabel = forecastData?.metadata.method ?? null;
 
   const title = walletId ? "Wallet Forecast" : "Accumulated Forecast";
   const description = walletId
-    ? `Forecasting balance 1 year ahead in ${baseCurrency}`
-    : `Forecasting total balance 1 year ahead in ${baseCurrency}`;
+    ? `Forecasting balance ${horizonYears} year${horizonYears > 1 ? "s" : ""} ahead in ${baseCurrency}`
+    : `Forecasting total balance ${horizonYears} year${horizonYears > 1 ? "s" : ""} ahead in ${baseCurrency}`;
+
+  const forecastStroke =
+    forecastMode === "with-income" ? "hsl(var(--chart-1))" : "#ef4444";
 
   if (isLoading) {
     return (
@@ -248,16 +261,36 @@ export function ForecastLineChart({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-4">
           <div>
             <CardTitle>{title}</CardTitle>
             <CardDescription>{description}</CardDescription>
           </div>
-          {methodLabel && (
-            <span className="text-muted-foreground rounded border px-2 py-0.5 text-xs font-mono">
-              {methodLabel}
-            </span>
-          )}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground text-sm">With income</span>
+              <Switch
+                checked={forecastMode === "no-income"}
+                onCheckedChange={(checked) =>
+                  setForecastMode(checked ? "no-income" : "with-income")
+                }
+              />
+              <span className="text-muted-foreground text-sm">No income</span>
+            </div>
+            <Select
+              value={String(horizonYears)}
+              onValueChange={(v) => setHorizonYears(Number(v))}
+            >
+              <SelectTrigger className="w-20 h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1 year</SelectItem>
+                <SelectItem value="2">2 years</SelectItem>
+                <SelectItem value="3">3 years</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -283,23 +316,24 @@ export function ForecastLineChart({
               tickFormatter={(value) => formatCurrency(value, baseCurrency)}
             />
 
-            {/* 95% confidence band — only over forecast points */}
-            {forecast.map((p, i) => {
-              const next = forecast[i + 1];
-              if (p.lower == null || p.upper == null) return null;
-              return (
-                <ReferenceArea
-                  key={p.month}
-                  x1={p.month}
-                  x2={next?.month ?? p.month}
-                  y1={p.lower}
-                  y2={p.upper}
-                  fill="hsl(var(--chart-1))"
-                  fillOpacity={0.07}
-                  strokeOpacity={0}
-                />
-              );
-            })}
+            {/* 95% confidence band — only for with-income ARIMA forecast */}
+            {forecastMode === "with-income" &&
+              activeForecast.map((p, i) => {
+                const next = activeForecast[i + 1];
+                if (p.lower == null || p.upper == null) return null;
+                return (
+                  <ReferenceArea
+                    key={p.month}
+                    x1={p.month}
+                    x2={next?.month ?? p.month}
+                    y1={p.lower}
+                    y2={p.upper}
+                    fill="hsl(var(--chart-1))"
+                    fillOpacity={0.07}
+                    strokeOpacity={0}
+                  />
+                );
+              })}
 
             <ChartTooltip
               cursor={false}
@@ -326,7 +360,11 @@ export function ForecastLineChart({
                         <span
                           className={`text-sm ${isForecast ? "text-muted-foreground" : ""}`}
                         >
-                          {isForecast ? "Forecast" : "Balance"}
+                          {isForecast
+                            ? forecastMode === "with-income"
+                              ? "Forecast"
+                              : "No income"
+                            : "Balance"}
                         </span>
                         <span className="text-sm font-medium">
                           <Money
@@ -335,20 +373,23 @@ export function ForecastLineChart({
                           />
                         </span>
                       </div>
-                      {isForecast && lower != null && upper != null && (
-                        <div className="text-muted-foreground text-xs">
-                          95% CI:{" "}
-                          <Money
-                            cents={Math.round(lower * 100)}
-                            currency={baseCurrency}
-                          />{" "}
-                          —{" "}
-                          <Money
-                            cents={Math.round(upper * 100)}
-                            currency={baseCurrency}
-                          />
-                        </div>
-                      )}
+                      {isForecast &&
+                        forecastMode === "with-income" &&
+                        lower != null &&
+                        upper != null && (
+                          <div className="text-muted-foreground text-xs">
+                            95% CI:{" "}
+                            <Money
+                              cents={Math.round(lower * 100)}
+                              currency={baseCurrency}
+                            />{" "}
+                            —{" "}
+                            <Money
+                              cents={Math.round(upper * 100)}
+                              currency={baseCurrency}
+                            />
+                          </div>
+                        )}
                     </div>
                   </div>
                 );
@@ -375,11 +416,11 @@ export function ForecastLineChart({
               connectNulls={false}
               isAnimationActive={false}
             />
-            {/* ARIMA forecast — dashed */}
+            {/* Forecast — dashed, color reflects mode */}
             <Line
               type="monotone"
               dataKey="forecast"
-              stroke="hsl(var(--chart-1))"
+              stroke={forecastStroke}
               strokeWidth={2}
               strokeDasharray="5 5"
               strokeOpacity={0.7}
@@ -391,6 +432,13 @@ export function ForecastLineChart({
           </LineChart>
         </ChartContainer>
       </CardContent>
+      {methodLabel && (
+        <CardFooter>
+          <span className="text-muted-foreground rounded border px-2 py-0.5 text-xs font-mono">
+            {methodLabel}
+          </span>
+        </CardFooter>
+      )}
     </Card>
   );
 }
