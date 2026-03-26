@@ -16,7 +16,6 @@ import { SufficiencyRatioChart } from "@/components/charts/sufficiency-ratio-cha
 import { TagCloudAnalyticsChart } from "@/components/charts/tag-cloud-analytics-chart";
 import { TransactionSizeDistributionChart } from "@/components/charts/transaction-size-distribution-chart";
 import { TransactionTypeDistributionChart } from "@/components/charts/transaction-type-distribution-chart";
-import { FinanceCopilotCard } from "@/components/shared/finance-copilot-card";
 import { TrendsChart } from "@/components/charts/trends-chart";
 import PageHeader from "@/components/shared/page-header";
 import {
@@ -50,11 +49,10 @@ export function InfographicsTabs({
     <Tabs defaultValue={defaultTab} onValueChange={handleTabChange}>
       <PageHeader>
         <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
           {autonomyEnabled && (
             <TabsTrigger value="autonomy">Autonomy</TabsTrigger>
           )}
-          <TabsTrigger value="chat">Chat</TabsTrigger>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
           <TabsTrigger value="labels">Labels</TabsTrigger>
           <TabsTrigger value="expenses">Expenses</TabsTrigger>
@@ -95,16 +93,6 @@ export function InfographicsTabs({
             </div>
           </TabsContent>
         )}
-
-        <TabsContent value="chat">
-          <div className="grid grid-cols-1 gap-4 p-4">
-            <FinanceCopilotCard
-              from={filters.from}
-              to={filters.to}
-              scopeLabel="the active workspace"
-            />
-          </div>
-        </TabsContent>
 
         <TabsContent value="overview">
           <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">

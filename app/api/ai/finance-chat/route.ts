@@ -278,7 +278,9 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function buildPromptBriefing(briefing: Awaited<ReturnType<typeof buildFinancialBriefing>>["briefing"]) {
+function buildPromptBriefing(
+  briefing: Awaited<ReturnType<typeof buildFinancialBriefing>>["briefing"],
+) {
   return {
     scope: briefing.scope,
     currentPosition: briefing.currentPosition,
@@ -580,7 +582,9 @@ export async function POST(request: NextRequest) {
         const fallbackResponse = await createFallbackOpenAIResponse({
           model,
           previousResponseId:
-            typeof payload.id === "string" ? payload.id : body.previousResponseId,
+            typeof payload.id === "string"
+              ? payload.id
+              : body.previousResponseId,
           history: body.history,
           message: body.message,
           briefing,
