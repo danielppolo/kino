@@ -96,19 +96,6 @@ interface BriefingSummary {
   notableSignals: string[];
 }
 
-const WORKSPACE_PROMPTS = [
-  "Can I safely increase spending next month?",
-  "What should I cut first to improve cash flow?",
-  "What is my biggest financial risk in the next 3 months?",
-  "Why does the forecast get worse later this quarter?",
-];
-
-const WALLET_PROMPTS = [
-  "Can this wallet safely absorb more discretionary spending next month?",
-  "What should I cut first in this wallet?",
-  "What is the biggest near-term risk in this wallet?",
-  "Why does this wallet forecast get worse later this quarter?",
-];
 
 function detectClientIntent(message: string): ChatIntent {
   const normalized = message.toLowerCase();
@@ -573,11 +560,6 @@ export function FinanceCopilotCard({
   const [isPending, startTransition] = useTransition();
   const threadRef = useRef<HTMLDivElement | null>(null);
 
-  const suggestedPrompts = useMemo(
-    () => (walletId ? WALLET_PROMPTS : WORKSPACE_PROMPTS),
-    [walletId],
-  );
-
   useEffect(() => {
     const container = threadRef.current;
     if (!container) return;
@@ -672,22 +654,6 @@ export function FinanceCopilotCard({
                   title="Finance Copilot"
                   description={`Decision-first advisory chat for ${scopeLabel}`}
                 />
-                <div className="flex flex-wrap justify-center gap-2">
-                  {suggestedPrompts.map((prompt) => (
-                    <Button
-                      key={prompt}
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-auto whitespace-normal rounded-full px-4 py-2 text-left"
-                      onClick={() => sendMessage(prompt)}
-                      disabled={isPending}
-                    >
-                      <Sparkles className="mr-2 size-4 shrink-0 text-primary" />
-                      {prompt}
-                    </Button>
-                  ))}
-                </div>
               </div>
             ) : (
               <div className="mx-auto flex max-w-4xl flex-col gap-6">
