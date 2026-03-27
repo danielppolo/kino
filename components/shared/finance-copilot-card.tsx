@@ -12,7 +12,6 @@ import {
 import {
   AlertCircle,
   ArrowUpRight,
-  Bot,
   BrainCircuit,
   CalendarRange,
   CircleHelp,
@@ -24,16 +23,12 @@ import {
   SendHorizonal,
   Sparkles,
   TrendingUp,
-  User2,
 } from "lucide-react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import EmptyState from "@/components/shared/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
@@ -457,7 +452,7 @@ function InsightSurface({
         className,
       )}
     >
-      <div className="border-b border-black/5 bg-gradient-to-r from-background/80 via-background/70 to-background/40 px-4 py-3 dark:border-white/5">
+      <div className="border-b px-4 py-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-current/10 bg-background/80">
@@ -543,27 +538,18 @@ function RiskStack({
         </Text>
       ) : null}
       {items.length > 0 ? (
-        <div className="space-y-2.5">
+        <div className="space-y-2">
           {items.map((item) => (
-            <div
-              key={item}
-              className="rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50 to-background px-3.5 py-3 text-sm leading-6 text-amber-950 shadow-sm dark:border-amber-900/50 dark:from-amber-950/35 dark:to-background dark:text-amber-100"
-            >
-              <div className="flex gap-3">
-                <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300">
-                  <AlertCircle className="size-4" />
-                </div>
-                <span>{item}</span>
-              </div>
-            </div>
+            <Alert key={item} className="border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-100">
+              <AlertCircle className="size-4 text-amber-600 dark:text-amber-400" />
+              <AlertDescription className="text-amber-950 dark:text-amber-100">
+                {item}
+              </AlertDescription>
+            </Alert>
           ))}
         </div>
       ) : emptyText ? (
-        <div className="rounded-2xl border border-dashed border-border/70 bg-background/60 px-4 py-3">
-          <Text muted className="text-sm leading-6">
-            {emptyText}
-          </Text>
-        </div>
+        <EmptyState variant="compact" title="No Watch-outs" description={emptyText} />
       ) : null}
     </div>
   );
@@ -681,45 +667,18 @@ export function FinanceCopilotCard({
             className="flex-1 space-y-6 overflow-y-auto px-4 py-5 [content-visibility:auto] md:px-6"
           >
             {messages.length === 0 ? (
-              <div className="mx-auto flex max-w-3xl flex-col gap-6 py-8">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <Bot className="size-5" />
-                    </div>
-                    <div>
-                      <Text strong className="text-base">
-                        Finance Copilot
-                      </Text>
-                      <Text muted className="text-sm">
-                        Decision-first advisory chat for {scopeLabel}
-                      </Text>
-                    </div>
-                  </div>
-                  <Text className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                    Ask what you can afford, what to cut first, where the near-term
-                    risk is, or why the forecast is changing.
-                  </Text>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline">
-                      {walletId ? "Wallet scope" : "Workspace scope"}
-                    </Badge>
-                    {from && to ? (
-                      <Badge variant="secondary">
-                        {from} to {to}
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary">All available history</Badge>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
+              <div className="flex h-full flex-col items-center justify-center gap-6 py-8">
+                <EmptyState variant="compact"
+                  title="Finance Copilot"
+                  description={`Decision-first advisory chat for ${scopeLabel}`}
+                />
+                <div className="flex flex-wrap justify-center gap-2">
                   {suggestedPrompts.map((prompt) => (
                     <Button
                       key={prompt}
                       type="button"
                       variant="outline"
+                      size="sm"
                       className="h-auto whitespace-normal rounded-full px-4 py-2 text-left"
                       onClick={() => sendMessage(prompt)}
                       disabled={isPending}
@@ -744,11 +703,6 @@ export function FinanceCopilotCard({
                         isUser ? "justify-end" : "justify-start",
                       )}
                     >
-                      {!isUser ? (
-                        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                          <Bot className="size-5" />
-                        </div>
-                      ) : null}
 
                       <div className="max-w-[min(82%,48rem)] space-y-3">
                         <div
@@ -759,37 +713,34 @@ export function FinanceCopilotCard({
                               : `rounded-bl-md border ${intentAccent(reply?.intent ?? "general")}`,
                           )}
                         >
+                          
+                        {reply ? (
                           <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
-                            <span className="font-medium">
-                              {isUser ? "You" : "Copilot"}
-                            </span>
-                            {reply ? (
-                              <>
-                                <Badge
-                                  variant="outline"
-                                  className="rounded-full text-[10px]"
-                                >
-                                  {intentLabel(reply.intent)}
-                                </Badge>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="inline-flex">
-                                      <Badge
-                                        variant={confidenceVariant(reply.confidence)}
-                                        className="rounded-full text-[10px]"
-                                      >
-                                        {reply.confidence} confidence
-                                      </Badge>
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    Based on the current scope, analytics, and any
-                                    tool drilldowns used.
-                                  </TooltipContent>
-                                </Tooltip>
-                              </>
-                            ) : null}
-                          </div>
+                            <Badge
+                              variant="outline"
+                              className="rounded-full text-[10px]"
+                            >
+                              {intentLabel(reply.intent)}
+                            </Badge>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="inline-flex">
+                                  <Badge
+                                    variant={confidenceVariant(reply.confidence)}
+                                    className="rounded-full text-[10px]"
+                                  >
+                                    {reply.confidence} confidence
+                                  </Badge>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                Based on the current scope, analytics, and any
+                                tool drilldowns used.
+                              </TooltipContent>
+                            </Tooltip>
+                            </div>
+                        ) : null}
+                          
 
                           {isUser ? (
                             <Text className="whitespace-pre-wrap text-sm leading-6 text-primary-foreground">
@@ -801,7 +752,7 @@ export function FinanceCopilotCard({
                                 eyebrow={intentLabel(reply.intent)}
                                 title="Bottom Line"
                                 icon={Gauge}
-                                className="border-primary/20 bg-gradient-to-br from-primary/10 via-background/95 to-background text-foreground"
+                                className="border-primary/20 bg-primary/5 text-foreground"
                                 badge={
                                   <Badge
                                     variant={confidenceVariant(reply.confidence)}
@@ -918,20 +869,12 @@ export function FinanceCopilotCard({
                         ) : null}
                       </div>
 
-                      {isUser ? (
-                        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                          <User2 className="size-5" />
-                        </div>
-                      ) : null}
                     </div>
                   );
                 })}
 
                 {isPending ? (
                   <div className="flex w-full justify-start gap-3">
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <Bot className="size-5" />
-                    </div>
                     <div className="w-full max-w-2xl rounded-3xl rounded-bl-md border border-border/70 bg-muted/45 px-4 py-3 shadow-sm">
                       <div className="mb-3 flex items-center gap-2 text-sm font-medium">
                         <Loader2 className="size-4 animate-spin text-primary" />
@@ -956,7 +899,6 @@ export function FinanceCopilotCard({
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
                   placeholder="Ask a financial decision or diagnostic question..."
-                  className="min-h-[72px] resize-none rounded-3xl border-border/70 bg-muted/30 px-4 py-3 shadow-none focus-visible:ring-1"
                   onKeyDown={(event) => {
                     if (
                       (event.metaKey || event.ctrlKey) &&
@@ -967,53 +909,36 @@ export function FinanceCopilotCard({
                     }
                   }}
                 />
-                <Button
-                  type="button"
-                  onClick={() => sendMessage(draft)}
-                  disabled={isPending || !draft.trim()}
-                  size="icon"
-                  className="size-12 rounded-full"
-                >
-                  <SendHorizonal className="size-4" />
-                </Button>
               </div>
 
                 {error ? (
-                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <Text destructive className="text-sm">
-                      {error}
-                    </Text>
-                  </div>
-                ) : null}
+                <Alert variant="destructive">
+                  <AlertCircle className="size-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              ) : null}
             </div>
           </div>
         </div>
 
         <aside className="hidden border-l border-border/70 bg-muted/20 xl:flex xl:min-h-0 xl:flex-col">
           <div className="space-y-5 overflow-y-auto p-5">
-            <Card className="overflow-hidden rounded-[28px] border-primary/15 bg-gradient-to-br from-primary/10 via-background to-background shadow-sm">
-              <CardHeader className="space-y-4 p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex size-11 items-center justify-center rounded-2xl bg-primary/12 text-primary">
-                      <Gauge className="size-5" />
-                    </div>
-                    <div className="space-y-1">
-                      <Text strong className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                        Latest read
-                      </Text>
-                      <CardTitle className="text-base">Bottom Line</CardTitle>
-                    </div>
-                  </div>
-                  {latestReply ? (
-                    <Badge
-                      variant={confidenceVariant(latestReply.confidence)}
-                      className="rounded-full px-2.5 py-1 text-[10px]"
-                    >
-                      {latestReply.confidence}
-                    </Badge>
-                  ) : null}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Gauge className="size-4 text-primary" />
+                  <Text strong className="text-sm">Bottom Line</Text>
                 </div>
+                {latestReply ? (
+                  <Badge
+                    variant={confidenceVariant(latestReply.confidence)}
+                    className="rounded-full px-2.5 py-1 text-[10px]"
+                  >
+                    {latestReply.confidence}
+                  </Badge>
+                ) : null}
+              </div>
+              <div className="rounded-2xl border border-border/70 bg-background/70 p-4 space-y-3">
                 <Text className="text-sm leading-7">
                   {latestReply?.summary ||
                     "Ask a question to see the latest recommendation, diagnosis, or forecast bottom line."}
@@ -1028,8 +953,8 @@ export function FinanceCopilotCard({
                     </Badge>
                   </div>
                 ) : null}
-              </CardHeader>
-            </Card>
+              </div>
+            </div>
 
             <div className="space-y-3">
               <div className="flex items-center gap-2">
@@ -1108,12 +1033,11 @@ export function FinanceCopilotCard({
                     </div>
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-border/70 bg-background/60 px-4 py-3">
-                    <Text muted className="text-sm leading-6">
-                    Decision framing appears here when the assistant is answering a
-                    recommendation-style question.
-                    </Text>
-                  </div>
+                  <EmptyState 
+                    variant="compact"
+                    title="No Decision Framing Yet"
+                    description="Decision framing appears here when the assistant is answering a recommendation-style question."
+                  />
                 )}
 
                 {latestReply?.analysis?.drivers?.length ? (
@@ -1157,11 +1081,11 @@ export function FinanceCopilotCard({
                     </div>
                   ))
                 ) : (
-                  <div className="rounded-2xl border border-border/70 bg-background/70 p-4">
-                    <Text muted className="text-sm leading-6">
-                      Evidence cards will appear here after the first answer.
-                    </Text>
-                  </div>
+                  <EmptyState 
+                    variant="compact"
+                    title="No Evidence Yet"
+                    description="Evidence cards will appear here after the first answer."
+                  />
                 )}
               </div>
             </div>
