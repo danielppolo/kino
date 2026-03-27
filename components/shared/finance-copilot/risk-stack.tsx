@@ -32,7 +32,7 @@ export function RiskStack({
           ))}
         </div>
       ) : emptyText ? (
-        <EmptyState title="No Watch-outs" description={emptyText} />
+        <EmptyState title="No Watch-outs" description={emptyText} variant="compact" />
       ) : null}
     </div>
   );

@@ -190,7 +190,10 @@ export function ExplorationCapitalChart({
       <Card>
         <CardHeader>
           <CardTitle>Exploration Capital</CardTitle>
-          <CardDescription>Discretionary spend as % of total</CardDescription>
+          <CardDescription>
+            Shows how much of your spending is still flexible after baseline
+            obligations take their share.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex h-64 items-center justify-center">Loading...</div>
@@ -204,7 +207,10 @@ export function ExplorationCapitalChart({
       <Card>
         <CardHeader>
           <CardTitle>Exploration Capital</CardTitle>
-          <CardDescription>Discretionary spend as % of total</CardDescription>
+          <CardDescription>
+            Shows how much of your spending is still flexible after baseline
+            obligations take their share.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex h-64 items-center justify-center text-gray-500">
@@ -231,7 +237,12 @@ export function ExplorationCapitalChart({
           </span>
         </CardTitle>
         <CardDescription>
-          Discretionary spend fraction — baseline: {topCategoryNames.join(", ")}
+          The blue area shows the share of spend that remains discretionary, while{" "}
+          {topCategoryNames.length > 0 ? (
+            <>the baseline is anchored by {topCategoryNames.join(", ")}.</>
+          ) : (
+            <>the gray area represents recurring baseline obligations.</>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent>

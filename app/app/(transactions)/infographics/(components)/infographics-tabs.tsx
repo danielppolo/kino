@@ -69,22 +69,22 @@ export function InfographicsTabs({
                   to={filters.to}
                 />
               </div>
-              <div className="md:col-span-2 lg:col-span-2">
+              <div className="md:col-span-2 lg:col-span-4">
                 <FreedomMultiplierChart
                   from={filters.from}
                   to={filters.to}
                 />
               </div>
-              <div className="md:col-span-2 lg:col-span-2">
+              <div className="md:col-span-2 lg:col-span-4">
                 <SufficiencyRatioChart
                   from={filters.from}
                   to={filters.to}
                 />
               </div>
-              <div className="md:col-span-2 lg:col-span-2">
+              <div className="md:col-span-2 lg:col-span-4">
                 <BurnRateDriftChart from={filters.from} to={filters.to} />
               </div>
-              <div className="md:col-span-2 lg:col-span-2">
+              <div className="md:col-span-2 lg:col-span-4">
                 <ExplorationCapitalChart
                   from={filters.from}
                   to={filters.to}
