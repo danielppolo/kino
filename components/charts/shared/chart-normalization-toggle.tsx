@@ -44,6 +44,8 @@ function NormalizationLevelIcon({
   );
 }
 
+export { NormalizationLevelIcon };
+
 export function ChartNormalizationToggle({
   value,
   onValueChange,

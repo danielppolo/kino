@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useMemo } from "react";
 import { format } from "date-fns";
 import {
   Area,
@@ -26,8 +26,7 @@ import {
   ChartLegendContent,
   ChartTooltip,
 } from "@/components/ui/chart";
-import { Slider } from "@/components/ui/slider";
-import { Money } from "@/components/ui/money";
+import { useChartControls } from "@/components/charts/shared/chart-controls-context";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import {
   calculateMonthlyTotals,
@@ -37,6 +36,7 @@ import {
 import { createClient } from "@/utils/supabase/client";
 import { getWalletMonthlyBalances } from "@/utils/supabase/queries";
 import type { ForecastApiResponse } from "@/app/api/forecast/route";
+import { Money } from "../ui/money";
 
 interface AutonomyHorizonChartProps {
   walletId?: string;
@@ -65,10 +65,7 @@ export function AutonomyHorizonChart({
 }: AutonomyHorizonChartProps) {
   const [wallets, walletMap] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
-
-  // User-controlled monthly burn rate (in base currency, dollars not cents).
-  // Initialised from the API's trimmed-mean once loaded.
-  const [monthlyBurnRate, setMonthlyBurnRate] = useState<number | null>(null);
+  const controls = useChartControls();
 
   const { data: monthlyBalances, isLoading: loadingBalances } = useQuery({
     queryKey: ["autonomy-horizon-balances", walletId, from, to],
@@ -105,16 +102,12 @@ export function AutonomyHorizonChart({
     staleTime: 60 * 60 * 1000,
   });
 
-  // Seed the burn rate from the API once on first load, snapped to the nearest 10k step
-  useEffect(() => {
-    if (forecastData && monthlyBurnRate === null) {
-      const snapped = Math.round(forecastData.avgMonthlyBurn / 10000) * 10000;
-      setMonthlyBurnRate(Math.min(100000, Math.max(0, snapped)));
-    }
-  }, [forecastData, monthlyBurnRate]);
-
   const isLoading = loadingBalances || loadingForecast;
-  const effectiveBurnRate = monthlyBurnRate ?? forecastData?.avgMonthlyBurn ?? 0;
+  const effectiveBurnRate =
+    controls?.monthlySpend ??
+    controls?.defaultMonthlySpend ??
+    forecastData?.avgMonthlyBurn ??
+    0;
 
   const chartData = useMemo(() => {
     if (!monthlyBalances || !forecastData || monthlyBalances.length === 0) {
@@ -236,38 +229,13 @@ export function AutonomyHorizonChart({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-start justify-between gap-8">
-          <div>
-            <CardTitle>Autonomy Horizon</CardTitle>
-            <CardDescription>
-              Over the next {horizonMonths} months, compare your projected balance
-              path against how long your current reserves would last with no new
-              income, measured in {baseCurrency}.
-            </CardDescription>
-          </div>
-          <div className="flex flex-col gap-1.5 min-w-56">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-sm">Monthly spend</span>
-              <span className="text-sm font-medium tabular-nums">
-                <Money
-                  cents={Math.round(effectiveBurnRate * 100)}
-                  currency={baseCurrency}
-                />
-              </span>
-            </div>
-            <Slider
-              min={0}
-              max={100000}
-              step={10000}
-              value={[effectiveBurnRate]}
-              onValueChange={([v]) => setMonthlyBurnRate(v)}
-            />
-            <div className="text-muted-foreground flex justify-between text-xs">
-              <span>0</span>
-              <span>{formatCurrency(100000, baseCurrency)}</span>
-            </div>
-          </div>
-        </div>
+        <CardTitle>Autonomy Horizon</CardTitle>
+        <CardDescription>
+          Over the next {horizonMonths} months, compare your projected balance
+          path against how long your current reserves would last with no new
+          income, measured in {baseCurrency}. The shared spend control adjusts the
+          zero-income burn-down line.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>

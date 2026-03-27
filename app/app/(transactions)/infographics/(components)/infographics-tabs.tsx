@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { AccumulatedAreaChart } from "@/components/charts/accumulated-area-chart";
@@ -17,6 +18,8 @@ import { TagCloudAnalyticsChart } from "@/components/charts/tag-cloud-analytics-
 import { TransactionSizeDistributionChart } from "@/components/charts/transaction-size-distribution-chart";
 import { TransactionTypeDistributionChart } from "@/components/charts/transaction-type-distribution-chart";
 import { TrendsChart } from "@/components/charts/trends-chart";
+import { ChartControlsProvider } from "@/components/charts/shared/chart-controls-context";
+import { ChartHeaderControls } from "@/components/charts/shared/chart-header-controls";
 import PageHeader from "@/components/shared/page-header";
 import {
   Tabs,
@@ -38,15 +41,17 @@ export function InfographicsTabs({
 }: InfographicsTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState(defaultTab);
 
   const handleTabChange = (value: string) => {
+    setActiveTab(value);
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", value);
     router.push(`?${params.toString()}`);
   };
 
-  return (
-    <Tabs defaultValue={defaultTab} onValueChange={handleTabChange}>
+  const content = (
+    <Tabs value={activeTab} onValueChange={handleTabChange}>
       <PageHeader>
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -57,40 +62,41 @@ export function InfographicsTabs({
           <TabsTrigger value="labels">Labels</TabsTrigger>
           <TabsTrigger value="expenses">Expenses</TabsTrigger>
         </TabsList>
+        {autonomyEnabled && activeTab === "autonomy" && <ChartHeaderControls />}
       </PageHeader>
 
       <div style={{ height: "calc(100vh - 44px)", overflow: "auto" }}>
         {autonomyEnabled && (
           <TabsContent value="autonomy">
-            <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
-              <div className="md:col-span-2 lg:col-span-4">
-                <AutonomyHorizonChart
-                  from={filters.from}
-                  to={filters.to}
-                />
+              <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="md:col-span-2 lg:col-span-4">
+                  <AutonomyHorizonChart
+                    from={filters.from}
+                    to={filters.to}
+                  />
+                </div>
+                <div className="md:col-span-2 lg:col-span-4">
+                  <FreedomMultiplierChart
+                    from={filters.from}
+                    to={filters.to}
+                  />
+                </div>
+                <div className="md:col-span-2 lg:col-span-4">
+                  <SufficiencyRatioChart
+                    from={filters.from}
+                    to={filters.to}
+                  />
+                </div>
+                <div className="md:col-span-2 lg:col-span-4">
+                  <BurnRateDriftChart from={filters.from} to={filters.to} />
+                </div>
+                <div className="md:col-span-2 lg:col-span-4">
+                  <ExplorationCapitalChart
+                    from={filters.from}
+                    to={filters.to}
+                  />
+                </div>
               </div>
-              <div className="md:col-span-2 lg:col-span-4">
-                <FreedomMultiplierChart
-                  from={filters.from}
-                  to={filters.to}
-                />
-              </div>
-              <div className="md:col-span-2 lg:col-span-4">
-                <SufficiencyRatioChart
-                  from={filters.from}
-                  to={filters.to}
-                />
-              </div>
-              <div className="md:col-span-2 lg:col-span-4">
-                <BurnRateDriftChart from={filters.from} to={filters.to} />
-              </div>
-              <div className="md:col-span-2 lg:col-span-4">
-                <ExplorationCapitalChart
-                  from={filters.from}
-                  to={filters.to}
-                />
-              </div>
-            </div>
           </TabsContent>
         )}
 
@@ -203,5 +209,13 @@ export function InfographicsTabs({
         </TabsContent>
       </div>
     </Tabs>
+  );
+
+  return autonomyEnabled ? (
+    <ChartControlsProvider from={filters.from} to={filters.to}>
+      {content}
+    </ChartControlsProvider>
+  ) : (
+    content
   );
 }

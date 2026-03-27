@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { format } from "date-fns";
 import {
   Bar,
@@ -26,12 +26,9 @@ import {
   ChartLegendContent,
   ChartTooltip,
 } from "@/components/ui/chart";
-import { ChartNormalizationToggle } from "@/components/charts/shared/chart-normalization-toggle";
-import { Money } from "@/components/ui/money";
+import { useChartControls } from "@/components/charts/shared/chart-controls-context";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import {
-  CHART_NORMALIZATION_PRESETS,
-  ChartNormalizationPreset,
   capChartOutliers,
   formatCurrency,
   parseMonthDate,
@@ -42,6 +39,7 @@ import {
   getMonthlyStats,
   listRecurringTransactions,
 } from "@/utils/supabase/queries";
+import { Money } from "../ui/money";
 
 interface BurnRateDriftChartProps {
   walletId?: string;
@@ -67,10 +65,9 @@ export function BurnRateDriftChart({
 }: BurnRateDriftChartProps) {
   const [, walletMap] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
-  const [normalizationPreset, setNormalizationPreset] =
-    useState<ChartNormalizationPreset>("strong");
+  const controls = useChartControls();
   const normalizationPercentile =
-    CHART_NORMALIZATION_PRESETS[normalizationPreset].percentile;
+    controls?.peakNormalizationPercentile ?? 0.9;
 
   const { data: monthlyStats, isLoading: loadingStats } = useQuery({
     queryKey: ["burn-rate-drift-stats", walletId, from, to],
@@ -249,32 +246,15 @@ export function BurnRateDriftChart({
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-          <div>
-            <CardTitle>Burn Rate Drift</CardTitle>
-            <CardDescription>
-              <span style={{ color: driftColor }}>
-                {drift >= 0 ? "+" : ""}
-                {drift.toFixed(1)}% drift
-              </span>{" "}
-              — compared with the start of the period, your monthly spend trend is{" "}
-              {driftLabel.toLowerCase()}.
-            </CardDescription>
-          </div>
-          <div className="w-full space-y-1.5 sm:min-w-36 sm:max-w-40">
-            <div className="text-muted-foreground text-xs font-medium">
-              Peak normalization
-            </div>
-            <ChartNormalizationToggle
-              value={normalizationPreset}
-              onValueChange={setNormalizationPreset}
-            />
-            <div className="text-muted-foreground text-xs">
-              Stronger normalization compresses isolated peaks so the underlying
-              slope of your burn rate is easier to interpret.
-            </div>
-          </div>
-        </div>
+        <CardTitle>Burn Rate Drift</CardTitle>
+        <CardDescription>
+          <span style={{ color: driftColor }}>
+            {drift >= 0 ? "+" : ""}
+            {drift.toFixed(1)}% drift
+          </span>{" "}
+          — compared with the start of the period, your monthly spend trend is{" "}
+          {driftLabel.toLowerCase()}.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
