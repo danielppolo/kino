@@ -55,6 +55,7 @@ const chartConfig: ChartConfig = {
     color: "#f59e0b",
   },
 };
+const HEADLINE_LOOKBACK_MONTHS = 3;
 
 export function FreedomMultiplierChart({
   walletId,
@@ -81,9 +82,13 @@ export function FreedomMultiplierChart({
     },
   });
 
-  const { chartData, currentMultiplier } = useMemo(() => {
+  const { chartData, headlineMultiplier, headlineWindowMonths } = useMemo(() => {
     if (!monthlyStats || monthlyStats.length === 0) {
-      return { chartData: [], currentMultiplier: 0 };
+      return {
+        chartData: [],
+        headlineMultiplier: 0,
+        headlineWindowMonths: [] as string[],
+      };
     }
 
     // Group by month and convert to base currency
@@ -130,14 +135,30 @@ export function FreedomMultiplierChart({
       return { ...point, rolling: avg };
     });
 
-    const current = data.length > 0 ? data[data.length - 1].multiplier : 0;
+    const currentMonthKey = format(new Date(), "yyyy-MM-01");
+    const completedMonths = data.filter((point) => point.month < currentMonthKey);
+    const headlineWindow =
+      completedMonths.slice(-HEADLINE_LOOKBACK_MONTHS);
+    const fallbackWindow =
+      headlineWindow.length > 0
+        ? headlineWindow
+        : data.slice(-Math.min(HEADLINE_LOOKBACK_MONTHS, data.length));
+    const headlineAverage =
+      fallbackWindow.length > 0
+        ? fallbackWindow.reduce((sum, point) => sum + point.multiplier, 0) /
+          fallbackWindow.length
+        : 0;
     const { data: cappedData } = capChartOutliers(
       data,
       ["multiplier", "rolling"],
       normalizationPercentile,
     );
 
-    return { chartData: cappedData, currentMultiplier: current };
+    return {
+      chartData: cappedData,
+      headlineMultiplier: headlineAverage,
+      headlineWindowMonths: fallbackWindow.map((point) => point.month),
+    };
   }, [monthlyStats, conversionRates, baseCurrency, walletMap, normalizationPercentile]);
 
   const percentageChange = useMemo(() => {
@@ -193,9 +214,9 @@ export function FreedomMultiplierChart({
   }
 
   const multiplierColor =
-    currentMultiplier >= 2
+    headlineMultiplier >= 2
       ? "#22c55e"
-      : currentMultiplier >= 1
+      : headlineMultiplier >= 1
         ? "#f59e0b"
         : "#ef4444";
 
@@ -208,15 +229,17 @@ export function FreedomMultiplierChart({
             className="ml-3 text-2xl font-bold"
             style={{ color: multiplierColor }}
           >
-            {currentMultiplier.toFixed(1)}×
+            {headlineMultiplier.toFixed(1)}×
           </span>
         </CardTitle>
         <CardDescription>
-          After covering your average monthly burn, each month of income currently
-          buys{" "}
-          <strong>{Math.max(0, currentMultiplier).toFixed(1)}</strong> months
-          of future autonomy. That leaves your leverage{" "}
-          {currentMultiplier >= 1 ? "above" : "below"} break-even.
+          Averaged across{" "}
+          <strong>{headlineWindowMonths.length || HEADLINE_LOOKBACK_MONTHS}</strong>{" "}
+          recent completed {headlineWindowMonths.length === 1 ? "month" : "months"}
+          , each month of income bought{" "}
+          <strong>{Math.max(0, headlineMultiplier).toFixed(1)}</strong> months of
+          future autonomy after covering average burn. That left leverage{" "}
+          {headlineMultiplier >= 1 ? "above" : "below"} break-even.
         </CardDescription>
       </CardHeader>
       <CardContent>
