@@ -202,7 +202,10 @@ export function AutonomyHorizonChart({
       <Card>
         <CardHeader>
           <CardTitle>Autonomy Horizon</CardTitle>
-          <CardDescription>Projected runway at current burn rate</CardDescription>
+          <CardDescription>
+            Forecasted balance runway showing the path with income versus a zero-income
+            burn-down at your current monthly spend.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex h-64 items-center justify-center">Loading...</div>
@@ -216,7 +219,10 @@ export function AutonomyHorizonChart({
       <Card>
         <CardHeader>
           <CardTitle>Autonomy Horizon</CardTitle>
-          <CardDescription>Projected runway at current burn rate</CardDescription>
+          <CardDescription>
+            Forecasted balance runway showing the path with income versus a zero-income
+            burn-down at your current monthly spend.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex h-64 items-center justify-center text-gray-500">
@@ -234,8 +240,9 @@ export function AutonomyHorizonChart({
           <div>
             <CardTitle>Autonomy Horizon</CardTitle>
             <CardDescription>
-              {horizonMonths}-month runway — ARIMA trajectory vs. zero-income
-              burn-down ({baseCurrency})
+              Over the next {horizonMonths} months, compare your projected balance
+              path against how long your current reserves would last with no new
+              income, measured in {baseCurrency}.
             </CardDescription>
           </div>
           <div className="flex flex-col gap-1.5 min-w-56">

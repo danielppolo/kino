@@ -27,6 +27,90 @@ export function formatCurrency(value: number, currency: string): string {
   }).format(value);
 }
 
+type ChartOutlierOriginals<K extends string> = Partial<Record<K, number>>;
+
+export const CHART_NORMALIZATION_PRESETS = {
+  light: {
+    label: "Light",
+    percentile: 0.995,
+  },
+  balanced: {
+    label: "Balanced",
+    percentile: 0.97,
+  },
+  strong: {
+    label: "Strong",
+    percentile: 0.9,
+  },
+} as const;
+
+export type ChartNormalizationPreset = keyof typeof CHART_NORMALIZATION_PRESETS;
+
+export function capChartOutliers<
+  T extends Record<string, unknown>,
+  K extends keyof T & string,
+>(
+  data: T[],
+  numericKeys: readonly K[],
+  percentile: number = 0.99,
+): {
+  cap: number;
+  data: Array<T & { _original: ChartOutlierOriginals<K> }>;
+} {
+  if (data.length === 0 || numericKeys.length === 0) {
+    return { cap: Infinity, data: [] };
+  }
+
+  const allValues = data.flatMap((point) =>
+    numericKeys.flatMap((key) => {
+      const value = point[key];
+      return typeof value === "number" && Number.isFinite(value)
+        ? [Math.abs(value)]
+        : [];
+    }),
+  );
+
+  if (allValues.length === 0) {
+    return {
+      cap: Infinity,
+      data: data.map((point) => ({
+        ...point,
+        _original: {},
+      })),
+    };
+  }
+
+  const sorted = [...allValues].sort((a, b) => a - b);
+  const normalizedPercentile = Math.min(Math.max(percentile, 0), 1);
+  const capIndex = Math.min(
+    sorted.length - 1,
+    Math.floor(sorted.length * normalizedPercentile),
+  );
+  const cap = sorted[capIndex] ?? Infinity;
+
+  return {
+    cap,
+    data: data.map((point) => {
+      const nextPoint = {
+        ...point,
+        _original: {},
+      } as T & { _original: ChartOutlierOriginals<K> };
+
+      numericKeys.forEach((key) => {
+        const value = point[key];
+        if (typeof value !== "number" || !Number.isFinite(value)) {
+          return;
+        }
+
+        nextPoint._original[key] = value;
+        nextPoint[key] = (Math.sign(value) * Math.min(Math.abs(value), cap)) as T[K];
+      });
+
+      return nextPoint;
+    }),
+  };
+}
+
 /**
  * Calculate monthly totals from wallet monthly balances
  * Converts balances to base currency and groups by month and wallet
@@ -508,4 +592,3 @@ export function parseMonthDate(monthString: string): Date {
   // Create date in local timezone (month is 0-indexed in JS)
   return new Date(year, month - 1, day);
 }
-

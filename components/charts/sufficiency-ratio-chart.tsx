@@ -195,7 +195,10 @@ export function SufficiencyRatioChart({
       <Card>
         <CardHeader>
           <CardTitle>Sufficiency Ratio</CardTitle>
-          <CardDescription>Years of autonomy at current burn rate</CardDescription>
+          <CardDescription>
+            Shows how many years your current reserves could fund your lifestyle at
+            the average burn rate.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex h-64 items-center justify-center">Loading...</div>
@@ -209,7 +212,10 @@ export function SufficiencyRatioChart({
       <Card>
         <CardHeader>
           <CardTitle>Sufficiency Ratio</CardTitle>
-          <CardDescription>Years of autonomy at current burn rate</CardDescription>
+          <CardDescription>
+            Shows how many years your current reserves could fund your lifestyle at
+            the average burn rate.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex h-64 items-center justify-center text-gray-500">
@@ -230,7 +236,9 @@ export function SufficiencyRatioChart({
           </span>
         </CardTitle>
         <CardDescription>
-          {currentLabel} — years of autonomy at average burn rate ({baseCurrency})
+          {currentLabel} — if spending stayed near its average pace, your current
+          reserves would fund roughly {currentYears.toFixed(1)} years of autonomy in{" "}
+          {baseCurrency}.
         </CardDescription>
       </CardHeader>
       <CardContent>

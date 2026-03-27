@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import {
   Bar,
@@ -27,9 +27,19 @@ import {
   ChartLegendContent,
   ChartTooltip,
 } from "@/components/ui/chart";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import {
+  CHART_NORMALIZATION_PRESETS,
+  ChartNormalizationPreset,
+  capChartOutliers,
   calculateTrimmedMean,
   parseMonthDate,
 } from "@/utils/chart-helpers";
@@ -61,6 +71,10 @@ export function FreedomMultiplierChart({
 }: FreedomMultiplierChartProps) {
   const [, walletMap] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
+  const [normalizationPreset, setNormalizationPreset] =
+    useState<ChartNormalizationPreset>("balanced");
+  const normalizationPercentile =
+    CHART_NORMALIZATION_PRESETS[normalizationPreset].percentile;
 
   const { data: monthlyStats, isLoading } = useQuery({
     queryKey: ["freedom-multiplier-stats", walletId, from, to],
@@ -126,13 +140,27 @@ export function FreedomMultiplierChart({
     });
 
     const current = data.length > 0 ? data[data.length - 1].multiplier : 0;
-    return { chartData: data, currentMultiplier: current };
-  }, [monthlyStats, conversionRates, baseCurrency, walletMap]);
+    const { data: cappedData } = capChartOutliers(
+      data,
+      ["multiplier", "rolling"],
+      normalizationPercentile,
+    );
+
+    return { chartData: cappedData, currentMultiplier: current };
+  }, [monthlyStats, conversionRates, baseCurrency, walletMap, normalizationPercentile]);
 
   const percentageChange = useMemo(() => {
     if (chartData.length < 2) return 0;
-    const prev = chartData[chartData.length - 2].multiplier;
-    const curr = chartData[chartData.length - 1].multiplier;
+    const prevPoint = chartData[chartData.length - 2] as {
+      multiplier: number;
+      _original?: { multiplier?: number };
+    };
+    const currPoint = chartData[chartData.length - 1] as {
+      multiplier: number;
+      _original?: { multiplier?: number };
+    };
+    const prev = prevPoint._original?.multiplier ?? prevPoint.multiplier;
+    const curr = currPoint._original?.multiplier ?? currPoint.multiplier;
     if (prev === 0) return 0;
     return ((curr - prev) / Math.abs(prev)) * 100;
   }, [chartData]);
@@ -142,7 +170,10 @@ export function FreedomMultiplierChart({
       <Card>
         <CardHeader>
           <CardTitle>Freedom Multiplier</CardTitle>
-          <CardDescription>Months of freedom purchased per month worked</CardDescription>
+          <CardDescription>
+            Measures how many months of autonomy each month of work is buying after
+            covering your average burn.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex h-64 items-center justify-center">Loading...</div>
@@ -156,7 +187,10 @@ export function FreedomMultiplierChart({
       <Card>
         <CardHeader>
           <CardTitle>Freedom Multiplier</CardTitle>
-          <CardDescription>Months of freedom purchased per month worked</CardDescription>
+          <CardDescription>
+            Measures how many months of autonomy each month of work is buying after
+            covering your average burn.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex h-64 items-center justify-center text-gray-500">
@@ -177,21 +211,53 @@ export function FreedomMultiplierChart({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>
-          Freedom Multiplier
-          <span
-            className="ml-3 text-2xl font-bold"
-            style={{ color: multiplierColor }}
-          >
-            {currentMultiplier.toFixed(1)}×
-          </span>
-        </CardTitle>
-        <CardDescription>
-          Each month of income currently buys{" "}
-          <strong>{Math.max(0, currentMultiplier).toFixed(1)}</strong> months of
-          autonomy — leverage {currentMultiplier >= 1 ? "above" : "below"}{" "}
-          break-even
-        </CardDescription>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+          <div>
+            <CardTitle>
+              Freedom Multiplier
+              <span
+                className="ml-3 text-2xl font-bold"
+                style={{ color: multiplierColor }}
+              >
+                {currentMultiplier.toFixed(1)}×
+              </span>
+            </CardTitle>
+            <CardDescription>
+              After covering your average monthly burn, each month of income currently
+              buys{" "}
+              <strong>{Math.max(0, currentMultiplier).toFixed(1)}</strong> months
+              of future autonomy. That leaves your leverage{" "}
+              {currentMultiplier >= 1 ? "above" : "below"} break-even.
+            </CardDescription>
+          </div>
+          <div className="w-full space-y-1.5 sm:min-w-36 sm:max-w-40">
+            <div className="text-muted-foreground text-xs font-medium">
+              Peak normalization
+            </div>
+            <Select
+              value={normalizationPreset}
+              onValueChange={(value) =>
+                setNormalizationPreset(value as ChartNormalizationPreset)
+              }
+            >
+              <SelectTrigger className="h-8 w-full text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(CHART_NORMALIZATION_PRESETS).map(([key, preset]) => (
+                  <SelectItem key={key} value={key} className="text-xs">
+                    {preset.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="text-muted-foreground text-xs">
+              Tighter normalization compresses denominator-driven spikes so the
+              direction of leverage is easier to read, without changing tooltip
+              values.
+            </div>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
@@ -217,10 +283,22 @@ export function FreedomMultiplierChart({
               cursor={false}
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
-                const mult = payload.find((p) => p.dataKey === "multiplier")
-                  ?.value as number | undefined;
-                const roll = payload.find((p) => p.dataKey === "rolling")
-                  ?.value as number | undefined;
+                const point = payload[0]?.payload as
+                  | {
+                      _original?: {
+                        multiplier?: number;
+                        rolling?: number;
+                      };
+                    }
+                  | undefined;
+                const mult =
+                  point?._original?.multiplier ??
+                  (payload.find((p) => p.dataKey === "multiplier")
+                    ?.value as number | undefined);
+                const roll =
+                  point?._original?.rolling ??
+                  (payload.find((p) => p.dataKey === "rolling")
+                    ?.value as number | undefined);
                 return (
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
                     <div className="text-sm font-medium mb-1">

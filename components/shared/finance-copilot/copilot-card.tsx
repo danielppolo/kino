@@ -23,10 +23,11 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import EmptyState from "@/components/shared/empty-state";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,20 +61,6 @@ import {
   intentLoadingCopy,
 } from "./utils";
 
-const WORKSPACE_PROMPTS = [
-  "Can I safely increase spending next month?",
-  "What should I cut first to improve cash flow?",
-  "What is my biggest financial risk in the next 3 months?",
-  "Why does the forecast get worse later this quarter?",
-];
-
-const WALLET_PROMPTS = [
-  "Can this wallet safely absorb more discretionary spending next month?",
-  "What should I cut first in this wallet?",
-  "What is the biggest near-term risk in this wallet?",
-  "Why does this wallet forecast get worse later this quarter?",
-];
-
 export function FinanceCopilotCard({
   walletId,
   from,
@@ -90,7 +77,6 @@ export function FinanceCopilotCard({
   const [isPending, startTransition] = useTransition();
   const threadRef = useRef<HTMLDivElement | null>(null);
 
-  const suggestedPrompts = walletId ? WALLET_PROMPTS : WORKSPACE_PROMPTS;
 
   useEffect(() => {
     const container = threadRef.current;
@@ -184,23 +170,9 @@ export function FinanceCopilotCard({
               <div className="flex h-full flex-col items-center justify-center gap-6 py-8">
                 <EmptyState
                   title="Finance Copilot"
+                  variant="compact" 
                   description={`Decision-first advisory chat for ${scopeLabel}`}
                 />
-                <div className="flex flex-wrap justify-center gap-2">
-                  {suggestedPrompts.map((prompt) => (
-                    <Button
-                      key={prompt}
-                      type="button"
-                      variant="outline"
-                      className="h-auto whitespace-normal rounded-full px-4 py-2 text-left"
-                      onClick={() => sendMessage(prompt)}
-                      disabled={isPending}
-                    >
-                      <Sparkles className="mr-2 size-4 shrink-0 text-primary" />
-                      {prompt}
-                    </Button>
-                  ))}
-                </div>
               </div>
             ) : (
               <div className="mx-auto flex max-w-4xl flex-col gap-6">
@@ -217,12 +189,15 @@ export function FinanceCopilotCard({
                       )}
                     >
                       <div className="max-w-[min(82%,48rem)] space-y-3">
-                        <div
+                        <Card
                           className={cn(
-                            "rounded-3xl px-4 py-3 shadow-sm",
+                            "rounded-3xl px-4 py-3",
                             isUser
-                              ? "rounded-br-md bg-primary text-primary-foreground"
-                              : `rounded-bl-md border ${intentAccent(reply?.intent ?? "general")}`,
+                              ? "rounded-br-md border-0 bg-primary text-primary-foreground shadow-none"
+                              : cn(
+                                  "rounded-bl-md",
+                                  intentAccent(reply?.intent ?? "general"),
+                                ),
                           )}
                         >
                           {reply ? (
@@ -317,7 +292,7 @@ export function FinanceCopilotCard({
                               {message.content}
                             </Text>
                           )}
-                        </div>
+                        </Card>
 
                         {reply ? (
                           <div className="space-y-3 px-1">
@@ -384,7 +359,7 @@ export function FinanceCopilotCard({
 
                 {isPending ? (
                   <div className="flex w-full justify-start gap-3">
-                    <div className="w-full max-w-2xl rounded-3xl rounded-bl-md border border-border/70 bg-muted/45 px-4 py-3 shadow-sm">
+                    <Card className="w-full max-w-2xl rounded-3xl rounded-bl-md border-border/70 bg-muted/45 px-4 py-3">
                       <div className="mb-3 flex items-center gap-2 text-sm font-medium">
                         <Loader2 className="size-4 animate-spin text-primary" />
                         Copilot is {intentLoadingCopy(activeIntent)}
@@ -394,7 +369,7 @@ export function FinanceCopilotCard({
                         <Skeleton className="h-4 w-3/5" />
                         <Skeleton className="h-24 w-full" />
                       </div>
-                    </div>
+                    </Card>
                   </div>
                 ) : null}
               </div>
@@ -408,7 +383,6 @@ export function FinanceCopilotCard({
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
                   placeholder="Ask a financial decision or diagnostic question..."
-                  className="min-h-[72px] resize-none rounded-3xl border-border/70 bg-muted/30 px-4 py-3 shadow-none focus-visible:ring-1"
                   onKeyDown={(event) => {
                     if (
                       (event.metaKey || event.ctrlKey) &&
@@ -419,15 +393,6 @@ export function FinanceCopilotCard({
                     }
                   }}
                 />
-                <Button
-                  type="button"
-                  onClick={() => sendMessage(draft)}
-                  disabled={isPending || !draft.trim()}
-                  size="icon"
-                  className="size-12 rounded-full"
-                >
-                  <SendHorizonal className="size-4" />
-                </Button>
               </div>
 
               {error ? (
@@ -457,22 +422,24 @@ export function FinanceCopilotCard({
                   </Badge>
                 ) : null}
               </div>
-              <div className="rounded-2xl border border-border/70 bg-background/70 p-4 space-y-3">
-                <Text className="text-sm leading-7">
-                  {latestReply?.summary ||
-                    "Ask a question to see the latest recommendation, diagnosis, or forecast bottom line."}
-                </Text>
-                {latestReply ? (
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline" className="rounded-full px-3 py-1">
-                      {intentLabel(latestReply.intent)}
-                    </Badge>
-                    <Badge variant="secondary" className="rounded-full px-3 py-1">
-                      {walletId ? "Wallet scope" : "Workspace scope"}
-                    </Badge>
-                  </div>
-                ) : null}
-              </div>
+              <Card className="rounded-2xl border-border/70 bg-background/70">
+                <CardContent className="space-y-3 p-4">
+                  <Text className="text-sm leading-7">
+                    {latestReply?.summary ||
+                      "Ask a question to see the latest recommendation, diagnosis, or forecast bottom line."}
+                  </Text>
+                  {latestReply ? (
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="outline" className="rounded-full px-3 py-1">
+                        {intentLabel(latestReply.intent)}
+                      </Badge>
+                      <Badge variant="secondary" className="rounded-full px-3 py-1">
+                        {walletId ? "Wallet scope" : "Workspace scope"}
+                      </Badge>
+                    </div>
+                  ) : null}
+                </CardContent>
+              </Card>
             </div>
 
             <div className="space-y-3">
@@ -480,41 +447,43 @@ export function FinanceCopilotCard({
                 <CalendarRange className="size-4 text-primary" />
                 <Text strong className="text-sm">Scope</Text>
               </div>
-              <div className="space-y-2 rounded-2xl border border-border/70 bg-background/70 p-4">
-                <Text className="text-sm leading-6">
-                  {briefingSummary?.scopeLabel || scopeLabel}
-                </Text>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline">
-                    {walletId ? "Wallet scope" : "Workspace scope"}
-                  </Badge>
-                  {from && to ? (
-                    <Badge variant="secondary">
-                      {from} to {to}
+              <Card className="rounded-2xl border-border/70 bg-background/70">
+                <CardContent className="space-y-2 p-4">
+                  <Text className="text-sm leading-6">
+                    {briefingSummary?.scopeLabel || scopeLabel}
+                  </Text>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline">
+                      {walletId ? "Wallet scope" : "Workspace scope"}
                     </Badge>
-                  ) : (
-                    <Badge variant="secondary">All available history</Badge>
-                  )}
-                </div>
-                {briefingSummary ? (
-                  <div className="grid gap-2 pt-2">
-                    <Text className="text-sm">
-                      Balance{" "}
-                      {formatMoney(
-                        briefingSummary.totalBalanceCents,
-                        briefingSummary.baseCurrency,
-                      )}
-                    </Text>
-                    <Text className="text-sm">
-                      Owed{" "}
-                      {formatMoney(
-                        briefingSummary.totalOwedCents,
-                        briefingSummary.baseCurrency,
-                      )}
-                    </Text>
+                    {from && to ? (
+                      <Badge variant="secondary">
+                        {from} to {to}
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">All available history</Badge>
+                    )}
                   </div>
-                ) : null}
-              </div>
+                  {briefingSummary ? (
+                    <div className="grid gap-2 pt-2">
+                      <Text className="text-sm">
+                        Balance{" "}
+                        {formatMoney(
+                          briefingSummary.totalBalanceCents,
+                          briefingSummary.baseCurrency,
+                        )}
+                      </Text>
+                      <Text className="text-sm">
+                        Owed{" "}
+                        {formatMoney(
+                          briefingSummary.totalOwedCents,
+                          briefingSummary.baseCurrency,
+                        )}
+                      </Text>
+                    </div>
+                  ) : null}
+                </CardContent>
+              </Card>
             </div>
 
             <div className="space-y-3">
@@ -522,53 +491,56 @@ export function FinanceCopilotCard({
                 <Scale className="size-4 text-primary" />
                 <Text strong className="text-sm">Decision Factors</Text>
               </div>
-              <div className="space-y-3 rounded-[24px] border border-border/70 bg-background/70 p-4 shadow-sm">
-                {latestReply?.decision ? (
-                  <div className="space-y-3">
-                    <div className="grid gap-3">
-                      <KeyValueTile
-                        label="Recommendation"
-                        value={latestReply.decision.recommendation}
-                        icon={Scale}
-                        tone="success"
-                      />
-                      <div className="grid gap-3 md:grid-cols-2">
+              <Card className="rounded-2xl border-border/70 bg-background/70">
+                <CardContent className="space-y-3 p-4">
+                  {latestReply?.decision ? (
+                    <div className="space-y-3">
+                      <div className="grid gap-3">
                         <KeyValueTile
-                          label="Tradeoff"
-                          value={latestReply.decision.tradeoff}
-                          icon={ArrowUpRight}
-                          tone="warning"
+                          label="Recommendation"
+                          value={latestReply.decision.recommendation}
+                          icon={Scale}
+                          tone="success"
                         />
-                        <KeyValueTile
-                          label="Impact Window"
-                          value={latestReply.decision.impactWindow}
-                          icon={CalendarRange}
-                        />
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <KeyValueTile
+                            label="Tradeoff"
+                            value={latestReply.decision.tradeoff}
+                            icon={ArrowUpRight}
+                            tone="warning"
+                          />
+                          <KeyValueTile
+                            label="Impact Window"
+                            value={latestReply.decision.impactWindow}
+                            icon={CalendarRange}
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ) : (
-                  <EmptyState
-                    title="No Decision Framing Yet"
-                    description="Decision framing appears here when the assistant is answering a recommendation-style question."
-                  />
-                )}
+                  ) : (
+                    <EmptyState
+                      title="No Decision Framing Yet"
+                      variant="compact"
+                      description="Decision framing appears here when the assistant is answering a recommendation-style question."
+                    />
+                  )}
 
-                {latestReply?.analysis?.drivers?.length ? (
-                  <SectionList
-                    title="Drivers"
-                    icon={Radar}
-                    items={latestReply.analysis.drivers}
-                  />
-                ) : null}
-                {latestReply?.analysis?.forecastSignals?.length ? (
-                  <SectionList
-                    title="Forecast Signals"
-                    icon={TrendingUp}
-                    items={latestReply.analysis.forecastSignals}
-                  />
-                ) : null}
-              </div>
+                  {latestReply?.analysis?.drivers?.length ? (
+                    <SectionList
+                      title="Drivers"
+                      icon={Radar}
+                      items={latestReply.analysis.drivers}
+                    />
+                  ) : null}
+                  {latestReply?.analysis?.forecastSignals?.length ? (
+                    <SectionList
+                      title="Forecast Signals"
+                      icon={TrendingUp}
+                      items={latestReply.analysis.forecastSignals}
+                    />
+                  ) : null}
+                </CardContent>
+              </Card>
             </div>
 
             <div className="space-y-3">
@@ -579,22 +551,25 @@ export function FinanceCopilotCard({
               <div className="space-y-2">
                 {latestReply?.evidence.length ? (
                   latestReply.evidence.map((item) => (
-                    <div
+                    <Card
                       key={`${item.label}-${item.value}`}
-                      className="rounded-2xl border border-border/70 bg-background/70 p-4"
+                      className="rounded-2xl border-border/70 bg-background/70"
                     >
-                      <Text strong className="text-xs uppercase text-muted-foreground">
-                        {item.label}
-                      </Text>
-                      <Text className="mt-1 text-sm">{item.value}</Text>
-                      <Text muted className="mt-2 text-xs leading-5">
-                        {item.detail}
-                      </Text>
-                    </div>
+                      <CardContent className="p-4">
+                        <Text strong className="text-xs uppercase text-muted-foreground">
+                          {item.label}
+                        </Text>
+                        <Text className="mt-1 text-sm">{item.value}</Text>
+                        <Text muted className="mt-2 text-xs leading-5">
+                          {item.detail}
+                        </Text>
+                      </CardContent>
+                    </Card>
                   ))
                 ) : (
                   <EmptyState
                     title="No Evidence Yet"
+                    variant="compact" 
                     description="Evidence cards will appear here after the first answer."
                   />
                 )}
@@ -606,38 +581,40 @@ export function FinanceCopilotCard({
                 <FileWarning className="size-4 text-primary" />
                 <Text strong className="text-sm">Watch-outs</Text>
               </div>
-              <div className="space-y-4 rounded-[24px] border border-border/70 bg-background/70 p-4 shadow-sm">
-                <RiskStack
-                  items={latestReply?.risks ?? []}
-                  emptyText="Risks and uncertainty notes will appear here when relevant."
-                />
-
-                {latestReply?.analysis?.assumptions?.length ? (
-                  <SectionList
-                    title="Assumptions"
-                    icon={CircleHelp}
-                    items={latestReply.analysis.assumptions}
-                    tone="warning"
+              <Card className="rounded-3xl border-border/70 bg-background/70">
+                <CardContent className="space-y-4 p-4">
+                  <RiskStack
+                    items={latestReply?.risks ?? []}
+                    emptyText="Risks and uncertainty notes will appear here when relevant."
                   />
-                ) : null}
 
-                {latestReply?.analysis?.missingData?.length ? (
-                  <SectionList
-                    title="Missing Data"
-                    icon={FileWarning}
-                    items={latestReply.analysis.missingData}
-                    tone="warning"
-                  />
-                ) : null}
+                  {latestReply?.analysis?.assumptions?.length ? (
+                    <SectionList
+                      title="Assumptions"
+                      icon={CircleHelp}
+                      items={latestReply.analysis.assumptions}
+                      tone="warning"
+                    />
+                  ) : null}
 
-                {briefingSummary?.notableSignals.length ? (
-                  <SectionList
-                    title="Scope Signals"
-                    icon={Gauge}
-                    items={briefingSummary.notableSignals}
-                  />
-                ) : null}
-              </div>
+                  {latestReply?.analysis?.missingData?.length ? (
+                    <SectionList
+                      title="Missing Data"
+                      icon={FileWarning}
+                      items={latestReply.analysis.missingData}
+                      tone="warning"
+                    />
+                  ) : null}
+
+                  {briefingSummary?.notableSignals.length ? (
+                    <SectionList
+                      title="Scope Signals"
+                      icon={Gauge}
+                      items={briefingSummary.notableSignals}
+                    />
+                  ) : null}
+                </CardContent>
+              </Card>
             </div>
           </div>
         </aside>

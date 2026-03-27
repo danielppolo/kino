@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import {
   Bar,
@@ -16,7 +16,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -28,8 +27,21 @@ import {
   ChartTooltip,
 } from "@/components/ui/chart";
 import { Money } from "@/components/ui/money";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
-import { formatCurrency, parseMonthDate } from "@/utils/chart-helpers";
+import {
+  CHART_NORMALIZATION_PRESETS,
+  ChartNormalizationPreset,
+  capChartOutliers,
+  formatCurrency,
+  parseMonthDate,
+} from "@/utils/chart-helpers";
 import { convertCurrency } from "@/utils/currency-conversion";
 import { createClient } from "@/utils/supabase/client";
 import {
@@ -61,6 +73,10 @@ export function BurnRateDriftChart({
 }: BurnRateDriftChartProps) {
   const [, walletMap] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
+  const [normalizationPreset, setNormalizationPreset] =
+    useState<ChartNormalizationPreset>("strong");
+  const normalizationPercentile =
+    CHART_NORMALIZATION_PRESETS[normalizationPreset].percentile;
 
   const { data: monthlyStats, isLoading: loadingStats } = useQuery({
     queryKey: ["burn-rate-drift-stats", walletId, from, to],
@@ -91,9 +107,14 @@ export function BurnRateDriftChart({
 
   const isLoading = loadingStats || loadingRecurring;
 
-  const { chartData, drift, fixedBaseline } = useMemo(() => {
+  const { chartData, drift, fixedBaseline, cappedFixedBaseline } = useMemo(() => {
     if (!monthlyStats || monthlyStats.length === 0) {
-      return { chartData: [], drift: 0, fixedBaseline: 0 };
+      return {
+        chartData: [],
+        drift: 0,
+        fixedBaseline: 0,
+        cappedFixedBaseline: 0,
+      };
     }
 
     // Aggregate monthly expenses by month (converted to base currency)
@@ -165,15 +186,36 @@ export function BurnRateDriftChart({
       });
     }
 
-    return { chartData: data, drift: driftPct, fixedBaseline: fixed };
-  }, [monthlyStats, recurringTransactions, conversionRates, baseCurrency, walletMap]);
+    const { cap, data: cappedData } = capChartOutliers(
+      data,
+      ["expense", "rolling"],
+      normalizationPercentile,
+    );
+
+    return {
+      chartData: cappedData,
+      drift: driftPct,
+      fixedBaseline: fixed,
+      cappedFixedBaseline: Math.min(fixed, cap),
+    };
+  }, [
+    monthlyStats,
+    recurringTransactions,
+    conversionRates,
+    baseCurrency,
+    walletMap,
+    normalizationPercentile,
+  ]);
 
   if (isLoading) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Burn Rate Drift</CardTitle>
-          <CardDescription>Monthly cost structure over time</CardDescription>
+          <CardDescription>
+            Tracks whether your underlying monthly burn is drifting upward,
+            stabilizing, or easing over time.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex h-64 items-center justify-center">Loading...</div>
@@ -187,7 +229,10 @@ export function BurnRateDriftChart({
       <Card>
         <CardHeader>
           <CardTitle>Burn Rate Drift</CardTitle>
-          <CardDescription>Monthly cost structure over time</CardDescription>
+          <CardDescription>
+            Tracks whether your underlying monthly burn is drifting upward,
+            stabilizing, or easing over time.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex h-64 items-center justify-center text-gray-500">
@@ -210,14 +255,45 @@ export function BurnRateDriftChart({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Burn Rate Drift</CardTitle>
-        <CardDescription>
-          <span style={{ color: driftColor }}>
-            {drift >= 0 ? "+" : ""}
-            {drift.toFixed(1)}% drift
-          </span>{" "}
-          — {driftLabel}
-        </CardDescription>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+          <div>
+            <CardTitle>Burn Rate Drift</CardTitle>
+            <CardDescription>
+              <span style={{ color: driftColor }}>
+                {drift >= 0 ? "+" : ""}
+                {drift.toFixed(1)}% drift
+              </span>{" "}
+              — compared with the start of the period, your monthly spend trend is{" "}
+              {driftLabel.toLowerCase()}.
+            </CardDescription>
+          </div>
+          <div className="w-full space-y-1.5 sm:min-w-36 sm:max-w-40">
+            <div className="text-muted-foreground text-xs font-medium">
+              Peak normalization
+            </div>
+            <Select
+              value={normalizationPreset}
+              onValueChange={(value) =>
+                setNormalizationPreset(value as ChartNormalizationPreset)
+              }
+            >
+              <SelectTrigger className="h-8 w-full text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(CHART_NORMALIZATION_PRESETS).map(([key, preset]) => (
+                  <SelectItem key={key} value={key} className="text-xs">
+                    {preset.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="text-muted-foreground text-xs">
+              Stronger normalization compresses isolated peaks so the underlying
+              slope of your burn rate is easier to interpret.
+            </div>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
@@ -243,10 +319,22 @@ export function BurnRateDriftChart({
               cursor={false}
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
-                const expense = payload.find((p) => p.dataKey === "expense")
-                  ?.value as number | undefined;
-                const rolling = payload.find((p) => p.dataKey === "rolling")
-                  ?.value as number | undefined;
+                const point = payload[0]?.payload as
+                  | {
+                      _original?: {
+                        expense?: number;
+                        rolling?: number;
+                      };
+                    }
+                  | undefined;
+                const expense =
+                  point?._original?.expense ??
+                  (payload.find((p) => p.dataKey === "expense")
+                    ?.value as number | undefined);
+                const rolling =
+                  point?._original?.rolling ??
+                  (payload.find((p) => p.dataKey === "rolling")
+                    ?.value as number | undefined);
                 return (
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
                     <div className="text-sm font-medium mb-1">
@@ -278,11 +366,14 @@ export function BurnRateDriftChart({
             />
             {fixedBaseline > 0 && (
               <ReferenceLine
-                y={fixedBaseline}
+                y={cappedFixedBaseline}
                 stroke="#6b7280"
                 strokeDasharray="4 4"
                 label={{
-                  value: "fixed floor",
+                  value:
+                    cappedFixedBaseline < fixedBaseline
+                      ? "fixed floor (capped)"
+                      : "fixed floor",
                   position: "insideTopRight",
                   fontSize: 10,
                   fill: "#6b7280",
