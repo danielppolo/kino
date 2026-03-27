@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { format } from "date-fns";
 import {
   Bar,
@@ -27,12 +27,10 @@ import {
   ChartLegendContent,
   ChartTooltip,
 } from "@/components/ui/chart";
-import { ChartNormalizationToggle } from "@/components/charts/shared/chart-normalization-toggle";
+import { useChartControls } from "@/components/charts/shared/chart-controls-context";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import {
-  CHART_NORMALIZATION_PRESETS,
-  ChartNormalizationPreset,
   capChartOutliers,
   calculateTrimmedMean,
   parseMonthDate,
@@ -65,10 +63,9 @@ export function FreedomMultiplierChart({
 }: FreedomMultiplierChartProps) {
   const [, walletMap] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
-  const [normalizationPreset, setNormalizationPreset] =
-    useState<ChartNormalizationPreset>("balanced");
+  const controls = useChartControls();
   const normalizationPercentile =
-    CHART_NORMALIZATION_PRESETS[normalizationPreset].percentile;
+    controls?.peakNormalizationPercentile ?? 0.97;
 
   const { data: monthlyStats, isLoading } = useQuery({
     queryKey: ["freedom-multiplier-stats", walletId, from, to],
@@ -205,40 +202,22 @@ export function FreedomMultiplierChart({
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-          <div>
-            <CardTitle>
-              Freedom Multiplier
-              <span
-                className="ml-3 text-2xl font-bold"
-                style={{ color: multiplierColor }}
-              >
-                {currentMultiplier.toFixed(1)}×
-              </span>
-            </CardTitle>
-            <CardDescription>
-              After covering your average monthly burn, each month of income currently
-              buys{" "}
-              <strong>{Math.max(0, currentMultiplier).toFixed(1)}</strong> months
-              of future autonomy. That leaves your leverage{" "}
-              {currentMultiplier >= 1 ? "above" : "below"} break-even.
-            </CardDescription>
-          </div>
-          <div className="w-full space-y-1.5 sm:min-w-36 sm:max-w-40">
-            <div className="text-muted-foreground text-xs font-medium">
-              Peak normalization
-            </div>
-            <ChartNormalizationToggle
-              value={normalizationPreset}
-              onValueChange={setNormalizationPreset}
-            />
-            <div className="text-muted-foreground text-xs">
-              Tighter normalization compresses denominator-driven spikes so the
-              direction of leverage is easier to read, without changing tooltip
-              values.
-            </div>
-          </div>
-        </div>
+        <CardTitle>
+          Freedom Multiplier
+          <span
+            className="ml-3 text-2xl font-bold"
+            style={{ color: multiplierColor }}
+          >
+            {currentMultiplier.toFixed(1)}×
+          </span>
+        </CardTitle>
+        <CardDescription>
+          After covering your average monthly burn, each month of income currently
+          buys{" "}
+          <strong>{Math.max(0, currentMultiplier).toFixed(1)}</strong> months
+          of future autonomy. That leaves your leverage{" "}
+          {currentMultiplier >= 1 ? "above" : "below"} break-even.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
