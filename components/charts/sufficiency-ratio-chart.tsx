@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import {
   Area,
@@ -24,11 +24,14 @@ import {
   ChartContainer,
   ChartTooltip,
 } from "@/components/ui/chart";
+import { Money } from "@/components/ui/money";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
+import { Slider } from "@/components/ui/slider";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import {
   calculateMonthlyTotals,
   calculateTrimmedMean,
+  formatCurrency,
   parseMonthDate,
 } from "@/utils/chart-helpers";
 import { convertCurrency } from "@/utils/currency-conversion";
@@ -58,6 +61,7 @@ export function SufficiencyRatioChart({
 }: SufficiencyRatioChartProps) {
   const [, walletMap] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
+  const [monthlyBurnRate, setMonthlyBurnRate] = useState<number | null>(null);
 
   const { data: monthlyBalances, isLoading: loadingBalances } = useQuery({
     queryKey: ["sufficiency-ratio-balances", walletId, from, to],
@@ -89,9 +93,9 @@ export function SufficiencyRatioChart({
 
   const isLoading = loadingBalances || loadingStats;
 
-  const { chartData, currentYears } = useMemo(() => {
+  const { chartData, currentYears, avgMonthlyBurn } = useMemo(() => {
     if (!monthlyBalances || !monthlyStats || monthlyStats.length === 0) {
-      return { chartData: [], currentYears: 0 };
+      return { chartData: [], currentYears: 0, avgMonthlyBurn: 0 };
     }
 
     // Monthly totals per wallet per month (converted to base currency)
@@ -102,24 +106,6 @@ export function SufficiencyRatioChart({
       walletMap,
       walletId,
     );
-
-    // Compute annualized burn rate from all monthly expenses
-    const monthlyExpenses = monthlyStats
-      .filter((s) => s.outcome_cents !== 0)
-      .map((s) => {
-        const wallet = walletMap.get(s.wallet_id ?? "");
-        if (!wallet) return Math.abs(s.outcome_cents) / 100;
-        return (
-          Math.abs(
-            convertCurrency(
-              s.outcome_cents,
-              wallet.currency,
-              baseCurrency,
-              conversionRates,
-            ),
-          ) / 100
-        );
-      });
 
     // Group expenses by month to get monthly totals
     const expenseByMonth: Record<string, number> = {};
@@ -142,10 +128,17 @@ export function SufficiencyRatioChart({
     const monthlyExpenseTotals = Object.values(expenseByMonth).filter(
       (v) => v > 0,
     );
-    const avgMonthlyBurn = calculateTrimmedMean(monthlyExpenseTotals);
-    const annualBurn = avgMonthlyBurn * 12;
+    const baselineMonthlyBurn = calculateTrimmedMean(monthlyExpenseTotals);
+    const effectiveMonthlyBurn = monthlyBurnRate ?? baselineMonthlyBurn;
+    const annualBurn = effectiveMonthlyBurn * 12;
 
-    if (annualBurn === 0) return { chartData: [], currentYears: 0 };
+    if (annualBurn === 0) {
+      return {
+        chartData: [],
+        currentYears: 0,
+        avgMonthlyBurn: baselineMonthlyBurn,
+      };
+    }
 
     const walletIds = walletId
       ? [walletId]
@@ -166,8 +159,26 @@ export function SufficiencyRatioChart({
       .filter((p) => p.years > 0);
 
     const current = data.length > 0 ? data[data.length - 1].years : 0;
-    return { chartData: data, currentYears: current };
-  }, [monthlyBalances, monthlyStats, conversionRates, baseCurrency, walletMap, walletId]);
+    return {
+      chartData: data,
+      currentYears: current,
+      avgMonthlyBurn: baselineMonthlyBurn,
+    };
+  }, [
+    monthlyBalances,
+    monthlyStats,
+    conversionRates,
+    baseCurrency,
+    walletMap,
+    walletId,
+    monthlyBurnRate,
+  ]);
+
+  useEffect(() => {
+    if (avgMonthlyBurn > 0 && monthlyBurnRate === null) {
+      setMonthlyBurnRate(Math.round(avgMonthlyBurn / 1000) * 1000);
+    }
+  }, [avgMonthlyBurn, monthlyBurnRate]);
 
   const percentageChange = useMemo(() => {
     if (chartData.length < 2) return 0;
@@ -183,6 +194,13 @@ export function SufficiencyRatioChart({
     if (currentYears >= 5) return "Fragile autonomy";
     return "Below safety threshold";
   }, [currentYears]);
+
+  const effectiveMonthlyBurn = monthlyBurnRate ?? avgMonthlyBurn;
+  const sliderMin = 1000;
+  const sliderMax = useMemo(() => {
+    if (effectiveMonthlyBurn <= 0) return 100000;
+    return Math.max(100000, Math.ceil((effectiveMonthlyBurn * 2) / 10000) * 10000);
+  }, [effectiveMonthlyBurn]);
 
   const areaColor = useMemo(() => {
     if (currentYears >= 10) return "#22c55e";
@@ -229,17 +247,49 @@ export function SufficiencyRatioChart({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>
-          Sufficiency Ratio
-          <span className="ml-3 text-2xl font-bold" style={{ color: areaColor }}>
-            {currentYears.toFixed(1)} yrs
-          </span>
-        </CardTitle>
-        <CardDescription>
-          {currentLabel} — if spending stayed near its average pace, your current
-          reserves would fund roughly {currentYears.toFixed(1)} years of autonomy in{" "}
-          {baseCurrency}.
-        </CardDescription>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
+          <div>
+            <CardTitle>
+              Sufficiency Ratio
+              <span
+                className="ml-3 text-2xl font-bold"
+                style={{ color: areaColor }}
+              >
+                {currentYears.toFixed(1)} yrs
+              </span>
+            </CardTitle>
+            <CardDescription>
+              {currentLabel} — at a monthly spend of{" "}
+              <strong>{formatCurrency(effectiveMonthlyBurn, baseCurrency)}</strong>,
+              your current reserves would fund roughly {currentYears.toFixed(1)} years
+              of autonomy in {baseCurrency}.
+            </CardDescription>
+          </div>
+          <div className="w-full sm:min-w-56 sm:max-w-72">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-muted-foreground text-sm">Monthly spend</span>
+              <span className="text-sm font-medium tabular-nums">
+                <Money
+                  cents={Math.round(effectiveMonthlyBurn * 100)}
+                  currency={baseCurrency}
+                />
+              </span>
+            </div>
+            <div className="mt-2">
+              <Slider
+                min={sliderMin}
+                max={sliderMax}
+                step={1000}
+                value={[effectiveMonthlyBurn]}
+                onValueChange={([value]) => setMonthlyBurnRate(value)}
+              />
+            </div>
+            <div className="text-muted-foreground mt-1 flex justify-between text-xs">
+              <span>{formatCurrency(sliderMin, baseCurrency)}</span>
+              <span>{formatCurrency(sliderMax, baseCurrency)}</span>
+            </div>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <ChartContainer config={{ years: { label: "Years", color: areaColor } }}>

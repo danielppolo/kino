@@ -27,13 +27,7 @@ import {
   ChartLegendContent,
   ChartTooltip,
 } from "@/components/ui/chart";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ChartNormalizationToggle } from "@/components/charts/shared/chart-normalization-toggle";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import {
@@ -234,23 +228,10 @@ export function FreedomMultiplierChart({
             <div className="text-muted-foreground text-xs font-medium">
               Peak normalization
             </div>
-            <Select
+            <ChartNormalizationToggle
               value={normalizationPreset}
-              onValueChange={(value) =>
-                setNormalizationPreset(value as ChartNormalizationPreset)
-              }
-            >
-              <SelectTrigger className="h-8 w-full text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(CHART_NORMALIZATION_PRESETS).map(([key, preset]) => (
-                  <SelectItem key={key} value={key} className="text-xs">
-                    {preset.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onValueChange={setNormalizationPreset}
+            />
             <div className="text-muted-foreground text-xs">
               Tighter normalization compresses denominator-driven spikes so the
               direction of leverage is easier to read, without changing tooltip

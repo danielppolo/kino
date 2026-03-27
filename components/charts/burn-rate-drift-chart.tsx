@@ -26,14 +26,8 @@ import {
   ChartLegendContent,
   ChartTooltip,
 } from "@/components/ui/chart";
+import { ChartNormalizationToggle } from "@/components/charts/shared/chart-normalization-toggle";
 import { Money } from "@/components/ui/money";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import {
   CHART_NORMALIZATION_PRESETS,
@@ -271,23 +265,10 @@ export function BurnRateDriftChart({
             <div className="text-muted-foreground text-xs font-medium">
               Peak normalization
             </div>
-            <Select
+            <ChartNormalizationToggle
               value={normalizationPreset}
-              onValueChange={(value) =>
-                setNormalizationPreset(value as ChartNormalizationPreset)
-              }
-            >
-              <SelectTrigger className="h-8 w-full text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(CHART_NORMALIZATION_PRESETS).map(([key, preset]) => (
-                  <SelectItem key={key} value={key} className="text-xs">
-                    {preset.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onValueChange={setNormalizationPreset}
+            />
             <div className="text-muted-foreground text-xs">
               Stronger normalization compresses isolated peaks so the underlying
               slope of your burn rate is easier to interpret.
