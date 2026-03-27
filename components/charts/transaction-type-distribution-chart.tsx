@@ -45,18 +45,22 @@ export function TransactionTypeDistributionChart({
   from,
   to,
 }: TransactionTypeDistributionChartProps) {
+  const hasExplicitDateRange = Boolean(from && to);
+  const effectiveFrom = hasExplicitDateRange ? from : undefined;
+  const effectiveTo = hasExplicitDateRange ? to : undefined;
+
   const {
     data: typeData,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["transaction-type-distribution", walletId, from, to],
+    queryKey: ["transaction-type-distribution", walletId, effectiveFrom, effectiveTo],
     queryFn: async () => {
       const supabase = await createClient();
       const { data, error } = await getTransactionTypeDistribution(supabase, {
         walletId,
-        from,
-        to,
+        from: effectiveFrom,
+        to: effectiveTo,
       });
 
       if (error) throw error;
@@ -150,6 +154,7 @@ export function TransactionTypeDistributionChart({
           <CardTitle>Transaction Type Distribution</CardTitle>
           <CardDescription>
             Income, expense, and transfer breakdown over time in {baseCurrency}
+            {hasExplicitDateRange ? "" : " across all available history"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -168,6 +173,7 @@ export function TransactionTypeDistributionChart({
           <CardTitle>Transaction Type Distribution</CardTitle>
           <CardDescription>
             Income, expense, and transfer breakdown over time in {baseCurrency}
+            {hasExplicitDateRange ? "" : " across all available history"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -186,6 +192,7 @@ export function TransactionTypeDistributionChart({
           <CardTitle>Transaction Type Distribution</CardTitle>
           <CardDescription>
             Income, expense, and transfer breakdown over time in {baseCurrency}
+            {hasExplicitDateRange ? "" : " across all available history"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -203,6 +210,7 @@ export function TransactionTypeDistributionChart({
         <CardTitle>Transaction Type Distribution</CardTitle>
         <CardDescription>
           Income, expense, and transfer breakdown over time in {baseCurrency}
+          {hasExplicitDateRange ? "" : " across all available history"}
         </CardDescription>
       </CardHeader>
       <CardContent>
