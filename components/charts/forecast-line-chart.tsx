@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { format } from "date-fns";
 import {
   CartesianGrid,
@@ -22,20 +21,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useChartControls } from "@/components/charts/shared/chart-controls-context";
 import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
 } from "@/components/ui/chart";
 import { Money } from "@/components/ui/money";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import {
   calculateMonthlyTotals,
@@ -60,9 +52,9 @@ export function ForecastLineChart({
 }: ForecastLineChartProps) {
   const [wallets, walletMap] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
-
-  const [forecastMode, setForecastMode] = useState<"with-income" | "no-income">("with-income");
-  const [horizonYears, setHorizonYears] = useState(1);
+  const controls = useChartControls();
+  const forecastMode = controls?.forecastMode ?? "with-income";
+  const horizonYears = controls?.forecastHorizonYears ?? 1;
   const horizonMonths = horizonYears * 12;
 
   const {
@@ -160,30 +152,36 @@ export function ForecastLineChart({
     historical.length > 0 ? (historical[historical.length - 1].total ?? 0) : 0;
 
   // With-income: ARIMA delta forecast anchored to current balance
-  const firstForecastRaw = forecastData?.forecast[0]?.value ?? lastHistoricalTotal;
+  const firstForecastRaw =
+    forecastData?.forecast[0]?.value ?? lastHistoricalTotal;
   const anchorDelta = lastHistoricalTotal - firstForecastRaw;
 
-  const withIncomeForecast: ChartPoint[] = (forecastData?.forecast ?? []).map((p) => ({
-    month: p.month,
-    total: null,
-    forecast: p.value + anchorDelta,
-    lower: p.lower + anchorDelta,
-    upper: p.upper + anchorDelta,
-    isForecast: true,
-  }));
+  const withIncomeForecast: ChartPoint[] = (forecastData?.forecast ?? []).map(
+    (p) => ({
+      month: p.month,
+      total: null,
+      forecast: p.value + anchorDelta,
+      lower: p.lower + anchorDelta,
+      upper: p.upper + anchorDelta,
+      isForecast: true,
+    }),
+  );
 
   // No-income: straight burn-down from current balance at avg monthly spend
   const avgBurn = forecastData?.avgMonthlyBurn ?? 0;
-  const noIncomeForecast: ChartPoint[] = (forecastData?.forecast ?? []).map((p, i) => ({
-    month: p.month,
-    total: null,
-    forecast: Math.max(0, lastHistoricalTotal - avgBurn * (i + 1)),
-    lower: null,
-    upper: null,
-    isForecast: true,
-  }));
+  const noIncomeForecast: ChartPoint[] = (forecastData?.forecast ?? []).map(
+    (p, i) => ({
+      month: p.month,
+      total: null,
+      forecast: Math.max(0, lastHistoricalTotal - avgBurn * (i + 1)),
+      lower: null,
+      upper: null,
+      isForecast: true,
+    }),
+  );
 
-  const activeForecast = forecastMode === "with-income" ? withIncomeForecast : noIncomeForecast;
+  const activeForecast =
+    forecastMode === "with-income" ? withIncomeForecast : noIncomeForecast;
   const chartData: ChartPoint[] = [...historical, ...activeForecast];
 
   const chartConfig: ChartConfig = {
@@ -192,7 +190,10 @@ export function ForecastLineChart({
       color: "hsl(var(--chart-1))",
     },
     forecast: {
-      label: forecastMode === "with-income" ? "Forecast (with income)" : "Forecast (no income)",
+      label:
+        forecastMode === "with-income"
+          ? "Forecast (with income)"
+          : "Forecast (no income)",
       color: forecastMode === "with-income" ? "hsl(var(--chart-1))" : "#ef4444",
     },
   };
@@ -261,37 +262,8 @@ export function ForecastLineChart({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <CardTitle>{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-sm">With income</span>
-              <Switch
-                checked={forecastMode === "no-income"}
-                onCheckedChange={(checked) =>
-                  setForecastMode(checked ? "no-income" : "with-income")
-                }
-              />
-              <span className="text-muted-foreground text-sm">No income</span>
-            </div>
-            <Select
-              value={String(horizonYears)}
-              onValueChange={(v) => setHorizonYears(Number(v))}
-            >
-              <SelectTrigger className="w-20 h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1 year</SelectItem>
-                <SelectItem value="2">2 years</SelectItem>
-                <SelectItem value="3">3 years</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>

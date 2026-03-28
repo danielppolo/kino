@@ -66,6 +66,9 @@ export function AutonomyHorizonChart({
   const [wallets, walletMap] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
   const controls = useChartControls();
+  const effectiveHorizonMonths =
+    (controls?.forecastHorizonYears ??
+      Math.max(1, Math.round(horizonMonths / 12))) * 12;
 
   const { data: monthlyBalances, isLoading: loadingBalances } = useQuery({
     queryKey: ["autonomy-horizon-balances", walletId, from, to],
@@ -82,7 +85,7 @@ export function AutonomyHorizonChart({
   });
 
   const { data: forecastData, isLoading: loadingForecast } = useQuery({
-    queryKey: ["autonomy-arima", walletId, baseCurrency],
+    queryKey: ["autonomy-arima", walletId, baseCurrency, effectiveHorizonMonths],
     queryFn: async (): Promise<ForecastApiResponse> => {
       const workspaceWalletIds = wallets.map((w) => w.id);
       const res = await fetch("/api/forecast", {
@@ -91,7 +94,7 @@ export function AutonomyHorizonChart({
         body: JSON.stringify({
           walletId: walletId ?? null,
           walletIds: workspaceWalletIds,
-          horizon: horizonMonths,
+          horizon: effectiveHorizonMonths,
           baseCurrency,
           conversionRates,
         }),
@@ -231,10 +234,10 @@ export function AutonomyHorizonChart({
       <CardHeader>
         <CardTitle>Autonomy Horizon</CardTitle>
         <CardDescription>
-          Over the next {horizonMonths} months, compare your projected balance
-          path against how long your current reserves would last with no new
-          income, measured in {baseCurrency}. The shared spend control adjusts the
-          zero-income burn-down line.
+          Over the next {effectiveHorizonMonths} months, compare your projected
+          balance path against how long your current reserves would last with no
+          new income, measured in {baseCurrency}. The shared spend control
+          adjusts the zero-income burn-down line.
         </CardDescription>
       </CardHeader>
       <CardContent>
