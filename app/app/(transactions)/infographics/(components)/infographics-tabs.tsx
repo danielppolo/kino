@@ -62,41 +62,32 @@ export function InfographicsTabs({
           <TabsTrigger value="labels">Labels</TabsTrigger>
           <TabsTrigger value="expenses">Expenses</TabsTrigger>
         </TabsList>
-        {autonomyEnabled && activeTab === "autonomy" && <ChartHeaderControls />}
+        <ChartHeaderControls
+          showForecastControls={activeTab === "overview"}
+          showAutonomyControls={autonomyEnabled && activeTab === "autonomy"}
+        />
       </PageHeader>
 
       <div style={{ height: "calc(100vh - 44px)", overflow: "auto" }}>
         {autonomyEnabled && (
           <TabsContent value="autonomy">
-              <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
-                <div className="md:col-span-2 lg:col-span-4">
-                  <AutonomyHorizonChart
-                    from={filters.from}
-                    to={filters.to}
-                  />
-                </div>
-                <div className="md:col-span-2 lg:col-span-4">
-                  <FreedomMultiplierChart
-                    from={filters.from}
-                    to={filters.to}
-                  />
-                </div>
-                <div className="md:col-span-2 lg:col-span-4">
-                  <SufficiencyRatioChart
-                    from={filters.from}
-                    to={filters.to}
-                  />
-                </div>
-                <div className="md:col-span-2 lg:col-span-4">
-                  <BurnRateDriftChart from={filters.from} to={filters.to} />
-                </div>
-                <div className="md:col-span-2 lg:col-span-4">
-                  <ExplorationCapitalChart
-                    from={filters.from}
-                    to={filters.to}
-                  />
-                </div>
+            <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="md:col-span-2 lg:col-span-4">
+                <AutonomyHorizonChart from={filters.from} to={filters.to} />
               </div>
+              <div className="md:col-span-2 lg:col-span-4">
+                <FreedomMultiplierChart from={filters.from} to={filters.to} />
+              </div>
+              <div className="md:col-span-2 lg:col-span-4">
+                <SufficiencyRatioChart from={filters.from} to={filters.to} />
+              </div>
+              <div className="md:col-span-2 lg:col-span-4">
+                <BurnRateDriftChart from={filters.from} to={filters.to} />
+              </div>
+              <div className="md:col-span-2 lg:col-span-4">
+                <ExplorationCapitalChart from={filters.from} to={filters.to} />
+              </div>
+            </div>
           </TabsContent>
         )}
 
@@ -211,11 +202,9 @@ export function InfographicsTabs({
     </Tabs>
   );
 
-  return autonomyEnabled ? (
+  return (
     <ChartControlsProvider from={filters.from} to={filters.to}>
       {content}
     </ChartControlsProvider>
-  ) : (
-    content
   );
 }

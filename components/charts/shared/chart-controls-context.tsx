@@ -27,13 +27,21 @@ interface ChartControlsContextValue {
   peakNormalization: ChartNormalizationPreset;
   setPeakNormalization: (value: ChartNormalizationPreset) => void;
   peakNormalizationPercentile: number;
+  forecastHorizonYears: number;
+  setForecastHorizonYears: (value: number) => void;
+  forecastMode: "with-income" | "no-income";
+  setForecastMode: (value: "with-income" | "no-income") => void;
 }
 
-const ChartControlsContext = createContext<ChartControlsContextValue | null>(null);
+const ChartControlsContext = createContext<ChartControlsContextValue | null>(
+  null,
+);
 const CHART_SPEND_SLIDER_MAX = 100000;
 const CHART_SPEND_SLIDER_STEP = 10000;
 const DEFAULT_CHART_MONTHLY_SPEND = 30000;
 const DEFAULT_PEAK_NORMALIZATION: ChartNormalizationPreset = "strong";
+const DEFAULT_FORECAST_HORIZON_YEARS = 1;
+const DEFAULT_FORECAST_MODE = "with-income";
 
 export function ChartControlsProvider({
   children,
@@ -47,6 +55,12 @@ export function ChartControlsProvider({
     useState<number | null>(DEFAULT_CHART_MONTHLY_SPEND);
   const [peakNormalization, setPeakNormalization] =
     useState<ChartNormalizationPreset>(DEFAULT_PEAK_NORMALIZATION);
+  const [forecastHorizonYears, setForecastHorizonYears] = useState(
+    DEFAULT_FORECAST_HORIZON_YEARS,
+  );
+  const [forecastMode, setForecastMode] = useState<"with-income" | "no-income">(
+    DEFAULT_FORECAST_MODE,
+  );
 
   const { data: monthlyStats } = useQuery({
     queryKey: ["chart-controls-stats", walletId, from, to, baseCurrency],
@@ -112,12 +126,18 @@ export function ChartControlsProvider({
       setPeakNormalization,
       peakNormalizationPercentile:
         CHART_NORMALIZATION_PRESETS[peakNormalization].percentile,
+      forecastHorizonYears,
+      setForecastHorizonYears,
+      forecastMode,
+      setForecastMode,
     }),
     [
       monthlySpend,
       defaultMonthlySpend,
       peakNormalization,
       setPeakNormalization,
+      forecastHorizonYears,
+      forecastMode,
     ],
   );
 
