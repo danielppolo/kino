@@ -13,13 +13,12 @@ import { ExplorationCapitalChart } from "@/components/charts/exploration-capital
 import { ForecastLineChart } from "@/components/charts/forecast-line-chart";
 import { FreedomMultiplierChart } from "@/components/charts/freedom-multiplier-chart";
 import LabelPieChart from "@/components/charts/label-pie-chart";
+import { ChartControlsProvider } from "@/components/charts/shared/chart-controls-context";
+import { ChartHeaderControls } from "@/components/charts/shared/chart-header-controls";
 import { SufficiencyRatioChart } from "@/components/charts/sufficiency-ratio-chart";
-import { TagCloudAnalyticsChart } from "@/components/charts/tag-cloud-analytics-chart";
 import { TransactionSizeDistributionChart } from "@/components/charts/transaction-size-distribution-chart";
 import { TransactionTypeDistributionChart } from "@/components/charts/transaction-type-distribution-chart";
 import { TrendsChart } from "@/components/charts/trends-chart";
-import { ChartControlsProvider } from "@/components/charts/shared/chart-controls-context";
-import { ChartHeaderControls } from "@/components/charts/shared/chart-header-controls";
 import PageHeader from "@/components/shared/page-header";
 import {
   Tabs,
@@ -160,6 +159,7 @@ export function InfographicsTabs({
                 to={filters.to}
                 type="expense"
                 title="Expenses by Label"
+                chartType="polar"
               />
             </div>
             <div className="col-span-2">
@@ -168,6 +168,7 @@ export function InfographicsTabs({
                 to={filters.to}
                 type="income"
                 title="Income by Label"
+                chartType="polar"
               />
             </div>
           </div>
@@ -188,9 +189,6 @@ export function InfographicsTabs({
                 to={filters.to}
                 type="expense"
               />
-            </div>
-            <div className="md:col-span-2 lg:col-span-2">
-              <TagCloudAnalyticsChart from={filters.from} to={filters.to} />
             </div>
             <div className="md:col-span-2 lg:col-span-2">
               <CurrencyExposureChart from={filters.from} to={filters.to} />

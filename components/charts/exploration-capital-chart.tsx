@@ -5,9 +5,8 @@ import { format } from "date-fns";
 import {
   Area,
   CartesianGrid,
+  ComposedChart,
   Line,
-  LineChart,
-  ReferenceArea,
   ReferenceLine,
   XAxis,
   YAxis,
@@ -45,8 +44,7 @@ interface ExplorationCapitalChartProps {
 
 /**
  * Shows how much of spending remains discretionary after required categories.
- * The chart emphasizes the exploration share directly instead of stacking both
- * sides of the ratio.
+ * The chart uses smoothed exploration trendlines so the signal stays legible.
  *
  * The key question: is exploration capacity growing or being crowded out?
  */
@@ -174,8 +172,21 @@ export function ExplorationCapitalChart({
       const data = months.map((month, index) => {
         const { baseline, variable } = byMonth[month];
         const total = baseline + variable;
-        const variablePct = total > 0 ? (variable / total) * 100 : 0;
-        const rollingWindow = months.slice(Math.max(0, index - 2), index + 1);
+        const variablePctRaw = total > 0 ? (variable / total) * 100 : 0;
+        const trendWindow = months.slice(Math.max(0, index - 4), index + 1);
+        const trendWeights = trendWindow.map((_, windowIndex) => windowIndex + 1);
+        const smoothedVariablePct =
+          trendWindow.reduce((sum, currentMonth, windowIndex) => {
+            const current = byMonth[currentMonth];
+            const currentTotal = current.baseline + current.variable;
+            if (currentTotal <= 0) return sum;
+            return (
+              sum +
+              ((current.variable / currentTotal) * 100) *
+                trendWeights[windowIndex]
+            );
+          }, 0) / trendWeights.reduce((sum, weight) => sum + weight, 0);
+        const rollingWindow = months.slice(Math.max(0, index - 5), index + 1);
         const rollingAverage =
           rollingWindow.reduce((sum, currentMonth) => {
             const current = byMonth[currentMonth];
@@ -186,8 +197,10 @@ export function ExplorationCapitalChart({
 
         return {
           month,
-          baseline: total > 0 ? (baseline / total) * 100 : 0,
-          variable: variablePct,
+          baseline: 100 - smoothedVariablePct,
+          variable: smoothedVariablePct,
+          rawVariable: variablePctRaw,
+          remainingTop: smoothedVariablePct,
           rollingAverage,
         };
       });
@@ -204,8 +217,12 @@ export function ExplorationCapitalChart({
           color: "#3b82f6",
         },
         rollingAverage: {
-          label: "3-month average",
+          label: "6-month average",
           color: "#94a3b8",
+        },
+        baseline: {
+          label: "Required spend",
+          color: "#3f3f46",
         },
       };
 
@@ -280,7 +297,8 @@ export function ExplorationCapitalChart({
           </span>
         </CardTitle>
         <CardDescription>
-          The blue line shows the share of spend that remains discretionary.{" "}
+          The solid blue line shows your smoothed discretionary share, with
+          required spend grounded below it and remaining room above it.{" "}
           {topCategoryNames.length > 0 ? (
             <>Required spend is anchored by {topCategoryNames.join(", ")}.</>
           ) : (
@@ -290,13 +308,10 @@ export function ExplorationCapitalChart({
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
-          <LineChart
+          <ComposedChart
             data={chartData}
             margin={{ left: 12, right: 12, top: 12, bottom: 12 }}
           >
-            <ReferenceArea y1={0} y2={20} fill="#7f1d1d" fillOpacity={0.12} />
-            <ReferenceArea y1={20} y2={40} fill="#854d0e" fillOpacity={0.1} />
-            <ReferenceArea y1={40} y2={100} fill="#14532d" fillOpacity={0.08} />
             <CartesianGrid vertical={false} />
             <XAxis
               dataKey="month"
@@ -319,8 +334,14 @@ export function ExplorationCapitalChart({
                 const variable = payload.find(
                   (p) => p.dataKey === "variable",
                 )?.value as number | undefined;
+                const rawVariable = payload.find(
+                  (p) => p.dataKey === "rawVariable",
+                )?.value as number | undefined;
                 const rollingAverage = payload.find(
                   (p) => p.dataKey === "rollingAverage",
+                )?.value as number | undefined;
+                const baseline = payload.find(
+                  (p) => p.dataKey === "baseline",
                 )?.value as number | undefined;
                 return (
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
@@ -333,12 +354,24 @@ export function ExplorationCapitalChart({
                         <span className="font-bold">{variable.toFixed(1)}%</span>
                       </div>
                     )}
+                    {rawVariable !== undefined && (
+                      <div className="flex justify-between gap-4 text-sm">
+                        <span className="text-muted-foreground">Raw month</span>
+                        <span>{rawVariable.toFixed(1)}%</span>
+                      </div>
+                    )}
                     {rollingAverage !== undefined && (
                       <div className="flex justify-between gap-4 text-sm">
                         <span className="text-muted-foreground">
-                          3-month average
+                          6-month average
                         </span>
                         <span>{rollingAverage.toFixed(1)}%</span>
+                      </div>
+                    )}
+                    {baseline !== undefined && (
+                      <div className="flex justify-between gap-4 text-sm">
+                        <span className="text-muted-foreground">Required</span>
+                        <span>{baseline.toFixed(1)}%</span>
                       </div>
                     )}
                   </div>
@@ -357,21 +390,39 @@ export function ExplorationCapitalChart({
               strokeDasharray="4 4"
               strokeOpacity={0.6}
             />
+            <ReferenceLine
+              y={60}
+              stroke="#60a5fa"
+              strokeDasharray="4 4"
+              strokeOpacity={0.4}
+            />
             <Area
-              dataKey="variable"
+              dataKey="baseline"
+              name="Required spend"
               type="monotone"
-              fill="#3b82f6"
-              fillOpacity={0.12}
+              fill="#3f3f46"
+              fillOpacity={0.45}
               stroke="none"
+            />
+            <Area
+              dataKey="remainingTop"
+              name="Remaining room"
+              type="monotone"
+              fill="#1d4ed8"
+              fillOpacity={0.16}
+              stroke="none"
+              stackId="capacity"
             />
             <Line
               dataKey="rollingAverage"
-              name="3-month average"
+              name="6-month average"
               type="monotone"
               stroke="#94a3b8"
               strokeWidth={2}
               dot={false}
               activeDot={false}
+              strokeOpacity={0.7}
+              strokeDasharray="6 4"
             />
             <Line
               dataKey="variable"
@@ -383,7 +434,7 @@ export function ExplorationCapitalChart({
               activeDot={{ r: 4, fill: "#3b82f6" }}
             />
             <ChartLegend content={<ChartLegendContent />} />
-          </LineChart>
+          </ComposedChart>
         </ChartContainer>
       </CardContent>
       <CardFooter>
