@@ -29,6 +29,14 @@ export function CategoryRow({
   active = false,
 }: CategoryRowProps) {
   const router = useRouter();
+  const requiredSpendKind = category.required_spend_kind ?? "none";
+  const requiredSpendBadgeLabel =
+    requiredSpendKind === "temporal"
+      ? "Timed"
+      : requiredSpendKind === "atemporal"
+        ? "Required"
+        : null;
+
   return (
     <SelectableRow
       id={category.id}
@@ -42,9 +50,9 @@ export function CategoryRow({
       <Text className="text-muted-foreground shrink-0 grow text-xs">
         {Array.isArray(category.keywords) ? category.keywords.join(", ") : ""}
       </Text>
-      {category.type === "expense" && category.is_obligation && (
+      {category.type === "expense" && requiredSpendBadgeLabel && (
         <Badge variant="secondary" className="shrink-0">
-          Required
+          {requiredSpendBadgeLabel}
         </Badge>
       )}
       <div className="shrink-0">
