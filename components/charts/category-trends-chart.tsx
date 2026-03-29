@@ -6,6 +6,8 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
 
+import { useChartControls } from "./shared/chart-controls-context";
+
 import {
   Card,
   CardContent,
@@ -28,7 +30,6 @@ import { formatCurrency, parseMonthDate } from "@/utils/chart-helpers";
 import { ChartColors } from "@/utils/constants";
 import { createClient } from "@/utils/supabase/client";
 import { getCategoryTrends } from "@/utils/supabase/queries";
-import { StackOffsetToggle } from "./shared/stack-offset-toggle";
 
 interface CategoryTrendsChartProps {
   walletId?: string;
@@ -39,6 +40,7 @@ interface CategoryTrendsChartProps {
 
 interface ChartDataPoint {
   month: string;
+  _original?: Record<string, number>;
   [key: string]: number | string;
 }
 
@@ -61,6 +63,7 @@ export function CategoryTrendsChart({
   to,
   type = "expense",
 }: CategoryTrendsChartProps) {
+  const controls = useChartControls();
   const [wallets, walletMap] = useWallets();
   const workspaceWalletIds = wallets.map((w) => w.id);
   const { conversionRates, baseCurrency } = useCurrency();
@@ -85,7 +88,7 @@ export function CategoryTrendsChart({
       return data;
     },
   });
-  const [stackMode, setStackMode] = React.useState<"percentage" | "absolute">("percentage");
+  const stackMode = controls?.chartValueMode ?? "percentage";
 
   const chartData: ChartDataPoint[] = React.useMemo(() => {
     if (!categoryData) return [];
@@ -140,7 +143,7 @@ export function CategoryTrendsChart({
         });
 
         // Store originals as hidden property for tooltip access
-        (dataPoint as any)._original = originalValues;
+        dataPoint._original = originalValues;
         return dataPoint;
       })
       .sort(
@@ -274,16 +277,11 @@ export function CategoryTrendsChart({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex flex-col space-y-1.5">
-            <CardTitle>Category Trends</CardTitle>
-            <CardDescription>
-              Top {type === "income" ? "income" : "expense"} categories over time in{" "}
-              {baseCurrency} (extreme outliers normalized)
-            </CardDescription>
-          </div>
-          <StackOffsetToggle value={stackMode} onValueChange={setStackMode} />
-        </div>
+        <CardTitle>Category Trends</CardTitle>
+        <CardDescription>
+          Top {type === "income" ? "income" : "expense"} categories over time in{" "}
+          {baseCurrency} (extreme outliers normalized)
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
@@ -324,7 +322,7 @@ export function CategoryTrendsChart({
 
                 // Get original uncapped values from the data point
                 const dataPoint = chartData.find((d) => d.month === label);
-                const originalValues = (dataPoint as any)?._original || {};
+                const originalValues = dataPoint?._original || {};
 
                 return (
                   <div className="bg-background rounded-lg border p-2 shadow-sm">

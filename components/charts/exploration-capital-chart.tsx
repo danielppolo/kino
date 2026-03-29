@@ -14,6 +14,8 @@ import {
 
 import { useQuery } from "@tanstack/react-query";
 
+import { useChartControls } from "./shared/chart-controls-context";
+
 import {
   Card,
   CardContent,
@@ -29,9 +31,10 @@ import {
   ChartLegendContent,
   ChartTooltip,
 } from "@/components/ui/chart";
+import { Money } from "@/components/ui/money";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
-import { parseMonthDate } from "@/utils/chart-helpers";
+import { formatCurrency, parseMonthDate } from "@/utils/chart-helpers";
 import { convertCurrency } from "@/utils/currency-conversion";
 import { createClient } from "@/utils/supabase/client";
 import { getMonthlyCategoryStats } from "@/utils/supabase/queries";
@@ -53,8 +56,10 @@ export function ExplorationCapitalChart({
   from,
   to,
 }: ExplorationCapitalChartProps) {
+  const controls = useChartControls();
   const [, walletMap] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
+  const chartValueMode = controls?.chartValueMode ?? "percentage";
 
   const { data: categoryStats, isLoading } = useQuery({
     queryKey: ["exploration-capital-stats", walletId, from, to],
@@ -77,6 +82,8 @@ export function ExplorationCapitalChart({
     topCategoryNames,
     variablePct,
     avgVariablePct,
+    variableAmount,
+    avgVariableAmount,
   } =
     useMemo(() => {
       if (!categoryStats || categoryStats.length === 0) {
@@ -86,6 +93,8 @@ export function ExplorationCapitalChart({
           topCategoryNames: [],
           variablePct: 0,
           avgVariablePct: 0,
+          variableAmount: 0,
+          avgVariableAmount: 0,
         };
       }
 
@@ -194,6 +203,11 @@ export function ExplorationCapitalChart({
             if (currentTotal <= 0) return sum;
             return sum + (current.variable / currentTotal) * 100;
           }, 0) / rollingWindow.length;
+        const rollingAbsolute =
+          rollingWindow.reduce((sum, currentMonth) => {
+            const current = byMonth[currentMonth];
+            return sum + current.variable;
+          }, 0) / rollingWindow.length;
 
         return {
           month,
@@ -201,6 +215,10 @@ export function ExplorationCapitalChart({
           variable: smoothedVariablePct,
           rawVariable: variablePctRaw,
           rollingAverage,
+          baselineAmount: baseline,
+          variableAmount: variable,
+          rawVariableAmount: variable,
+          rollingAbsolute,
         };
       });
 
@@ -209,6 +227,10 @@ export function ExplorationCapitalChart({
         data.length > 0 ? data[data.length - 1].variable : 0;
       const currentAvgVariablePct =
         data.length > 0 ? data[data.length - 1].rollingAverage : 0;
+      const currentVariableAmount =
+        data.length > 0 ? data[data.length - 1].variableAmount : 0;
+      const currentAvgVariableAmount =
+        data.length > 0 ? data[data.length - 1].rollingAbsolute : 0;
 
       const config: ChartConfig = {
         variable: {
@@ -231,6 +253,8 @@ export function ExplorationCapitalChart({
         topCategoryNames,
         variablePct: currentVariablePct,
         avgVariablePct: currentAvgVariablePct,
+        variableAmount: currentVariableAmount,
+        avgVariableAmount: currentAvgVariableAmount,
       };
     }, [categoryStats, conversionRates, baseCurrency, walletMap]);
 
@@ -282,6 +306,16 @@ export function ExplorationCapitalChart({
     variablePct >= 40 ? "#22c55e" : variablePct >= 20 ? "#f59e0b" : "#ef4444";
   const statusLabel =
     variablePct >= 40 ? "Healthy room" : variablePct >= 20 ? "Tight" : "Constrained";
+  const headlineValue =
+    chartValueMode === "percentage" ? (
+      `${variablePct.toFixed(0)}%`
+    ) : (
+      <Money
+        cents={Math.round(variableAmount * 100)}
+        currency={baseCurrency}
+        className="font-bold"
+      />
+    );
 
   return (
     <Card>
@@ -292,12 +326,13 @@ export function ExplorationCapitalChart({
             className="ml-3 text-2xl font-bold"
             style={{ color: explorationColor }}
           >
-            {variablePct.toFixed(0)}%
+            {headlineValue}
           </span>
         </CardTitle>
         <CardDescription>
-          The solid blue line shows your smoothed discretionary share, with
-          required spend grounded below it and remaining room above it.{" "}
+          {chartValueMode === "percentage"
+            ? "The solid blue line shows your smoothed discretionary share, with required spend grounded below it and remaining room above it. "
+            : "The solid blue line shows your monthly discretionary amount, with required spend stacked below it. "}
           {topCategoryNames.length > 0 ? (
             <>Required spend is anchored by {topCategoryNames.join(", ")}.</>
           ) : (
@@ -320,27 +355,39 @@ export function ExplorationCapitalChart({
               tickFormatter={(v) => format(parseMonthDate(v), "MMM yy")}
             />
             <YAxis
-              domain={[0, 100]}
+              domain={[0, "auto"]}
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(v) => `${v.toFixed(0)}%`}
+              tickFormatter={(v) =>
+                chartValueMode === "percentage"
+                  ? `${v.toFixed(0)}%`
+                  : formatCurrency(v, baseCurrency)
+              }
             />
             <ChartTooltip
               cursor={false}
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
                 const variable = payload.find(
-                  (p) => p.dataKey === "variable",
+                  (p) =>
+                    p.dataKey ===
+                    (chartValueMode === "percentage" ? "variable" : "variableAmount"),
                 )?.value as number | undefined;
                 const rawVariable = payload.find(
-                  (p) => p.dataKey === "rawVariable",
+                  (p) =>
+                    p.dataKey ===
+                    (chartValueMode === "percentage" ? "rawVariable" : "rawVariableAmount"),
                 )?.value as number | undefined;
                 const rollingAverage = payload.find(
-                  (p) => p.dataKey === "rollingAverage",
+                  (p) =>
+                    p.dataKey ===
+                    (chartValueMode === "percentage" ? "rollingAverage" : "rollingAbsolute"),
                 )?.value as number | undefined;
                 const baseline = payload.find(
-                  (p) => p.dataKey === "baseline",
+                  (p) =>
+                    p.dataKey ===
+                    (chartValueMode === "percentage" ? "baseline" : "baselineAmount"),
                 )?.value as number | undefined;
                 return (
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
@@ -350,13 +397,21 @@ export function ExplorationCapitalChart({
                     {variable !== undefined && (
                       <div className="flex justify-between gap-4 text-sm">
                         <span style={{ color: "#3b82f6" }}>Exploration</span>
-                        <span className="font-bold">{variable.toFixed(1)}%</span>
+                        <span className="font-bold">
+                          {chartValueMode === "percentage"
+                            ? `${variable.toFixed(1)}%`
+                            : formatCurrency(variable, baseCurrency)}
+                        </span>
                       </div>
                     )}
                     {rawVariable !== undefined && (
                       <div className="flex justify-between gap-4 text-sm">
                         <span className="text-muted-foreground">Raw month</span>
-                        <span>{rawVariable.toFixed(1)}%</span>
+                        <span>
+                          {chartValueMode === "percentage"
+                            ? `${rawVariable.toFixed(1)}%`
+                            : formatCurrency(rawVariable, baseCurrency)}
+                        </span>
                       </div>
                     )}
                     {rollingAverage !== undefined && (
@@ -364,39 +419,51 @@ export function ExplorationCapitalChart({
                         <span className="text-muted-foreground">
                           6-month average
                         </span>
-                        <span>{rollingAverage.toFixed(1)}%</span>
+                        <span>
+                          {chartValueMode === "percentage"
+                            ? `${rollingAverage.toFixed(1)}%`
+                            : formatCurrency(rollingAverage, baseCurrency)}
+                        </span>
                       </div>
                     )}
                     {baseline !== undefined && (
                       <div className="flex justify-between gap-4 text-sm">
                         <span className="text-muted-foreground">Required</span>
-                        <span>{baseline.toFixed(1)}%</span>
+                        <span>
+                          {chartValueMode === "percentage"
+                            ? `${baseline.toFixed(1)}%`
+                            : formatCurrency(baseline, baseCurrency)}
+                        </span>
                       </div>
                     )}
                   </div>
                 );
               }}
             />
-            <ReferenceLine
-              y={20}
-              stroke="#f59e0b"
-              strokeDasharray="4 4"
-              strokeOpacity={0.6}
-            />
-            <ReferenceLine
-              y={40}
-              stroke="#22c55e"
-              strokeDasharray="4 4"
-              strokeOpacity={0.6}
-            />
-            <ReferenceLine
-              y={60}
-              stroke="#60a5fa"
-              strokeDasharray="4 4"
-              strokeOpacity={0.4}
-            />
+            {chartValueMode === "percentage" && (
+              <>
+                <ReferenceLine
+                  y={20}
+                  stroke="#f59e0b"
+                  strokeDasharray="4 4"
+                  strokeOpacity={0.6}
+                />
+                <ReferenceLine
+                  y={40}
+                  stroke="#22c55e"
+                  strokeDasharray="4 4"
+                  strokeOpacity={0.6}
+                />
+                <ReferenceLine
+                  y={60}
+                  stroke="#60a5fa"
+                  strokeDasharray="4 4"
+                  strokeOpacity={0.4}
+                />
+              </>
+            )}
             <Area
-              dataKey="baseline"
+              dataKey={chartValueMode === "percentage" ? "baseline" : "baselineAmount"}
               name="Required spend"
               type="monotone"
               fill="#3f3f46"
@@ -405,7 +472,7 @@ export function ExplorationCapitalChart({
               stackId="capacity"
             />
             <Area
-              dataKey="variable"
+              dataKey={chartValueMode === "percentage" ? "variable" : "variableAmount"}
               name="Exploration capital"
               type="monotone"
               fill="#1d4ed8"
@@ -414,7 +481,11 @@ export function ExplorationCapitalChart({
               stackId="capacity"
             />
             <Line
-              dataKey="rollingAverage"
+              dataKey={
+                chartValueMode === "percentage"
+                  ? "rollingAverage"
+                  : "rollingAbsolute"
+              }
               name="6-month average"
               type="monotone"
               stroke="#94a3b8"
@@ -425,7 +496,7 @@ export function ExplorationCapitalChart({
               strokeDasharray="6 4"
             />
             <Line
-              dataKey="variable"
+              dataKey={chartValueMode === "percentage" ? "variable" : "variableAmount"}
               name="Exploration capital"
               type="monotone"
               stroke="#3b82f6"
@@ -444,18 +515,21 @@ export function ExplorationCapitalChart({
             startDate={chartData[0]?.month}
             endDate={chartData[chartData.length - 1]?.month}
           />
-          <div className="text-right">
-            <div className="text-muted-foreground text-xs uppercase tracking-wide">
-              Current zone
-            </div>
-            <div className="font-medium" style={{ color: explorationColor }}>
-              {statusLabel}
-            </div>
-            <div className="text-muted-foreground text-xs">
-              Avg {avgVariablePct.toFixed(0)}%
+            <div className="text-right">
+              <div className="text-muted-foreground text-xs uppercase tracking-wide">
+                Current zone
+              </div>
+              <div className="font-medium" style={{ color: explorationColor }}>
+                {statusLabel}
+              </div>
+              <div className="text-muted-foreground text-xs">
+                Avg{" "}
+                {chartValueMode === "percentage"
+                  ? `${avgVariablePct.toFixed(0)}%`
+                  : formatCurrency(avgVariableAmount, baseCurrency)}
+              </div>
             </div>
           </div>
-        </div>
       </CardFooter>
     </Card>
   );

@@ -13,6 +13,8 @@ import {
 
 import { useQuery } from "@tanstack/react-query";
 
+import type { ForecastApiResponse } from "@/app/api/forecast/route";
+import { useChartControls } from "@/components/charts/shared/chart-controls-context";
 import {
   Card,
   CardContent,
@@ -21,7 +23,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useChartControls } from "@/components/charts/shared/chart-controls-context";
 import {
   ChartConfig,
   ChartContainer,
@@ -37,7 +38,6 @@ import {
 import { createClient } from "@/utils/supabase/client";
 import { getWalletMonthlyBalances } from "@/utils/supabase/queries";
 import { Wallet } from "@/utils/supabase/types";
-import type { ForecastApiResponse } from "@/app/api/forecast/route";
 
 interface ForecastLineChartProps {
   walletId?: string;
@@ -98,6 +98,7 @@ export function ForecastLineChart({
       return res.json();
     },
     staleTime: 60 * 60 * 1000,
+    enabled: process.env.NEXT_PUBLIC_APP_ENV === "production",
   });
 
   const isLoading = isLoadingBalances || isLoadingForecast;
@@ -171,9 +172,13 @@ export function ForecastLineChart({
         anchorDelta +
         (index === forecast.length - 1 ? futureLumpSum : 0),
       lower:
-        p.lower + anchorDelta + (index === forecast.length - 1 ? futureLumpSum : 0),
+        p.lower +
+        anchorDelta +
+        (index === forecast.length - 1 ? futureLumpSum : 0),
       upper:
-        p.upper + anchorDelta + (index === forecast.length - 1 ? futureLumpSum : 0),
+        p.upper +
+        anchorDelta +
+        (index === forecast.length - 1 ? futureLumpSum : 0),
       isForecast: true,
     }),
   );
@@ -241,7 +246,9 @@ export function ForecastLineChart({
           <CardDescription>{description}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">Loading...</div>
+          <div className="flex h-64 items-center justify-center">
+            Loading...
+          </div>
         </CardContent>
       </Card>
     );
@@ -426,7 +433,7 @@ export function ForecastLineChart({
       </CardContent>
       {methodLabel && (
         <CardFooter>
-          <span className="text-muted-foreground rounded border px-2 py-0.5 text-xs font-mono">
+          <span className="text-muted-foreground rounded border px-2 py-0.5 font-mono text-xs">
             {methodLabel}
           </span>
         </CardFooter>
