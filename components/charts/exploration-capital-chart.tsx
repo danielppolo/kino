@@ -9,7 +9,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+
 import { useQuery } from "@tanstack/react-query";
+
 import {
   Card,
   CardContent,
