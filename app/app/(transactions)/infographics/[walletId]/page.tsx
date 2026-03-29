@@ -16,10 +16,9 @@ import { CurrencyExposureChart } from "@/components/charts/currency-exposure-cha
 import { ExpenseConcentrationChart } from "@/components/charts/expense-concentration-chart";
 import { ExpensePredictabilityChart } from "@/components/charts/expense-predictability-chart";
 import { RecurringVsOnetimeBillsChart } from "@/components/charts/recurring-vs-onetime-bills-chart";
-import { TrendsChart } from "@/components/charts/trends-chart";
-import { TagCloudAnalyticsChart } from "@/components/charts/tag-cloud-analytics-chart";
 import { TransactionSizeDistributionChart } from "@/components/charts/transaction-size-distribution-chart";
 import { TransactionTypeDistributionChart } from "@/components/charts/transaction-type-distribution-chart";
+import { TrendsChart } from "@/components/charts/trends-chart";
 import { WalletNetBalanceLineChart } from "@/components/charts/wallet-net-balance-line-chart";
 import { Filters } from "@/utils/supabase/queries";
 
@@ -125,14 +124,6 @@ async function InfographicsPage({ params, searchParams }: PageParams) {
           to={filters.to}
         />
       </div>
-      <div className="md:col-span-2 lg:col-span-3">
-        <TagCloudAnalyticsChart
-          walletId={walletId}
-          from={filters.from}
-          to={filters.to}
-        />
-      </div>
-
       {/* Transfer Analysis */}
       {/* <div className="md:col-span-2 lg:col-span-3">
         <TransferFlowDiagramChart
