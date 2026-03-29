@@ -6,6 +6,7 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
+  Line,
   ReferenceLine,
   XAxis,
   YAxis,
@@ -39,6 +40,7 @@ import {
   getMonthlyStats,
   getWalletMonthlyBalances,
 } from "@/utils/supabase/queries";
+import type { ForecastApiResponse } from "@/app/api/forecast/route";
 
 interface SufficiencyRatioChartProps {
   walletId?: string;
@@ -51,6 +53,10 @@ const chartConfig: ChartConfig = {
     label: "Years of Autonomy",
     color: "#3b82f6",
   },
+  forecast: {
+    label: "Projected autonomy",
+    color: "#3b82f6",
+  },
 };
 const MAX_SUFFICIENCY_YEARS = 50;
 
@@ -59,9 +65,13 @@ export function SufficiencyRatioChart({
   from,
   to,
 }: SufficiencyRatioChartProps) {
-  const [, walletMap] = useWallets();
+  const [wallets, walletMap] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
   const controls = useChartControls();
+  const forecastMode = controls?.forecastMode ?? "with-income";
+  const horizonYears = controls?.forecastHorizonYears ?? 1;
+  const horizonMonths = horizonYears * 12;
+  const futureLumpSum = controls?.futureLumpSum ?? 0;
 
   const { data: monthlyBalances, isLoading: loadingBalances } = useQuery({
     queryKey: ["sufficiency-ratio-balances", walletId, from, to],
@@ -91,11 +101,39 @@ export function SufficiencyRatioChart({
     },
   });
 
-  const isLoading = loadingBalances || loadingStats;
+  const { data: forecastData, isLoading: loadingForecast } = useQuery({
+    queryKey: ["sufficiency-ratio-forecast", walletId, baseCurrency, horizonMonths],
+    queryFn: async (): Promise<ForecastApiResponse> => {
+      const workspaceWalletIds = wallets.map((w) => w.id);
+      const res = await fetch("/api/forecast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          walletId: walletId ?? null,
+          walletIds: workspaceWalletIds,
+          horizon: horizonMonths,
+          baseCurrency,
+          conversionRates,
+        }),
+      });
+      if (!res.ok) throw new Error("Forecast API failed");
+      return res.json();
+    },
+    staleTime: 60 * 60 * 1000,
+  });
 
-  const { chartData, currentYears, avgMonthlyBurn } = useMemo(() => {
+  const isLoading = loadingBalances || loadingStats || loadingForecast;
+
+  const { chartData, currentYears, projectedYears, avgMonthlyBurn, lastHistoricalMonth } =
+    useMemo(() => {
     if (!monthlyBalances || !monthlyStats || monthlyStats.length === 0) {
-      return { chartData: [], currentYears: 0, avgMonthlyBurn: 0 };
+      return {
+        chartData: [],
+        currentYears: 0,
+        projectedYears: 0,
+        avgMonthlyBurn: 0,
+        lastHistoricalMonth: null as string | null,
+      };
     }
 
     // Monthly totals per wallet per month (converted to base currency)
@@ -132,6 +170,7 @@ export function SufficiencyRatioChart({
     const effectiveMonthlyBurn =
       controls?.monthlySpend ??
       controls?.defaultMonthlySpend ??
+      forecastData?.avgMonthlyBurn ??
       baselineMonthlyBurn;
     const annualBurn = effectiveMonthlyBurn * 12;
 
@@ -152,31 +191,100 @@ export function SufficiencyRatioChart({
             annualBurn > 0
               ? Math.max(0, totalBalance / annualBurn)
               : MAX_SUFFICIENCY_YEARS,
+          forecast: null as number | null,
+          isForecast: false,
         };
       })
       .filter((p) => p.years > 0);
 
     const current = data.length > 0 ? data[data.length - 1].years : 0;
+    const lastBalancePoint = data[data.length - 1];
+    const lastBalance = annualBurn > 0 ? current * annualBurn : 0;
+    const firstForecastRaw = forecastData?.forecast[0]?.value ?? lastBalance;
+    const anchorDelta = lastBalance - firstForecastRaw;
+
+    const withIncomeForecast = (forecastData?.forecast ?? []).map((point, index, forecast) => {
+      const adjustedValue =
+        point.value +
+        anchorDelta +
+        (index === forecast.length - 1 ? futureLumpSum : 0);
+      return {
+        month: point.month,
+        years: null as number | null,
+        forecast:
+          annualBurn > 0
+            ? Math.max(0, adjustedValue / annualBurn)
+            : MAX_SUFFICIENCY_YEARS,
+        isForecast: true,
+      };
+    });
+
+    const noIncomeForecast = (forecastData?.forecast ?? []).map((point, index, forecast) => {
+      const adjustedValue =
+        lastBalance -
+        effectiveMonthlyBurn * (index + 1) +
+        (index === forecast.length - 1 ? futureLumpSum : 0);
+      return {
+        month: point.month,
+        years: null as number | null,
+        forecast:
+          annualBurn > 0
+            ? Math.max(0, adjustedValue / annualBurn)
+            : MAX_SUFFICIENCY_YEARS,
+        isForecast: true,
+      };
+    });
+
+    const activeForecast =
+      forecastMode === "with-income" ? withIncomeForecast : noIncomeForecast;
+    const chartDataWithForecast =
+      lastBalancePoint && activeForecast.length > 0
+        ? [
+            ...data.slice(0, -1),
+            {
+              ...lastBalancePoint,
+              forecast: lastBalancePoint.years,
+            },
+            ...activeForecast,
+          ]
+        : data;
+
+    const projected =
+      activeForecast.length > 0
+        ? (activeForecast[activeForecast.length - 1].forecast ?? current)
+        : current;
+
     return {
-      chartData: data,
+      chartData: chartDataWithForecast,
       currentYears: current,
+      projectedYears: projected,
       avgMonthlyBurn: baselineMonthlyBurn,
+      lastHistoricalMonth: data[data.length - 1]?.month ?? null,
     };
   }, [
     monthlyBalances,
     monthlyStats,
+    forecastData,
     conversionRates,
     baseCurrency,
     walletMap,
     walletId,
     controls?.monthlySpend,
     controls?.defaultMonthlySpend,
+    forecastMode,
+    futureLumpSum,
   ]);
 
   const percentageChange = useMemo(() => {
     if (chartData.length < 2) return 0;
-    const prev = chartData[chartData.length - 2].years;
-    const curr = chartData[chartData.length - 1].years;
+    const prev =
+      chartData[chartData.length - 2].forecast ??
+      chartData[chartData.length - 2].years ??
+      0;
+    const curr =
+      chartData[chartData.length - 1].forecast ??
+      chartData[chartData.length - 1].years ??
+      0;
     if (prev === 0) return 0;
     return ((curr - prev) / prev) * 100;
   }, [chartData]);
@@ -188,17 +296,17 @@ export function SufficiencyRatioChart({
 
   const currentLabel = useMemo(() => {
     if (effectiveMonthlyBurn === 0) return "Effectively unbounded autonomy";
-    if (currentYears >= 25) return "Irreversible autonomy";
-    if (currentYears >= 10) return "Stable autonomy";
-    if (currentYears >= 5) return "Fragile autonomy";
+    if (projectedYears >= 25) return "Irreversible autonomy";
+    if (projectedYears >= 10) return "Stable autonomy";
+    if (projectedYears >= 5) return "Fragile autonomy";
     return "Below safety threshold";
-  }, [currentYears, effectiveMonthlyBurn]);
+  }, [projectedYears, effectiveMonthlyBurn]);
 
   const areaColor = useMemo(() => {
-    if (currentYears >= 10) return "#22c55e";
-    if (currentYears >= 5) return "#f59e0b";
+    if (projectedYears >= 10) return "#22c55e";
+    if (projectedYears >= 5) return "#f59e0b";
     return "#ef4444";
-  }, [currentYears]);
+  }, [projectedYears]);
 
   if (isLoading) {
     return (
@@ -244,7 +352,7 @@ export function SufficiencyRatioChart({
           <span className="ml-3 text-2xl font-bold" style={{ color: areaColor }}>
             {effectiveMonthlyBurn === 0
               ? `${MAX_SUFFICIENCY_YEARS}+ yrs`
-              : `${currentYears.toFixed(1)} yrs`}
+              : `${projectedYears.toFixed(1)} yrs`}
           </span>
         </CardTitle>
         <CardDescription>
@@ -259,8 +367,13 @@ export function SufficiencyRatioChart({
             <>
               {currentLabel} — at a monthly spend of{" "}
               <strong>{formatCurrency(effectiveMonthlyBurn, baseCurrency)}</strong>,
-              your current reserves would fund roughly {currentYears.toFixed(1)} years
-              of autonomy in {baseCurrency}.
+              your reserves move from roughly {currentYears.toFixed(1)} years
+              today to {projectedYears.toFixed(1)} projected years of autonomy
+              in {baseCurrency} after {horizonYears} forecast year
+              {horizonYears > 1 ? "s" : ""}
+              {futureLumpSum > 0
+                ? ` and a final ${formatCurrency(futureLumpSum, baseCurrency)} lump sum`
+                : ""}.
             </>
           )}
         </CardDescription>
@@ -289,19 +402,34 @@ export function SufficiencyRatioChart({
               cursor={false}
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
-                const years = payload[0]?.value as number;
+                const yearsEntry =
+                  payload.find((item) => item.dataKey === "forecast") ??
+                  payload.find((item) => item.dataKey === "years");
+                const years = (yearsEntry?.value as number | undefined) ?? 0;
+                const point = yearsEntry?.payload as
+                  | { isForecast?: boolean }
+                  | undefined;
                 return (
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
                     <div className="text-sm font-medium mb-1">
                       {format(parseMonthDate(label), "MMMM yyyy")}
                     </div>
                     <div className="text-sm">
-                      <span className="font-bold">{years.toFixed(1)}</span> years of autonomy
+                      <span className="font-bold">{years.toFixed(1)}</span>{" "}
+                      {point?.isForecast ? "projected" : "historical"} years of autonomy
                     </div>
                   </div>
                 );
               }}
             />
+            {lastHistoricalMonth && (
+              <ReferenceLine
+                x={lastHistoricalMonth}
+                stroke="hsl(var(--muted-foreground))"
+                strokeDasharray="3 3"
+                label={{ value: "Today", position: "top" }}
+              />
+            )}
             {/* Threshold reference lines */}
             <ReferenceLine
               y={5}
@@ -328,6 +456,17 @@ export function SufficiencyRatioChart({
               fill={areaColor}
               fillOpacity={0.15}
               stroke={areaColor}
+              connectNulls={false}
+            />
+            <Line
+              dataKey="forecast"
+              name="Projected autonomy"
+              type="monotone"
+              stroke={areaColor}
+              strokeWidth={2}
+              strokeDasharray="5 5"
+              dot={false}
+              connectNulls={false}
             />
           </AreaChart>
         </ChartContainer>
