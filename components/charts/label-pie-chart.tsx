@@ -2,7 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { Cell, Pie, PieChart, RadialBar, RadialBarChart } from "recharts";
+import {
+  Cell,
+  Pie,
+  PieChart,
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
+  Radar,
+  RadarChart,
+} from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
 
@@ -205,14 +214,12 @@ export default function LabelPieChart({
       <CardContent>
         <ChartContainer config={chartConfig}>
           {chartType === "polar" ? (
-            <RadialBarChart
+            <RadarChart
               data={transformedData}
-              innerRadius="18%"
-              outerRadius="90%"
-              startAngle={90}
-              endAngle={-270}
-              barSize={18}
             >
+              <PolarGrid />
+              <PolarAngleAxis dataKey="name" tick={false} />
+              <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
               <ChartTooltip
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
@@ -245,12 +252,15 @@ export default function LabelPieChart({
                   );
                 }}
               />
-              <RadialBar
+              <Radar
                 dataKey="share"
-                cornerRadius={10}
-                background={{ fill: "hsl(var(--muted) / 0.25)" }}
+                name="Share"
+                stroke="#3b82f6"
+                fill="#3b82f6"
+                fillOpacity={0.28}
+                strokeWidth={2}
               />
-            </RadialBarChart>
+            </RadarChart>
           ) : (
             <PieChart>
               <ChartTooltip
