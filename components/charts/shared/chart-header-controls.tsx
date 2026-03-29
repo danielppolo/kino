@@ -5,6 +5,7 @@ import { BanknoteArrowUp, BanknoteX } from "lucide-react";
 
 import { useChartControls } from "./chart-controls-context";
 import { NormalizationLevelIcon } from "./chart-normalization-toggle";
+import { StackOffsetToggle } from "./stack-offset-toggle";
 
 import {
   DropdownMenu,
@@ -86,6 +87,11 @@ export function ChartHeaderControls({
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
+      <StackOffsetToggle
+        value={controls.chartValueMode}
+        onValueChange={controls.setChartValueMode}
+      />
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <TooltipButton
