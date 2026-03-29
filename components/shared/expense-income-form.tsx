@@ -222,9 +222,14 @@ const ExpenseIncomeForm = ({
       );
     },
     onSettled: () => {
-      queryClient.invalidateQueries({
-        queryKey: transactionsQueryKey,
-      });
+      void Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: transactionsQueryKey,
+        }),
+        queryClient.invalidateQueries({ queryKey: ["wallets"] }),
+        queryClient.invalidateQueries({ queryKey: ["workspace-wallets"] }),
+        queryClient.invalidateQueries({ queryKey: ["cashflow-breakdown"] }),
+      ]);
     },
   });
 
@@ -245,6 +250,12 @@ const ExpenseIncomeForm = ({
           };
         },
       );
+
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["wallets"] }),
+        queryClient.invalidateQueries({ queryKey: ["workspace-wallets"] }),
+        queryClient.invalidateQueries({ queryKey: ["cashflow-breakdown"] }),
+      ]);
     },
   });
 
