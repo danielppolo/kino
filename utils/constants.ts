@@ -16,6 +16,7 @@ export const TRANSFER_CATEGORIES = [
     id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_IN_ID!,
     type: "transfer",
     user_id: null,
+    is_obligation: false,
     keywords: null,
   },
   {
@@ -24,6 +25,7 @@ export const TRANSFER_CATEGORIES = [
     id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_OUT_ID!,
     type: "transfer",
     user_id: null,
+    is_obligation: false,
     keywords: null,
   },
   {
@@ -32,6 +34,7 @@ export const TRANSFER_CATEGORIES = [
     id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID!,
     type: "transfer",
     user_id: null,
+    is_obligation: false,
     keywords: null,
   },
 ];

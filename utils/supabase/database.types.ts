@@ -150,6 +150,7 @@ export type Database = {
         Row: {
           icon: string
           id: string
+          is_obligation: boolean
           keywords: string[] | null
           name: string
           type: string
@@ -158,6 +159,7 @@ export type Database = {
         Insert: {
           icon: string
           id?: string
+          is_obligation?: boolean
           keywords?: string[] | null
           name: string
           type: string
@@ -166,6 +168,7 @@ export type Database = {
         Update: {
           icon?: string
           id?: string
+          is_obligation?: boolean
           keywords?: string[] | null
           name?: string
           type?: string

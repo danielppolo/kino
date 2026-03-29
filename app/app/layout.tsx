@@ -1,6 +1,7 @@
 import React from "react";
 
-import { Providers } from "@/app/providers";
+import AuthenticatedProviders from "./providers";
+
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { WorkspaceProvider } from "@/contexts/workspace-context";
 import { WorkspaceSettingsBridge } from "@/contexts/workspace-settings-bridge";
@@ -26,12 +27,12 @@ export default async function Layout({ children }: LayoutProps) {
   }
 
   return (
-    <Providers>
+    <AuthenticatedProviders key={user.id} userId={user.id}>
       <SidebarProvider>
         <WorkspaceProvider userId={user.id}>
           <WorkspaceSettingsBridge>{children}</WorkspaceSettingsBridge>
         </WorkspaceProvider>
       </SidebarProvider>
-    </Providers>
+    </AuthenticatedProviders>
   );
 }

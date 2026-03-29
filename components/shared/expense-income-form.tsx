@@ -28,6 +28,7 @@ import {
   useWallets,
 } from "@/contexts/settings-context";
 import { useTransactionForm } from "@/contexts/transaction-form-context";
+import { useWorkspace } from "@/contexts/workspace-context";
 import useFilters from "@/hooks/use-filters";
 import { createClient } from "@/utils/supabase/client";
 import {
@@ -81,13 +82,20 @@ const ExpenseIncomeForm = ({
   open,
   onOpenChange,
 }: ExpenseIncomeFormProps) => {
-  const [, walletMap] = useWallets();
+  const [wallets, walletMap] = useWallets();
   const { bills_enabled } = useFeatureFlags();
+  const { activeWorkspace } = useWorkspace();
   const filters = useFilters();
   const [availableTags] = useTags();
   const [addAnother, setAddAnother] = useState(false);
   const queryClient = useQueryClient();
   const { billPrefill } = useTransactionForm();
+  const workspaceWalletIds = wallets.map((wallet) => wallet.id);
+  const transactionsQueryKey = [
+    "transactions",
+    filters,
+    workspaceWalletIds,
+  ] as const;
 
   const { mutateAsync, isPending } = useMutation<
     { data: Transaction[] },
@@ -105,13 +113,11 @@ const ExpenseIncomeForm = ({
     },
     onMutate: async (newTransaction) => {
       await queryClient.cancelQueries({
-        queryKey: ["transactions", filters],
+        queryKey: transactionsQueryKey,
       });
 
-      const previousData = queryClient.getQueryData<InfiniteTransactionData>([
-        "transactions",
-        filters,
-      ]);
+      const previousData =
+        queryClient.getQueryData<InfiniteTransactionData>(transactionsQueryKey);
 
       const amountCents =
         newTransaction.type === "expense"
@@ -137,7 +143,7 @@ const ExpenseIncomeForm = ({
       };
 
       queryClient.setQueryData<InfiniteTransactionData>(
-        ["transactions", filters],
+        transactionsQueryKey,
         (old) => {
           if (!old) {
             return {
@@ -168,7 +174,7 @@ const ExpenseIncomeForm = ({
     onError: (_err, _newTransaction, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(
-          ["transactions", filters],
+          transactionsQueryKey,
           context.previousData,
         );
       }
@@ -198,7 +204,7 @@ const ExpenseIncomeForm = ({
       };
 
       queryClient.setQueryData<InfiniteTransactionData>(
-        ["transactions", filters],
+        transactionsQueryKey,
         (old) => {
           if (!old) return old;
           return {
@@ -217,7 +223,7 @@ const ExpenseIncomeForm = ({
     },
     onSettled: () => {
       queryClient.invalidateQueries({
-        queryKey: ["transactions", filters],
+        queryKey: transactionsQueryKey,
       });
     },
   });
@@ -276,9 +282,7 @@ const ExpenseIncomeForm = ({
         const supabase = await createClient();
         const billsResult = await getBillsForTransaction(supabase, values.id);
         if (billsResult.data) {
-          existingBillIds = billsResult.data
-            .map((bp: any) => bp.bill_id)
-            .filter(Boolean);
+          existingBillIds = billsResult.data.map((bill) => bill.id);
         }
       }
 
@@ -354,9 +358,9 @@ const ExpenseIncomeForm = ({
   });
 
   const handleRepeat = async (values: ExpenseIncomeFormValues) => {
-    const { id: _id, ...rest } = values;
     const repeatValues: ExpenseIncomeFormValues = {
-      ...rest,
+      ...values,
+      id: undefined,
       date: format(Date.now(), "yyyy-MM-dd"),
     };
 
@@ -421,14 +425,18 @@ const ExpenseIncomeForm = ({
           )}
         />
         <FormField
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <DescriptionInput {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
+        name="description"
+        render={({ field }) => (
+          <FormItem>
+            <FormControl>
+              <DescriptionInput
+                {...field}
+                value={field.value ?? ""}
+                workspaceId={activeWorkspace?.id}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
           )}
         />
       </div>

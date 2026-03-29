@@ -15,6 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { deleteLabels } from "@/utils/supabase/mutations";
 
 interface DeleteLabelsDialogProps {
@@ -37,7 +38,7 @@ export default function DeleteLabelsDialog({
       await deleteLabels(selected);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries();
+      invalidateWorkspaceQueries(queryClient);
       toast.success(`${selected.length} labels deleted`);
       onOpenChange(false);
       onSuccess?.();

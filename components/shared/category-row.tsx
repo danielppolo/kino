@@ -4,10 +4,8 @@ import React, { memo } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "../ui/badge";
 import SelectableRow from "./selectable-row";
-import { LazyIcon } from "../ui/icon";
-import { Category } from "@/utils/supabase/types";
 import { Text } from "../ui/typography";
-import { SquareArrowOutUpRight } from "lucide-react";
+import { Category } from "@/utils/supabase/types";
 
 interface CategoryRowProps {
   category: Category;
@@ -42,6 +40,11 @@ export function CategoryRow({
       <Text className="text-muted-foreground shrink-0 grow text-xs">
         {Array.isArray(category.keywords) ? category.keywords.join(", ") : ""}
       </Text>
+      {category.type === "expense" && category.is_obligation && (
+        <Badge variant="secondary" className="shrink-0">
+          Obligation
+        </Badge>
+      )}
       <div className="shrink-0">
         {!!transactionCount && (
           <Badge

@@ -15,6 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { deleteCategories } from "@/utils/supabase/mutations";
 
 interface DeleteCategoriesDialogProps {
@@ -37,7 +38,7 @@ export default function DeleteCategoriesDialog({
       await deleteCategories(selected);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries();
+      invalidateWorkspaceQueries(queryClient);
       toast.success(`${selected.length} categories deleted`);
       onOpenChange(false);
       onSuccess?.();

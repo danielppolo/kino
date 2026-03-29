@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Money } from "@/components/ui/money";
 import { useCurrency } from "@/contexts/settings-context";
+import { useWorkspace } from "@/contexts/workspace-context";
 import useFilters from "@/hooks/use-filters";
 import { createClient } from "@/utils/supabase/client";
 import { getCashflowBreakdown } from "@/utils/supabase/queries";
@@ -21,6 +22,7 @@ import { getCashflowBreakdown } from "@/utils/supabase/queries";
 export default function TransactionTotal() {
   const filters = useFilters();
   const { baseCurrency } = useCurrency();
+  const { activeWorkspace } = useWorkspace();
 
   // Check if there are any active filters (excluding wallet_id which is always present)
   const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
@@ -37,7 +39,7 @@ export default function TransactionTotal() {
   });
 
   const { data: cashflowData } = useQuery({
-    queryKey: ["cashflow-breakdown", filters],
+    queryKey: ["cashflow-breakdown", activeWorkspace?.id, filters],
     queryFn: async () => {
       const supabase = createClient();
       // Convert empty strings to undefined for the query
@@ -60,6 +62,7 @@ export default function TransactionTotal() {
       return result.data;
     },
     enabled: hasActiveFilters, // Only enable the query when there are active filters
+    staleTime: 1000 * 15,
   });
 
   // Don't show anything if there are no active filters

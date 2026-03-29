@@ -30,8 +30,8 @@ import EmptyState from "./empty-state";
 import RowGroupHeader, { RowGroupHeaderLoading } from "./row-group-header";
 import TransactionRow from "./transaction-row";
 
-import { useTransactionForm } from "@/contexts/transaction-form-context";
 import { useWallets } from "@/contexts/settings-context";
+import { useTransactionForm } from "@/contexts/transaction-form-context";
 import useFilters from "@/hooks/use-filters";
 import { useSelection } from "@/hooks/use-selection";
 import { PAGE_SIZE } from "@/utils/constants";
@@ -108,6 +108,7 @@ export default function TransactionList() {
       if (!lastPage.data || lastPage.data.length < PAGE_SIZE) return undefined;
       return allPages.length;
     },
+    staleTime: 1000 * 15,
   });
 
   const {

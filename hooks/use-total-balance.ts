@@ -31,6 +31,7 @@ export function useTotalBalance() {
       return Object.fromEntries(results);
     },
     enabled: showOwedInBalance && wallets.length > 0,
+    staleTime: 1000 * 15,
   });
 
   // Calculate total balance (with optional owed amounts)

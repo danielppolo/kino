@@ -8,14 +8,17 @@ import { Input } from "../ui/input";
 
 import { EntityForm } from "@/components/shared/entity-form";
 import CreatableMultiSelect from "@/components/ui/creatable-multi-select";
-import { useWorkspace } from "@/contexts/workspace-context";
 import {
   FormControl,
   FormField,
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { useWorkspace } from "@/contexts/workspace-context";
 import { ICONS } from "@/utils/constants";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { Database } from "@/utils/supabase/database.types";
 import {
   createCategory,
@@ -46,6 +49,7 @@ const CategoryForm = ({
     type,
     name: "",
     icon: ICONS[Math.floor(Math.random() * ICONS.length)],
+    is_obligation: false,
     keywords: [],
   };
 
@@ -94,7 +98,7 @@ const CategoryForm = ({
       return await deleteCategory(category.id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries();
+      invalidateWorkspaceQueries(queryClient);
       onSuccess?.();
     },
     onError(error: unknown) {
@@ -229,6 +233,29 @@ const CategoryForm = ({
           </FormItem>
         )}
       />
+      {type === "expense" && (
+        <FormField
+          name="is_obligation"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+              <div className="space-y-1">
+                <Label htmlFor="is-obligation">Baseline obligation</Label>
+                <p className="text-muted-foreground text-sm">
+                  Mark fixed or expected categories that should reduce
+                  exploration capital.
+                </p>
+              </div>
+              <FormControl>
+                <Switch
+                  id="is-obligation"
+                  checked={Boolean(field.value)}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      )}
     </EntityForm>
   );
 };
