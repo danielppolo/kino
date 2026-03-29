@@ -200,7 +200,6 @@ export function ExplorationCapitalChart({
           baseline: 100 - smoothedVariablePct,
           variable: smoothedVariablePct,
           rawVariable: variablePctRaw,
-          remainingTop: smoothedVariablePct,
           rollingAverage,
         };
       });
@@ -401,15 +400,16 @@ export function ExplorationCapitalChart({
               name="Required spend"
               type="monotone"
               fill="#3f3f46"
-              fillOpacity={0.45}
+              fillOpacity={0.55}
               stroke="none"
+              stackId="capacity"
             />
             <Area
-              dataKey="remainingTop"
-              name="Remaining room"
+              dataKey="variable"
+              name="Exploration capital"
               type="monotone"
               fill="#1d4ed8"
-              fillOpacity={0.16}
+              fillOpacity={0.18}
               stroke="none"
               stackId="capacity"
             />
