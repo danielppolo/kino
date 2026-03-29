@@ -4,6 +4,8 @@ import React from "react";
 import { format } from "date-fns";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
+import { useChartControls } from "./chart-controls-context";
+
 import {
   Card,
   CardContent,
@@ -21,10 +23,10 @@ import {
 } from "@/components/ui/chart";
 import { Money } from "@/components/ui/money";
 import { formatCurrency, parseMonthDate } from "@/utils/chart-helpers";
-import { StackOffsetToggle } from "./stack-offset-toggle";
 
 interface ChartDataPoint {
   month: string;
+  _original?: Record<string, number>;
   [key: string]: number | string;
 }
 
@@ -59,9 +61,8 @@ export function StackedTrendsChart({
   footer,
   showOutlierWarning = false,
 }: StackedTrendsChartProps) {
-  const [stackMode, setStackMode] = React.useState<"percentage" | "absolute">(
-    "percentage"
-  );
+  const controls = useChartControls();
+  const stackMode = controls?.chartValueMode ?? "percentage";
 
   if (isLoading) {
     return (
@@ -114,13 +115,8 @@ export function StackedTrendsChart({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex flex-col space-y-1.5">
-            <CardTitle>{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
-          </div>
-          <StackOffsetToggle value={stackMode} onValueChange={setStackMode} />
-        </div>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
@@ -162,7 +158,7 @@ export function StackedTrendsChart({
 
                 // Get original uncapped values if they exist
                 const dataPoint = chartData.find((d) => d.month === label);
-                const originalValues = (dataPoint as any)?._original || {};
+                const originalValues = dataPoint?._original || {};
 
                 // Sort and filter payload
                 const sortedPayload = [...payload]

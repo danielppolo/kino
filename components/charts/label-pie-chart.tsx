@@ -2,16 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import {
-  Cell,
-  Pie,
-  PieChart,
-  PolarAngleAxis,
-  PolarGrid,
-  PolarRadiusAxis,
-  Radar,
-  RadarChart,
-} from "recharts";
+import { Cell, Pie, PieChart } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
 
@@ -58,6 +49,7 @@ export default function LabelPieChart({
   chartType = "piechart",
 }: LabelPieChartProps) {
   const [isListOpen, setIsListOpen] = useState(false);
+  const [activePolarItem, setActivePolarItem] = useState<string | null>(null);
   const { conversionRates, baseCurrency } = useCurrency();
   const [wallets, walletMap] = useWallets();
   const workspaceWalletIds = wallets.map((w) => w.id);
@@ -202,6 +194,9 @@ export default function LabelPieChart({
   }
 
   const total = transformedData.reduce((sum, item) => sum + item.value, 0);
+  const polarMaxValue = Math.max(...transformedData.map((item) => item.share), 1);
+  const activeItem =
+    transformedData.find((item) => item.name === activePolarItem) ?? null;
 
   return (
     <Card>
@@ -214,53 +209,91 @@ export default function LabelPieChart({
       <CardContent>
         <ChartContainer config={chartConfig}>
           {chartType === "polar" ? (
-            <RadarChart
-              data={transformedData}
-            >
-              <PolarGrid />
-              <PolarAngleAxis dataKey="name" tick={false} />
-              <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
-              <ChartTooltip
-                content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-
-                  const item = payload[0].payload as TransformedPieItem;
+            <div className="relative flex h-full items-center justify-center">
+              <svg
+                viewBox="0 0 320 320"
+                className="h-full w-full max-w-[340px]"
+                role="img"
+                aria-label={`${title} polar area chart`}
+              >
+                {[0.25, 0.5, 0.75, 1].map((ring) => {
+                  const radius = 120 * ring;
+                  return (
+                    <circle
+                      key={ring}
+                      cx="160"
+                      cy="160"
+                      r={radius}
+                      fill="none"
+                      stroke="hsl(var(--border) / 0.5)"
+                      strokeDasharray={ring === 1 ? undefined : "4 4"}
+                    />
+                  );
+                })}
+                {transformedData.map((item, index) => {
+                  const sliceAngle = (Math.PI * 2) / transformedData.length;
+                  const startAngle = -Math.PI / 2 + sliceAngle * index;
+                  const endAngle = startAngle + sliceAngle;
+                  const radius = Math.max(
+                    24,
+                    (item.share / polarMaxValue) * 120,
+                  );
+                  const x1 = 160 + radius * Math.cos(startAngle);
+                  const y1 = 160 + radius * Math.sin(startAngle);
+                  const x2 = 160 + radius * Math.cos(endAngle);
+                  const y2 = 160 + radius * Math.sin(endAngle);
+                  const largeArcFlag = endAngle - startAngle > Math.PI ? 1 : 0;
+                  const path = [
+                    `M 160 160`,
+                    `L ${x1} ${y1}`,
+                    `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+                    "Z",
+                  ].join(" ");
 
                   return (
-                    <div className="bg-background rounded-lg border p-2 shadow-sm">
-                      <div className="grid gap-1">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="h-2 w-2 rounded-full"
-                            style={{ backgroundColor: item.color }}
-                          />
-                          <span className="text-sm font-medium">{item.name}</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          <div className="flex items-center gap-2">
-                            <span>Share:</span>
-                            <span>{item.share.toFixed(1)}%</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span>Amount:</span>
-                            <Money cents={item.value} currency={baseCurrency} />
-                          </div>
-                          <div>Transactions: {item.transactionCount}</div>
-                        </div>
-                      </div>
-                    </div>
+                    <path
+                      key={item.name}
+                      d={path}
+                      fill={item.color}
+                      fillOpacity={activeItem?.name === item.name ? 0.9 : 0.55}
+                      stroke={item.color}
+                      strokeWidth={activeItem?.name === item.name ? 2 : 1}
+                      onMouseEnter={() => setActivePolarItem(item.name)}
+                      onMouseLeave={() => setActivePolarItem(null)}
+                    />
                   );
-                }}
-              />
-              <Radar
-                dataKey="share"
-                name="Share"
-                stroke="#3b82f6"
-                fill="#3b82f6"
-                fillOpacity={0.28}
-                strokeWidth={2}
-              />
-            </RadarChart>
+                })}
+              </svg>
+              {activeItem && (
+                <div className="bg-background absolute right-2 bottom-2 rounded-lg border p-2 shadow-sm">
+                  <div className="grid gap-1">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: activeItem.color }}
+                      />
+                      <span className="text-sm font-medium">
+                        {activeItem.name}
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <span>Share:</span>
+                        <span>{activeItem.share.toFixed(1)}%</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span>Amount:</span>
+                        <Money
+                          cents={activeItem.value}
+                          currency={baseCurrency}
+                        />
+                      </div>
+                      <div>Transactions: {activeItem.transactionCount}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           ) : (
             <PieChart>
               <ChartTooltip
