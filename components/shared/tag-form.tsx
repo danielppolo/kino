@@ -15,6 +15,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useWorkspace } from "@/contexts/workspace-context";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { Database } from "@/utils/supabase/database.types";
 import { createTag, deleteTag, updateTag } from "@/utils/supabase/mutations";
 import { Tag } from "@/utils/supabase/types";
@@ -39,7 +40,7 @@ const TagForm = ({ tag, onSuccess, open, onOpenChange }: TagFormProps) => {
       return createTag({ ...values, workspace_id: workspaceId });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tags"] });
+      void invalidateWorkspaceQueries(queryClient);
       onSuccess?.();
     },
     onError(error: unknown) {
@@ -53,7 +54,7 @@ const TagForm = ({ tag, onSuccess, open, onOpenChange }: TagFormProps) => {
     mutationFn: async (values: TagFormValues) =>
       updateTag({ ...values, id: tag?.id } as Database["public"]["Tables"]["tags"]["Update"]),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tags"] });
+      void invalidateWorkspaceQueries(queryClient);
       onSuccess?.();
     },
     onError(error: unknown) {
@@ -69,7 +70,7 @@ const TagForm = ({ tag, onSuccess, open, onOpenChange }: TagFormProps) => {
       return deleteTag(tag.id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tags"] });
+      void invalidateWorkspaceQueries(queryClient);
       onSuccess?.();
     },
     onError(error: unknown) {

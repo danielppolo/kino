@@ -1,13 +1,15 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+import { Input } from "../ui/input";
 import { AmountInput } from "./amount-input";
 import CategoryCombobox from "./category-combobox";
 import LabelCombobox from "./label-combobox";
 import TagMultiSelect from "./tag-multi-select";
-import { DescriptionInput } from "./description-input";
+
 import { EntityForm } from "@/components/shared/entity-form";
 import {
   FormControl,
@@ -15,16 +17,16 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
+import { useTags } from "@/contexts/settings-context";
+import { useWorkspace } from "@/contexts/workspace-context";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
+import { Database } from "@/utils/supabase/database.types";
 import {
   createTransactionTemplate,
-  updateTransactionTemplate,
   deleteTransactionTemplate,
+  updateTransactionTemplate,
 } from "@/utils/supabase/mutations";
-import { Database } from "@/utils/supabase/database.types";
 import { TransactionTemplate } from "@/utils/supabase/types";
-import { useWorkspace } from "@/contexts/workspace-context";
-import { useTags } from "@/contexts/settings-context";
-import { Input } from "../ui/input";
 
 interface TemplateFormProps {
   type: "income" | "expense";
@@ -63,7 +65,7 @@ const TemplateForm = ({
       values: Database["public"]["Tables"]["transaction_templates"]["Insert"],
     ) => createTransactionTemplate(values),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transaction-templates"] });
+      void invalidateWorkspaceQueries(queryClient);
       onSuccess?.();
     },
     onError(error: unknown) {
@@ -78,7 +80,7 @@ const TemplateForm = ({
       values: Database["public"]["Tables"]["transaction_templates"]["Update"],
     ) => updateTransactionTemplate(values),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transaction-templates"] });
+      void invalidateWorkspaceQueries(queryClient);
       onSuccess?.();
     },
     onError(error: unknown) {
@@ -94,7 +96,7 @@ const TemplateForm = ({
       return deleteTransactionTemplate(template.id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transaction-templates"] });
+      void invalidateWorkspaceQueries(queryClient);
       onSuccess?.();
     },
   });

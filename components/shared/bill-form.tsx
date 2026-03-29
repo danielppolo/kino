@@ -21,6 +21,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useWallets } from "@/contexts/settings-context";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { Database } from "@/utils/supabase/database.types";
 import { createBill } from "@/utils/supabase/mutations";
 
@@ -100,7 +101,7 @@ export function BillForm({
       return results;
     },
     onSuccess: (results) => {
-      queryClient.invalidateQueries({ queryKey: ["bills-with-payments"] });
+      void invalidateWorkspaceQueries(queryClient);
       const count = results.length;
       toast.success(
         count === 1 ? "Bill added successfully!" : `${count} bills added successfully!`,

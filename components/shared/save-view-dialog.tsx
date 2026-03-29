@@ -1,16 +1,16 @@
 "use client";
-
-import { useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import { DrawerDialog } from "@/components/ui/drawer-dialog";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useWorkspace } from "@/contexts/workspace-context";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { createView } from "@/utils/supabase/mutations";
 
 interface SaveViewDialogProps {
@@ -36,7 +36,7 @@ export default function SaveViewDialog({ open, onOpenChange }: SaveViewDialogPro
       await createView({ name: values.name, query_params, workspace_id: workspaceId });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["views"] });
+      void invalidateWorkspaceQueries(queryClient);
       toast.success("View saved");
       onOpenChange(false);
     },

@@ -8,6 +8,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "../ui/button";
 
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { createClient } from "@/utils/supabase/client";
 import { Wallet } from "@/utils/supabase/types";
 
@@ -30,7 +31,7 @@ export function ToggleWalletVisibility({
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["wallets"] });
+      void invalidateWorkspaceQueries(queryClient);
     },
   });
 

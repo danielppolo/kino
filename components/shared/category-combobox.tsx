@@ -10,6 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useCategories } from "@/contexts/settings-context";
 import { useWorkspace } from "@/contexts/workspace-context";
 import { ICONS } from "@/utils/constants";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { Database } from "@/utils/supabase/database.types";
 import { createCategory } from "@/utils/supabase/mutations";
 
@@ -79,7 +80,7 @@ const CategoryCombobox = ({
       return result[0];
     },
     onSuccess: (data, name) => {
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      void invalidateWorkspaceQueries(queryClient);
       toast.success(`Added ${name} in ${effectiveType}`);
     },
     onError: (error) => {

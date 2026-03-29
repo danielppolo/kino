@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import {
   deleteTag,
   updateTransactionCategoriesByTag,
@@ -77,10 +78,7 @@ export default function BulkCategoryChangeDialog({
         } to the new category ${actionText}.`,
       );
       onSuccess?.();
-      // Invalidate relevant queries to refresh the UI
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["tag-transaction-counts"] });
-      queryClient.invalidateQueries({ queryKey: ["tags"] });
+      void invalidateWorkspaceQueries(queryClient);
       onOpenChange(false);
       setSelectedCategoryId(null);
       setDeleteTagAfterUpdate(true);

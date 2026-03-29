@@ -44,7 +44,7 @@ export function CategoryRow({
       </Text>
       {category.type === "expense" && category.is_obligation && (
         <Badge variant="secondary" className="shrink-0">
-          Obligation
+          Required
         </Badge>
       )}
       <div className="shrink-0">

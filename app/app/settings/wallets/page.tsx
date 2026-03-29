@@ -17,6 +17,7 @@ import { TooltipButton } from "@/components/ui/tooltip-button";
 import { useWallets } from "@/contexts/settings-context";
 import { useSelection } from "@/hooks/use-selection";
 import { canUseGlobalShortcuts } from "@/utils/keyboard-shortcuts";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { createClient } from "@/utils/supabase/client";
 
 export default function Page() {
@@ -50,7 +51,7 @@ export default function Page() {
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["wallets"] });
+      void invalidateWorkspaceQueries(queryClient);
     },
   });
 
@@ -69,7 +70,6 @@ export default function Page() {
         ids: selected,
         visible: !allVisible,
       });
-      queryClient.invalidateQueries({ queryKey: ["wallets"] });
       toast.success(
         `${selectedWallets.length} wallet${selectedWallets.length === 1 ? "" : "s"} ${
           allVisible ? "hidden" : "shown"

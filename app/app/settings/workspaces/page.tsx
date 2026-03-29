@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import PageHeader from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -15,17 +15,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { useWorkspace } from "@/contexts/workspace-context";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { createClient } from "@/utils/supabase/client";
 import {
-  updateWorkspaceFeatureFlags,
   updateWorkspaceBaseCurrency,
+  updateWorkspaceFeatureFlags,
 } from "@/utils/supabase/mutations";
 import {
+  DEFAULT_FEATURE_FLAGS,
   FeatureFlags,
   parseFeatureFlags,
-  DEFAULT_FEATURE_FLAGS,
 } from "@/utils/types/feature-flags";
-import { useWorkspace } from "@/contexts/workspace-context";
 
 type WorkspaceConfigFormState = {
   baseCurrency: "USD" | "MXN";
@@ -82,8 +84,7 @@ export default function WorkspacesPage() {
     },
     onSuccess: () => {
       toast.success("Workspace configuration updated successfully");
-      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
-      queryClient.invalidateQueries({ queryKey: ["workspace-currency-conversions"] });
+      void invalidateWorkspaceQueries(queryClient);
       window.location.reload();
     },
     onError: (error: unknown) => {

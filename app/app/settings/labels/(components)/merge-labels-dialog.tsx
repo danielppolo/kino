@@ -16,6 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { mergeLabels } from "@/utils/supabase/mutations";
 
 interface MergeLabelsDialogProps {
@@ -46,7 +47,7 @@ export default function MergeLabelsDialog({
       await mergeLabels(targetValue, selected);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["labels"] });
+      void invalidateWorkspaceQueries(queryClient);
       toast.success("Labels merged");
       onOpenChange(false);
       setTarget(null);
