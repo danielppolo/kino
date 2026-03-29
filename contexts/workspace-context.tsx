@@ -172,11 +172,15 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({
 
 
   // Fetch conversion rates for all wallet currencies
-  const { data: conversionRates = {} } = useQuery<
+  const {
+    data: conversionRates = {},
+    refetch: refetchConversionRates,
+  } = useQuery<
     Record<string, CurrencyConversion>
   >({
     queryKey: [
       "workspace-currency-conversions",
+      activeWorkspace?.id,
       activeWorkspace?.base_currency,
       walletCurrencies,
     ],
@@ -217,10 +221,10 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({
       const data = await response.json();
       return data.conversions;
     },
-    // staleTime: 1000 * 60 * 60, // Consider rates fresh for 1 hour
     enabled: !!activeWorkspace && walletCurrencies.length > 0,
-    initialData: {},
+    placeholderData: {},
     staleTime: 1000 * 60 * 60,
+    refetchOnMount: true,
   });
 
   const handleSwitchWorkspace = async (workspaceId: string) => {
@@ -239,6 +243,7 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({
       refetchWorkspaces(),
       refetchPreferences(),
       refetchMembers(),
+      refetchConversionRates(),
     ]);
   };
 

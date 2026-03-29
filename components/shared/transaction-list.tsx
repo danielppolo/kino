@@ -128,6 +128,9 @@ export default function TransactionList() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["wallets"] });
+      queryClient.invalidateQueries({ queryKey: ["workspace-wallets"] });
+      queryClient.invalidateQueries({ queryKey: ["cashflow-breakdown"] });
       queryClient.invalidateQueries({ queryKey: ["wallet-owed-amounts"] });
       queryClient.invalidateQueries({ queryKey: ["bills"] });
       toast.success(
