@@ -2,15 +2,7 @@
 
 import { useMemo } from "react";
 import { format } from "date-fns";
-import {
-  Area,
-  CartesianGrid,
-  ComposedChart,
-  Line,
-  ReferenceLine,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Area, CartesianGrid, ComposedChart, ReferenceLine, XAxis, YAxis } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
 
@@ -34,7 +26,7 @@ import {
 import { Money } from "@/components/ui/money";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
-import { formatCurrency, parseMonthDate } from "@/utils/chart-helpers";
+import { capChartOutliers, formatCurrency, parseMonthDate } from "@/utils/chart-helpers";
 import { convertCurrency } from "@/utils/currency-conversion";
 import { createClient } from "@/utils/supabase/client";
 import { getMonthlyCategoryStats } from "@/utils/supabase/queries";
@@ -60,6 +52,7 @@ export function ExplorationCapitalChart({
   const [, walletMap] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
   const chartValueMode = controls?.chartValueMode ?? "percentage";
+  const peakNormalizationPercentile = controls?.peakNormalizationPercentile ?? 0.97;
 
   const { data: categoryStats, isLoading } = useQuery({
     queryKey: ["exploration-capital-stats", walletId, from, to],
@@ -178,7 +171,7 @@ export function ExplorationCapitalChart({
         (a, b) => new Date(a).getTime() - new Date(b).getTime(),
       );
 
-      const data = months.map((month, index) => {
+      const rawData = months.map((month, index) => {
         const { baseline, variable } = byMonth[month];
         const total = baseline + variable;
         const variablePctRaw = total > 0 ? (variable / total) * 100 : 0;
@@ -224,22 +217,33 @@ export function ExplorationCapitalChart({
 
       // Variable % in the last month
       const currentVariablePct =
-        data.length > 0 ? data[data.length - 1].variable : 0;
+        rawData.length > 0 ? rawData[rawData.length - 1].variable : 0;
       const currentAvgVariablePct =
-        data.length > 0 ? data[data.length - 1].rollingAverage : 0;
+        rawData.length > 0 ? rawData[rawData.length - 1].rollingAverage : 0;
       const currentVariableAmount =
-        data.length > 0 ? data[data.length - 1].variableAmount : 0;
+        rawData.length > 0 ? rawData[rawData.length - 1].variableAmount : 0;
       const currentAvgVariableAmount =
-        data.length > 0 ? data[data.length - 1].rollingAbsolute : 0;
+        rawData.length > 0 ? rawData[rawData.length - 1].rollingAbsolute : 0;
+
+      const absoluteCapped = capChartOutliers(
+        rawData,
+        ["baselineAmount", "variableAmount"] as const,
+        peakNormalizationPercentile,
+      );
+      const chartData = rawData.map((point, index) => {
+        const cappedPoint = absoluteCapped.data[index];
+        return {
+          ...point,
+          cappedBaselineAmount: cappedPoint?.baselineAmount ?? point.baselineAmount,
+          cappedVariableAmount: cappedPoint?.variableAmount ?? point.variableAmount,
+          _absoluteOriginal: cappedPoint?._original ?? {},
+        };
+      });
 
       const config: ChartConfig = {
         variable: {
           label: "Exploration capital",
           color: "#3b82f6",
-        },
-        rollingAverage: {
-          label: "6-month average",
-          color: "#94a3b8",
         },
         baseline: {
           label: "Required spend",
@@ -248,7 +252,7 @@ export function ExplorationCapitalChart({
       };
 
       return {
-        chartData: data,
+        chartData,
         chartConfig: config,
         topCategoryNames,
         variablePct: currentVariablePct,
@@ -256,7 +260,13 @@ export function ExplorationCapitalChart({
         variableAmount: currentVariableAmount,
         avgVariableAmount: currentAvgVariableAmount,
       };
-    }, [categoryStats, conversionRates, baseCurrency, walletMap]);
+    }, [
+      categoryStats,
+      conversionRates,
+      baseCurrency,
+      walletMap,
+      peakNormalizationPercentile,
+    ]);
 
   const percentageChange = useMemo(() => {
     if (chartData.length < 2) return 0;
@@ -331,8 +341,8 @@ export function ExplorationCapitalChart({
         </CardTitle>
         <CardDescription>
           {chartValueMode === "percentage"
-            ? "The solid blue line shows your smoothed discretionary share, with required spend grounded below it and remaining room above it. "
-            : "The solid blue line shows your monthly discretionary amount, with required spend stacked below it. "}
+            ? "The stacked areas show your smoothed discretionary share on top of required spend. "
+            : "The stacked areas show your monthly discretionary amount on top of required spend. Extreme peaks are normalized using the global chart cap control. "}
           {topCategoryNames.length > 0 ? (
             <>Required spend is anchored by {topCategoryNames.join(", ")}.</>
           ) : (
@@ -387,8 +397,20 @@ export function ExplorationCapitalChart({
                 const baseline = payload.find(
                   (p) =>
                     p.dataKey ===
-                    (chartValueMode === "percentage" ? "baseline" : "baselineAmount"),
+                    (chartValueMode === "percentage"
+                      ? "baseline"
+                      : "cappedBaselineAmount"),
                 )?.value as number | undefined;
+                const dataPoint = chartData.find((point) => point.month === label);
+                const absoluteOriginal = dataPoint?._absoluteOriginal || {};
+                const rawBaselineAmount =
+                  typeof absoluteOriginal.baselineAmount === "number"
+                    ? absoluteOriginal.baselineAmount
+                    : baseline;
+                const rawVariableAmount =
+                  typeof absoluteOriginal.variableAmount === "number"
+                    ? absoluteOriginal.variableAmount
+                    : variable;
                 return (
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
                     <div className="text-sm font-medium mb-1">
@@ -400,7 +422,7 @@ export function ExplorationCapitalChart({
                         <span className="font-bold">
                           {chartValueMode === "percentage"
                             ? `${variable.toFixed(1)}%`
-                            : formatCurrency(variable, baseCurrency)}
+                            : formatCurrency(rawVariableAmount ?? variable, baseCurrency)}
                         </span>
                       </div>
                     )}
@@ -432,10 +454,18 @@ export function ExplorationCapitalChart({
                         <span>
                           {chartValueMode === "percentage"
                             ? `${baseline.toFixed(1)}%`
-                            : formatCurrency(baseline, baseCurrency)}
+                            : formatCurrency(rawBaselineAmount ?? baseline, baseCurrency)}
                         </span>
                       </div>
                     )}
+                    {chartValueMode === "absolute" &&
+                      rawVariableAmount !== undefined &&
+                      variable !== undefined &&
+                      rawVariableAmount > variable && (
+                        <div className="text-muted-foreground pt-1 text-xs">
+                          Chart view capped for readability.
+                        </div>
+                      )}
                   </div>
                 );
               }}
@@ -463,7 +493,11 @@ export function ExplorationCapitalChart({
               </>
             )}
             <Area
-              dataKey={chartValueMode === "percentage" ? "baseline" : "baselineAmount"}
+              dataKey={
+                chartValueMode === "percentage"
+                  ? "baseline"
+                  : "cappedBaselineAmount"
+              }
               name="Required spend"
               type="monotone"
               fill="#3f3f46"
@@ -472,37 +506,17 @@ export function ExplorationCapitalChart({
               stackId="capacity"
             />
             <Area
-              dataKey={chartValueMode === "percentage" ? "variable" : "variableAmount"}
+              dataKey={
+                chartValueMode === "percentage"
+                  ? "variable"
+                  : "cappedVariableAmount"
+              }
               name="Exploration capital"
               type="monotone"
               fill="#1d4ed8"
               fillOpacity={0.18}
               stroke="none"
               stackId="capacity"
-            />
-            <Line
-              dataKey={
-                chartValueMode === "percentage"
-                  ? "rollingAverage"
-                  : "rollingAbsolute"
-              }
-              name="6-month average"
-              type="monotone"
-              stroke="#94a3b8"
-              strokeWidth={2}
-              dot={false}
-              activeDot={false}
-              strokeOpacity={0.7}
-              strokeDasharray="6 4"
-            />
-            <Line
-              dataKey={chartValueMode === "percentage" ? "variable" : "variableAmount"}
-              name="Exploration capital"
-              type="monotone"
-              stroke="#3b82f6"
-              strokeWidth={3}
-              dot={false}
-              activeDot={{ r: 4, fill: "#3b82f6" }}
             />
             <ChartLegend content={<ChartLegendContent />} />
           </ComposedChart>
