@@ -4,8 +4,11 @@ import { useMemo } from "react";
 import { format } from "date-fns";
 import {
   Area,
-  AreaChart,
   CartesianGrid,
+  Line,
+  LineChart,
+  ReferenceArea,
+  ReferenceLine,
   XAxis,
   YAxis,
 } from "recharts";
@@ -41,11 +44,11 @@ interface ExplorationCapitalChartProps {
 }
 
 /**
- * Shows monthly spending split between:
- * - "Baseline" — categories explicitly marked as obligations
- * - "Variable" — everything else (exploration capital)
+ * Shows how much of spending remains discretionary after required categories.
+ * The chart emphasizes the exploration share directly instead of stacking both
+ * sides of the ratio.
  *
- * The key question: is the variable/exploration fraction growing or being crowded out?
+ * The key question: is exploration capacity growing or being crowded out?
  */
 export function ExplorationCapitalChart({
   walletId,
@@ -70,7 +73,13 @@ export function ExplorationCapitalChart({
     },
   });
 
-  const { chartData, chartConfig, topCategoryNames, variablePct } =
+  const {
+    chartData,
+    chartConfig,
+    topCategoryNames,
+    variablePct,
+    avgVariablePct,
+  } =
     useMemo(() => {
       if (!categoryStats || categoryStats.length === 0) {
         return {
@@ -78,6 +87,7 @@ export function ExplorationCapitalChart({
           chartConfig: {} as ChartConfig,
           topCategoryNames: [],
           variablePct: 0,
+          avgVariablePct: 0,
         };
       }
 
@@ -161,28 +171,41 @@ export function ExplorationCapitalChart({
         (a, b) => new Date(a).getTime() - new Date(b).getTime(),
       );
 
-      const data = months.map((month) => {
+      const data = months.map((month, index) => {
         const { baseline, variable } = byMonth[month];
         const total = baseline + variable;
+        const variablePct = total > 0 ? (variable / total) * 100 : 0;
+        const rollingWindow = months.slice(Math.max(0, index - 2), index + 1);
+        const rollingAverage =
+          rollingWindow.reduce((sum, currentMonth) => {
+            const current = byMonth[currentMonth];
+            const currentTotal = current.baseline + current.variable;
+            if (currentTotal <= 0) return sum;
+            return sum + (current.variable / currentTotal) * 100;
+          }, 0) / rollingWindow.length;
+
         return {
           month,
           baseline: total > 0 ? (baseline / total) * 100 : 0,
-          variable: total > 0 ? (variable / total) * 100 : 0,
+          variable: variablePct,
+          rollingAverage,
         };
       });
 
       // Variable % in the last month
       const currentVariablePct =
         data.length > 0 ? data[data.length - 1].variable : 0;
+      const currentAvgVariablePct =
+        data.length > 0 ? data[data.length - 1].rollingAverage : 0;
 
       const config: ChartConfig = {
-        baseline: {
-          label: "Baseline obligations",
-          color: "#6b7280",
-        },
         variable: {
           label: "Exploration capital",
           color: "#3b82f6",
+        },
+        rollingAverage: {
+          label: "3-month average",
+          color: "#94a3b8",
         },
       };
 
@@ -191,6 +214,7 @@ export function ExplorationCapitalChart({
         chartConfig: config,
         topCategoryNames,
         variablePct: currentVariablePct,
+        avgVariablePct: currentAvgVariablePct,
       };
     }, [categoryStats, conversionRates, baseCurrency, walletMap]);
 
@@ -240,6 +264,8 @@ export function ExplorationCapitalChart({
 
   const explorationColor =
     variablePct >= 40 ? "#22c55e" : variablePct >= 20 ? "#f59e0b" : "#ef4444";
+  const statusLabel =
+    variablePct >= 40 ? "Healthy room" : variablePct >= 20 ? "Tight" : "Constrained";
 
   return (
     <Card>
@@ -254,21 +280,23 @@ export function ExplorationCapitalChart({
           </span>
         </CardTitle>
         <CardDescription>
-          The blue area shows the share of spend that remains discretionary, while{" "}
+          The blue line shows the share of spend that remains discretionary.{" "}
           {topCategoryNames.length > 0 ? (
-            <>the baseline is anchored by {topCategoryNames.join(", ")}.</>
+            <>Required spend is anchored by {topCategoryNames.join(", ")}.</>
           ) : (
-            <>the gray area represents recurring baseline obligations.</>
+            <>Required spend is inferred from your largest recurring categories.</>
           )}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
-          <AreaChart
+          <LineChart
             data={chartData}
             margin={{ left: 12, right: 12, top: 12, bottom: 12 }}
-            stackOffset="expand"
           >
+            <ReferenceArea y1={0} y2={20} fill="#7f1d1d" fillOpacity={0.12} />
+            <ReferenceArea y1={20} y2={40} fill="#854d0e" fillOpacity={0.1} />
+            <ReferenceArea y1={40} y2={100} fill="#14532d" fillOpacity={0.08} />
             <CartesianGrid vertical={false} />
             <XAxis
               dataKey="month"
@@ -278,70 +306,105 @@ export function ExplorationCapitalChart({
               tickFormatter={(v) => format(parseMonthDate(v), "MMM yy")}
             />
             <YAxis
+              domain={[0, 100]}
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
+              tickFormatter={(v) => `${v.toFixed(0)}%`}
             />
             <ChartTooltip
               cursor={false}
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
-                const baseline = payload.find(
-                  (p) => p.dataKey === "baseline",
-                )?.value as number | undefined;
                 const variable = payload.find(
                   (p) => p.dataKey === "variable",
+                )?.value as number | undefined;
+                const rollingAverage = payload.find(
+                  (p) => p.dataKey === "rollingAverage",
                 )?.value as number | undefined;
                 return (
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
                     <div className="text-sm font-medium mb-1">
                       {format(parseMonthDate(label), "MMMM yyyy")}
                     </div>
-                    {baseline !== undefined && (
-                      <div className="flex justify-between gap-4 text-sm">
-                        <span className="text-muted-foreground">Baseline</span>
-                        <span>{baseline.toFixed(1)}%</span>
-                      </div>
-                    )}
                     {variable !== undefined && (
                       <div className="flex justify-between gap-4 text-sm">
                         <span style={{ color: "#3b82f6" }}>Exploration</span>
                         <span className="font-bold">{variable.toFixed(1)}%</span>
                       </div>
                     )}
+                    {rollingAverage !== undefined && (
+                      <div className="flex justify-between gap-4 text-sm">
+                        <span className="text-muted-foreground">
+                          3-month average
+                        </span>
+                        <span>{rollingAverage.toFixed(1)}%</span>
+                      </div>
+                    )}
                   </div>
                 );
               }}
             />
-            <Area
-              dataKey="baseline"
-              name="Baseline obligations"
-              type="monotone"
-              fill="#6b7280"
-              fillOpacity={0.3}
-              stroke="#6b7280"
-              stackId="1"
+            <ReferenceLine
+              y={20}
+              stroke="#f59e0b"
+              strokeDasharray="4 4"
+              strokeOpacity={0.6}
+            />
+            <ReferenceLine
+              y={40}
+              stroke="#22c55e"
+              strokeDasharray="4 4"
+              strokeOpacity={0.6}
             />
             <Area
               dataKey="variable"
-              name="Exploration capital"
               type="monotone"
               fill="#3b82f6"
-              fillOpacity={0.3}
+              fillOpacity={0.12}
+              stroke="none"
+            />
+            <Line
+              dataKey="rollingAverage"
+              name="3-month average"
+              type="monotone"
+              stroke="#94a3b8"
+              strokeWidth={2}
+              dot={false}
+              activeDot={false}
+            />
+            <Line
+              dataKey="variable"
+              name="Exploration capital"
+              type="monotone"
               stroke="#3b82f6"
-              stackId="1"
+              strokeWidth={3}
+              dot={false}
+              activeDot={{ r: 4, fill: "#3b82f6" }}
             />
             <ChartLegend content={<ChartLegendContent />} />
-          </AreaChart>
+          </LineChart>
         </ChartContainer>
       </CardContent>
       <CardFooter>
-        <TrendingIndicator
-          percentageChange={percentageChange}
-          startDate={chartData[0]?.month}
-          endDate={chartData[chartData.length - 1]?.month}
-        />
+        <div className="flex w-full items-center justify-between gap-4">
+          <TrendingIndicator
+            percentageChange={percentageChange}
+            startDate={chartData[0]?.month}
+            endDate={chartData[chartData.length - 1]?.month}
+          />
+          <div className="text-right">
+            <div className="text-muted-foreground text-xs uppercase tracking-wide">
+              Current zone
+            </div>
+            <div className="font-medium" style={{ color: explorationColor }}>
+              {statusLabel}
+            </div>
+            <div className="text-muted-foreground text-xs">
+              Avg {avgVariablePct.toFixed(0)}%
+            </div>
+          </div>
+        </div>
       </CardFooter>
     </Card>
   );
