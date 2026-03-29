@@ -13,26 +13,26 @@ export function StackOffsetToggle({
   value,
   onValueChange,
 }: StackOffsetToggleProps) {
+  const isAbsolute = value === "absolute";
+
   return (
-    <div className="flex items-center gap-1 rounded-md border border-input bg-background p-1">
-      <Toggle
-        size="sm"
-        variant="outline"
-        pressed={value === "percentage"}
-        onPressedChange={(pressed) => pressed && onValueChange("percentage")}
-        aria-label="Show as percentage"
-      >
-        <Percent className="size-4" />
-      </Toggle>
-      <Toggle
-        size="sm"
-        variant="outline"
-        pressed={value === "absolute"}
-        onPressedChange={(pressed) => pressed && onValueChange("absolute")}
-        aria-label="Show as absolute values"
-      >
+    <Toggle
+      size="sm"
+      variant="outline"
+      pressed={isAbsolute}
+      onPressedChange={(pressed) =>
+        onValueChange(pressed ? "absolute" : "percentage")
+      }
+      aria-label={
+        isAbsolute ? "Showing absolute values" : "Showing percentages"
+      }
+      className="px-2"
+    >
+      {isAbsolute ? (
         <DollarSign className="size-4" />
-      </Toggle>
-    </div>
+      ) : (
+        <Percent className="size-4" />
+      )}
+    </Toggle>
   );
 }
