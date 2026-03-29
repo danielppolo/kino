@@ -1,6 +1,8 @@
 "use client";
 
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { DollarSign, Percent } from "lucide-react";
+
+import { Toggle } from "@/components/ui/toggle";
 
 interface StackOffsetToggleProps {
   value: "percentage" | "absolute";
@@ -12,19 +14,25 @@ export function StackOffsetToggle({
   onValueChange,
 }: StackOffsetToggleProps) {
   return (
-    <ToggleGroup
-      type="single"
-      value={value}
-      onValueChange={(v) => v && onValueChange(v as "percentage" | "absolute")}
-      size="sm"
-      variant="outline"
-    >
-      <ToggleGroupItem value="percentage" aria-label="Show as percentage">
-        Percentage
-      </ToggleGroupItem>
-      <ToggleGroupItem value="absolute" aria-label="Show as absolute values">
-        Absolute
-      </ToggleGroupItem>
-    </ToggleGroup>
+    <div className="flex items-center gap-1 rounded-md border border-input bg-background p-1">
+      <Toggle
+        size="sm"
+        variant="outline"
+        pressed={value === "percentage"}
+        onPressedChange={(pressed) => pressed && onValueChange("percentage")}
+        aria-label="Show as percentage"
+      >
+        <Percent className="size-4" />
+      </Toggle>
+      <Toggle
+        size="sm"
+        variant="outline"
+        pressed={value === "absolute"}
+        onPressedChange={(pressed) => pressed && onValueChange("absolute")}
+        aria-label="Show as absolute values"
+      >
+        <DollarSign className="size-4" />
+      </Toggle>
+    </div>
   );
 }

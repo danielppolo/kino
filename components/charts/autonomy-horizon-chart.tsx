@@ -112,7 +112,6 @@ export function AutonomyHorizonChart({
       return res.json();
     },
     staleTime: 60 * 60 * 1000,
-    enabled: process.env.NEXT_PUBLIC_APP_ENV === "production",
   });
 
   const isLoading = loadingBalances || loadingForecast;
