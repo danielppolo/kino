@@ -112,6 +112,7 @@ export function AutonomyHorizonChart({
     controls?.defaultMonthlySpend ??
     forecastData?.avgMonthlyBurn ??
     0;
+  const futureLumpSum = controls?.futureLumpSum ?? 0;
   const emphasizeNoIncome = forecastMode === "no-income";
 
   const chartData = useMemo(() => {
@@ -166,10 +167,16 @@ export function AutonomyHorizonChart({
 
     // Forecast rows
     forecastData.forecast.forEach((p, i) => {
+      const horizonAdjustment =
+        i === forecastData.forecast.length - 1 ? futureLumpSum : 0;
+
       result.push({
         month: p.month,
-        balance: Math.max(0, p.value + anchorDelta),
-        noIncome: Math.max(0, lastBalance - effectiveBurnRate * (i + 1)),
+        balance: Math.max(0, p.value + anchorDelta + horizonAdjustment),
+        noIncome: Math.max(
+          0,
+          lastBalance - effectiveBurnRate * (i + 1) + horizonAdjustment,
+        ),
         isForecast: true,
       });
     });
@@ -183,6 +190,7 @@ export function AutonomyHorizonChart({
     walletMap,
     walletId,
     effectiveBurnRate,
+    futureLumpSum,
   ]);
 
   // Runway: first forecast month where no-income balance hits zero
@@ -239,7 +247,10 @@ export function AutonomyHorizonChart({
           Over the next {effectiveHorizonMonths} months, compare your projected
           balance path against how long your current reserves would last with no
           new income, measured in {baseCurrency}. The shared spend control
-          adjusts the zero-income burn-down line.
+          adjusts the zero-income burn-down line
+          {futureLumpSum > 0
+            ? `, and the final ${formatCurrency(futureLumpSum, baseCurrency)} horizon amount shows where both paths land`
+            : "."}
         </CardDescription>
       </CardHeader>
       <CardContent>

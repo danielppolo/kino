@@ -24,6 +24,8 @@ interface ChartControlsContextValue {
   monthlySpend: number | null;
   setMonthlySpend: (value: number) => void;
   defaultMonthlySpend: number;
+  futureLumpSum: number;
+  setFutureLumpSum: (value: number) => void;
   peakNormalization: ChartNormalizationPreset;
   setPeakNormalization: (value: ChartNormalizationPreset) => void;
   peakNormalizationPercentile: number;
@@ -42,6 +44,7 @@ const DEFAULT_CHART_MONTHLY_SPEND = 30000;
 const DEFAULT_PEAK_NORMALIZATION: ChartNormalizationPreset = "strong";
 const DEFAULT_FORECAST_HORIZON_YEARS = 1;
 const DEFAULT_FORECAST_MODE = "with-income";
+const DEFAULT_FUTURE_LUMP_SUM = 0;
 
 export function ChartControlsProvider({
   children,
@@ -53,6 +56,7 @@ export function ChartControlsProvider({
   const { conversionRates, baseCurrency } = useCurrency();
   const [monthlySpend, setMonthlySpend] =
     useState<number | null>(DEFAULT_CHART_MONTHLY_SPEND);
+  const [futureLumpSum, setFutureLumpSum] = useState(DEFAULT_FUTURE_LUMP_SUM);
   const [peakNormalization, setPeakNormalization] =
     useState<ChartNormalizationPreset>(DEFAULT_PEAK_NORMALIZATION);
   const [forecastHorizonYears, setForecastHorizonYears] = useState(
@@ -122,6 +126,8 @@ export function ChartControlsProvider({
       monthlySpend,
       setMonthlySpend,
       defaultMonthlySpend,
+      futureLumpSum,
+      setFutureLumpSum,
       peakNormalization,
       setPeakNormalization,
       peakNormalizationPercentile:
@@ -134,6 +140,7 @@ export function ChartControlsProvider({
     [
       monthlySpend,
       defaultMonthlySpend,
+      futureLumpSum,
       peakNormalization,
       setPeakNormalization,
       forecastHorizonYears,

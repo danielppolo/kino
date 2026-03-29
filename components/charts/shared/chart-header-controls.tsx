@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { BanknoteArrowUp, BanknoteX } from "lucide-react";
 
 import { Money } from "@/components/ui/money";
@@ -12,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -52,6 +54,13 @@ export function ChartHeaderControls({
 }: ChartHeaderControlsProps) {
   const controls = useChartControls();
   const { baseCurrency } = useCurrency();
+  const [futureLumpSumInput, setFutureLumpSumInput] = useState("");
+
+  useEffect(() => {
+    setFutureLumpSumInput(
+      controls?.futureLumpSum ? String(controls.futureLumpSum) : "",
+    );
+  }, [controls?.futureLumpSum]);
 
   if (!controls) {
     return null;
@@ -59,6 +68,20 @@ export function ChartHeaderControls({
 
   const effectiveMonthlySpend =
     controls.monthlySpend ?? controls.defaultMonthlySpend;
+
+  const handleFutureLumpSumChange = (value: string) => {
+    setFutureLumpSumInput(value);
+
+    if (value.trim() === "") {
+      controls.setFutureLumpSum(0);
+      return;
+    }
+
+    const parsed = Number(value);
+    if (!Number.isNaN(parsed)) {
+      controls.setFutureLumpSum(Math.max(0, parsed));
+    }
+  };
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
@@ -113,6 +136,55 @@ export function ChartHeaderControls({
           <BanknoteArrowUp className="size-4" />
         )}
       </Toggle>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <TooltipButton
+            variant="ghost"
+            size="sm"
+            tooltip="Future lump sum"
+            className="gap-1.5"
+          >
+            <span className="text-xs font-medium tabular-nums">
+              {controls.futureLumpSum > 0
+                ? `+${formatCurrency(controls.futureLumpSum, baseCurrency)}`
+                : "+0"}
+            </span>
+          </TooltipButton>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-72 p-0">
+          <DropdownMenuLabel>Future lump sum</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <div className="space-y-3 p-3">
+            <div className="text-muted-foreground text-xs">
+              Add a one-time amount to the final forecast month to see where the
+              projection lands.
+            </div>
+            <Input
+              type="number"
+              min="0"
+              step="100"
+              value={futureLumpSumInput}
+              onChange={(event) =>
+                handleFutureLumpSumChange(event.target.value)
+              }
+              placeholder="0"
+              className="h-8 text-xs"
+            />
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-muted-foreground text-xs font-medium">
+                Applied amount
+              </span>
+              <span className="text-sm font-medium tabular-nums">
+                <Money
+                  cents={Math.round(controls.futureLumpSum * 100)}
+                  currency={baseCurrency}
+                />
+              </span>
+            </div>
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {showAutonomyControls && (
         <>

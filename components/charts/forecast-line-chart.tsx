@@ -107,6 +107,7 @@ export function ForecastLineChart({
     controls?.defaultMonthlySpend ??
     forecastData?.avgMonthlyBurn ??
     0;
+  const futureLumpSum = controls?.futureLumpSum ?? 0;
 
   const historicalData = calculateMonthlyTotals(
     monthlyBalances ?? [],
@@ -162,22 +163,32 @@ export function ForecastLineChart({
   const anchorDelta = lastHistoricalTotal - firstForecastRaw;
 
   const withIncomeForecast: ChartPoint[] = (forecastData?.forecast ?? []).map(
-    (p) => ({
+    (p, index, forecast) => ({
       month: p.month,
       total: null,
-      forecast: p.value + anchorDelta,
-      lower: p.lower + anchorDelta,
-      upper: p.upper + anchorDelta,
+      forecast:
+        p.value +
+        anchorDelta +
+        (index === forecast.length - 1 ? futureLumpSum : 0),
+      lower:
+        p.lower + anchorDelta + (index === forecast.length - 1 ? futureLumpSum : 0),
+      upper:
+        p.upper + anchorDelta + (index === forecast.length - 1 ? futureLumpSum : 0),
       isForecast: true,
     }),
   );
 
   // No-income: straight burn-down from current balance at avg monthly spend
   const noIncomeForecast: ChartPoint[] = (forecastData?.forecast ?? []).map(
-    (p, i) => ({
+    (p, i, forecast) => ({
       month: p.month,
       total: null,
-      forecast: Math.max(0, lastHistoricalTotal - effectiveMonthlyBurn * (i + 1)),
+      forecast: Math.max(
+        0,
+        lastHistoricalTotal -
+          effectiveMonthlyBurn * (i + 1) +
+          (i === forecast.length - 1 ? futureLumpSum : 0),
+      ),
       lower: null,
       upper: null,
       isForecast: true,
@@ -213,11 +224,11 @@ export function ForecastLineChart({
   const description =
     forecastMode === "no-income"
       ? walletId
-        ? `Projecting balance ${horizonYears} year${horizonYears > 1 ? "s" : ""} ahead with no new income using a monthly burn of ${formatCurrency(effectiveMonthlyBurn, baseCurrency)}`
-        : `Projecting total balance ${horizonYears} year${horizonYears > 1 ? "s" : ""} ahead with no new income using a monthly burn of ${formatCurrency(effectiveMonthlyBurn, baseCurrency)}`
+        ? `Projecting balance ${horizonYears} year${horizonYears > 1 ? "s" : ""} ahead with no new income using a monthly burn of ${formatCurrency(effectiveMonthlyBurn, baseCurrency)}${futureLumpSum > 0 ? ` and a final ${formatCurrency(futureLumpSum, baseCurrency)} lump sum` : ""}`
+        : `Projecting total balance ${horizonYears} year${horizonYears > 1 ? "s" : ""} ahead with no new income using a monthly burn of ${formatCurrency(effectiveMonthlyBurn, baseCurrency)}${futureLumpSum > 0 ? ` and a final ${formatCurrency(futureLumpSum, baseCurrency)} lump sum` : ""}`
       : walletId
-        ? `Forecasting balance ${horizonYears} year${horizonYears > 1 ? "s" : ""} ahead in ${baseCurrency}`
-        : `Forecasting total balance ${horizonYears} year${horizonYears > 1 ? "s" : ""} ahead in ${baseCurrency}`;
+        ? `Forecasting balance ${horizonYears} year${horizonYears > 1 ? "s" : ""} ahead in ${baseCurrency}${futureLumpSum > 0 ? ` with a final ${formatCurrency(futureLumpSum, baseCurrency)} lump sum` : ""}`
+        : `Forecasting total balance ${horizonYears} year${horizonYears > 1 ? "s" : ""} ahead in ${baseCurrency}${futureLumpSum > 0 ? ` with a final ${formatCurrency(futureLumpSum, baseCurrency)} lump sum` : ""}`;
 
   const forecastStroke =
     forecastMode === "with-income" ? "hsl(var(--chart-1))" : "#ef4444";
