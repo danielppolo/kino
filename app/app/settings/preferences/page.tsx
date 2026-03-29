@@ -5,7 +5,6 @@ import { toast } from "sonner";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { useWorkspace } from "@/contexts/workspace-context";
 import PageHeader from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +18,8 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { useWorkspace } from "@/contexts/workspace-context";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { createClient } from "@/utils/supabase/client";
 import {
   updateUserPreferences,
@@ -27,18 +28,18 @@ import {
   updateWorkspaceFinanceMemory,
 } from "@/utils/supabase/mutations";
 import {
-  createEmptyFinanceMemory,
-  formatStringList,
-  parseFinanceMemory,
-  type FinanceMemory,
-  type FinanceMemoryProfile,
-  normalizeStringList,
-} from "@/utils/types/finance-memory";
-import {
   DEFAULT_FEATURE_FLAGS,
   FeatureFlags,
   parseFeatureFlags,
 } from "@/utils/types/feature-flags";
+import {
+  createEmptyFinanceMemory,
+  type FinanceMemory,
+  type FinanceMemoryProfile,
+  formatStringList,
+  normalizeStringList,
+  parseFinanceMemory,
+} from "@/utils/types/finance-memory";
 
 const RISK_TOLERANCE_OPTIONS = [
   "conservative",
@@ -216,8 +217,7 @@ export default function Page() {
     },
     onSuccess: () => {
       toast.success("Preferences updated successfully");
-      queryClient.invalidateQueries({ queryKey: ["user-preferences"] });
-      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+      void invalidateWorkspaceQueries(queryClient);
       window.location.reload();
     },
     onError: (error: unknown) => {

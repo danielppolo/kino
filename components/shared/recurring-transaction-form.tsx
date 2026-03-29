@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTags, useWallets } from "@/contexts/settings-context";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import {
   createRecurringTransaction,
   deleteRecurringTransaction,
@@ -104,7 +105,7 @@ const RecurringTransactionForm = ({
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recurring-transactions"] });
+      void invalidateWorkspaceQueries(queryClient);
       onSuccess?.();
     },
   });
@@ -132,7 +133,7 @@ const RecurringTransactionForm = ({
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recurring-transactions"] });
+      void invalidateWorkspaceQueries(queryClient);
       onSuccess?.();
     },
   });
@@ -143,7 +144,7 @@ const RecurringTransactionForm = ({
       await deleteRecurringTransaction(recurring.id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recurring-transactions"] });
+      void invalidateWorkspaceQueries(queryClient);
       onSuccess?.();
     },
   });

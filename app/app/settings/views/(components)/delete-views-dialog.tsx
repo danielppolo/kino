@@ -15,6 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { deleteViews } from "@/utils/supabase/mutations";
 
 interface DeleteViewsDialogProps {
@@ -37,7 +38,7 @@ export default function DeleteViewsDialog({
       await deleteViews(selected);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["views"] });
+      void invalidateWorkspaceQueries(queryClient);
       toast.success(`${selected.length} views deleted`);
       onOpenChange(false);
       onSuccess?.();

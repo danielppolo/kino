@@ -17,6 +17,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useTags } from "@/contexts/settings-context";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { TransactionList } from "@/utils/supabase/types";
 
 interface BulkTransactionEditFormProps {
@@ -67,7 +68,7 @@ export default function BulkTransactionEditForm({
       return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      void invalidateWorkspaceQueries(queryClient);
       toast.success("Transactions updated");
       onSuccess?.();
     },

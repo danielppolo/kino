@@ -62,7 +62,7 @@ const CategoryForm = ({
       return await createCategory({ ...values, workspace_id: workspaceId });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      void invalidateWorkspaceQueries(queryClient);
       toast.success(`Added category in ${type}`);
       onSuccess?.();
     },
@@ -80,7 +80,7 @@ const CategoryForm = ({
       return await updateCategory({ ...values, id: category?.id });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      void invalidateWorkspaceQueries(queryClient);
       onSuccess?.();
     },
     onError(error: unknown) {
@@ -239,7 +239,7 @@ const CategoryForm = ({
           render={({ field }) => (
             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
               <div className="space-y-1">
-                <Label htmlFor="is-obligation">Baseline obligation</Label>
+                <Label htmlFor="is-obligation">Required category</Label>
                 <p className="text-muted-foreground text-sm">
                   Mark fixed or expected categories that should reduce
                   exploration capital.

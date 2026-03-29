@@ -15,6 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { deleteRecurrentBills } from "@/utils/supabase/mutations";
 
 interface DeleteBillsDialogProps {
@@ -37,9 +38,7 @@ export default function DeleteBillsDialog({
       await deleteRecurrentBills(selected);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recurrent-bills"] });
-      queryClient.invalidateQueries({ queryKey: ["bills"] });
-      queryClient.invalidateQueries({ queryKey: ["bills-with-payments"] });
+      void invalidateWorkspaceQueries(queryClient);
       toast.success(`${selected.length} recurrent bill${selected.length === 1 ? "" : "s"} deleted`);
       onOpenChange(false);
       onSuccess?.();
@@ -82,4 +81,3 @@ export default function DeleteBillsDialog({
     </AlertDialog>
   );
 }
-

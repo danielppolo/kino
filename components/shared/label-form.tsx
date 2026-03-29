@@ -21,6 +21,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { COLORS } from "@/utils/constants";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { Database } from "@/utils/supabase/database.types";
 import { createLabel, updateLabel } from "@/utils/supabase/mutations";
 
@@ -57,7 +58,7 @@ const LabelForm = ({
       return await createLabel(values);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["labels"] });
+      void invalidateWorkspaceQueries(queryClient);
       toast.success("Label added successfully!");
       onSuccess?.();
     },
@@ -75,7 +76,7 @@ const LabelForm = ({
       return await updateLabel({ ...values, id: label!.id });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["labels"] });
+      void invalidateWorkspaceQueries(queryClient);
       toast.success("Label updated successfully!");
       onSuccess?.();
     },

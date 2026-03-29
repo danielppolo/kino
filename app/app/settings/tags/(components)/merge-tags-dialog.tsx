@@ -16,6 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { mergeTags } from "@/utils/supabase/mutations";
 
 interface MergeTagsDialogProps {
@@ -40,7 +41,7 @@ export default function MergeTagsDialog({
       await mergeTags(target, selected);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tags"] });
+      void invalidateWorkspaceQueries(queryClient);
       toast.success("Tags merged");
       onOpenChange(false);
       setTarget(null);

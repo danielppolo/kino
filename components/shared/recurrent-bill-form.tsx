@@ -28,6 +28,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useWallets } from "@/contexts/settings-context";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { Database } from "@/utils/supabase/database.types";
 import {
   createRecurrentBill,
@@ -156,7 +157,7 @@ export function RecurrentBillForm({
       return results;
     },
     onSuccess: (results) => {
-      queryClient.invalidateQueries({ queryKey: ["recurrent-bills"] });
+      void invalidateWorkspaceQueries(queryClient);
       const count = results.length;
       toast.success(
         count === 1
@@ -190,7 +191,7 @@ export function RecurrentBillForm({
       return await updateRecurrentBill(data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recurrent-bills"] });
+      void invalidateWorkspaceQueries(queryClient);
       toast.success("Recurrent bill updated successfully!");
       onSuccess?.();
     },
