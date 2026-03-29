@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import { BanknoteArrowUp, BanknoteX } from "lucide-react";
 
-import { Money } from "@/components/ui/money";
+import { useChartControls } from "./chart-controls-context";
+import { NormalizationLevelIcon } from "./chart-normalization-toggle";
+import { StackOffsetToggle } from "./stack-offset-toggle";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Money } from "@/components/ui/money";
 import {
   Select,
   SelectContent,
@@ -30,8 +34,6 @@ import {
   ChartNormalizationPreset,
   formatCurrency,
 } from "@/utils/chart-helpers";
-import { NormalizationLevelIcon } from "./chart-normalization-toggle";
-import { useChartControls } from "./chart-controls-context";
 
 interface ChartHeaderControlsProps {
   showAutonomyControls?: boolean;
@@ -85,6 +87,11 @@ export function ChartHeaderControls({
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
+      <StackOffsetToggle
+        value={controls.chartValueMode}
+        onValueChange={controls.setChartValueMode}
+      />
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <TooltipButton

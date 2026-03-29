@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+
 import { useQuery } from "@tanstack/react-query";
 
 import { useCurrency, useWallets } from "@/contexts/settings-context";
@@ -33,6 +34,8 @@ interface ChartControlsContextValue {
   setForecastHorizonYears: (value: number) => void;
   forecastMode: "with-income" | "no-income";
   setForecastMode: (value: "with-income" | "no-income") => void;
+  chartValueMode: "percentage" | "absolute";
+  setChartValueMode: (value: "percentage" | "absolute") => void;
 }
 
 const ChartControlsContext = createContext<ChartControlsContextValue | null>(
@@ -45,6 +48,7 @@ const DEFAULT_PEAK_NORMALIZATION: ChartNormalizationPreset = "strong";
 const DEFAULT_FORECAST_HORIZON_YEARS = 1;
 const DEFAULT_FORECAST_MODE = "with-income";
 const DEFAULT_FUTURE_LUMP_SUM = 0;
+const DEFAULT_CHART_VALUE_MODE = "percentage";
 
 export function ChartControlsProvider({
   children,
@@ -65,6 +69,9 @@ export function ChartControlsProvider({
   const [forecastMode, setForecastMode] = useState<"with-income" | "no-income">(
     DEFAULT_FORECAST_MODE,
   );
+  const [chartValueMode, setChartValueMode] = useState<
+    "percentage" | "absolute"
+  >(DEFAULT_CHART_VALUE_MODE);
 
   const { data: monthlyStats } = useQuery({
     queryKey: ["chart-controls-stats", walletId, from, to, baseCurrency],
@@ -136,6 +143,8 @@ export function ChartControlsProvider({
       setForecastHorizonYears,
       forecastMode,
       setForecastMode,
+      chartValueMode,
+      setChartValueMode,
     }),
     [
       monthlySpend,
@@ -145,6 +154,7 @@ export function ChartControlsProvider({
       setPeakNormalization,
       forecastHorizonYears,
       forecastMode,
+      chartValueMode,
     ],
   );
 

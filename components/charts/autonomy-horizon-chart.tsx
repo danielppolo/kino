@@ -10,7 +10,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+
 import { useQuery } from "@tanstack/react-query";
+
+import { Money } from "../ui/money";
+
+import type { ForecastApiResponse } from "@/app/api/forecast/route";
+import { useChartControls } from "@/components/charts/shared/chart-controls-context";
 import {
   Card,
   CardContent,
@@ -26,7 +32,6 @@ import {
   ChartLegendContent,
   ChartTooltip,
 } from "@/components/ui/chart";
-import { useChartControls } from "@/components/charts/shared/chart-controls-context";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import {
   calculateMonthlyTotals,
@@ -35,8 +40,6 @@ import {
 } from "@/utils/chart-helpers";
 import { createClient } from "@/utils/supabase/client";
 import { getWalletMonthlyBalances } from "@/utils/supabase/queries";
-import type { ForecastApiResponse } from "@/app/api/forecast/route";
-import { Money } from "../ui/money";
 
 interface AutonomyHorizonChartProps {
   walletId?: string;
@@ -86,7 +89,12 @@ export function AutonomyHorizonChart({
   });
 
   const { data: forecastData, isLoading: loadingForecast } = useQuery({
-    queryKey: ["autonomy-arima", walletId, baseCurrency, effectiveHorizonMonths],
+    queryKey: [
+      "autonomy-arima",
+      walletId,
+      baseCurrency,
+      effectiveHorizonMonths,
+    ],
     queryFn: async (): Promise<ForecastApiResponse> => {
       const workspaceWalletIds = wallets.map((w) => w.id);
       const res = await fetch("/api/forecast", {
@@ -104,6 +112,7 @@ export function AutonomyHorizonChart({
       return res.json();
     },
     staleTime: 60 * 60 * 1000,
+    enabled: process.env.NEXT_PUBLIC_APP_ENV === "production",
   });
 
   const isLoading = loadingBalances || loadingForecast;
@@ -209,12 +218,14 @@ export function AutonomyHorizonChart({
         <CardHeader>
           <CardTitle>Autonomy Horizon</CardTitle>
           <CardDescription>
-            Forecasted balance runway showing the path with income versus a zero-income
-            burn-down at your current monthly spend.
+            Forecasted balance runway showing the path with income versus a
+            zero-income burn-down at your current monthly spend.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">Loading...</div>
+          <div className="flex h-64 items-center justify-center">
+            Loading...
+          </div>
         </CardContent>
       </Card>
     );
@@ -226,8 +237,8 @@ export function AutonomyHorizonChart({
         <CardHeader>
           <CardTitle>Autonomy Horizon</CardTitle>
           <CardDescription>
-            Forecasted balance runway showing the path with income versus a zero-income
-            burn-down at your current monthly spend.
+            Forecasted balance runway showing the path with income versus a
+            zero-income burn-down at your current monthly spend.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -292,15 +303,17 @@ export function AutonomyHorizonChart({
                 const noInc = payload.find((p) => p.dataKey === "noIncome")
                   ?.value as number | undefined;
                 return (
-                  <div className="bg-background rounded-lg border p-2 shadow-sm min-w-40">
-                    <div className="text-sm font-medium mb-1">
+                  <div className="bg-background min-w-40 rounded-lg border p-2 shadow-sm">
+                    <div className="mb-1 text-sm font-medium">
                       {format(parseMonthDate(label), "MMMM yyyy")}
                     </div>
                     {base !== undefined && (
                       <div className="flex justify-between gap-4 text-sm">
                         <span
                           className={
-                            emphasizeNoIncome ? "text-muted-foreground" : "text-[#3b82f6]"
+                            emphasizeNoIncome
+                              ? "text-muted-foreground"
+                              : "text-[#3b82f6]"
                           }
                         >
                           With income
@@ -315,7 +328,9 @@ export function AutonomyHorizonChart({
                       <div className="flex justify-between gap-4 text-sm">
                         <span
                           className={
-                            emphasizeNoIncome ? "text-[#ef4444]" : "text-muted-foreground"
+                            emphasizeNoIncome
+                              ? "text-[#ef4444]"
+                              : "text-muted-foreground"
                           }
                         >
                           No income
@@ -405,12 +420,12 @@ export function AutonomyHorizonChart({
             </>
           ) : (
             <span>
-              Runway exceeds the {effectiveHorizonMonths}-month horizon at this burn
-              rate.
+              Runway exceeds the {effectiveHorizonMonths}-month horizon at this
+              burn rate.
             </span>
           )}
           {methodLabel && (
-            <span className="text-muted-foreground ml-2 rounded border px-2 py-0.5 text-xs font-mono align-middle">
+            <span className="text-muted-foreground ml-2 rounded border px-2 py-0.5 align-middle font-mono text-xs">
               {methodLabel}
             </span>
           )}
