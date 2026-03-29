@@ -102,6 +102,11 @@ export function ForecastLineChart({
 
   const isLoading = isLoadingBalances || isLoadingForecast;
   const error = balancesError || forecastError;
+  const effectiveMonthlyBurn =
+    controls?.monthlySpend ??
+    controls?.defaultMonthlySpend ??
+    forecastData?.avgMonthlyBurn ??
+    0;
 
   const historicalData = calculateMonthlyTotals(
     monthlyBalances ?? [],
@@ -168,12 +173,11 @@ export function ForecastLineChart({
   );
 
   // No-income: straight burn-down from current balance at avg monthly spend
-  const avgBurn = forecastData?.avgMonthlyBurn ?? 0;
   const noIncomeForecast: ChartPoint[] = (forecastData?.forecast ?? []).map(
     (p, i) => ({
       month: p.month,
       total: null,
-      forecast: Math.max(0, lastHistoricalTotal - avgBurn * (i + 1)),
+      forecast: Math.max(0, lastHistoricalTotal - effectiveMonthlyBurn * (i + 1)),
       lower: null,
       upper: null,
       isForecast: true,
@@ -206,9 +210,14 @@ export function ForecastLineChart({
   const methodLabel = forecastData?.metadata.method ?? null;
 
   const title = walletId ? "Wallet Forecast" : "Accumulated Forecast";
-  const description = walletId
-    ? `Forecasting balance ${horizonYears} year${horizonYears > 1 ? "s" : ""} ahead in ${baseCurrency}`
-    : `Forecasting total balance ${horizonYears} year${horizonYears > 1 ? "s" : ""} ahead in ${baseCurrency}`;
+  const description =
+    forecastMode === "no-income"
+      ? walletId
+        ? `Projecting balance ${horizonYears} year${horizonYears > 1 ? "s" : ""} ahead with no new income using a monthly burn of ${formatCurrency(effectiveMonthlyBurn, baseCurrency)}`
+        : `Projecting total balance ${horizonYears} year${horizonYears > 1 ? "s" : ""} ahead with no new income using a monthly burn of ${formatCurrency(effectiveMonthlyBurn, baseCurrency)}`
+      : walletId
+        ? `Forecasting balance ${horizonYears} year${horizonYears > 1 ? "s" : ""} ahead in ${baseCurrency}`
+        : `Forecasting total balance ${horizonYears} year${horizonYears > 1 ? "s" : ""} ahead in ${baseCurrency}`;
 
   const forecastStroke =
     forecastMode === "with-income" ? "hsl(var(--chart-1))" : "#ef4444";
