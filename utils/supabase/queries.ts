@@ -136,7 +136,7 @@ export const listTransactionDescriptionSuggestions = async (
     .select("description, created_at, wallets!inner(workspace_id)")
     .eq("wallets.workspace_id", params.workspaceId)
     .not("description", "is", null)
-    .ilike("description", `${normalizedQuery}%`)
+    .ilike("description", `%${normalizedQuery}%`)
     .order("created_at", { ascending: false })
     .limit(fetchLimit);
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Combine, Plus, Trash2, SquaresUnite } from "lucide-react";
+import { Combine, Plus, SquaresUnite,Trash2 } from "lucide-react";
 
 import BulkCategoryChangeDialog from "./(components)/bulk-category-change-dialog";
 import DeleteTagsDialog from "./(components)/delete-tags-dialog";
@@ -17,6 +17,8 @@ import { useTags } from "@/contexts/settings-context";
 import { useSelection } from "@/hooks/use-selection";
 import { canUseGlobalShortcuts } from "@/utils/keyboard-shortcuts";
 import { Tag as TagType } from "@/utils/supabase/types";
+
+type TransactionCountLookup = Record<string, number>;
 
 export default function Page() {
   const [tags] = useTags();
@@ -73,8 +75,8 @@ export default function Page() {
     clearSelection();
   };
 
-  const handleTransactionCountsLoaded = (counts: Map<string, number>) => {
-    setTransactionCounts(counts);
+  const handleTransactionCountsLoaded = (counts: TransactionCountLookup) => {
+    setTransactionCounts(new Map(Object.entries(counts)));
   };
 
   const selectedTags = tags.filter((tag) => selected.includes(tag.id));

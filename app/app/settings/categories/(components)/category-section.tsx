@@ -10,6 +10,8 @@ import { createClient } from "@/utils/supabase/client";
 import { getCategoryTransactionCounts } from "@/utils/supabase/queries";
 import { Category } from "@/utils/supabase/types";
 
+type TransactionCountLookup = Record<string, number>;
+
 interface CategoriesProps {
   type: "income" | "expense";
   selected: string[];
@@ -34,7 +36,7 @@ export default function CategorySection({
     .sort((a, b) => a.name.localeCompare(b.name));
 
   // Fetch transaction counts using react-query
-  const { data: transactionCountsData } = useQuery({
+  const { data: transactionCountsData } = useQuery<TransactionCountLookup>({
     queryKey: ["category-transaction-counts", type],
     queryFn: async () => {
       const supabase = createClient();
@@ -46,13 +48,9 @@ export default function CategorySection({
         throw error;
       }
 
-      // Convert array to Map for easier lookup
-      const countsMap = new Map<string, number>();
-      data?.forEach((item) => {
-        countsMap.set(item.category_id, item.transaction_count);
-      });
-
-      return countsMap;
+      return Object.fromEntries(
+        (data ?? []).map((item) => [item.category_id, item.transaction_count]),
+      );
     },
   });
 
@@ -76,7 +74,7 @@ export default function CategorySection({
 
   return filteredCategories.map((category) => {
     const isSelected = selected.includes(category.id);
-    const transactionCount = transactionCountsData?.get(category.id) || 0;
+    const transactionCount = transactionCountsData?.[category.id] || 0;
     return (
       <CategoryRow
         key={`${category.id}-${transactionCount}`}
