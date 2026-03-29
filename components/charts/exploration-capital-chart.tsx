@@ -77,6 +77,9 @@ export function ExplorationCapitalChart({
     avgVariablePct,
     variableAmount,
     avgVariableAmount,
+    avgBaselinePct,
+    avgBaselineAmount,
+    avgTotalAmount,
   } =
     useMemo(() => {
       if (!categoryStats || categoryStats.length === 0) {
@@ -88,6 +91,9 @@ export function ExplorationCapitalChart({
           avgVariablePct: 0,
           variableAmount: 0,
           avgVariableAmount: 0,
+          avgBaselinePct: 0,
+          avgBaselineAmount: 0,
+          avgTotalAmount: 0,
         };
       }
 
@@ -224,6 +230,23 @@ export function ExplorationCapitalChart({
         rawData.length > 0 ? rawData[rawData.length - 1].variableAmount : 0;
       const currentAvgVariableAmount =
         rawData.length > 0 ? rawData[rawData.length - 1].rollingAbsolute : 0;
+      const averageBaselinePct =
+        rawData.length > 0
+          ? rawData.reduce((sum, point) => sum + point.baseline, 0) /
+            rawData.length
+          : 0;
+      const averageBaselineAmount =
+        rawData.length > 0
+          ? rawData.reduce((sum, point) => sum + point.baselineAmount, 0) /
+            rawData.length
+          : 0;
+      const averageTotalAmount =
+        rawData.length > 0
+          ? rawData.reduce(
+              (sum, point) => sum + point.baselineAmount + point.variableAmount,
+              0,
+            ) / rawData.length
+          : 0;
 
       const absoluteCapped = capChartOutliers(
         rawData,
@@ -259,6 +282,9 @@ export function ExplorationCapitalChart({
         avgVariablePct: currentAvgVariablePct,
         variableAmount: currentVariableAmount,
         avgVariableAmount: currentAvgVariableAmount,
+        avgBaselinePct: averageBaselinePct,
+        avgBaselineAmount: averageBaselineAmount,
+        avgTotalAmount: averageTotalAmount,
       };
     }, [
       categoryStats,
@@ -490,6 +516,28 @@ export function ExplorationCapitalChart({
                   strokeDasharray="4 4"
                   strokeOpacity={0.4}
                 />
+                <ReferenceLine
+                  y={avgBaselinePct}
+                  stroke="#a1a1aa"
+                  strokeDasharray="6 4"
+                  strokeOpacity={0.8}
+                />
+              </>
+            )}
+            {chartValueMode === "absolute" && (
+              <>
+                <ReferenceLine
+                  y={avgBaselineAmount}
+                  stroke="#a1a1aa"
+                  strokeDasharray="6 4"
+                  strokeOpacity={0.8}
+                />
+                <ReferenceLine
+                  y={avgTotalAmount}
+                  stroke="#60a5fa"
+                  strokeDasharray="6 4"
+                  strokeOpacity={0.45}
+                />
               </>
             )}
             <Area
@@ -541,6 +589,12 @@ export function ExplorationCapitalChart({
                 {chartValueMode === "percentage"
                   ? `${avgVariablePct.toFixed(0)}%`
                   : formatCurrency(avgVariableAmount, baseCurrency)}
+              </div>
+              <div className="text-muted-foreground text-xs">
+                Required avg{" "}
+                {chartValueMode === "percentage"
+                  ? `${avgBaselinePct.toFixed(0)}%`
+                  : formatCurrency(avgBaselineAmount, baseCurrency)}
               </div>
             </div>
           </div>
