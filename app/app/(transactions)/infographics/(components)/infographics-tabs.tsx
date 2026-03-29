@@ -63,8 +63,7 @@ export function InfographicsTabs({
           <TabsTrigger value="expenses">Expenses</TabsTrigger>
         </TabsList>
         <ChartHeaderControls
-          showForecastControls={activeTab === "overview"}
-          showAutonomyControls={autonomyEnabled && activeTab === "autonomy"}
+          showAutonomyControls={autonomyEnabled}
         />
       </PageHeader>
 

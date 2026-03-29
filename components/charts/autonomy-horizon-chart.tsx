@@ -69,6 +69,7 @@ export function AutonomyHorizonChart({
   const effectiveHorizonMonths =
     (controls?.forecastHorizonYears ??
       Math.max(1, Math.round(horizonMonths / 12))) * 12;
+  const forecastMode = controls?.forecastMode ?? "with-income";
 
   const { data: monthlyBalances, isLoading: loadingBalances } = useQuery({
     queryKey: ["autonomy-horizon-balances", walletId, from, to],
@@ -111,6 +112,7 @@ export function AutonomyHorizonChart({
     controls?.defaultMonthlySpend ??
     forecastData?.avgMonthlyBurn ??
     0;
+  const emphasizeNoIncome = forecastMode === "no-income";
 
   const chartData = useMemo(() => {
     if (!monthlyBalances || !forecastData || monthlyBalances.length === 0) {
@@ -285,7 +287,13 @@ export function AutonomyHorizonChart({
                     </div>
                     {base !== undefined && (
                       <div className="flex justify-between gap-4 text-sm">
-                        <span className="text-[#3b82f6]">With income</span>
+                        <span
+                          className={
+                            emphasizeNoIncome ? "text-muted-foreground" : "text-[#3b82f6]"
+                          }
+                        >
+                          With income
+                        </span>
                         <Money
                           cents={Math.round(base * 100)}
                           currency={baseCurrency}
@@ -294,7 +302,13 @@ export function AutonomyHorizonChart({
                     )}
                     {noInc !== undefined && (
                       <div className="flex justify-between gap-4 text-sm">
-                        <span className="text-[#ef4444]">No income</span>
+                        <span
+                          className={
+                            emphasizeNoIncome ? "text-[#ef4444]" : "text-muted-foreground"
+                          }
+                        >
+                          No income
+                        </span>
                         <Money
                           cents={Math.round(noInc * 100)}
                           currency={baseCurrency}
@@ -340,7 +354,9 @@ export function AutonomyHorizonChart({
               type="monotone"
               fill="url(#gradNoIncome)"
               stroke="#ef4444"
-              strokeWidth={1.5}
+              fillOpacity={emphasizeNoIncome ? 1 : 0.2}
+              strokeOpacity={emphasizeNoIncome ? 1 : 0.35}
+              strokeWidth={emphasizeNoIncome ? 2 : 1.5}
               strokeDasharray="4 4"
               dot={false}
               connectNulls={false}
@@ -351,7 +367,9 @@ export function AutonomyHorizonChart({
               type="monotone"
               fill="url(#gradBase)"
               stroke="#3b82f6"
-              strokeWidth={2}
+              fillOpacity={emphasizeNoIncome ? 0.2 : 1}
+              strokeOpacity={emphasizeNoIncome ? 0.35 : 1}
+              strokeWidth={emphasizeNoIncome ? 1.5 : 2}
               dot={false}
               connectNulls={false}
             />
@@ -376,7 +394,7 @@ export function AutonomyHorizonChart({
             </>
           ) : (
             <span>
-              Runway exceeds the {horizonMonths}-month horizon at this burn
+              Runway exceeds the {effectiveHorizonMonths}-month horizon at this burn
               rate.
             </span>
           )}
