@@ -2,9 +2,11 @@
 
 import React, { memo } from "react";
 import { useRouter } from "next/navigation";
+
 import { Badge } from "../ui/badge";
-import SelectableRow from "./selectable-row";
 import { Text } from "../ui/typography";
+import SelectableRow from "./selectable-row";
+
 import { Category } from "@/utils/supabase/types";
 
 interface CategoryRowProps {
