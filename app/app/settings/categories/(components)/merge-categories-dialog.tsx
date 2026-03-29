@@ -19,6 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useCategories } from "@/contexts/settings-context";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { mergeCategories } from "@/utils/supabase/mutations";
 
 interface MergeCategoriesDialogProps {
@@ -112,7 +113,7 @@ export default function MergeCategoriesDialog({
       await mergeCategories(targetValue, selected);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries();
+      invalidateWorkspaceQueries(queryClient);
       toast.success("Categories merged");
       onOpenChange(false);
       setTarget(null);

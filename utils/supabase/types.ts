@@ -58,5 +58,6 @@ export interface RecurringTransaction {
     name: string;
     type: string;
     icon: string;
+    is_obligation?: boolean;
   } | null;
 }

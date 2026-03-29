@@ -1,7 +1,10 @@
 "use client";
 
 import React, { createContext, ReactNode, useContext } from "react";
+
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { createClient } from "@/utils/supabase/client";
 import { switchActiveWorkspace } from "@/utils/supabase/mutations";
 import { listWallets } from "@/utils/supabase/queries";
@@ -95,6 +98,7 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({
           : null,
       }));
     },
+    staleTime: 1000 * 60 * 10,
   });
 
   // Fetch user preferences to get active workspace
@@ -115,6 +119,7 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({
       if (error) throw error;
       return data;
     },
+    staleTime: 1000 * 60 * 10,
   });
 
   // Determine active workspace
@@ -140,6 +145,7 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({
       return (data || []) as WorkspaceMember[];
     },
     enabled: !!activeWorkspace?.id,
+    staleTime: 1000 * 60 * 10,
   });
   const workspaceMembers = workspaceMembersRaw as WorkspaceMember[];
 
@@ -155,6 +161,7 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({
       return result.data || [];
     },
     enabled: !!activeWorkspace?.id,
+    staleTime: 1000 * 60 * 10,
   });
 
   // Extract unique currencies from wallets
@@ -213,33 +220,14 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({
     // staleTime: 1000 * 60 * 60, // Consider rates fresh for 1 hour
     enabled: !!activeWorkspace && walletCurrencies.length > 0,
     initialData: {},
+    staleTime: 1000 * 60 * 60,
   });
 
   const handleSwitchWorkspace = async (workspaceId: string) => {
     try {
       await switchActiveWorkspace(userId, workspaceId);
 
-      // Invalidate all workspace-dependent queries
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["user-preferences"] }),
-        queryClient.invalidateQueries({ queryKey: ["categories"] }),
-        queryClient.invalidateQueries({ queryKey: ["labels"] }),
-        queryClient.invalidateQueries({ queryKey: ["tags"] }),
-        queryClient.invalidateQueries({ queryKey: ["views"] }),
-        queryClient.invalidateQueries({ queryKey: ["transaction-templates"] }),
-        queryClient.invalidateQueries({ queryKey: ["wallets"] }),
-        queryClient.invalidateQueries({ queryKey: ["workspace-wallets"] }),
-        queryClient.invalidateQueries({ queryKey: ["workspace-members"] }),
-        queryClient.invalidateQueries({
-          queryKey: ["workspace-currency-conversions"],
-        }),
-        queryClient.invalidateQueries({ queryKey: ["category-pie-chart"] }),
-        queryClient.invalidateQueries({ queryKey: ["label-pie-chart"] }),
-        queryClient.invalidateQueries({ queryKey: ["category-trends"] }),
-        queryClient.invalidateQueries({ queryKey: ["label-area-chart"] }),
-        queryClient.invalidateQueries({ queryKey: ["label-trends"] }),
-        queryClient.invalidateQueries({ queryKey: ["expense-concentration"] }),
-      ]);
+      await invalidateWorkspaceQueries(queryClient);
     } catch (error) {
       console.error("Failed to switch workspace:", error);
       throw error;

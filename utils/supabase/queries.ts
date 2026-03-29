@@ -1,4 +1,4 @@
-import { SupabaseClient } from "@supabase/supabase-js";
+import { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 
 import { BillWithPayments, TypedSupabaseClient } from "@/utils/supabase/types";
 
@@ -112,6 +112,57 @@ export const listTransactions = async (
   );
 
   return { data, error, count };
+};
+
+export const listTransactionDescriptionSuggestions = async (
+  client: TypedSupabaseClient,
+  params: {
+    workspaceId: string;
+    query: string;
+    limit?: number;
+  },
+): Promise<{ data: string[] | null; error: PostgrestError | null }> => {
+  const normalizedQuery = params.query.trim();
+
+  if (!normalizedQuery) {
+    return { data: [], error: null };
+  }
+
+  const limit = Math.max(params.limit ?? 8, 1);
+  const fetchLimit = Math.max(limit * 5, limit);
+
+  const { data, error } = await client
+    .from("transactions")
+    .select("description, created_at, wallets!inner(workspace_id)")
+    .eq("wallets.workspace_id", params.workspaceId)
+    .not("description", "is", null)
+    .ilike("description", `${normalizedQuery}%`)
+    .order("created_at", { ascending: false })
+    .limit(fetchLimit);
+
+  if (error) {
+    return { data: null, error };
+  }
+
+  const suggestions: string[] = [];
+  const seen = new Set<string>();
+
+  for (const row of data ?? []) {
+    const description =
+      typeof row.description === "string" ? row.description.trim() : "";
+
+    if (!description) continue;
+
+    const key = description.toLowerCase();
+    if (seen.has(key)) continue;
+
+    seen.add(key);
+    suggestions.push(description);
+
+    if (suggestions.length >= limit) break;
+  }
+
+  return { data: suggestions, error: null };
 };
 
 export const listLabels = async (
@@ -399,7 +450,8 @@ export const getMonthlyCategoryStats = async (
         id,
         name,
         icon,
-        type
+        type,
+        is_obligation
       )
     `,
       )

@@ -15,6 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { deleteTags } from "@/utils/supabase/mutations";
 
 interface DeleteTagsDialogProps {
@@ -37,7 +38,7 @@ export default function DeleteTagsDialog({
       await deleteTags(selected);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries();
+      invalidateWorkspaceQueries(queryClient);
       toast.success(`${selected.length} tags deleted`);
       onOpenChange(false);
       onSuccess?.();

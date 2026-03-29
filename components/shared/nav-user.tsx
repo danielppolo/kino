@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 
 import { signOutAction } from "@/app/actions";
+import { SignOutButton } from "@/components/shared/sign-out-button";
 import { UpdateProfileForm } from "@/components/shared/update-profile-form";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -162,10 +163,10 @@ export function NavUser() {
               )}
               <DropdownMenuItem>
                 <form action={signOutAction} className="w-full">
-                  <button className="flex w-full items-center gap-2 bg-transparent">
+                  <SignOutButton className="flex w-full items-center gap-2 bg-transparent">
                     <LogOut className="size-4" />
                     Logout
-                  </button>
+                  </SignOutButton>
                 </form>
               </DropdownMenuItem>
             </DropdownMenuContent>

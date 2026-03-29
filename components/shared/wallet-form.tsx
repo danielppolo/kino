@@ -12,7 +12,7 @@ import { Textarea } from "../ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import Color from "./color";
 import CurrencyPicker from "./currency-picker";
-import { WalletTypeIcon, getWalletTypeLabel } from "./wallet-type-icon";
+import { getWalletTypeLabel,WalletTypeIcon } from "./wallet-type-icon";
 
 import { SubmitButton } from "@/components/submit-button";
 import {
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/form";
 import { useWorkspace } from "@/contexts/workspace-context";
 import { COLORS } from "@/utils/constants";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { Database } from "@/utils/supabase/database.types";
 import { createWallet, updateWallet } from "@/utils/supabase/mutations";
 import { Wallet } from "@/utils/supabase/types";
@@ -66,7 +67,7 @@ const WalletForm = ({ onSuccess, wallet }: WalletFormProps) => {
     },
     onSuccess: () => {
       toast.success("Wallet added!");
-      queryClient.invalidateQueries();
+      invalidateWorkspaceQueries(queryClient);
       onSuccess();
     },
     onError(error: unknown) {
@@ -92,7 +93,7 @@ const WalletForm = ({ onSuccess, wallet }: WalletFormProps) => {
     },
     onSuccess: () => {
       toast.success("Wallet updated!");
-      queryClient.invalidateQueries({ queryKey: ["wallets"] });
+      invalidateWorkspaceQueries(queryClient);
       onSuccess();
     },
     onError(error: unknown) {

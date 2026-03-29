@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { format } from "date-fns";
 import { useFormContext } from "react-hook-form";
+import { format } from "date-fns";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -21,6 +21,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useWallets } from "@/contexts/settings-context";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { Database } from "@/utils/supabase/database.types";
 import { deleteTransfer, updateTransfer } from "@/utils/supabase/mutations";
 import { Transaction } from "@/utils/supabase/types";
@@ -42,6 +43,11 @@ type TransferFormValues = Omit<
   sender_wallet_id: string;
   receiver_wallet_id: string;
   amount: number;
+};
+
+type TransferTransaction = Transaction & {
+  transfer_id?: string | null;
+  transfer_wallet_id?: string | null;
 };
 
 const TransferForm = ({
@@ -70,14 +76,14 @@ const TransferForm = ({
       if (error) throw new Error(error);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries();
+      invalidateWorkspaceQueries(queryClient);
       onSuccess?.();
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: async (values: TransferFormValues) => {
-      const transferId = (initialData as any)?.transfer_id;
+      const transferId = (initialData as TransferTransaction | undefined)?.transfer_id;
       if (!transferId) throw new Error("No transfer ID provided");
       await updateTransfer(transferId, {
         description: values.description ?? undefined,
@@ -85,19 +91,19 @@ const TransferForm = ({
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries();
+      invalidateWorkspaceQueries(queryClient);
       onSuccess?.();
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const transferId = (initialData as any)?.transfer_id;
+      const transferId = (initialData as TransferTransaction | undefined)?.transfer_id;
       if (!transferId) throw new Error("No transfer ID provided");
       await deleteTransfer(transferId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries();
+      invalidateWorkspaceQueries(queryClient);
       onSuccess?.();
     },
   });
@@ -165,7 +171,8 @@ const TransferForm = ({
   ): TransferFormValues => ({
     type: transaction.type,
     sender_wallet_id: transaction.wallet_id,
-    receiver_wallet_id: (transaction as any).transfer_wallet_id ?? "",
+    receiver_wallet_id:
+      (transaction as TransferTransaction).transfer_wallet_id ?? "",
     date: transaction.date,
     currency: transaction.currency,
     description: transaction.description ?? undefined,

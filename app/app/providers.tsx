@@ -1,34 +1,59 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
-import { QueryClient } from "@tanstack/react-query";
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 
-export default function Providers({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(
+import {
+  createAppQueryClient,
+  getAuthenticatedQueryCacheBuster,
+  getAuthenticatedQueryCacheKey,
+  shouldDehydrateAuthenticatedQuery,
+} from "@/utils/query-cache";
+
+interface AuthenticatedProvidersProps {
+  children: React.ReactNode;
+  userId: string;
+}
+
+const DAY_IN_MS = 1000 * 60 * 60 * 24;
+
+export default function AuthenticatedProviders({
+  children,
+  userId,
+}: AuthenticatedProvidersProps) {
+  const [queryClient] = useState(() => createAppQueryClient());
+
+  const persister = useMemo(
     () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            gcTime: 1000 * 60 * 60 * 24, // 24 hours
-            staleTime: 1000 * 60 * 5, // 5 minutes
-          },
-        },
+      createSyncStoragePersister({
+        key: getAuthenticatedQueryCacheKey(userId),
+        throttleTime: 1000,
+        serialize: JSON.stringify,
+        deserialize: JSON.parse,
+        storage:
+          typeof window !== "undefined" ? window.localStorage : undefined,
       }),
+    [userId],
   );
 
-  const [persister] = useState(() =>
-    createAsyncStoragePersister({
-      storage: typeof window !== "undefined" ? window.localStorage : undefined,
+  const persistOptions = useMemo(
+    () => ({
+      buster: getAuthenticatedQueryCacheBuster(userId),
+      dehydrateOptions: {
+        shouldDehydrateQuery: shouldDehydrateAuthenticatedQuery,
+      },
+      maxAge: DAY_IN_MS,
+      persister,
     }),
+    [persister, userId],
   );
 
   return (
     <PersistQueryClientProvider
       client={queryClient}
-      persistOptions={{ persister }}
+      persistOptions={persistOptions}
     >
       {children}
     </PersistQueryClientProvider>

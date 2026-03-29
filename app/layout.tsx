@@ -2,7 +2,7 @@ import type { Viewport } from "next";
 import localFont from "next/font/local";
 import { ThemeProvider } from "next-themes";
 
-import Providers from "./app/providers";
+import { Providers } from "./providers";
 
 import "./globals.css";
 import "lucide-static/font/lucide.css";

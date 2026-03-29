@@ -6,23 +6,23 @@ import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 
 import { TRANSFER_CATEGORIES } from "@/utils/constants";
 import { createClient } from "@/utils/supabase/client";
-import { FeatureFlags, parseFeatureFlags, DEFAULT_FEATURE_FLAGS } from "@/utils/types/feature-flags";
 import {
   listCategories,
   listLabels,
   listTags,
+  listTransactionTemplates,
   listViews,
   listWallets,
-  listTransactionTemplates,
 } from "@/utils/supabase/queries";
 import {
   Category,
   Label,
   Tag,
-  Wallet,
-  View,
   TransactionTemplate,
+  View,
+  Wallet,
 } from "@/utils/supabase/types";
+import { FeatureFlags } from "@/utils/types/feature-flags";
 
 export interface CurrencyConversion {
   rate: number;
@@ -84,6 +84,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
       if (result.error) throw result.error;
       return (result.data || []).sort((a, b) => a.name.localeCompare(b.name));
     },
+    staleTime: 1000 * 60 * 10,
   });
 
   const { data: labels = [] } = useSuspenseQuery<Label[]>({
@@ -94,6 +95,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
       if (result.error) throw result.error;
       return (result.data || []).sort((a, b) => a.name.localeCompare(b.name));
     },
+    staleTime: 1000 * 60 * 10,
   });
 
   const { data: tags = [] } = useSuspenseQuery<Tag[]>({
@@ -104,6 +106,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
       if (result.error) throw result.error;
       return (result.data || []).sort((a, b) => a.title.localeCompare(b.title));
     },
+    staleTime: 1000 * 60 * 10,
   });
 
   const { data: templates = [] } = useQuery<TransactionTemplate[]>({
@@ -114,6 +117,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
       if (result.error) throw result.error;
       return (result.data || []).sort((a, b) => a.name.localeCompare(b.name));
     },
+    staleTime: 1000 * 60 * 10,
   });
 
   const { data: views = [] } = useQuery<View[]>({
@@ -124,6 +128,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
       if (result.error) throw result.error;
       return (result.data || []).sort((a, b) => a.name.localeCompare(b.name));
     },
+    staleTime: 1000 * 60 * 10,
   });
 
   const { data: wallets = [] } = useSuspenseQuery<Wallet[]>({
@@ -134,6 +139,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
       if (result.error) throw result.error;
       return (result.data || []).sort((a, b) => a.name.localeCompare(b.name));
     },
+    staleTime: 1000 * 60 * 10,
   });
 
   // Use conversion rates from WorkspaceProvider (passed as initialConversionRates)

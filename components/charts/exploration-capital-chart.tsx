@@ -40,7 +40,7 @@ interface ExplorationCapitalChartProps {
 
 /**
  * Shows monthly spending split between:
- * - "Baseline" — the top 3 categories by total cumulative spend (structural obligations)
+ * - "Baseline" — categories explicitly marked as obligations
  * - "Variable" — everything else (exploration capital)
  *
  * The key question: is the variable/exploration fraction growing or being crowded out?
@@ -79,7 +79,16 @@ export function ExplorationCapitalChart({
         };
       }
 
-      // Aggregate total spend per category across all months
+      // Prefer explicit obligation metadata. Fall back to the historical
+      // top-spend heuristic until categories are classified.
+      const explicitObligationIds = new Set(
+        categoryStats
+          .filter((s) => s.categories?.is_obligation)
+          .map((s) => s.category_id)
+          .filter(Boolean),
+      );
+
+      // Aggregate total spend per category across all months for fallback
       const categoryTotals: Record<string, { name: string; total: number }> =
         {};
       categoryStats.forEach((s) => {
@@ -105,15 +114,21 @@ export function ExplorationCapitalChart({
         categoryTotals[cid].total += expense;
       });
 
-      // Identify top 3 categories by total spend — these are the "baseline"
       const sorted = Object.entries(categoryTotals).sort(
         ([, a], [, b]) => b.total - a.total,
       );
-      const topN = 3;
-      const baselineIds = new Set(sorted.slice(0, topN).map(([id]) => id));
-      const topCategoryNames = sorted
-        .slice(0, topN)
-        .map(([, v]) => v.name);
+      const fallbackTopN = 3;
+      const fallbackIds = new Set(
+        sorted.slice(0, fallbackTopN).map(([id]) => id),
+      );
+      const baselineIds =
+        explicitObligationIds.size > 0 ? explicitObligationIds : fallbackIds;
+      const topCategoryNames =
+        explicitObligationIds.size > 0
+          ? sorted
+              .filter(([id]) => baselineIds.has(id))
+              .map(([, value]) => value.name)
+          : sorted.slice(0, fallbackTopN).map(([, value]) => value.name);
 
       // Group by month
       const byMonth: Record<
