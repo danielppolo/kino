@@ -5,22 +5,24 @@ import { useRouter } from "next/navigation";
 
 import { useQuery } from "@tanstack/react-query";
 
-import { Badge } from "@/components/ui/badge";
+import EmptyState from "@/components/shared/empty-state";
+import RowGroupHeader from "@/components/shared/row-group-header";
 import SelectableRow from "@/components/shared/selectable-row";
+import { Badge } from "@/components/ui/badge";
+import { Text } from "@/components/ui/typography";
 import { useTags } from "@/contexts/settings-context";
+import { useKeyboardListNavigation } from "@/hooks/use-keyboard-list-navigation";
 import { createClient } from "@/utils/supabase/client";
 import { getTagTransactionCounts } from "@/utils/supabase/queries";
 import { Tag } from "@/utils/supabase/types";
-import { Text } from "@/components/ui/typography";
-import EmptyState from "@/components/shared/empty-state";
-import RowGroupHeader from "@/components/shared/row-group-header";
-import { useKeyboardListNavigation } from "@/hooks/use-keyboard-list-navigation";
+
+type TransactionCountLookup = Record<string, number>;
 
 interface TagsSectionProps {
   selected: string[];
   onToggle: (tag: Tag, shiftKey: boolean) => void;
   onEdit: (tag: Tag) => void;
-  onTransactionCountsLoaded?: (counts: Map<string, number>) => void;
+  onTransactionCountsLoaded?: (counts: TransactionCountLookup) => void;
   selectAll: () => void;
 }
 
@@ -35,7 +37,7 @@ export default function TagsSection({
   const [tags] = useTags();
 
   // Fetch transaction counts using react-query
-  const { data: transactionCountsData } = useQuery({
+  const { data: transactionCountsData } = useQuery<TransactionCountLookup>({
     queryKey: ["tag-transaction-counts"],
     queryFn: async () => {
       const supabase = createClient();
@@ -45,13 +47,9 @@ export default function TagsSection({
         throw error;
       }
 
-      // Convert array to Map for easier lookup
-      const countsMap = new Map<string, number>();
-      data?.forEach((item) => {
-        countsMap.set(item.tag_id, item.transaction_count);
-      });
-
-      return countsMap;
+      return Object.fromEntries(
+        (data ?? []).map((item) => [item.tag_id, item.transaction_count]),
+      );
     },
   });
 
@@ -113,7 +111,7 @@ export default function TagsSection({
           />
           {groupTags.map((tag) => {
             const isSelected = selected.includes(tag.id);
-            const transactionCount = transactionCountsData?.get(tag.id) || 0;
+            const transactionCount = transactionCountsData?.[tag.id] || 0;
 
             return (
               <SelectableRow
