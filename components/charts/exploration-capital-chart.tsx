@@ -1,8 +1,16 @@
 "use client";
 
 import { useMemo } from "react";
-import { format } from "date-fns";
-import { Area, CartesianGrid, ComposedChart, ReferenceLine, XAxis, YAxis } from "recharts";
+import { addMonths, format, parseISO, startOfMonth } from "date-fns";
+import {
+  Area,
+  CartesianGrid,
+  ComposedChart,
+  ReferenceArea,
+  ReferenceLine,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
 
@@ -25,11 +33,21 @@ import {
 } from "@/components/ui/chart";
 import { Money } from "@/components/ui/money";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
-import { useCurrency, useWallets } from "@/contexts/settings-context";
-import { capChartOutliers, formatCurrency, parseMonthDate } from "@/utils/chart-helpers";
+import { useCategories, useCurrency, useWallets } from "@/contexts/settings-context";
+import {
+  calculateTrimmedMean,
+  capChartOutliers,
+  formatCurrency,
+  parseMonthDate,
+} from "@/utils/chart-helpers";
 import { convertCurrency } from "@/utils/currency-conversion";
 import { createClient } from "@/utils/supabase/client";
-import { getMonthlyCategoryStats } from "@/utils/supabase/queries";
+import {
+  getMonthlyCategoryStats,
+  listBills,
+  listRecurrentBills,
+  listRecurringTransactions,
+} from "@/utils/supabase/queries";
 
 interface ExplorationCapitalChartProps {
   walletId?: string;
@@ -37,270 +55,617 @@ interface ExplorationCapitalChartProps {
   to?: string;
 }
 
-/**
- * Shows how much of spending remains discretionary after required categories.
- * The chart uses smoothed exploration trendlines so the signal stays legible.
- *
- * The key question: is exploration capacity growing or being crowded out?
- */
+type ObligationKind = "none" | "atemporal" | "temporal";
+
+type ChartPoint = {
+  month: string;
+  isForecast: boolean;
+  atemporalAmount: number;
+  temporalAmount: number;
+  discretionaryAmount: number;
+  incomeAmount: number;
+  totalExpenseAmount: number;
+  atemporalPct: number;
+  temporalPct: number;
+  discretionaryPct: number;
+  incomePct: number;
+  cappedAtemporalAmount?: number;
+  cappedTemporalAmount?: number;
+  cappedDiscretionaryAmount?: number;
+  cappedIncomeAmount?: number;
+  _absoluteOriginal?: Partial<
+    Record<
+      | "atemporalAmount"
+      | "temporalAmount"
+      | "discretionaryAmount"
+      | "incomeAmount",
+      number
+    >
+  >;
+};
+
+function toMonthKey(date: string) {
+  return format(startOfMonth(parseISO(date)), "yyyy-MM-dd");
+}
+
+function getObligationKind(category?: {
+  required_spend_kind?: string | null;
+} | null): ObligationKind {
+  if (category?.required_spend_kind === "atemporal") return "atemporal";
+  if (category?.required_spend_kind === "temporal") return "temporal";
+  return "none";
+}
+
+function isMonthWithinWindow(
+  month: string,
+  startDate?: string | null,
+  endDate?: string | null,
+) {
+  const startMonth = startDate ? toMonthKey(startDate) : null;
+  const endMonth = endDate ? toMonthKey(endDate) : null;
+
+  if (startMonth && month < startMonth) return false;
+  if (endMonth && month > endMonth) return false;
+  return true;
+}
+
+function toMonthlyAmount(amount: number, intervalType: string) {
+  switch (intervalType) {
+    case "daily":
+      return (amount * 365) / 12;
+    case "weekly":
+      return (amount * 52) / 12;
+    case "quarterly":
+      return amount / 3;
+    case "yearly":
+      return amount / 12;
+    case "monthly":
+    default:
+      return amount;
+  }
+}
+
+function mean(values: number[]) {
+  if (values.length === 0) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function toPercentPoint(point: Omit<ChartPoint, "atemporalPct" | "temporalPct" | "discretionaryPct" | "incomePct">): ChartPoint {
+  if (point.totalExpenseAmount <= 0) {
+    return {
+      ...point,
+      atemporalPct: 0,
+      temporalPct: 0,
+      discretionaryPct: 0,
+      incomePct: 0,
+    };
+  }
+
+  const atemporalPct = (point.atemporalAmount / point.totalExpenseAmount) * 100;
+  const temporalPct = (point.temporalAmount / point.totalExpenseAmount) * 100;
+  const discretionaryPct = Math.max(
+    0,
+    100 - atemporalPct - temporalPct,
+  );
+  const incomePct = Math.min(
+    100,
+    (point.incomeAmount / point.totalExpenseAmount) * 100,
+  );
+
+  return {
+    ...point,
+    atemporalPct,
+    temporalPct,
+    discretionaryPct,
+    incomePct,
+  };
+}
+
 export function ExplorationCapitalChart({
   walletId,
   from,
   to,
 }: ExplorationCapitalChartProps) {
   const controls = useChartControls();
-  const [, walletMap] = useWallets();
+  const [wallets, walletMap] = useWallets();
+  const [categories, categoryMap] = useCategories();
   const { conversionRates, baseCurrency } = useCurrency();
   const chartValueMode = controls?.chartValueMode ?? "percentage";
   const peakNormalizationPercentile = controls?.peakNormalizationPercentile ?? 0.97;
+  const forecastHorizonYears = controls?.forecastHorizonYears ?? 1;
+  const forecastHorizonMonths = forecastHorizonYears * 12;
+  const workspaceWalletIds = useMemo(() => wallets.map((wallet) => wallet.id), [wallets]);
 
-  const { data: categoryStats, isLoading } = useQuery({
-    queryKey: ["exploration-capital-stats", walletId, from, to],
+  const { data: expenseCategoryStats, isLoading: loadingExpenses } = useQuery({
+    queryKey: [
+      "exploration-capital-expense-stats",
+      walletId,
+      workspaceWalletIds,
+      from,
+      to,
+    ],
     queryFn: async () => {
       const supabase = await createClient();
       const { data, error } = await getMonthlyCategoryStats(supabase, {
         walletId,
+        workspaceWalletIds,
         from,
         to,
         type: "expense",
       });
       if (error) throw error;
-      return data;
+      return data ?? [];
     },
   });
+
+  const { data: incomeCategoryStats, isLoading: loadingIncome } = useQuery({
+    queryKey: [
+      "exploration-capital-income-stats",
+      walletId,
+      workspaceWalletIds,
+      from,
+      to,
+    ],
+    queryFn: async () => {
+      const supabase = await createClient();
+      const { data, error } = await getMonthlyCategoryStats(supabase, {
+        walletId,
+        workspaceWalletIds,
+        from,
+        to,
+        type: "income",
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: recurringIncome, isLoading: loadingRecurringIncome } = useQuery({
+    queryKey: [
+      "exploration-capital-recurring-income",
+      walletId,
+      workspaceWalletIds,
+    ],
+    queryFn: async () => {
+      const supabase = await createClient();
+      const { data, error } = await listRecurringTransactions(supabase, {
+        walletId,
+        workspaceWalletIds,
+        type: "income",
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: bills, isLoading: loadingBills } = useQuery({
+    queryKey: ["exploration-capital-bills", walletId, workspaceWalletIds],
+    queryFn: async () => {
+      const supabase = await createClient();
+      const { data, error } = await listBills(supabase, {
+        walletId,
+        workspaceWalletIds,
+        pageSize: 1000,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: recurrentBills, isLoading: loadingRecurrentBills } = useQuery({
+    queryKey: ["exploration-capital-recurrent-bills", walletId, workspaceWalletIds],
+    queryFn: async () => {
+      const supabase = await createClient();
+      const { data, error } = await listRecurrentBills(supabase, {
+        walletId,
+        workspaceWalletIds,
+        pageSize: 1000,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const isLoading =
+    loadingExpenses ||
+    loadingIncome ||
+    loadingRecurringIncome ||
+    loadingBills ||
+    loadingRecurrentBills;
 
   const {
     chartData,
     chartConfig,
     topCategoryNames,
-    variablePct,
-    avgVariablePct,
-    variableAmount,
-    avgVariableAmount,
-    avgBaselinePct,
-    avgBaselineAmount,
-    avgTotalAmount,
-  } =
-    useMemo(() => {
-      if (!categoryStats || categoryStats.length === 0) {
-        return {
-          chartData: [],
-          chartConfig: {} as ChartConfig,
-          topCategoryNames: [],
-          variablePct: 0,
-          avgVariablePct: 0,
-          variableAmount: 0,
-          avgVariableAmount: 0,
-          avgBaselinePct: 0,
-          avgBaselineAmount: 0,
-          avgTotalAmount: 0,
-        };
+    currentDiscretionaryPct,
+    currentDiscretionaryAmount,
+    avgDiscretionaryPct,
+    avgDiscretionaryAmount,
+    avgAtemporalPct,
+    avgTemporalPct,
+    avgIncomePct,
+    avgAtemporalAmount,
+    avgTemporalAmount,
+    avgIncomeAmount,
+    lastHistoricalMonth,
+    currentPoint,
+  } = useMemo(() => {
+    if (
+        (!expenseCategoryStats || expenseCategoryStats.length === 0) &&
+        (!incomeCategoryStats || incomeCategoryStats.length === 0)
+    ) {
+      return {
+        chartData: [] as ChartPoint[],
+        chartConfig: {} as ChartConfig,
+        topCategoryNames: [] as string[],
+        currentDiscretionaryPct: 0,
+        currentDiscretionaryAmount: 0,
+        avgDiscretionaryPct: 0,
+        avgDiscretionaryAmount: 0,
+        avgAtemporalPct: 0,
+        avgTemporalPct: 0,
+        avgIncomePct: 0,
+        avgAtemporalAmount: 0,
+        avgTemporalAmount: 0,
+        avgIncomeAmount: 0,
+        lastHistoricalMonth: null as string | null,
+        currentPoint: null as ChartPoint | null,
+      };
+    }
+
+    const byMonth = new Map<
+      string,
+      Omit<
+        ChartPoint,
+        | "atemporalPct"
+        | "temporalPct"
+        | "discretionaryPct"
+        | "incomePct"
+        | "cappedAtemporalAmount"
+        | "cappedTemporalAmount"
+        | "cappedDiscretionaryAmount"
+        | "cappedIncomeAmount"
+        | "_absoluteOriginal"
+      >
+    >();
+    const categoryHistory = new Map<string, number[]>();
+    const categoryTotals = new Map<string, number>();
+
+    const ensureMonth = (month: string) => {
+      const existing = byMonth.get(month);
+      if (existing) return existing;
+
+      const seed = {
+        month,
+        isForecast: false,
+        atemporalAmount: 0,
+        temporalAmount: 0,
+        discretionaryAmount: 0,
+        incomeAmount: 0,
+        totalExpenseAmount: 0,
+      };
+      byMonth.set(month, seed);
+      return seed;
+    };
+
+    expenseCategoryStats?.forEach((stat) => {
+      const month = stat.month;
+      const bucket = ensureMonth(month);
+      const wallet = walletMap.get(stat.wallet_id ?? "");
+      const currency = wallet?.currency ?? baseCurrency;
+      const expenseAmount =
+        Math.abs(
+          convertCurrency(
+            stat.outcome_cents,
+            currency,
+            baseCurrency,
+            conversionRates,
+          ),
+        ) / 100;
+
+      const category =
+        stat.categories ?? (stat.category_id ? categoryMap.get(stat.category_id) : null);
+      const requiredSpendKind = getObligationKind(category);
+
+      if (requiredSpendKind === "atemporal") {
+        bucket.atemporalAmount += expenseAmount;
+      } else if (requiredSpendKind === "temporal") {
+        bucket.temporalAmount += expenseAmount;
+      } else {
+        bucket.discretionaryAmount += expenseAmount;
       }
 
-      // Prefer explicit obligation metadata. Fall back to the historical
-      // top-spend heuristic until categories are classified.
-      const explicitObligationIds = new Set(
-        categoryStats
-          .filter((s) => s.categories?.is_obligation)
-          .map((s) => s.category_id)
-          .filter(Boolean),
-      );
+      bucket.totalExpenseAmount += expenseAmount;
 
-      // Aggregate total spend per category across all months for fallback
-      const categoryTotals: Record<string, { name: string; total: number }> =
-        {};
-      categoryStats.forEach((s) => {
-        const cid = s.category_id;
-        if (!cid) return;
-        const wallet = walletMap.get(s.wallet_id ?? "");
-        const currency = wallet?.currency ?? baseCurrency;
-        const expense =
-          Math.abs(
-            convertCurrency(
-              s.outcome_cents,
-              currency,
-              baseCurrency,
-              conversionRates,
-            ),
-          ) / 100;
-        if (!categoryTotals[cid]) {
-          categoryTotals[cid] = {
-            name: s.categories?.name ?? cid,
-            total: 0,
-          };
+      if (stat.category_id) {
+        if (!categoryHistory.has(stat.category_id)) {
+          categoryHistory.set(stat.category_id, []);
         }
-        categoryTotals[cid].total += expense;
+        if (expenseAmount > 0) {
+          categoryHistory.get(stat.category_id)?.push(expenseAmount);
+        }
+        categoryTotals.set(
+          stat.category_id,
+          (categoryTotals.get(stat.category_id) ?? 0) + expenseAmount,
+        );
+      }
+    });
+
+    incomeCategoryStats?.forEach((stat) => {
+      const month = stat.month;
+      const bucket = ensureMonth(month);
+      const wallet = walletMap.get(stat.wallet_id ?? "");
+      const currency = wallet?.currency ?? baseCurrency;
+      bucket.incomeAmount +=
+        Math.abs(
+          convertCurrency(
+            stat.income_cents,
+            currency,
+            baseCurrency,
+            conversionRates,
+          ),
+        ) / 100;
+    });
+
+    const historicalMonths = Array.from(byMonth.keys()).sort(
+      (left, right) => new Date(left).getTime() - new Date(right).getTime(),
+    );
+    const lastMonth = historicalMonths[historicalMonths.length - 1] ?? null;
+
+    const obligationCategories = categories
+      .filter(
+        (category) =>
+          category.type === "expense" && getObligationKind(category) !== "none",
+      )
+      .sort((left, right) => {
+        const rightTotal = categoryTotals.get(right.id) ?? 0;
+        const leftTotal = categoryTotals.get(left.id) ?? 0;
+        if (rightTotal !== leftTotal) return rightTotal - leftTotal;
+        return left.name.localeCompare(right.name);
       });
 
-      const sorted = Object.entries(categoryTotals).sort(
-        ([, a], [, b]) => b.total - a.total,
-      );
-      const fallbackTopN = 3;
-      const fallbackIds = new Set(
-        sorted.slice(0, fallbackTopN).map(([id]) => id),
-      );
-      const baselineIds =
-        explicitObligationIds.size > 0 ? explicitObligationIds : fallbackIds;
-      const topCategoryNames =
-        explicitObligationIds.size > 0
-          ? sorted
-              .filter(([id]) => baselineIds.has(id))
-              .map(([, value]) => value.name)
-          : sorted.slice(0, fallbackTopN).map(([, value]) => value.name);
+    const topNames = obligationCategories.map((category) => category.name);
 
-      // Group by month
-      const byMonth: Record<
-        string,
-        { baseline: number; variable: number }
-      > = {};
-      categoryStats.forEach((s) => {
-        if (!byMonth[s.month]) byMonth[s.month] = { baseline: 0, variable: 0 };
-        const wallet = walletMap.get(s.wallet_id ?? "");
-        const currency = wallet?.currency ?? baseCurrency;
-        const expense =
-          Math.abs(
-            convertCurrency(
-              s.outcome_cents,
-              currency,
-              baseCurrency,
-              conversionRates,
-            ),
-          ) / 100;
-        if (baselineIds.has(s.category_id ?? "")) {
-          byMonth[s.month].baseline += expense;
-        } else {
-          byMonth[s.month].variable += expense;
-        }
-      });
+    const projectedExpenseBaseline = calculateTrimmedMean(
+      historicalMonths
+        .map((month) => byMonth.get(month)?.totalExpenseAmount ?? 0)
+        .filter((value) => value > 0),
+    );
 
-      const months = Object.keys(byMonth).sort(
-        (a, b) => new Date(a).getTime() - new Date(b).getTime(),
-      );
+    const projectedCategoryAmounts = new Map<string, number>();
+    obligationCategories.forEach((category) => {
+      const activeHistory = (categoryHistory.get(category.id) ?? []).slice(-12);
+      const projectedAmount =
+        activeHistory.length === 0
+          ? 0
+          : activeHistory.length < 3
+            ? mean(activeHistory)
+            : calculateTrimmedMean(activeHistory);
+      projectedCategoryAmounts.set(category.id, projectedAmount);
+    });
 
-      const rawData = months.map((month, index) => {
-        const { baseline, variable } = byMonth[month];
-        const total = baseline + variable;
-        const variablePctRaw = total > 0 ? (variable / total) * 100 : 0;
-        const trendWindow = months.slice(Math.max(0, index - 4), index + 1);
-        const trendWeights = trendWindow.map((_, windowIndex) => windowIndex + 1);
-        const smoothedVariablePct =
-          trendWindow.reduce((sum, currentMonth, windowIndex) => {
-            const current = byMonth[currentMonth];
-            const currentTotal = current.baseline + current.variable;
-            if (currentTotal <= 0) return sum;
+    const historicalData = historicalMonths.map((month) =>
+      toPercentPoint(byMonth.get(month)!),
+    );
+
+    const forecastData: ChartPoint[] = [];
+
+    if (lastMonth !== null) {
+      for (let index = 0; index < forecastHorizonMonths; index += 1) {
+        const month = format(
+          addMonths(parseMonthDate(lastMonth), index + 1),
+          "yyyy-MM-dd",
+        );
+
+        const atemporalAmount = obligationCategories
+          .filter((category) => getObligationKind(category) === "atemporal")
+          .reduce(
+            (sum, category) =>
+              sum + (projectedCategoryAmounts.get(category.id) ?? 0),
+            0,
+          );
+
+        const temporalAmountFromBills =
+          bills?.reduce((sum, bill) => {
+            const billMonth = toMonthKey(bill.due_date);
+            if (billMonth !== month) return sum;
+
+            const wallet = walletMap.get(bill.wallet_id);
+            const currency = wallet?.currency ?? bill.currency ?? baseCurrency;
             return (
               sum +
-              ((current.variable / currentTotal) * 100) *
-                trendWeights[windowIndex]
+              Math.abs(
+                convertCurrency(
+                  bill.amount_cents,
+                  currency,
+                  baseCurrency,
+                  conversionRates,
+                ),
+              ) /
+                100
             );
-          }, 0) / trendWeights.reduce((sum, weight) => sum + weight, 0);
-        const rollingWindow = months.slice(Math.max(0, index - 5), index + 1);
-        const rollingAverage =
-          rollingWindow.reduce((sum, currentMonth) => {
-            const current = byMonth[currentMonth];
-            const currentTotal = current.baseline + current.variable;
-            if (currentTotal <= 0) return sum;
-            return sum + (current.variable / currentTotal) * 100;
-          }, 0) / rollingWindow.length;
-        const rollingAbsolute =
-          rollingWindow.reduce((sum, currentMonth) => {
-            const current = byMonth[currentMonth];
-            return sum + current.variable;
-          }, 0) / rollingWindow.length;
+          }, 0) ?? 0;
 
-        return {
-          month,
-          baseline: 100 - smoothedVariablePct,
-          variable: smoothedVariablePct,
-          rawVariable: variablePctRaw,
-          rollingAverage,
-          baselineAmount: baseline,
-          variableAmount: variable,
-          rawVariableAmount: variable,
-          rollingAbsolute,
-        };
-      });
+        const temporalAmountFromRecurrentBills =
+          recurrentBills?.reduce((sum, recurrentBill) => {
+            if (
+              !isMonthWithinWindow(
+                month,
+                recurrentBill.start_date,
+                recurrentBill.end_date,
+              )
+            ) {
+              return sum;
+            }
 
-      // Variable % in the last month
-      const currentVariablePct =
-        rawData.length > 0 ? rawData[rawData.length - 1].variable : 0;
-      const currentAvgVariablePct =
-        rawData.length > 0 ? rawData[rawData.length - 1].rollingAverage : 0;
-      const currentVariableAmount =
-        rawData.length > 0 ? rawData[rawData.length - 1].variableAmount : 0;
-      const currentAvgVariableAmount =
-        rawData.length > 0 ? rawData[rawData.length - 1].rollingAbsolute : 0;
-      const averageBaselinePct =
-        rawData.length > 0
-          ? rawData.reduce((sum, point) => sum + point.baseline, 0) /
-            rawData.length
-          : 0;
-      const averageBaselineAmount =
-        rawData.length > 0
-          ? rawData.reduce((sum, point) => sum + point.baselineAmount, 0) /
-            rawData.length
-          : 0;
-      const averageTotalAmount =
-        rawData.length > 0
-          ? rawData.reduce(
-              (sum, point) => sum + point.baselineAmount + point.variableAmount,
-              0,
-            ) / rawData.length
-          : 0;
+            const wallet = walletMap.get(recurrentBill.wallet_id);
+            const currency = wallet?.currency ?? recurrentBill.currency ?? baseCurrency;
+            const baseAmount =
+              Math.abs(
+                convertCurrency(
+                  recurrentBill.amount_cents,
+                  currency,
+                  baseCurrency,
+                  conversionRates,
+                ),
+              ) / 100;
+            return sum + toMonthlyAmount(baseAmount, recurrentBill.interval_type);
+          }, 0) ?? 0;
 
-      const absoluteCapped = capChartOutliers(
-        rawData,
-        ["baselineAmount", "variableAmount"] as const,
-        peakNormalizationPercentile,
-      );
-      const chartData = rawData.map((point, index) => {
-        const cappedPoint = absoluteCapped.data[index];
-        return {
-          ...point,
-          cappedBaselineAmount: cappedPoint?.baselineAmount ?? point.baselineAmount,
-          cappedVariableAmount: cappedPoint?.variableAmount ?? point.variableAmount,
-          _absoluteOriginal: cappedPoint?._original ?? {},
-        };
-      });
+        const temporalAmount =
+          temporalAmountFromBills + temporalAmountFromRecurrentBills;
 
-      const config: ChartConfig = {
-        variable: {
-          label: "Exploration capital",
-          color: "#3b82f6",
-        },
-        baseline: {
-          label: "Required spend",
-          color: "#3f3f46",
-        },
-      };
+        const totalExpenseAmount = Math.max(
+          projectedExpenseBaseline,
+          atemporalAmount + temporalAmount,
+        );
+        const discretionaryAmount = Math.max(
+          totalExpenseAmount - atemporalAmount - temporalAmount,
+          0,
+        );
 
-      return {
-        chartData,
-        chartConfig: config,
-        topCategoryNames,
-        variablePct: currentVariablePct,
-        avgVariablePct: currentAvgVariablePct,
-        variableAmount: currentVariableAmount,
-        avgVariableAmount: currentAvgVariableAmount,
-        avgBaselinePct: averageBaselinePct,
-        avgBaselineAmount: averageBaselineAmount,
-        avgTotalAmount: averageTotalAmount,
-      };
-    }, [
-      categoryStats,
-      conversionRates,
-      baseCurrency,
-      walletMap,
+        const incomeAmount =
+          recurringIncome?.reduce((sum, transaction) => {
+            if (
+              !isMonthWithinWindow(
+                month,
+                transaction.start_date,
+                transaction.end_date,
+              )
+            ) {
+              return sum;
+            }
+
+            const wallet = walletMap.get(transaction.wallet_id);
+            const currency = wallet?.currency ?? baseCurrency;
+            const baseAmount =
+              Math.abs(
+                convertCurrency(
+                  transaction.amount_cents,
+                  currency,
+                  baseCurrency,
+                  conversionRates,
+                ),
+              ) / 100;
+
+            return sum + toMonthlyAmount(baseAmount, transaction.interval_type);
+          }, 0) ?? 0;
+
+        forecastData.push(
+          toPercentPoint({
+            month,
+            isForecast: true,
+            atemporalAmount,
+            temporalAmount,
+            discretionaryAmount,
+            incomeAmount,
+            totalExpenseAmount,
+          }),
+        );
+      }
+    }
+
+    const rawChartData = [...historicalData, ...forecastData];
+    const absoluteCapped = capChartOutliers(
+      rawChartData,
+      [
+        "atemporalAmount",
+        "temporalAmount",
+        "discretionaryAmount",
+        "incomeAmount",
+      ] as const,
       peakNormalizationPercentile,
-    ]);
+    );
+
+    const normalizedChartData = rawChartData.map((point, index) => {
+      const cappedPoint = absoluteCapped.data[index];
+      return {
+        ...point,
+        cappedAtemporalAmount:
+          cappedPoint?.atemporalAmount ?? point.atemporalAmount,
+        cappedTemporalAmount:
+          cappedPoint?.temporalAmount ?? point.temporalAmount,
+        cappedDiscretionaryAmount:
+          cappedPoint?.discretionaryAmount ?? point.discretionaryAmount,
+        cappedIncomeAmount: cappedPoint?.incomeAmount ?? point.incomeAmount,
+        _absoluteOriginal: cappedPoint?._original ?? {},
+      };
+    });
+
+    const historicalOnly = normalizedChartData.filter((point) => !point.isForecast);
+    const currentHistoricalPoint =
+      historicalOnly[historicalOnly.length - 1] ?? null;
+
+    const average = (selector: (point: ChartPoint) => number) =>
+      normalizedChartData.length > 0
+        ? normalizedChartData.reduce((sum, point) => sum + selector(point), 0) /
+          normalizedChartData.length
+        : 0;
+
+    return {
+      chartData: normalizedChartData,
+      chartConfig: {
+        atemporal: {
+          label: "Always required",
+          color: "#52525b",
+        },
+        temporal: {
+          label: "Timed required",
+          color: "#71717a",
+        },
+        discretionary: {
+          label: "Exploration capital",
+          color: "#2563eb",
+        },
+      } satisfies ChartConfig,
+      topCategoryNames: topNames,
+      currentDiscretionaryPct: currentHistoricalPoint?.discretionaryPct ?? 0,
+      currentDiscretionaryAmount:
+        currentHistoricalPoint?.discretionaryAmount ?? 0,
+      avgDiscretionaryPct: average((point) => point.discretionaryPct),
+      avgDiscretionaryAmount: average((point) => point.discretionaryAmount),
+      avgAtemporalPct: average((point) => point.atemporalPct),
+      avgTemporalPct: average((point) => point.temporalPct),
+      avgIncomePct: average((point) => point.incomePct),
+      avgAtemporalAmount: average((point) => point.atemporalAmount),
+      avgTemporalAmount: average((point) => point.temporalAmount),
+      avgIncomeAmount: average((point) => point.incomeAmount),
+      lastHistoricalMonth: lastMonth,
+      currentPoint: currentHistoricalPoint,
+    };
+  }, [
+    baseCurrency,
+    bills,
+    categories,
+    categoryMap,
+    conversionRates,
+    expenseCategoryStats,
+    forecastHorizonMonths,
+    incomeCategoryStats,
+    peakNormalizationPercentile,
+    recurrentBills,
+    recurringIncome,
+    walletMap,
+  ]);
 
   const percentageChange = useMemo(() => {
-    if (chartData.length < 2) return 0;
-    const prev = chartData[chartData.length - 2].variable;
-    const curr = chartData[chartData.length - 1].variable;
-    if (prev === 0) return 0;
-    return ((curr - prev) / prev) * 100;
-  }, [chartData]);
+    const historicalData = chartData.filter((point) => !point.isForecast);
+    if (historicalData.length < 2) return 0;
+
+    const previous = historicalData[historicalData.length - 2];
+    const current = historicalData[historicalData.length - 1];
+    const previousValue =
+      chartValueMode === "percentage"
+        ? previous.discretionaryPct
+        : previous.discretionaryAmount;
+    const currentValue =
+      chartValueMode === "percentage"
+        ? current.discretionaryPct
+        : current.discretionaryAmount;
+
+    if (previousValue === 0) return 0;
+    return ((currentValue - previousValue) / previousValue) * 100;
+  }, [chartData, chartValueMode]);
 
   if (isLoading) {
     return (
@@ -308,8 +673,8 @@ export function ExplorationCapitalChart({
         <CardHeader>
           <CardTitle>Exploration Capital</CardTitle>
           <CardDescription>
-            Shows how much of your spending is still flexible after baseline
-            obligations take their share.
+            Shows how much of your spending stays discretionary after required
+            obligations and how that mix projects into the forecast window.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -319,14 +684,14 @@ export function ExplorationCapitalChart({
     );
   }
 
-  if (!chartData || chartData.length === 0) {
+  if (!chartData.length || !currentPoint) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Exploration Capital</CardTitle>
           <CardDescription>
-            Shows how much of your spending is still flexible after baseline
-            obligations take their share.
+            Shows how much of your spending stays discretionary after required
+            obligations and how that mix projects into the forecast window.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -339,19 +704,28 @@ export function ExplorationCapitalChart({
   }
 
   const explorationColor =
-    variablePct >= 40 ? "#22c55e" : variablePct >= 20 ? "#f59e0b" : "#ef4444";
+    currentDiscretionaryPct >= 40
+      ? "#22c55e"
+      : currentDiscretionaryPct >= 20
+        ? "#f59e0b"
+        : "#ef4444";
   const statusLabel =
-    variablePct >= 40 ? "Healthy room" : variablePct >= 20 ? "Tight" : "Constrained";
+    currentDiscretionaryPct >= 40
+      ? "Healthy room"
+      : currentDiscretionaryPct >= 20
+        ? "Tight"
+        : "Constrained";
   const headlineValue =
     chartValueMode === "percentage" ? (
-      `${variablePct.toFixed(0)}%`
+      `${currentDiscretionaryPct.toFixed(0)}%`
     ) : (
       <Money
-        cents={Math.round(variableAmount * 100)}
+        cents={Math.round(currentDiscretionaryAmount * 100)}
         currency={baseCurrency}
         className="font-bold"
       />
     );
+  const firstForecastMonth = chartData.find((point) => point.isForecast)?.month;
 
   return (
     <Card>
@@ -367,12 +741,12 @@ export function ExplorationCapitalChart({
         </CardTitle>
         <CardDescription>
           {chartValueMode === "percentage"
-            ? "The stacked areas show your smoothed discretionary share on top of required spend. "
-            : "The stacked areas show your monthly discretionary amount on top of required spend. Extreme peaks are normalized using the global chart cap control. "}
+            ? "The stacked areas split every month into always-required, timed-required, and discretionary spend. Forecast months keep the same stack, with timed obligations sourced from bills."
+            : "The stacked areas show monthly required and discretionary amounts, with forecast months projected from category history, bills, and recurring income. Extreme peaks are normalized using the global chart cap control."}{" "}
           {topCategoryNames.length > 0 ? (
             <>Required spend is anchored by {topCategoryNames.join(", ")}.</>
           ) : (
-            <>Required spend is inferred from your largest recurring categories.</>
+            <>Classify expense categories as required to improve the forecast.</>
           )}
         </CardDescription>
       </CardHeader>
@@ -388,110 +762,98 @@ export function ExplorationCapitalChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(v) => format(parseMonthDate(v), "MMM yy")}
+              tickFormatter={(value) => format(parseMonthDate(value), "MMM yy")}
             />
             <YAxis
-              domain={[0, "auto"]}
+              domain={chartValueMode === "percentage" ? [0, 100] : [0, "auto"]}
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(v) =>
+              tickFormatter={(value) =>
                 chartValueMode === "percentage"
-                  ? `${v.toFixed(0)}%`
-                  : formatCurrency(v, baseCurrency)
+                  ? `${value.toFixed(0)}%`
+                  : formatCurrency(value, baseCurrency)
               }
             />
+            {firstForecastMonth && (
+              <ReferenceArea
+                x1={firstForecastMonth}
+                x2={chartData[chartData.length - 1]?.month}
+                fill="#ffffff"
+                fillOpacity={0.04}
+                strokeOpacity={0}
+              />
+            )}
             <ChartTooltip
               cursor={false}
-              content={({ active, payload, label }) => {
-                if (!active || !payload?.length) return null;
-                const variable = payload.find(
-                  (p) =>
-                    p.dataKey ===
-                    (chartValueMode === "percentage" ? "variable" : "variableAmount"),
-                )?.value as number | undefined;
-                const rawVariable = payload.find(
-                  (p) =>
-                    p.dataKey ===
-                    (chartValueMode === "percentage" ? "rawVariable" : "rawVariableAmount"),
-                )?.value as number | undefined;
-                const rollingAverage = payload.find(
-                  (p) =>
-                    p.dataKey ===
-                    (chartValueMode === "percentage" ? "rollingAverage" : "rollingAbsolute"),
-                )?.value as number | undefined;
-                const baseline = payload.find(
-                  (p) =>
-                    p.dataKey ===
-                    (chartValueMode === "percentage"
-                      ? "baseline"
-                      : "cappedBaselineAmount"),
-                )?.value as number | undefined;
-                const dataPoint = chartData.find((point) => point.month === label);
-                const absoluteOriginal = dataPoint?._absoluteOriginal || {};
-                const rawBaselineAmount =
-                  typeof absoluteOriginal.baselineAmount === "number"
-                    ? absoluteOriginal.baselineAmount
-                    : baseline;
-                const rawVariableAmount =
-                  typeof absoluteOriginal.variableAmount === "number"
-                    ? absoluteOriginal.variableAmount
-                    : variable;
+              content={({ active, label }) => {
+                if (!active || !label) return null;
+
+                const point = chartData.find((entry) => entry.month === label);
+                if (!point) return null;
+
+                const original = point._absoluteOriginal ?? {};
+                const atemporalAmount =
+                  original.atemporalAmount ?? point.atemporalAmount;
+                const temporalAmount =
+                  original.temporalAmount ?? point.temporalAmount;
+                const discretionaryAmount =
+                  original.discretionaryAmount ?? point.discretionaryAmount;
+                const incomeAmount = original.incomeAmount ?? point.incomeAmount;
+                const chartIsCapped =
+                  chartValueMode === "absolute" &&
+                  (atemporalAmount !== point.cappedAtemporalAmount ||
+                    temporalAmount !== point.cappedTemporalAmount ||
+                    discretionaryAmount !== point.cappedDiscretionaryAmount ||
+                    incomeAmount !== point.cappedIncomeAmount);
+
                 return (
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
-                    <div className="text-sm font-medium mb-1">
+                    <div className="mb-1 text-sm font-medium">
                       {format(parseMonthDate(label), "MMMM yyyy")}
+                      {point.isForecast ? " · projected" : ""}
                     </div>
-                    {variable !== undefined && (
-                      <div className="flex justify-between gap-4 text-sm">
-                        <span style={{ color: "#3b82f6" }}>Exploration</span>
-                        <span className="font-bold">
-                          {chartValueMode === "percentage"
-                            ? `${variable.toFixed(1)}%`
-                            : formatCurrency(rawVariableAmount ?? variable, baseCurrency)}
-                        </span>
+                    <div className="flex justify-between gap-4 text-sm">
+                      <span className="text-muted-foreground">
+                        Always required
+                      </span>
+                      <span>
+                        {chartValueMode === "percentage"
+                          ? `${point.atemporalPct.toFixed(1)}%`
+                          : formatCurrency(atemporalAmount, baseCurrency)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-4 text-sm">
+                      <span className="text-muted-foreground">
+                        Timed required
+                      </span>
+                      <span>
+                        {chartValueMode === "percentage"
+                          ? `${point.temporalPct.toFixed(1)}%`
+                          : formatCurrency(temporalAmount, baseCurrency)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-4 text-sm">
+                      <span style={{ color: "#2563eb" }}>Exploration</span>
+                      <span className="font-bold">
+                        {chartValueMode === "percentage"
+                          ? `${point.discretionaryPct.toFixed(1)}%`
+                          : formatCurrency(discretionaryAmount, baseCurrency)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-4 text-sm">
+                      <span className="text-muted-foreground">Income</span>
+                      <span>
+                        {chartValueMode === "percentage"
+                          ? `${point.incomePct.toFixed(1)}%`
+                          : formatCurrency(incomeAmount, baseCurrency)}
+                      </span>
+                    </div>
+                    {chartIsCapped && (
+                      <div className="text-muted-foreground pt-1 text-xs">
+                        Chart view capped for readability.
                       </div>
                     )}
-                    {rawVariable !== undefined && (
-                      <div className="flex justify-between gap-4 text-sm">
-                        <span className="text-muted-foreground">Raw month</span>
-                        <span>
-                          {chartValueMode === "percentage"
-                            ? `${rawVariable.toFixed(1)}%`
-                            : formatCurrency(rawVariable, baseCurrency)}
-                        </span>
-                      </div>
-                    )}
-                    {rollingAverage !== undefined && (
-                      <div className="flex justify-between gap-4 text-sm">
-                        <span className="text-muted-foreground">
-                          6-month average
-                        </span>
-                        <span>
-                          {chartValueMode === "percentage"
-                            ? `${rollingAverage.toFixed(1)}%`
-                            : formatCurrency(rollingAverage, baseCurrency)}
-                        </span>
-                      </div>
-                    )}
-                    {baseline !== undefined && (
-                      <div className="flex justify-between gap-4 text-sm">
-                        <span className="text-muted-foreground">Required</span>
-                        <span>
-                          {chartValueMode === "percentage"
-                            ? `${baseline.toFixed(1)}%`
-                            : formatCurrency(rawBaselineAmount ?? baseline, baseCurrency)}
-                        </span>
-                      </div>
-                    )}
-                    {chartValueMode === "absolute" &&
-                      rawVariableAmount !== undefined &&
-                      variable !== undefined &&
-                      rawVariableAmount > variable && (
-                        <div className="text-muted-foreground pt-1 text-xs">
-                          Chart view capped for readability.
-                        </div>
-                      )}
                   </div>
                 );
               }}
@@ -502,13 +864,13 @@ export function ExplorationCapitalChart({
                   y={20}
                   stroke="#f59e0b"
                   strokeDasharray="4 4"
-                  strokeOpacity={0.6}
+                  strokeOpacity={0.55}
                 />
                 <ReferenceLine
                   y={40}
                   stroke="#22c55e"
                   strokeDasharray="4 4"
-                  strokeOpacity={0.6}
+                  strokeOpacity={0.55}
                 />
                 <ReferenceLine
                   y={60}
@@ -517,25 +879,43 @@ export function ExplorationCapitalChart({
                   strokeOpacity={0.4}
                 />
                 <ReferenceLine
-                  y={avgBaselinePct}
+                  y={avgAtemporalPct}
                   stroke="#a1a1aa"
                   strokeDasharray="6 4"
                   strokeOpacity={0.8}
+                />
+                <ReferenceLine
+                  y={avgAtemporalPct + avgTemporalPct}
+                  stroke="#d4d4d8"
+                  strokeDasharray="3 5"
+                  strokeOpacity={0.9}
+                />
+                <ReferenceLine
+                  y={avgIncomePct}
+                  stroke="#22c55e"
+                  strokeDasharray="8 4"
+                  strokeOpacity={0.45}
                 />
               </>
             )}
             {chartValueMode === "absolute" && (
               <>
                 <ReferenceLine
-                  y={avgBaselineAmount}
+                  y={avgAtemporalAmount}
                   stroke="#a1a1aa"
                   strokeDasharray="6 4"
                   strokeOpacity={0.8}
                 />
                 <ReferenceLine
-                  y={avgTotalAmount}
-                  stroke="#60a5fa"
-                  strokeDasharray="6 4"
+                  y={avgAtemporalAmount + avgTemporalAmount}
+                  stroke="#d4d4d8"
+                  strokeDasharray="3 5"
+                  strokeOpacity={0.9}
+                />
+                <ReferenceLine
+                  y={avgIncomeAmount}
+                  stroke="#22c55e"
+                  strokeDasharray="8 4"
                   strokeOpacity={0.45}
                 />
               </>
@@ -543,26 +923,39 @@ export function ExplorationCapitalChart({
             <Area
               dataKey={
                 chartValueMode === "percentage"
-                  ? "baseline"
-                  : "cappedBaselineAmount"
+                  ? "atemporalPct"
+                  : "cappedAtemporalAmount"
               }
-              name="Required spend"
+              name="Always required"
               type="monotone"
-              fill="#3f3f46"
-              fillOpacity={0.55}
+              fill="#52525b"
+              fillOpacity={0.6}
               stroke="none"
               stackId="capacity"
             />
             <Area
               dataKey={
                 chartValueMode === "percentage"
-                  ? "variable"
-                  : "cappedVariableAmount"
+                  ? "temporalPct"
+                  : "cappedTemporalAmount"
+              }
+              name="Timed required"
+              type="monotone"
+              fill="#71717a"
+              fillOpacity={0.5}
+              stroke="none"
+              stackId="capacity"
+            />
+            <Area
+              dataKey={
+                chartValueMode === "percentage"
+                  ? "discretionaryPct"
+                  : "cappedDiscretionaryAmount"
               }
               name="Exploration capital"
               type="monotone"
-              fill="#1d4ed8"
-              fillOpacity={0.18}
+              fill="#2563eb"
+              fillOpacity={0.2}
               stroke="none"
               stackId="capacity"
             />
@@ -575,29 +968,41 @@ export function ExplorationCapitalChart({
           <TrendingIndicator
             percentageChange={percentageChange}
             startDate={chartData[0]?.month}
-            endDate={chartData[chartData.length - 1]?.month}
+            endDate={lastHistoricalMonth ?? chartData[chartData.length - 1]?.month}
           />
-            <div className="text-right">
-              <div className="text-muted-foreground text-xs uppercase tracking-wide">
-                Current zone
-              </div>
-              <div className="font-medium" style={{ color: explorationColor }}>
-                {statusLabel}
-              </div>
-              <div className="text-muted-foreground text-xs">
-                Avg{" "}
-                {chartValueMode === "percentage"
-                  ? `${avgVariablePct.toFixed(0)}%`
-                  : formatCurrency(avgVariableAmount, baseCurrency)}
-              </div>
-              <div className="text-muted-foreground text-xs">
-                Required avg{" "}
-                {chartValueMode === "percentage"
-                  ? `${avgBaselinePct.toFixed(0)}%`
-                  : formatCurrency(avgBaselineAmount, baseCurrency)}
-              </div>
+          <div className="text-right">
+            <div className="text-muted-foreground text-xs uppercase tracking-wide">
+              Current zone
+            </div>
+            <div className="font-medium" style={{ color: explorationColor }}>
+              {statusLabel}
+            </div>
+            <div className="text-muted-foreground text-xs">
+              Avg exploration{" "}
+              {chartValueMode === "percentage"
+                ? `${avgDiscretionaryPct.toFixed(0)}%`
+                : formatCurrency(avgDiscretionaryAmount, baseCurrency)}
+            </div>
+            <div className="text-muted-foreground text-xs">
+              Avg always required{" "}
+              {chartValueMode === "percentage"
+                ? `${avgAtemporalPct.toFixed(0)}%`
+                : formatCurrency(avgAtemporalAmount, baseCurrency)}
+            </div>
+            <div className="text-muted-foreground text-xs">
+              Avg timed required{" "}
+              {chartValueMode === "percentage"
+                ? `${avgTemporalPct.toFixed(0)}%`
+                : formatCurrency(avgTemporalAmount, baseCurrency)}
+            </div>
+            <div className="text-muted-foreground text-xs">
+              Avg income{" "}
+              {chartValueMode === "percentage"
+                ? `${avgIncomePct.toFixed(0)}%`
+                : formatCurrency(avgIncomeAmount, baseCurrency)}
             </div>
           </div>
+        </div>
       </CardFooter>
     </Card>
   );

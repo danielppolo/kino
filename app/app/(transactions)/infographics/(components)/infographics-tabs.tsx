@@ -159,7 +159,6 @@ export function InfographicsTabs({
                 to={filters.to}
                 type="expense"
                 title="Expenses by Label"
-                chartType="polar"
               />
             </div>
             <div className="col-span-2">
@@ -168,7 +167,6 @@ export function InfographicsTabs({
                 to={filters.to}
                 type="income"
                 title="Income by Label"
-                chartType="polar"
               />
             </div>
           </div>

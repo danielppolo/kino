@@ -451,7 +451,7 @@ export const getMonthlyCategoryStats = async (
         name,
         icon,
         type,
-        is_obligation
+        required_spend_kind
       )
     `,
       )
@@ -848,7 +848,11 @@ export const getTagTransactionCounts = async (
 
 export const listRecurringTransactions = async (
   client: TypedSupabaseClient,
-  params?: { walletId?: string; type?: "income" | "expense" },
+  params?: {
+    walletId?: string;
+    workspaceWalletIds?: string[];
+    type?: "income" | "expense";
+  },
 ) => {
   let query = client
     .from("recurring_transactions")
@@ -859,7 +863,8 @@ export const listRecurringTransactions = async (
         id,
         name,
         type,
-        icon
+        icon,
+        required_spend_kind
       )
     `,
     )
@@ -867,6 +872,11 @@ export const listRecurringTransactions = async (
 
   if (params?.walletId) {
     query = query.eq("wallet_id", params.walletId);
+  } else if (
+    params?.workspaceWalletIds &&
+    params.workspaceWalletIds.length > 0
+  ) {
+    query = query.in("wallet_id", params.workspaceWalletIds);
   }
 
   if (params?.type) {
@@ -937,6 +947,7 @@ export const listBills = async (
   client: TypedSupabaseClient,
   params?: {
     walletId?: string;
+    workspaceWalletIds?: string[];
     page?: number;
     pageSize?: number;
   },
@@ -948,6 +959,11 @@ export const listBills = async (
 
   if (params?.walletId) {
     query = query.eq("wallet_id", params.walletId);
+  } else if (
+    params?.workspaceWalletIds &&
+    params.workspaceWalletIds.length > 0
+  ) {
+    query = query.in("wallet_id", params.workspaceWalletIds);
   }
 
   const page = params?.page ?? 0;
@@ -966,6 +982,7 @@ export const listRecurrentBills = async (
   client: TypedSupabaseClient,
   params?: {
     walletId?: string;
+    workspaceWalletIds?: string[];
     page?: number;
     pageSize?: number;
   },
@@ -977,6 +994,11 @@ export const listRecurrentBills = async (
 
   if (params?.walletId) {
     query = query.eq("wallet_id", params.walletId);
+  } else if (
+    params?.workspaceWalletIds &&
+    params.workspaceWalletIds.length > 0
+  ) {
+    query = query.in("wallet_id", params.workspaceWalletIds);
   }
 
   const page = params?.page ?? 0;

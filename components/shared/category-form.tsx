@@ -5,6 +5,13 @@ import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Input } from "../ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 import { EntityForm } from "@/components/shared/entity-form";
 import CreatableMultiSelect from "@/components/ui/creatable-multi-select";
@@ -15,7 +22,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { useWorkspace } from "@/contexts/workspace-context";
 import { ICONS } from "@/utils/constants";
 import { invalidateWorkspaceQueries } from "@/utils/query-cache";
@@ -36,6 +42,51 @@ interface CategoryFormProps {
 }
 
 type CategoryFormValues = Database["public"]["Tables"]["categories"]["Insert"];
+type RequiredSpendKind = "none" | "atemporal" | "temporal";
+
+function normalizeCategoryValues(values: CategoryFormValues): CategoryFormValues {
+  const requiredSpendKind = (values.required_spend_kind ?? "none") as RequiredSpendKind;
+
+  return {
+    ...values,
+    required_spend_kind: requiredSpendKind,
+  };
+}
+
+function CategoryRequiredSpendFields() {
+  return (
+    <FormField
+      name="required_spend_kind"
+      render={({ field }) => (
+        <FormItem className="rounded-lg border p-3">
+          <div className="space-y-1">
+            <Label>Required spend</Label>
+            <p className="text-muted-foreground text-sm">
+              Choose whether this category belongs to the always-on baseline or
+              the bill-like required baseline.
+            </p>
+          </div>
+          <FormControl>
+            <Select
+              value={(field.value ?? "none") as string}
+              onValueChange={field.onChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select requirement mode" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Not required</SelectItem>
+                <SelectItem value="atemporal">Atemporal required</SelectItem>
+                <SelectItem value="temporal">Temporal required</SelectItem>
+              </SelectContent>
+            </Select>
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+}
 
 const CategoryForm = ({
   type,
@@ -49,7 +100,7 @@ const CategoryForm = ({
     type,
     name: "",
     icon: ICONS[Math.floor(Math.random() * ICONS.length)],
-    is_obligation: false,
+    required_spend_kind: "none",
     keywords: [],
   };
 
@@ -117,8 +168,9 @@ const CategoryForm = ({
 
   const handleSubmit = (values: CategoryFormValues) => {
     return new Promise<{ error?: string }>((resolve) => {
+      const normalizedValues = normalizeCategoryValues(values);
       if (category) {
-        updateMutation.mutate(values, {
+        updateMutation.mutate(normalizedValues, {
           onSuccess: () => resolve({}),
           onError: (error: unknown) => {
             if (error instanceof Error) {
@@ -129,7 +181,7 @@ const CategoryForm = ({
           },
         });
       } else {
-        createMutation.mutate(values, {
+        createMutation.mutate(normalizedValues, {
           onSuccess: () => resolve({}),
           onError: (error: unknown) => {
             if (error instanceof Error) {
@@ -161,7 +213,14 @@ const CategoryForm = ({
   return (
     <EntityForm
       title="Category"
-      entity={category}
+      entity={
+        category
+          ? {
+              ...category,
+              required_spend_kind: category.required_spend_kind ?? "none",
+            }
+          : undefined
+      }
       open={open}
       onOpenChange={onOpenChange}
       onSuccess={onSuccess}
@@ -233,29 +292,7 @@ const CategoryForm = ({
           </FormItem>
         )}
       />
-      {type === "expense" && (
-        <FormField
-          name="is_obligation"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-              <div className="space-y-1">
-                <Label htmlFor="is-obligation">Required category</Label>
-                <p className="text-muted-foreground text-sm">
-                  Mark fixed or expected categories that should reduce
-                  exploration capital.
-                </p>
-              </div>
-              <FormControl>
-                <Switch
-                  id="is-obligation"
-                  checked={Boolean(field.value)}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-      )}
+      {type === "expense" && <CategoryRequiredSpendFields />}
     </EntityForm>
   );
 };
