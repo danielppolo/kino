@@ -33,7 +33,11 @@ import {
 } from "@/components/ui/chart";
 import { Money } from "@/components/ui/money";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
-import { useCategories, useCurrency, useWallets } from "@/contexts/settings-context";
+import {
+  useCategories,
+  useCurrency,
+  useWallets,
+} from "@/contexts/settings-context";
 import {
   calculateTrimmedMean,
   capChartOutliers,
@@ -91,9 +95,11 @@ function toMonthKey(date: string) {
   return format(startOfMonth(parseISO(date)), "yyyy-MM-dd");
 }
 
-function getObligationKind(category?: {
-  required_spend_kind?: string | null;
-} | null): ObligationKind {
+function getObligationKind(
+  category?: {
+    required_spend_kind?: string | null;
+  } | null,
+): ObligationKind {
   if (category?.required_spend_kind === "atemporal") return "atemporal";
   if (category?.required_spend_kind === "temporal") return "temporal";
   return "none";
@@ -137,7 +143,12 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
-function toPercentPoint(point: Omit<ChartPoint, "atemporalPct" | "temporalPct" | "discretionaryPct" | "incomePct">): ChartPoint {
+function toPercentPoint(
+  point: Omit<
+    ChartPoint,
+    "atemporalPct" | "temporalPct" | "discretionaryPct" | "incomePct"
+  >,
+): ChartPoint {
   if (point.totalExpenseAmount <= 0) {
     return {
       ...point,
@@ -150,10 +161,7 @@ function toPercentPoint(point: Omit<ChartPoint, "atemporalPct" | "temporalPct" |
 
   const atemporalPct = (point.atemporalAmount / point.totalExpenseAmount) * 100;
   const temporalPct = (point.temporalAmount / point.totalExpenseAmount) * 100;
-  const discretionaryPct = Math.max(
-    0,
-    100 - atemporalPct - temporalPct,
-  );
+  const discretionaryPct = Math.max(0, 100 - atemporalPct - temporalPct);
   const incomePct = Math.min(
     100,
     (point.incomeAmount / point.totalExpenseAmount) * 100,
@@ -178,10 +186,15 @@ export function ExplorationCapitalChart({
   const [categories, categoryMap] = useCategories();
   const { conversionRates, baseCurrency } = useCurrency();
   const chartValueMode = controls?.chartValueMode ?? "percentage";
-  const peakNormalizationPercentile = controls?.peakNormalizationPercentile ?? 0.97;
+  const peakNormalizationPercentile =
+    controls?.peakNormalizationPercentile ?? 0.97;
   const forecastHorizonYears = controls?.forecastHorizonYears ?? 1;
   const forecastHorizonMonths = forecastHorizonYears * 12;
-  const workspaceWalletIds = useMemo(() => wallets.map((wallet) => wallet.id), [wallets]);
+  const effectiveMonthlySpend = controls?.effectiveMonthlySpend ?? 0;
+  const workspaceWalletIds = useMemo(
+    () => wallets.map((wallet) => wallet.id),
+    [wallets],
+  );
 
   const { data: expenseCategoryStats, isLoading: loadingExpenses } = useQuery({
     queryKey: [
@@ -227,23 +240,25 @@ export function ExplorationCapitalChart({
     },
   });
 
-  const { data: recurringIncome, isLoading: loadingRecurringIncome } = useQuery({
-    queryKey: [
-      "exploration-capital-recurring-income",
-      walletId,
-      workspaceWalletIds,
-    ],
-    queryFn: async () => {
-      const supabase = await createClient();
-      const { data, error } = await listRecurringTransactions(supabase, {
+  const { data: recurringIncome, isLoading: loadingRecurringIncome } = useQuery(
+    {
+      queryKey: [
+        "exploration-capital-recurring-income",
         walletId,
         workspaceWalletIds,
-        type: "income",
-      });
-      if (error) throw error;
-      return data ?? [];
+      ],
+      queryFn: async () => {
+        const supabase = await createClient();
+        const { data, error } = await listRecurringTransactions(supabase, {
+          walletId,
+          workspaceWalletIds,
+          type: "income",
+        });
+        if (error) throw error;
+        return data ?? [];
+      },
     },
-  });
+  );
 
   const { data: bills, isLoading: loadingBills } = useQuery({
     queryKey: ["exploration-capital-bills", walletId, workspaceWalletIds],
@@ -260,7 +275,11 @@ export function ExplorationCapitalChart({
   });
 
   const { data: recurrentBills, isLoading: loadingRecurrentBills } = useQuery({
-    queryKey: ["exploration-capital-recurrent-bills", walletId, workspaceWalletIds],
+    queryKey: [
+      "exploration-capital-recurrent-bills",
+      walletId,
+      workspaceWalletIds,
+    ],
     queryFn: async () => {
       const supabase = await createClient();
       const { data, error } = await listRecurrentBills(supabase, {
@@ -298,8 +317,8 @@ export function ExplorationCapitalChart({
     currentPoint,
   } = useMemo(() => {
     if (
-        (!expenseCategoryStats || expenseCategoryStats.length === 0) &&
-        (!incomeCategoryStats || incomeCategoryStats.length === 0)
+      (!expenseCategoryStats || expenseCategoryStats.length === 0) &&
+      (!incomeCategoryStats || incomeCategoryStats.length === 0)
     ) {
       return {
         chartData: [] as ChartPoint[],
@@ -371,7 +390,8 @@ export function ExplorationCapitalChart({
         ) / 100;
 
       const category =
-        stat.categories ?? (stat.category_id ? categoryMap.get(stat.category_id) : null);
+        stat.categories ??
+        (stat.category_id ? categoryMap.get(stat.category_id) : null);
       const requiredSpendKind = getObligationKind(category);
 
       if (requiredSpendKind === "atemporal") {
@@ -506,7 +526,8 @@ export function ExplorationCapitalChart({
             }
 
             const wallet = walletMap.get(recurrentBill.wallet_id);
-            const currency = wallet?.currency ?? recurrentBill.currency ?? baseCurrency;
+            const currency =
+              wallet?.currency ?? recurrentBill.currency ?? baseCurrency;
             const baseAmount =
               Math.abs(
                 convertCurrency(
@@ -516,14 +537,20 @@ export function ExplorationCapitalChart({
                   conversionRates,
                 ),
               ) / 100;
-            return sum + toMonthlyAmount(baseAmount, recurrentBill.interval_type);
+            return (
+              sum + toMonthlyAmount(baseAmount, recurrentBill.interval_type)
+            );
           }, 0) ?? 0;
 
         const temporalAmount =
           temporalAmountFromBills + temporalAmountFromRecurrentBills;
 
+        const forecastMonthlySpend =
+          effectiveMonthlySpend > 0
+            ? effectiveMonthlySpend
+            : projectedExpenseBaseline;
         const totalExpenseAmount = Math.max(
-          projectedExpenseBaseline,
+          forecastMonthlySpend,
           atemporalAmount + temporalAmount,
         );
         const discretionaryAmount = Math.max(
@@ -598,7 +625,9 @@ export function ExplorationCapitalChart({
     const avgTemporalPctHistorical = historicalAverage(
       (point) => point.temporalPct,
     );
-    const avgIncomePctHistorical = historicalAverage((point) => point.incomePct);
+    const avgIncomePctHistorical = historicalAverage(
+      (point) => point.incomePct,
+    );
     const avgAtemporalAmountHistorical = historicalAverage(
       (point) => point.atemporalAmount,
     );
@@ -615,9 +644,7 @@ export function ExplorationCapitalChart({
       point.incomeAmount ?? 0,
     ]);
     const cappedGuideMax =
-      cappedAmountSeries.length > 0
-        ? Math.max(...cappedAmountSeries, 0)
-        : 0;
+      cappedAmountSeries.length > 0 ? Math.max(...cappedAmountSeries, 0) : 0;
     const rawGuideMax = Math.max(
       avgAtemporalAmountHistorical,
       avgAtemporalAmountHistorical + avgTemporalAmountHistorical,
@@ -663,7 +690,9 @@ export function ExplorationCapitalChart({
       };
     });
 
-    const historicalOnly = normalizedChartData.filter((point) => !point.isForecast);
+    const historicalOnly = normalizedChartData.filter(
+      (point) => !point.isForecast,
+    );
     const currentHistoricalPoint =
       historicalOnly[historicalOnly.length - 1] ?? null;
 
@@ -707,6 +736,7 @@ export function ExplorationCapitalChart({
     categoryMap,
     conversionRates,
     expenseCategoryStats,
+    effectiveMonthlySpend,
     forecastHorizonMonths,
     incomeCategoryStats,
     peakNormalizationPercentile,
@@ -745,7 +775,9 @@ export function ExplorationCapitalChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">Loading...</div>
+          <div className="flex h-64 items-center justify-center">
+            Loading...
+          </div>
         </CardContent>
       </Card>
     );
@@ -813,7 +845,9 @@ export function ExplorationCapitalChart({
           {topCategoryNames.length > 0 ? (
             <>Required spend is anchored by {topCategoryNames.join(", ")}.</>
           ) : (
-            <>Classify expense categories as required to improve the forecast.</>
+            <>
+              Classify expense categories as required to improve the forecast.
+            </>
           )}
         </CardDescription>
       </CardHeader>
@@ -866,7 +900,8 @@ export function ExplorationCapitalChart({
                   original.temporalAmount ?? point.temporalAmount;
                 const discretionaryAmount =
                   original.discretionaryAmount ?? point.discretionaryAmount;
-                const incomeAmount = original.incomeAmount ?? point.incomeAmount;
+                const incomeAmount =
+                  original.incomeAmount ?? point.incomeAmount;
                 const chartIsCapped =
                   chartValueMode === "absolute" &&
                   (atemporalAmount !== point.cappedAtemporalAmount ||
@@ -997,7 +1032,7 @@ export function ExplorationCapitalChart({
                   : "cappedAtemporalAmount"
               }
               name="Always required"
-              type="monotone"
+              type="bump"
               fill="#52525b"
               fillOpacity={0.6}
               stroke="none"
@@ -1010,7 +1045,7 @@ export function ExplorationCapitalChart({
                   : "cappedTemporalAmount"
               }
               name="Timed required"
-              type="monotone"
+              type="bump"
               fill="#71717a"
               fillOpacity={0.5}
               stroke="none"
@@ -1023,7 +1058,7 @@ export function ExplorationCapitalChart({
                   : "cappedDiscretionaryAmount"
               }
               name="Exploration capital"
-              type="monotone"
+              type="bump"
               fill="#2563eb"
               fillOpacity={0.2}
               stroke="none"
@@ -1038,10 +1073,12 @@ export function ExplorationCapitalChart({
           <TrendingIndicator
             percentageChange={percentageChange}
             startDate={chartData[0]?.month}
-            endDate={lastHistoricalMonth ?? chartData[chartData.length - 1]?.month}
+            endDate={
+              lastHistoricalMonth ?? chartData[chartData.length - 1]?.month
+            }
           />
           <div className="text-right">
-            <div className="text-muted-foreground text-xs uppercase tracking-wide">
+            <div className="text-muted-foreground text-xs tracking-wide uppercase">
               Current zone
             </div>
             <div className="font-medium" style={{ color: explorationColor }}>

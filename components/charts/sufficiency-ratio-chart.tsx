@@ -14,8 +14,8 @@ import {
 
 import { useQuery } from "@tanstack/react-query";
 
-import type { ForecastApiResponse } from "@/app/api/forecast/route";
 import { useChartControls } from "@/components/charts/shared/chart-controls-context";
+import { useForecastQuery } from "@/components/charts/shared/use-forecast-query";
 import {
   Card,
   CardContent,
@@ -25,7 +25,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  ChartConfig,
   ChartContainer,
   ChartTooltip,
 } from "@/components/ui/chart";
@@ -50,16 +49,6 @@ interface SufficiencyRatioChartProps {
   to?: string;
 }
 
-const chartConfig: ChartConfig = {
-  years: {
-    label: "Years of Autonomy",
-    color: "#3b82f6",
-  },
-  forecast: {
-    label: "Projected autonomy",
-    color: "#3b82f6",
-  },
-};
 const MAX_SUFFICIENCY_YEARS = 50;
 
 export function SufficiencyRatioChart({
@@ -74,6 +63,7 @@ export function SufficiencyRatioChart({
   const horizonYears = controls?.forecastHorizonYears ?? 1;
   const horizonMonths = horizonYears * 12;
   const futureLumpSum = controls?.futureLumpSum ?? 0;
+  const workspaceWalletIds = wallets.map((w) => w.id);
 
   const { data: monthlyBalances, isLoading: loadingBalances } = useQuery({
     queryKey: ["sufficiency-ratio-balances", walletId, from, to],
@@ -103,30 +93,12 @@ export function SufficiencyRatioChart({
     },
   });
 
-  const { data: forecastData, isLoading: loadingForecast } = useQuery({
-    queryKey: [
-      "sufficiency-ratio-forecast",
-      walletId,
-      baseCurrency,
-      horizonMonths,
-    ],
-    queryFn: async (): Promise<ForecastApiResponse> => {
-      const workspaceWalletIds = wallets.map((w) => w.id);
-      const res = await fetch("/api/forecast", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          walletId: walletId ?? null,
-          walletIds: workspaceWalletIds,
-          horizon: horizonMonths,
-          baseCurrency,
-          conversionRates,
-        }),
-      });
-      if (!res.ok) throw new Error("Forecast API failed");
-      return res.json();
-    },
-    staleTime: 60 * 60 * 1000,
+  const { data: forecastData, isLoading: loadingForecast } = useForecastQuery({
+    walletId,
+    walletIds: workspaceWalletIds,
+    horizonMonths,
+    baseCurrency,
+    conversionRates,
   });
 
   const isLoading = loadingBalances || loadingStats || loadingForecast;
@@ -180,7 +152,7 @@ export function SufficiencyRatioChart({
     );
     const baselineMonthlyBurn = calculateTrimmedMean(monthlyExpenseTotals);
     const effectiveMonthlyBurn =
-      controls?.monthlySpend ??
+      controls?.effectiveMonthlySpend ??
       controls?.defaultMonthlySpend ??
       forecastData?.avgMonthlyBurn ??
       baselineMonthlyBurn;
@@ -283,7 +255,7 @@ export function SufficiencyRatioChart({
     baseCurrency,
     walletMap,
     walletId,
-    controls?.monthlySpend,
+    controls?.effectiveMonthlySpend,
     controls?.defaultMonthlySpend,
     forecastMode,
     futureLumpSum,
@@ -304,7 +276,9 @@ export function SufficiencyRatioChart({
   }, [chartData]);
 
   const effectiveMonthlyBurn =
-    controls?.monthlySpend ?? controls?.defaultMonthlySpend ?? avgMonthlyBurn;
+    controls?.effectiveMonthlySpend ??
+    controls?.defaultMonthlySpend ??
+    avgMonthlyBurn;
 
   const currentLabel = useMemo(() => {
     if (effectiveMonthlyBurn === 0) return "Effectively unbounded autonomy";
@@ -319,6 +293,16 @@ export function SufficiencyRatioChart({
     if (projectedYears >= 5) return "#f59e0b";
     return "#ef4444";
   }, [projectedYears]);
+
+  const yAxisDomain = useMemo(() => {
+    const maxValue = chartData.reduce((max, point) => {
+      const pointMax = Math.max(point.years ?? 0, point.forecast ?? 0);
+      return Math.max(max, pointMax);
+    }, 0);
+
+    if (maxValue <= 0) return [0, 1] as const;
+    return [0, Math.ceil(maxValue)] as const;
+  }, [chartData]);
 
   if (isLoading) {
     return (
@@ -417,6 +401,7 @@ export function SufficiencyRatioChart({
               tickFormatter={(v) => format(parseMonthDate(v), "MMM yy")}
             />
             <YAxis
+              domain={yAxisDomain}
               tickLine={false}
               axisLine={false}
               tickMargin={8}
@@ -496,6 +481,17 @@ export function SufficiencyRatioChart({
               fill={areaColor}
               fillOpacity={0.15}
               stroke={areaColor}
+              connectNulls={false}
+            />
+            <Area
+              dataKey="forecast"
+              name="Projected autonomy"
+              type="monotone"
+              fill={areaColor}
+              fillOpacity={0.15}
+              stroke={areaColor}
+              strokeDasharray="5 5"
+              dot={false}
               connectNulls={false}
             />
             <Line
