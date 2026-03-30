@@ -317,6 +317,7 @@ export const getWalletMonthlyOwed = async (
   client: TypedSupabaseClient,
   params: {
     walletId?: string;
+    walletIds?: string[];
     from?: string;
     to?: string;
   },
@@ -335,6 +336,8 @@ export const getWalletMonthlyOwed = async (
 
     if (params.walletId) {
       query = query.eq("wallet_id", params.walletId);
+    } else if (params.walletIds && params.walletIds.length > 0) {
+      query = query.in("wallet_id", params.walletIds);
     }
 
     if (params.from) {
@@ -396,10 +399,12 @@ export async function getMonthlyStats(
   supabase: SupabaseClient,
   {
     walletId,
+    workspaceWalletIds,
     from,
     to,
   }: {
     walletId?: string;
+    workspaceWalletIds?: string[];
     from?: string;
     to?: string;
   } = {},
@@ -418,6 +423,8 @@ export async function getMonthlyStats(
 
     if (walletId) {
       query = query.eq("wallet_id", walletId);
+    } else if (workspaceWalletIds && workspaceWalletIds.length > 0) {
+      query = query.in("wallet_id", workspaceWalletIds);
     }
 
     if (from) {
@@ -1133,7 +1140,12 @@ export const getBillWithPayments = async (
 
 export const listBillsWithPayments = async (
   client: TypedSupabaseClient,
-  params?: { walletId?: string; from?: string; to?: string },
+  params?: {
+    walletId?: string;
+    walletIds?: string[];
+    from?: string;
+    to?: string;
+  },
 ) => {
   // Scope bills by wallet and/or date range so downstream IN clauses stay small
   let billsQuery = client
@@ -1143,6 +1155,8 @@ export const listBillsWithPayments = async (
 
   if (params?.walletId) {
     billsQuery = billsQuery.eq("wallet_id", params.walletId);
+  } else if (params?.walletIds && params.walletIds.length > 0) {
+    billsQuery = billsQuery.in("wallet_id", params.walletIds);
   }
   if (params?.from) {
     billsQuery = billsQuery.gte("due_date", params.from);
@@ -1350,6 +1364,7 @@ export const getMonthlyBillStats = async (
   client: TypedSupabaseClient,
   params: {
     walletId?: string;
+    walletIds?: string[];
     from?: string;
     to?: string;
   },
@@ -1357,6 +1372,7 @@ export const getMonthlyBillStats = async (
   // Get all bills with payments
   const { data: bills, error } = await listBillsWithPayments(client, {
     walletId: params.walletId,
+    walletIds: params.walletIds,
     from: params.from,
     to: params.to,
   });

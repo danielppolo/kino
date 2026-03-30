@@ -11,6 +11,7 @@ import {
   EyeOff,
   FileClock,
   FilePlus,
+  FileText,
   Folder,
   HandCoins,
   Hash,
@@ -244,6 +245,15 @@ export function GlobalCommandPalette() {
           >
             <ChartArea className="mr-2 size-4" />
             Toggle charts view
+          </CommandItem>
+          <CommandItem
+            value="Open advisor report"
+            onSelect={() =>
+              closeAndRun(() => router.push("/app/settings/reports"))
+            }
+          >
+            <FileText className="mr-2 size-4" />
+            Open advisor report
           </CommandItem>
 
           <CommandItem
