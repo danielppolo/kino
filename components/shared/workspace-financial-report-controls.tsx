@@ -173,7 +173,7 @@ export function WorkspaceFinancialReportToolbar({
       <div></div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button size="sm" disabled={isBusy} variant="ghost">
+          <Button size="sm" disabled={isBusy} variant="secondary">
             Export
             <ChevronDown className="ml-2 size-4" />
           </Button>
