@@ -392,6 +392,114 @@ export type Database = {
           },
         ]
       }
+      real_estate_asset_valuations: {
+        Row: {
+          asset_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          updated_at: string
+          valuation_amount_cents: number
+          valuation_date: string
+          valuation_method: string | null
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          valuation_amount_cents: number
+          valuation_date: string
+          valuation_method?: string | null
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          valuation_amount_cents?: number
+          valuation_date?: string
+          valuation_method?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "real_estate_asset_valuations_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "real_estate_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      real_estate_assets: {
+        Row: {
+          acquired_on: string | null
+          asset_type: Database["public"]["Enums"]["real_estate_asset_type"]
+          created_at: string
+          currency: string
+          id: string
+          metadata: Json
+          name: string
+          notes: string | null
+          origin_transaction_id: string | null
+          status: Database["public"]["Enums"]["real_estate_asset_status"]
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          acquired_on?: string | null
+          asset_type?: Database["public"]["Enums"]["real_estate_asset_type"]
+          created_at?: string
+          currency: string
+          id?: string
+          metadata?: Json
+          name: string
+          notes?: string | null
+          origin_transaction_id?: string | null
+          status?: Database["public"]["Enums"]["real_estate_asset_status"]
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          acquired_on?: string | null
+          asset_type?: Database["public"]["Enums"]["real_estate_asset_type"]
+          created_at?: string
+          currency?: string
+          id?: string
+          metadata?: Json
+          name?: string
+          notes?: string | null
+          origin_transaction_id?: string | null
+          status?: Database["public"]["Enums"]["real_estate_asset_status"]
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "real_estate_assets_origin_transaction_id_fkey"
+            columns: ["origin_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transaction_list"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "real_estate_assets_origin_transaction_id_fkey"
+            columns: ["origin_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "real_estate_assets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recurrent_bills: {
         Row: {
           amount_cents: number
@@ -1181,6 +1289,13 @@ export type Database = {
       }
     }
     Enums: {
+      real_estate_asset_status: "active" | "sold" | "archived"
+      real_estate_asset_type:
+        | "primary_home"
+        | "rental_property"
+        | "land"
+        | "commercial_property"
+        | "other_real_estate"
       wallet_type: "bank_account" | "card" | "cash"
       transaction_type_enum: "income" | "expense" | "transfer"
     }
@@ -1818,6 +1933,14 @@ export const Constants = {
   },
   public: {
     Enums: {
+      real_estate_asset_status: ["active", "sold", "archived"],
+      real_estate_asset_type: [
+        "primary_home",
+        "rental_property",
+        "land",
+        "commercial_property",
+        "other_real_estate",
+      ],
       wallet_type: ["bank_account", "card", "cash"],
       transaction_type_enum: ["income", "expense", "transfer"],
     },

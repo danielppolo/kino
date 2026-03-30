@@ -2,17 +2,17 @@
 
 import React from "react";
 import {
+  Building,
   Folder,
   Hashtag,
   Label,
+  MultiplePages,
   Page,
   RefreshDouble,
   Reports,
   User,
   ViewGrid,
   Wallet,
-  MultiplePages,
-  Building,
 } from "iconoir-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -27,15 +27,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { useWallets, useFeatureFlags } from "@/contexts/settings-context";
+import { useFeatureFlags } from "@/contexts/settings-context";
 
 const SettingsSidebar: React.FC = () => {
-  const [wallets] = useWallets();
   const { bills_enabled } = useFeatureFlags();
   const pathname = usePathname();
-
-  // Sort wallets alphabetically by name
-  const sortedWallets = wallets.sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <SidebarWrapper>
@@ -63,6 +59,17 @@ const SettingsSidebar: React.FC = () => {
                 <Link href="/app/settings/wallets">
                   <Wallet className="size-4" />
                   Wallets
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === "/app/settings/assets"}
+              >
+                <Link href="/app/settings/assets">
+                  <Building className="size-4" />
+                  Assets
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

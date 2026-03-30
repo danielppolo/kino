@@ -186,6 +186,43 @@ export const listWallets = async (
   return client.from("wallets").select("*").eq("workspace_id", workspaceId);
 };
 
+export const listRealEstateAssets = async (
+  client: TypedSupabaseClient,
+  workspaceId: string,
+) => {
+  return client
+    .from("real_estate_assets")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .order("name", { ascending: true });
+};
+
+export const listRealEstateAssetValuations = async (
+  client: TypedSupabaseClient,
+  params: {
+    assetId?: string;
+    assetIds?: string[];
+  },
+) => {
+  if (!params.assetId && params.assetIds && params.assetIds.length === 0) {
+    return { data: [], error: null };
+  }
+
+  let query = client
+    .from("real_estate_asset_valuations")
+    .select("*")
+    .order("valuation_date", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (params.assetId) {
+    query = query.eq("asset_id", params.assetId);
+  } else if (params.assetIds && params.assetIds.length > 0) {
+    query = query.in("asset_id", params.assetIds);
+  }
+
+  return query;
+};
+
 export const listTags = async (
   client: TypedSupabaseClient,
   workspaceId: string,

@@ -36,6 +36,8 @@ const WORKSPACE_INVALIDATION_ROOTS: ReadonlyArray<readonly [string]> = [
   ["views"],
   ["transaction-templates"],
   ["wallets"],
+  ["real-estate-assets"],
+  ["real-estate-asset-valuations"],
   ["workspace-wallets"],
   ["workspace-members"],
   ["wallet-members"],

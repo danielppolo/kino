@@ -6,7 +6,6 @@ import {
   useState,
   useTransition,
 } from "react";
-
 import {
   AlertCircle,
   ArrowUpRight,
@@ -15,30 +14,13 @@ import {
   CircleHelp,
   FileWarning,
   Gauge,
+  Landmark,
   Loader2,
   Radar,
   Scale,
-  SendHorizonal,
   Sparkles,
   TrendingUp,
 } from "lucide-react";
-
-import EmptyState from "@/components/shared/empty-state";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Text } from "@/components/ui/typography";
-import { cn } from "@/lib/utils";
 
 import { InsightSurface } from "./insight-surface";
 import { KeyValueTile } from "./key-value-tile";
@@ -60,6 +42,23 @@ import {
   intentLabel,
   intentLoadingCopy,
 } from "./utils";
+
+import EmptyState from "@/components/shared/empty-state";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Text } from "@/components/ui/typography";
+import { cn } from "@/lib/utils";
 
 export function FinanceCopilotCard({
   walletId,
@@ -480,8 +479,54 @@ export function FinanceCopilotCard({
                           briefingSummary.baseCurrency,
                         )}
                       </Text>
+                      <Text className="text-sm">
+                        Real estate{" "}
+                        {formatMoney(
+                          briefingSummary.totalEstimatedAssetValueCents,
+                          briefingSummary.baseCurrency,
+                        )}
+                      </Text>
                     </div>
                   ) : null}
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Landmark className="size-4 text-primary" />
+                <Text strong className="text-sm">Assets</Text>
+              </div>
+              <Card className="rounded-2xl border-border/70 bg-background/70">
+                <CardContent className="space-y-3 p-4">
+                  {briefingSummary ? (
+                    <>
+                      <Text className="text-sm">
+                        Real-estate value{" "}
+                        {formatMoney(
+                          briefingSummary.totalEstimatedAssetValueCents,
+                          briefingSummary.baseCurrency,
+                        )}
+                      </Text>
+                      {briefingSummary.assetSignals.length > 0 ? (
+                        <SectionList
+                          title="Asset signals"
+                          icon={Sparkles}
+                          items={briefingSummary.assetSignals}
+                        />
+                      ) : (
+                        <Text muted className="text-sm">
+                          No asset-specific signals in the current scope.
+                        </Text>
+                      )}
+                    </>
+                  ) : (
+                    <EmptyState
+                      title="No Asset Briefing Yet"
+                      variant="compact"
+                      description="Ask a question to populate the current asset summary."
+                    />
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -611,6 +656,14 @@ export function FinanceCopilotCard({
                       title="Scope Signals"
                       icon={Gauge}
                       items={briefingSummary.notableSignals}
+                    />
+                  ) : null}
+
+                  {briefingSummary?.assetSignals.length ? (
+                    <SectionList
+                      title="Asset Signals"
+                      icon={Sparkles}
+                      items={briefingSummary.assetSignals}
                     />
                   ) : null}
                 </CardContent>

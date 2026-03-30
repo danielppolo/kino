@@ -9,6 +9,7 @@ import { createClient } from "@/utils/supabase/client";
 import {
   listCategories,
   listLabels,
+  listRealEstateAssets,
   listTags,
   listTransactionTemplates,
   listViews,
@@ -17,6 +18,7 @@ import {
 import {
   Category,
   Label,
+  RealEstateAsset,
   Tag,
   TransactionTemplate,
   View,
@@ -37,6 +39,7 @@ interface SettingsContextType {
   views: View[];
   templates: TransactionTemplate[];
   wallets: Wallet[];
+  realEstateAssets: RealEstateAsset[];
   conversionRates: Record<string, CurrencyConversion>;
   baseCurrency: string;
   featureFlags: FeatureFlags;
@@ -142,6 +145,17 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
     staleTime: 1000 * 60 * 10,
   });
 
+  const { data: realEstateAssets = [] } = useSuspenseQuery<RealEstateAsset[]>({
+    queryKey: ["real-estate-assets", workspaceId],
+    queryFn: async () => {
+      const supabase = await createClient();
+      const result = await listRealEstateAssets(supabase, workspaceId);
+      if (result.error) throw result.error;
+      return (result.data || []).sort((a, b) => a.name.localeCompare(b.name));
+    },
+    staleTime: 1000 * 60 * 10,
+  });
+
   // Use conversion rates from WorkspaceProvider (passed as initialConversionRates)
   // No need to fetch them again here
   const value: SettingsContextType = {
@@ -151,6 +165,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
     views,
     templates,
     wallets,
+    realEstateAssets,
     conversionRates: initialConversionRates,
     baseCurrency: initialBaseCurrency,
     featureFlags: initialFeatureFlags,
@@ -252,6 +267,22 @@ export const useWallets = (
   const list = context.wallets;
   const map = new Map(
     context.wallets.map((wallet) => [String(wallet[key]), wallet]),
+  );
+
+  return [list, map];
+};
+
+export const useRealEstateAssets = (
+  key: keyof RealEstateAsset = "id",
+): [RealEstateAsset[], Map<string, RealEstateAsset>] => {
+  const context = useContext(SettingsContext);
+  if (context === undefined) {
+    throw new Error("useRealEstateAssets must be used within a SettingsProvider");
+  }
+
+  const list = context.realEstateAssets;
+  const map = new Map(
+    context.realEstateAssets.map((asset) => [String(asset[key]), asset]),
   );
 
   return [list, map];

@@ -1,4 +1,15 @@
-import { addMonths, format } from "date-fns";
+import { addMonths, differenceInCalendarDays, format } from "date-fns";
+
+import { getBillInsights, resolveWorkspaceContext, syncWorkspaceFinanceMemory } from "./finance-copilot-data";
+import type { FinancialBriefing } from "./finance-copilot-types";
+import {
+  average,
+  formatMoney,
+  standardDeviation,
+  sumLast,
+  toBaseCents,
+  walletTypeLabel,
+} from "./finance-copilot-utils";
 
 import {
   calculateMonthlyTotals,
@@ -17,26 +28,161 @@ import {
   getTransactionSizeDistribution,
   getWalletMonthlyBalances,
   getWalletMonthlyOwed,
+  listRealEstateAssetValuations,
   listTransactions,
 } from "@/utils/supabase/queries";
 import { createClient } from "@/utils/supabase/server";
-import type { Wallet } from "@/utils/supabase/types";
-import { createEmptyFinanceMemory } from "@/utils/types/finance-memory";
+import type {
+  RealEstateAsset,
+  RealEstateAssetValuation,
+  Wallet,
+} from "@/utils/supabase/types";
 import type {
   FinanceMemory,
   FinanceMemoryDerivedContext,
 } from "@/utils/types/finance-memory";
+import { createEmptyFinanceMemory } from "@/utils/types/finance-memory";
 
-import { getBillInsights, resolveWorkspaceContext, syncWorkspaceFinanceMemory } from "./finance-copilot-data";
-import type { FinancialBriefing } from "./finance-copilot-types";
-import {
-  average,
-  formatMoney,
-  standardDeviation,
-  sumLast,
-  toBaseCents,
-  walletTypeLabel,
-} from "./finance-copilot-utils";
+type AssetWithLatestValuation = {
+  asset: RealEstateAsset;
+  latestValuation: RealEstateAssetValuation | null;
+};
+
+const REAL_ESTATE_ASSET_LABELS: Record<
+  RealEstateAsset["asset_type"],
+  string
+> = {
+  primary_home: "Primary home",
+  rental_property: "Rental property",
+  land: "Land",
+  commercial_property: "Commercial property",
+  other_real_estate: "Other real estate",
+};
+
+export function buildRealEstateAssetsSummary(
+  assets: RealEstateAsset[],
+  valuations: RealEstateAssetValuation[],
+) {
+  const latestValuationByAsset = new Map<string, RealEstateAssetValuation>();
+
+  valuations.forEach((valuation) => {
+    const current = latestValuationByAsset.get(valuation.asset_id);
+    if (!current) {
+      latestValuationByAsset.set(valuation.asset_id, valuation);
+      return;
+    }
+
+    if (
+      valuation.valuation_date > current.valuation_date ||
+      (valuation.valuation_date === current.valuation_date &&
+        valuation.created_at > current.created_at)
+    ) {
+      latestValuationByAsset.set(valuation.asset_id, valuation);
+    }
+  });
+
+  const assetsWithLatestValuation: AssetWithLatestValuation[] = assets.map((asset) => ({
+    asset,
+    latestValuation: latestValuationByAsset.get(asset.id) ?? null,
+  }));
+
+  const totalEstimatedAssetValueCents = assetsWithLatestValuation.reduce(
+    (sum, entry) => sum + (entry.latestValuation?.valuation_amount_cents ?? 0),
+    0,
+  );
+
+  const assetsByTypeMap = new Map<
+    string,
+    { assetCount: number; totalEstimatedValueCents: number }
+  >();
+  assetsWithLatestValuation.forEach(({ asset, latestValuation }) => {
+    const current = assetsByTypeMap.get(asset.asset_type) ?? {
+      assetCount: 0,
+      totalEstimatedValueCents: 0,
+    };
+    current.assetCount += 1;
+    current.totalEstimatedValueCents += latestValuation?.valuation_amount_cents ?? 0;
+    assetsByTypeMap.set(asset.asset_type, current);
+  });
+
+  const staleValuations = assetsWithLatestValuation
+    .filter(({ latestValuation }) => {
+      if (!latestValuation) return true;
+      return (
+        differenceInCalendarDays(
+          new Date(),
+          new Date(`${latestValuation.valuation_date}T00:00:00`),
+        ) > 180
+      );
+    })
+    .map(({ asset, latestValuation }) =>
+      latestValuation
+        ? `${asset.name} has no valuation update in the last 180 days.`
+        : `${asset.name} has no recorded valuation yet.`,
+    );
+
+  const concentration = assetsWithLatestValuation
+    .filter(({ latestValuation }) => totalEstimatedAssetValueCents > 0 && latestValuation)
+    .filter(
+      ({ latestValuation }) =>
+        ((latestValuation?.valuation_amount_cents ?? 0) /
+          totalEstimatedAssetValueCents) *
+          100 >=
+        60,
+    )
+    .map(
+      ({ asset, latestValuation }) =>
+        `${asset.name} represents ${Math.round(((latestValuation?.valuation_amount_cents ?? 0) / totalEstimatedAssetValueCents) * 100)}% of tracked real-estate value.`,
+    );
+
+  const missingPurchaseContext = assetsWithLatestValuation
+    .filter(({ asset }) => !asset.origin_transaction_id)
+    .map(({ asset }) => `${asset.name} has no linked purchase transaction.`);
+
+  return {
+    totalEstimatedAssetValueCents,
+    assetsByType: Array.from(assetsByTypeMap.entries())
+      .map(([assetType, values]) => ({
+        assetType,
+        assetCount: values.assetCount,
+        totalEstimatedValueCents: values.totalEstimatedValueCents,
+      }))
+      .sort((a, b) => b.totalEstimatedValueCents - a.totalEstimatedValueCents),
+    realEstateAssets: assetsWithLatestValuation
+      .map(({ asset, latestValuation }) => ({
+        assetId: asset.id,
+        name: asset.name,
+        status: asset.status,
+        assetType: asset.asset_type,
+        currency: asset.currency,
+        acquiredOn: asset.acquired_on,
+        originTransactionId: asset.origin_transaction_id,
+        latestValuation: latestValuation
+          ? {
+              valuationDate: latestValuation.valuation_date,
+              valuationAmountCents: latestValuation.valuation_amount_cents,
+              valuationMethod: latestValuation.valuation_method,
+            }
+          : null,
+        valuationAgeDays: latestValuation
+          ? differenceInCalendarDays(
+              new Date(),
+              new Date(`${latestValuation.valuation_date}T00:00:00`),
+            )
+          : null,
+      }))
+      .sort((a, b) => {
+        const valueA = a.latestValuation?.valuationAmountCents ?? 0;
+        const valueB = b.latestValuation?.valuationAmountCents ?? 0;
+        return valueB - valueA;
+      }),
+    signals: {
+      staleValuations,
+      concentration,
+      missingPurchaseContext,
+    },
+  };
+}
 
 export function buildMonthlySeries(
   monthlyStats: Array<{
@@ -226,6 +372,10 @@ export function buildNotableSignals(briefing: Omit<FinancialBriefing, "memory">)
     signals.push("The 6-month forecast trends below the current balance.");
   }
 
+  if (briefing.assets.signals.staleValuations.length > 0) {
+    signals.push("Some real-estate valuations are stale or missing.");
+  }
+
   return signals;
 }
 
@@ -257,6 +407,16 @@ export function deriveFinanceMemoryContext(params: {
       label: walletTypeLabel(walletType as Wallet["wallet_type"]),
       detail: `${Math.round((balanceCents / totalBalance) * 100)}% of tracked balance is held in ${walletTypeLabel(walletType as Wallet["wallet_type"]).toLowerCase()}.`,
     }));
+
+  briefing.assets.assetsByType.forEach((assetGroup) => {
+    if (assetGroup.totalEstimatedValueCents <= 0) return;
+    observedAssetExposureSummary.push({
+      label: REAL_ESTATE_ASSET_LABELS[
+        assetGroup.assetType as RealEstateAsset["asset_type"]
+      ] ?? assetGroup.assetType,
+      detail: `${assetGroup.assetCount} tracked asset${assetGroup.assetCount === 1 ? "" : "s"} with ${formatMoney(assetGroup.totalEstimatedValueCents, briefing.scope.baseCurrency)} in estimated value.`,
+    });
+  });
 
   const currenciesHeld = Array.from(
     new Set([
@@ -312,7 +472,9 @@ export function deriveFinanceMemoryContext(params: {
     )
   ) {
     cashVsInvestedBias =
-      "Tracked assets are mostly cash and spending-account oriented; explicit investment custody is not modeled in current wallets.";
+      briefing.assets.totalEstimatedAssetValueCents > 0
+        ? "Cash accounts are modeled separately from informational real-estate assets; liquidity and property value should be reasoned about separately."
+        : "Tracked assets are mostly cash and spending-account oriented; explicit investment custody is not modeled in current wallets.";
   }
 
   const nextDerived: FinanceMemoryDerivedContext = {
@@ -387,6 +549,7 @@ export async function buildFinancialBriefing(
   const visibleWallets = filters.walletId
     ? context.wallets.filter((wallet) => wallet.id === filters.walletId)
     : context.wallets;
+  const realEstateAssets = context.realEstateAssets;
 
   if (filters.walletId && visibleWallets.length === 0) {
     throw new Error("Wallet not found in active workspace");
@@ -448,6 +611,7 @@ export async function buildFinancialBriefing(
     expenseSizeDistributionResult,
     walletMonthlyOwedResult,
     recentTransactionsResult,
+    realEstateValuationsResult,
     billInsights,
   ] = await Promise.all([
     getWalletMonthlyBalances(supabase, { walletId: filters.walletId }),
@@ -475,6 +639,9 @@ export async function buildFinancialBriefing(
       pageSize: 8,
       page: 0,
     }),
+    listRealEstateAssetValuations(supabase, {
+      assetIds: realEstateAssets.map((asset) => asset.id),
+    }),
     getBillInsights(supabase, analyticsParams),
   ]);
 
@@ -487,11 +654,13 @@ export async function buildFinancialBriefing(
   if (expenseSizeDistributionResult.error) throw expenseSizeDistributionResult.error;
   if (walletMonthlyOwedResult.error) throw walletMonthlyOwedResult.error;
   if (recentTransactionsResult.error) throw recentTransactionsResult.error;
+  if (realEstateValuationsResult.error) throw realEstateValuationsResult.error;
 
   const monthlyBalances = monthlyBalancesResult.data ?? [];
   const filteredMonthlyStats = filteredMonthlyStatsResult.data ?? [];
   const fullMonthlyStats = fullMonthlyStatsResult.data ?? [];
   const walletMonthlyOwed = walletMonthlyOwedResult.data ?? [];
+  const realEstateValuations = realEstateValuationsResult.data ?? [];
   const monthlySeries = buildMonthlySeries(
     filteredMonthlyStats,
     walletMap,
@@ -574,6 +743,10 @@ export async function buildFinancialBriefing(
   );
 
   const trailingNetSeries = monthlySeries.map((item) => item.netCents);
+  const assets = buildRealEstateAssetsSummary(
+    realEstateAssets,
+    realEstateValuations,
+  );
 
   const briefingBase: Omit<FinancialBriefing, "memory"> = {
     generatedAt: new Date().toISOString(),
@@ -644,6 +817,7 @@ export async function buildFinancialBriefing(
       latestBillBurdenPercent: billInsights.latestBillBurdenPercent,
       latestNetAfterBillsCents: billInsights.latestNetAfterBillsCents,
     },
+    assets,
     recentTransactions,
     notableSignals: [],
   };
