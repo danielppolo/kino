@@ -51,6 +51,20 @@ function formatForecastHorizonTriggerValue(value: number) {
   return `${value}y`;
 }
 
+function formatForecastSpendModeLabel(
+  value: "required-spend" | "historical-average" | "custom",
+) {
+  switch (value) {
+    case "required-spend":
+      return "Req";
+    case "custom":
+      return "Custom";
+    case "historical-average":
+    default:
+      return "Avg";
+  }
+}
+
 export function ChartHeaderControls({
   showAutonomyControls = false,
 }: ChartHeaderControlsProps) {
@@ -68,8 +82,7 @@ export function ChartHeaderControls({
     return null;
   }
 
-  const effectiveMonthlySpend =
-    controls.monthlySpend ?? controls.defaultMonthlySpend;
+  const effectiveMonthlySpend = controls.effectiveMonthlySpend;
 
   const handleFutureLumpSumChange = (value: string) => {
     setFutureLumpSumInput(value);
@@ -199,14 +212,49 @@ export function ChartHeaderControls({
             <DropdownMenuTrigger asChild>
               <TooltipButton variant="ghost" size="sm" tooltip="Monthly spend">
                 <span className="min-w-10 text-xs font-medium tabular-nums">
+                  {formatForecastSpendModeLabel(controls.forecastSpendMode)}{" "}
                   {formatSpendTriggerValue(effectiveMonthlySpend)}
                 </span>
               </TooltipButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-72 p-0">
-              <DropdownMenuLabel>Monthly spend</DropdownMenuLabel>
+              <DropdownMenuLabel>Forecast monthly spend</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <div className="space-y-3 p-3">
+                <div className="space-y-2">
+                  <span className="text-muted-foreground text-xs font-medium">
+                    Spend source
+                  </span>
+                  <Select
+                    value={controls.forecastSpendMode}
+                    onValueChange={(value) =>
+                      controls.setForecastSpendMode(
+                        value as
+                          | "required-spend"
+                          | "historical-average"
+                          | "custom",
+                      )
+                    }
+                  >
+                    <SelectTrigger className="h-8 w-full text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="required-spend" className="text-xs">
+                        Required spend average
+                      </SelectItem>
+                      <SelectItem
+                        value="historical-average"
+                        className="text-xs"
+                      >
+                        Historical spend average
+                      </SelectItem>
+                      <SelectItem value="custom" className="text-xs">
+                        Custom monthly amount
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-muted-foreground text-xs font-medium">
                     Current value
@@ -218,17 +266,38 @@ export function ChartHeaderControls({
                     />
                   </span>
                 </div>
-                <Slider
-                  min={0}
-                  max={100000}
-                  step={10000}
-                  value={[Math.max(0, Math.min(100000, effectiveMonthlySpend))]}
-                  onValueChange={([value]) => controls.setMonthlySpend(value)}
-                />
-                <div className="text-muted-foreground flex justify-between text-xs">
-                  <span>{formatCurrency(0, baseCurrency)}</span>
-                  <span>{formatCurrency(100000, baseCurrency)}</span>
-                </div>
+                {controls.forecastSpendMode === "required-spend" && (
+                  <div className="text-muted-foreground text-xs">
+                    Uses the trimmed monthly average of atemporal
+                    `required_spend_kind` expenses.
+                  </div>
+                )}
+                {controls.forecastSpendMode === "historical-average" && (
+                  <div className="text-muted-foreground text-xs">
+                    Uses the trimmed monthly average of total spending over the
+                    selected history.
+                  </div>
+                )}
+                {controls.forecastSpendMode === "custom" && (
+                  <>
+                    <Slider
+                      min={0}
+                      max={100000}
+                      step={10000}
+                      value={[
+                        Math.max(
+                          0,
+                          Math.min(100000, controls.monthlySpend ?? 0),
+                        ),
+                      ]}
+                      onValueChange={([value]) => controls.setMonthlySpend(value)}
+                    />
+                    <div className="text-muted-foreground flex justify-between text-xs">
+                      <span>{formatCurrency(0, baseCurrency)}</span>
+                      <span>{formatCurrency(100000, baseCurrency)}</span>
+                    </div>
+                  </>
+                )}
               </div>
             </DropdownMenuContent>
           </DropdownMenu>

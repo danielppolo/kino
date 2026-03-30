@@ -13,8 +13,8 @@ import {
 
 import { useQuery } from "@tanstack/react-query";
 
-import type { ForecastApiResponse } from "@/app/api/forecast/route";
 import { useChartControls } from "@/components/charts/shared/chart-controls-context";
+import { useForecastQuery } from "@/components/charts/shared/use-forecast-query";
 import {
   Card,
   CardContent,
@@ -56,6 +56,7 @@ export function ForecastLineChart({
   const forecastMode = controls?.forecastMode ?? "with-income";
   const horizonYears = controls?.forecastHorizonYears ?? 1;
   const horizonMonths = horizonYears * 12;
+  const workspaceWalletIds = wallets.map((w) => w.id);
 
   const {
     data: monthlyBalances,
@@ -79,31 +80,18 @@ export function ForecastLineChart({
     data: forecastData,
     isLoading: isLoadingForecast,
     error: forecastError,
-  } = useQuery({
-    queryKey: ["forecast-arima", walletId, baseCurrency, horizonMonths],
-    queryFn: async (): Promise<ForecastApiResponse> => {
-      const workspaceWalletIds = wallets.map((w) => w.id);
-      const res = await fetch("/api/forecast", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          walletId: walletId ?? null,
-          walletIds: workspaceWalletIds,
-          horizon: horizonMonths,
-          baseCurrency,
-          conversionRates,
-        }),
-      });
-      if (!res.ok) throw new Error("Forecast API failed");
-      return res.json();
-    },
-    staleTime: 60 * 60 * 1000,
+  } = useForecastQuery({
+    walletId,
+    walletIds: workspaceWalletIds,
+    horizonMonths,
+    baseCurrency,
+    conversionRates,
   });
 
   const isLoading = isLoadingBalances || isLoadingForecast;
   const error = balancesError || forecastError;
   const effectiveMonthlyBurn =
-    controls?.monthlySpend ??
+    controls?.effectiveMonthlySpend ??
     controls?.defaultMonthlySpend ??
     forecastData?.avgMonthlyBurn ??
     0;

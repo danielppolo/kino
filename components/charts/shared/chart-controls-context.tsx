@@ -12,7 +12,7 @@ import {
 } from "@/utils/chart-helpers";
 import { convertCurrency } from "@/utils/currency-conversion";
 import { createClient } from "@/utils/supabase/client";
-import { getMonthlyStats } from "@/utils/supabase/queries";
+import { getMonthlyCategoryStats, getMonthlyStats } from "@/utils/supabase/queries";
 
 interface ChartControlsProviderProps {
   children: React.ReactNode;
@@ -25,6 +25,12 @@ interface ChartControlsContextValue {
   monthlySpend: number | null;
   setMonthlySpend: (value: number) => void;
   defaultMonthlySpend: number;
+  defaultRequiredSpend: number;
+  effectiveMonthlySpend: number;
+  forecastSpendMode: "required-spend" | "historical-average" | "custom";
+  setForecastSpendMode: (
+    value: "required-spend" | "historical-average" | "custom",
+  ) => void;
   futureLumpSum: number;
   setFutureLumpSum: (value: number) => void;
   peakNormalization: ChartNormalizationPreset;
@@ -49,6 +55,7 @@ const DEFAULT_FORECAST_HORIZON_YEARS = 1;
 const DEFAULT_FORECAST_MODE = "with-income";
 const DEFAULT_FUTURE_LUMP_SUM = 0;
 const DEFAULT_CHART_VALUE_MODE = "percentage";
+const DEFAULT_FORECAST_SPEND_MODE = "historical-average";
 
 export function ChartControlsProvider({
   children,
@@ -61,6 +68,9 @@ export function ChartControlsProvider({
   const [monthlySpend, setMonthlySpend] =
     useState<number | null>(DEFAULT_CHART_MONTHLY_SPEND);
   const [futureLumpSum, setFutureLumpSum] = useState(DEFAULT_FUTURE_LUMP_SUM);
+  const [forecastSpendMode, setForecastSpendMode] = useState<
+    "required-spend" | "historical-average" | "custom"
+  >(DEFAULT_FORECAST_SPEND_MODE);
   const [peakNormalization, setPeakNormalization] =
     useState<ChartNormalizationPreset>(DEFAULT_PEAK_NORMALIZATION);
   const [forecastHorizonYears, setForecastHorizonYears] = useState(
@@ -81,6 +91,27 @@ export function ChartControlsProvider({
         walletId,
         from,
         to,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: monthlyCategoryStats } = useQuery({
+    queryKey: [
+      "chart-controls-category-stats",
+      walletId,
+      from,
+      to,
+      baseCurrency,
+    ],
+    queryFn: async () => {
+      const supabase = await createClient();
+      const { data, error } = await getMonthlyCategoryStats(supabase, {
+        walletId,
+        from,
+        to,
+        type: "expense",
       });
       if (error) throw error;
       return data ?? [];
@@ -117,6 +148,56 @@ export function ChartControlsProvider({
     return calculateTrimmedMean(monthlyExpenseTotals);
   }, [monthlyStats, walletMap, baseCurrency, conversionRates]);
 
+  const defaultRequiredSpend = useMemo(() => {
+    if (!monthlyCategoryStats || monthlyCategoryStats.length === 0) {
+      return 0;
+    }
+
+    const atemporalByMonth: Record<string, number> = {};
+    monthlyCategoryStats.forEach((stat) => {
+      if (stat.categories?.required_spend_kind !== "atemporal") {
+        return;
+      }
+
+      if (!atemporalByMonth[stat.month]) {
+        atemporalByMonth[stat.month] = 0;
+      }
+
+      const wallet = walletMap.get(stat.wallet_id ?? "");
+      const currency = wallet?.currency ?? baseCurrency;
+      atemporalByMonth[stat.month] +=
+        Math.abs(
+          convertCurrency(
+            stat.outcome_cents,
+            currency,
+            baseCurrency,
+            conversionRates,
+          ),
+        ) / 100;
+    });
+
+    return calculateTrimmedMean(
+      Object.values(atemporalByMonth).filter((value) => value > 0),
+    );
+  }, [monthlyCategoryStats, walletMap, baseCurrency, conversionRates]);
+
+  const effectiveMonthlySpend = useMemo(() => {
+    switch (forecastSpendMode) {
+      case "required-spend":
+        return defaultRequiredSpend;
+      case "custom":
+        return monthlySpend ?? defaultMonthlySpend;
+      case "historical-average":
+      default:
+        return defaultMonthlySpend;
+    }
+  }, [
+    defaultMonthlySpend,
+    defaultRequiredSpend,
+    forecastSpendMode,
+    monthlySpend,
+  ]);
+
   useEffect(() => {
     if (defaultMonthlySpend > 0 && monthlySpend === null) {
       const snapped =
@@ -133,6 +214,10 @@ export function ChartControlsProvider({
       monthlySpend,
       setMonthlySpend,
       defaultMonthlySpend,
+      defaultRequiredSpend,
+      effectiveMonthlySpend,
+      forecastSpendMode,
+      setForecastSpendMode,
       futureLumpSum,
       setFutureLumpSum,
       peakNormalization,
@@ -149,6 +234,9 @@ export function ChartControlsProvider({
     [
       monthlySpend,
       defaultMonthlySpend,
+      defaultRequiredSpend,
+      effectiveMonthlySpend,
+      forecastSpendMode,
       futureLumpSum,
       peakNormalization,
       setPeakNormalization,

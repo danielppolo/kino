@@ -15,8 +15,8 @@ import { useQuery } from "@tanstack/react-query";
 
 import { Money } from "../ui/money";
 
-import type { ForecastApiResponse } from "@/app/api/forecast/route";
 import { useChartControls } from "@/components/charts/shared/chart-controls-context";
+import { useForecastQuery } from "@/components/charts/shared/use-forecast-query";
 import {
   Card,
   CardContent,
@@ -73,6 +73,7 @@ export function AutonomyHorizonChart({
     (controls?.forecastHorizonYears ??
       Math.max(1, Math.round(horizonMonths / 12))) * 12;
   const forecastMode = controls?.forecastMode ?? "with-income";
+  const workspaceWalletIds = wallets.map((w) => w.id);
 
   const { data: monthlyBalances, isLoading: loadingBalances } = useQuery({
     queryKey: ["autonomy-horizon-balances", walletId, from, to],
@@ -88,35 +89,17 @@ export function AutonomyHorizonChart({
     },
   });
 
-  const { data: forecastData, isLoading: loadingForecast } = useQuery({
-    queryKey: [
-      "autonomy-arima",
-      walletId,
-      baseCurrency,
-      effectiveHorizonMonths,
-    ],
-    queryFn: async (): Promise<ForecastApiResponse> => {
-      const workspaceWalletIds = wallets.map((w) => w.id);
-      const res = await fetch("/api/forecast", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          walletId: walletId ?? null,
-          walletIds: workspaceWalletIds,
-          horizon: effectiveHorizonMonths,
-          baseCurrency,
-          conversionRates,
-        }),
-      });
-      if (!res.ok) throw new Error("Forecast API failed");
-      return res.json();
-    },
-    staleTime: 60 * 60 * 1000,
+  const { data: forecastData, isLoading: loadingForecast } = useForecastQuery({
+    walletId,
+    walletIds: workspaceWalletIds,
+    horizonMonths: effectiveHorizonMonths,
+    baseCurrency,
+    conversionRates,
   });
 
   const isLoading = loadingBalances || loadingForecast;
   const effectiveBurnRate =
-    controls?.monthlySpend ??
+    controls?.effectiveMonthlySpend ??
     controls?.defaultMonthlySpend ??
     forecastData?.avgMonthlyBurn ??
     0;

@@ -55,7 +55,7 @@
     "lodash": "^4.17.21",
     "lucide-react": "^1.7.0",
     "lucide-static": "^0.451.0",
-    "next": "16.1.4",
+    "next": "16.2.1",
     "next-themes": "^0.3.0",
     "nuqs": "^1.17.0",
     "papaparse": "^5.4.1",

@@ -1,17 +1,23 @@
 "use client";
 
 import { useMemo } from "react";
-import { format } from "date-fns";
+import { addMonths, format } from "date-fns";
 import {
   Bar,
   CartesianGrid,
   ComposedChart,
   Line,
+  ReferenceArea,
   ReferenceLine,
   XAxis,
   YAxis,
 } from "recharts";
+
 import { useQuery } from "@tanstack/react-query";
+
+import { Money } from "../ui/money";
+
+import { useChartControls } from "@/components/charts/shared/chart-controls-context";
 import {
   Card,
   CardContent,
@@ -26,7 +32,6 @@ import {
   ChartLegendContent,
   ChartTooltip,
 } from "@/components/ui/chart";
-import { useChartControls } from "@/components/charts/shared/chart-controls-context";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import {
   capChartOutliers,
@@ -39,7 +44,6 @@ import {
   getMonthlyStats,
   listRecurringTransactions,
 } from "@/utils/supabase/queries";
-import { Money } from "../ui/money";
 
 interface BurnRateDriftChartProps {
   walletId?: string;
@@ -68,6 +72,9 @@ export function BurnRateDriftChart({
   const controls = useChartControls();
   const normalizationPercentile =
     controls?.peakNormalizationPercentile ?? 0.9;
+  const horizonYears = controls?.forecastHorizonYears ?? 1;
+  const horizonMonths = horizonYears * 12;
+  const effectiveMonthlySpend = controls?.effectiveMonthlySpend ?? 0;
 
   const { data: monthlyStats, isLoading: loadingStats } = useQuery({
     queryKey: ["burn-rate-drift-stats", walletId, from, to],
@@ -98,13 +105,14 @@ export function BurnRateDriftChart({
 
   const isLoading = loadingStats || loadingRecurring;
 
-  const { chartData, drift, fixedBaseline, cappedFixedBaseline } = useMemo(() => {
+  const { chartData, drift, fixedBaseline, cappedFixedBaseline, lastHistoricalMonth } = useMemo(() => {
     if (!monthlyStats || monthlyStats.length === 0) {
       return {
         chartData: [],
         drift: 0,
         fixedBaseline: 0,
         cappedFixedBaseline: 0,
+        lastHistoricalMonth: null as string | null,
       };
     }
 
@@ -130,15 +138,15 @@ export function BurnRateDriftChart({
       expense: byMonth[month],
     }));
 
-    const data = raw.map((point, i) => {
+    const historicalData = raw.map((point, i) => {
       const window = raw.slice(Math.max(0, i - 2), i + 1);
       const avg = window.reduce((sum, p) => sum + p.expense, 0) / window.length;
-      return { ...point, rolling: avg };
+      return { ...point, rolling: avg, isForecast: false };
     });
 
     // Compute drift: compare first 3-month avg to last 3-month avg
-    const firstWindow = data.slice(0, Math.min(3, data.length));
-    const lastWindow = data.slice(Math.max(0, data.length - 3));
+    const firstWindow = historicalData.slice(0, Math.min(3, historicalData.length));
+    const lastWindow = historicalData.slice(Math.max(0, historicalData.length - 3));
     const firstAvg = firstWindow.reduce((s, p) => s + p.expense, 0) / firstWindow.length;
     const lastAvg = lastWindow.reduce((s, p) => s + p.expense, 0) / lastWindow.length;
     const driftPct = firstAvg > 0 ? ((lastAvg - firstAvg) / firstAvg) * 100 : 0;
@@ -177,8 +185,38 @@ export function BurnRateDriftChart({
       });
     }
 
+    const forecastData =
+      horizonMonths > 0 && historicalData.length > 0
+        ? Array.from({ length: horizonMonths }, (_, index) => {
+            const month = format(
+              addMonths(
+                parseMonthDate(historicalData[historicalData.length - 1].month),
+                index + 1,
+              ),
+              "yyyy-MM-dd",
+            );
+            const expense = effectiveMonthlySpend;
+            const rollingWindow = [
+              ...historicalData.map((point) => point.expense),
+              ...Array.from({ length: index + 1 }, () => expense),
+            ].slice(-3);
+            const rolling =
+              rollingWindow.reduce((sum, value) => sum + value, 0) /
+              rollingWindow.length;
+
+            return {
+              month,
+              expense,
+              rolling,
+              isForecast: true,
+            };
+          })
+        : [];
+
+    const combinedData = [...historicalData, ...forecastData];
+
     const { cap, data: cappedData } = capChartOutliers(
-      data,
+      combinedData,
       ["expense", "rolling"],
       normalizationPercentile,
     );
@@ -188,8 +226,12 @@ export function BurnRateDriftChart({
       drift: driftPct,
       fixedBaseline: fixed,
       cappedFixedBaseline: Math.min(fixed, cap),
+      lastHistoricalMonth:
+        historicalData[historicalData.length - 1]?.month ?? null,
     };
   }, [
+    effectiveMonthlySpend,
+    horizonMonths,
     monthlyStats,
     recurringTransactions,
     conversionRates,
@@ -276,6 +318,15 @@ export function BurnRateDriftChart({
               tickMargin={8}
               tickFormatter={(v) => formatCurrency(v, baseCurrency)}
             />
+            {lastHistoricalMonth && (
+              <ReferenceArea
+                x1={lastHistoricalMonth}
+                x2={chartData[chartData.length - 1]?.month}
+                fill="#ffffff"
+                fillOpacity={0.04}
+                strokeOpacity={0}
+              />
+            )}
             <ChartTooltip
               cursor={false}
               content={({ active, payload, label }) => {
@@ -300,6 +351,7 @@ export function BurnRateDriftChart({
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
                     <div className="text-sm font-medium mb-1">
                       {format(parseMonthDate(label), "MMMM yyyy")}
+                      {point?.isForecast ? " · projected" : ""}
                     </div>
                     {expense !== undefined && (
                       <div className="text-sm">

@@ -21,6 +21,11 @@ import { TransactionTypeDistributionChart } from "@/components/charts/transactio
 import { TrendsChart } from "@/components/charts/trends-chart";
 import { WalletNetBalanceLineChart } from "@/components/charts/wallet-net-balance-line-chart";
 import { Filters } from "@/utils/supabase/queries";
+import { createClient } from "@/utils/supabase/server";
+import {
+  DEFAULT_FEATURE_FLAGS,
+  parseFeatureFlags,
+} from "@/utils/types/feature-flags";
 
 interface PageParams {
   params: { walletId: string };
@@ -32,6 +37,24 @@ export const dynamic = "force-dynamic";
 async function InfographicsPage({ params, searchParams }: PageParams) {
   const { walletId } = await params;
   const filters = await searchParams;
+  const supabase = await createClient();
+  const { data: prefs } = await supabase
+    .from("user_preferences")
+    .select("active_workspace_id")
+    .maybeSingle();
+
+  const workspaceId = prefs?.active_workspace_id;
+  const { data: workspace } = workspaceId
+    ? await supabase
+        .from("workspaces")
+        .select("feature_flags")
+        .eq("id", workspaceId)
+        .maybeSingle()
+    : { data: null };
+
+  const featureFlags = workspace?.feature_flags
+    ? parseFeatureFlags(workspace.feature_flags)
+    : DEFAULT_FEATURE_FLAGS;
 
   return (
     <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3">
@@ -133,98 +156,102 @@ async function InfographicsPage({ params, searchParams }: PageParams) {
         />
       </div> */}
 
-      {/* Bills Analysis */}
-      <div className="md:col-span-2 lg:col-span-3">
-        <BillsHistoryChart
-          walletId={walletId}
-          from={filters.from}
-          to={filters.to}
-        />
-      </div>
-      <div className="md:col-span-2 lg:col-span-3">
-        <BillDebtFlowChart
-          walletId={walletId}
-          from={filters.from}
-          to={filters.to}
-        />
-      </div>
-      <div className="md:col-span-2 lg:col-span-3">
-        <WalletNetBalanceLineChart
-          walletId={walletId}
-          from={filters.from}
-          to={filters.to}
-        />
-      </div>
-      <div className="md:col-span-2 lg:col-span-3">
-        <BillBalanceLineChart
-          walletId={walletId}
-          from={filters.from}
-          to={filters.to}
-        />
-      </div>
-      <div className="md:col-span-2 lg:col-span-3">
-        <RecurringVsOnetimeBillsChart
-          walletId={walletId}
-          from={filters.from}
-          to={filters.to}
-        />
-      </div>
-      <div className="md:col-span-2 lg:col-span-3">
-        <BillPaymentTimelineChart
-          walletId={walletId}
-          from={filters.from}
-          to={filters.to}
-        />
-      </div>
-      <div className="md:col-span-2 lg:col-span-1">
-        <BillPaymentRateChart
-          walletId={walletId}
-          from={filters.from}
-          to={filters.to}
-        />
-      </div>
-      <div className="md:col-span-2 lg:col-span-1">
-        <BillVelocityGaugeChart
-          walletId={walletId}
-          from={filters.from}
-          to={filters.to}
-        />
-      </div>
-      <div className="md:col-span-2 lg:col-span-1">
-        <BillCoverageRatioChart walletId={walletId} />
-      </div>
+      {featureFlags.bills_enabled && (
+        <>
+          {/* Bills Analysis */}
+          <div className="md:col-span-2 lg:col-span-3">
+            <BillsHistoryChart
+              walletId={walletId}
+              from={filters.from}
+              to={filters.to}
+            />
+          </div>
+          <div className="md:col-span-2 lg:col-span-3">
+            <BillDebtFlowChart
+              walletId={walletId}
+              from={filters.from}
+              to={filters.to}
+            />
+          </div>
+          <div className="md:col-span-2 lg:col-span-3">
+            <WalletNetBalanceLineChart
+              walletId={walletId}
+              from={filters.from}
+              to={filters.to}
+            />
+          </div>
+          <div className="md:col-span-2 lg:col-span-3">
+            <BillBalanceLineChart
+              walletId={walletId}
+              from={filters.from}
+              to={filters.to}
+            />
+          </div>
+          <div className="md:col-span-2 lg:col-span-3">
+            <RecurringVsOnetimeBillsChart
+              walletId={walletId}
+              from={filters.from}
+              to={filters.to}
+            />
+          </div>
+          <div className="md:col-span-2 lg:col-span-3">
+            <BillPaymentTimelineChart
+              walletId={walletId}
+              from={filters.from}
+              to={filters.to}
+            />
+          </div>
+          <div className="md:col-span-2 lg:col-span-1">
+            <BillPaymentRateChart
+              walletId={walletId}
+              from={filters.from}
+              to={filters.to}
+            />
+          </div>
+          <div className="md:col-span-2 lg:col-span-1">
+            <BillVelocityGaugeChart
+              walletId={walletId}
+              from={filters.from}
+              to={filters.to}
+            />
+          </div>
+          <div className="md:col-span-2 lg:col-span-1">
+            <BillCoverageRatioChart walletId={walletId} />
+          </div>
 
-      {/* Bills vs Expenses */}
-      <div className="md:col-span-2 lg:col-span-3">
-        <BillsVsDiscretionaryChart
-          walletId={walletId}
-          from={filters.from}
-          to={filters.to}
-        />
-      </div>
-      <div className="md:col-span-2 lg:col-span-1">
-        <BillBurdenRatioChart
-          walletId={walletId}
-          from={filters.from}
-          to={filters.to}
-        />
-      </div>
-      <div className="md:col-span-2 lg:col-span-2">
-        <ExpensePredictabilityChart
-          walletId={walletId}
-          from={filters.from}
-          to={filters.to}
-        />
-      </div>
+          {/* Bills vs Expenses */}
+          <div className="md:col-span-2 lg:col-span-3">
+            <BillsVsDiscretionaryChart
+              walletId={walletId}
+              from={filters.from}
+              to={filters.to}
+            />
+          </div>
+          <div className="md:col-span-2 lg:col-span-1">
+            <BillBurdenRatioChart
+              walletId={walletId}
+              from={filters.from}
+              to={filters.to}
+            />
+          </div>
+          <div className="md:col-span-2 lg:col-span-2">
+            <ExpensePredictabilityChart
+              walletId={walletId}
+              from={filters.from}
+              to={filters.to}
+            />
+          </div>
 
-      {/* Cash Flow */}
-      <div className="md:col-span-2 lg:col-span-3">
-        <CashFlowAfterBillsChart
-          walletId={walletId}
-          from={filters.from}
-          to={filters.to}
-        />
-      </div>
+          {/* Cash Flow */}
+          <div className="md:col-span-2 lg:col-span-3">
+            <CashFlowAfterBillsChart
+              walletId={walletId}
+              from={filters.from}
+              to={filters.to}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }
