@@ -6,6 +6,7 @@ import {
   Area,
   CartesianGrid,
   ComposedChart,
+  Line,
   ReferenceArea,
   ReferenceLine,
   XAxis,
@@ -78,8 +79,13 @@ type ChartPoint = {
   cappedDiscretionaryAmount?: number;
   cappedIncomeAmount?: number;
   cappedAtemporalGuideAmount?: number;
+  cappedDiscretionaryGuideAmount?: number;
   cappedRequiredGuideAmount?: number;
   cappedIncomeGuideAmount?: number;
+  avgDiscretionaryPctGuide?: number;
+  avgAtemporalPctGuide?: number;
+  avgRequiredPctGuide?: number;
+  avgIncomePctGuide?: number;
   _absoluteOriginal?: Partial<
     Record<
       | "atemporalAmount"
@@ -628,6 +634,9 @@ export function ExplorationCapitalChart({
     const avgIncomePctHistorical = historicalAverage(
       (point) => point.incomePct,
     );
+    const avgDiscretionaryPctHistorical = historicalAverage(
+      (point) => point.discretionaryPct,
+    );
     const avgAtemporalAmountHistorical = historicalAverage(
       (point) => point.atemporalAmount,
     );
@@ -636,6 +645,9 @@ export function ExplorationCapitalChart({
     );
     const avgIncomeAmountHistorical = historicalAverage(
       (point) => point.incomeAmount,
+    );
+    const avgDiscretionaryAmountHistorical = historicalAverage(
+      (point) => point.discretionaryAmount,
     );
 
     const cappedAmountSeries = absoluteCapped.data.flatMap((point) => [
@@ -673,6 +685,14 @@ export function ExplorationCapitalChart({
                 cappedGuideMax,
               )
             : 0,
+        cappedDiscretionaryGuideAmount:
+          avgDiscretionaryAmountHistorical > 0
+            ? clamp(
+                avgDiscretionaryAmountHistorical * guideScale,
+                0,
+                cappedGuideMax,
+              )
+            : 0,
         cappedRequiredGuideAmount:
           avgAtemporalAmountHistorical + avgTemporalAmountHistorical > 0
             ? clamp(
@@ -686,6 +706,11 @@ export function ExplorationCapitalChart({
           avgIncomeAmountHistorical > 0
             ? clamp(avgIncomeAmountHistorical * guideScale, 0, cappedGuideMax)
             : 0,
+        avgDiscretionaryPctGuide: avgDiscretionaryPctHistorical,
+        avgAtemporalPctGuide: avgAtemporalPctHistorical,
+        avgRequiredPctGuide:
+          avgAtemporalPctHistorical + avgTemporalPctHistorical,
+        avgIncomePctGuide: avgIncomePctHistorical,
         _absoluteOriginal: cappedPoint?._original ?? {},
       };
     });
@@ -716,7 +741,7 @@ export function ExplorationCapitalChart({
       currentDiscretionaryPct: currentHistoricalPoint?.discretionaryPct ?? 0,
       currentDiscretionaryAmount:
         currentHistoricalPoint?.discretionaryAmount ?? 0,
-      avgDiscretionaryPct: historicalAverage((point) => point.discretionaryPct),
+      avgDiscretionaryPct: avgDiscretionaryPctHistorical,
       avgDiscretionaryAmount: historicalAverage(
         (point) => point.discretionaryAmount,
       ),
@@ -960,71 +985,6 @@ export function ExplorationCapitalChart({
                 );
               }}
             />
-            {chartValueMode === "percentage" && (
-              <>
-                <ReferenceLine
-                  y={20}
-                  stroke="#f59e0b"
-                  strokeDasharray="4 4"
-                  strokeOpacity={0.55}
-                />
-                <ReferenceLine
-                  y={40}
-                  stroke="#22c55e"
-                  strokeDasharray="4 4"
-                  strokeOpacity={0.55}
-                />
-                <ReferenceLine
-                  y={60}
-                  stroke="#60a5fa"
-                  strokeDasharray="4 4"
-                  strokeOpacity={0.4}
-                />
-                <ReferenceLine
-                  y={avgAtemporalPct}
-                  stroke="#a1a1aa"
-                  strokeDasharray="6 4"
-                  strokeOpacity={0.8}
-                />
-                <ReferenceLine
-                  y={avgAtemporalPct + avgTemporalPct}
-                  stroke="#d4d4d8"
-                  strokeDasharray="3 5"
-                  strokeOpacity={0.9}
-                />
-                <ReferenceLine
-                  y={avgIncomePct}
-                  stroke="#22c55e"
-                  strokeDasharray="8 4"
-                  strokeOpacity={0.45}
-                />
-              </>
-            )}
-            {chartValueMode === "absolute" && (
-              <>
-                <ReferenceLine
-                  y={chartData[0]?.cappedAtemporalGuideAmount ?? 0}
-                  stroke="#d4d4d8"
-                  strokeDasharray="6 4"
-                  strokeOpacity={1}
-                  strokeWidth={1.5}
-                />
-                <ReferenceLine
-                  y={chartData[0]?.cappedRequiredGuideAmount ?? 0}
-                  stroke="#f5f5f5"
-                  strokeDasharray="3 5"
-                  strokeOpacity={1}
-                  strokeWidth={1.5}
-                />
-                <ReferenceLine
-                  y={chartData[0]?.cappedIncomeGuideAmount ?? 0}
-                  stroke="#22c55e"
-                  strokeDasharray="8 4"
-                  strokeOpacity={0.7}
-                  strokeWidth={1.5}
-                />
-              </>
-            )}
             <Area
               dataKey={
                 chartValueMode === "percentage"
@@ -1064,6 +1024,164 @@ export function ExplorationCapitalChart({
               stroke="none"
               stackId="capacity"
             />
+            {chartValueMode === "percentage" && (
+              <>
+                <Line
+                  dataKey="avgDiscretionaryPctGuide"
+                  name="Avg exploration"
+                  type="linear"
+                  stroke="#2563eb"
+                  strokeDasharray="8 4"
+                  strokeOpacity={0.95}
+                  strokeWidth={1.5}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+                <Line
+                  dataKey="avgAtemporalPctGuide"
+                  name="Avg always required"
+                  type="linear"
+                  stroke="#a1a1aa"
+                  strokeDasharray="6 4"
+                  strokeOpacity={0.95}
+                  strokeWidth={1.5}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+                <Line
+                  dataKey="avgRequiredPctGuide"
+                  name="Avg required"
+                  type="linear"
+                  stroke="#d4d4d8"
+                  strokeDasharray="3 5"
+                  strokeOpacity={1}
+                  strokeWidth={1.5}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+                <Line
+                  dataKey="avgIncomePctGuide"
+                  name="Avg income"
+                  type="linear"
+                  stroke="#22c55e"
+                  strokeDasharray="8 4"
+                  strokeOpacity={0.9}
+                  strokeWidth={1.5}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+              </>
+            )}
+            {chartValueMode === "absolute" && (
+              <>
+                <Line
+                  dataKey="cappedDiscretionaryGuideAmount"
+                  name="Avg exploration"
+                  type="linear"
+                  stroke="#2563eb"
+                  strokeDasharray="8 4"
+                  strokeOpacity={0.95}
+                  strokeWidth={1.5}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+                <Line
+                  dataKey="cappedAtemporalGuideAmount"
+                  name="Avg always required"
+                  type="linear"
+                  stroke="#d4d4d8"
+                  strokeDasharray="6 4"
+                  strokeOpacity={1}
+                  strokeWidth={1.5}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+                <Line
+                  dataKey="cappedRequiredGuideAmount"
+                  name="Avg required"
+                  type="linear"
+                  stroke="#f5f5f5"
+                  strokeDasharray="3 5"
+                  strokeOpacity={1}
+                  strokeWidth={1.5}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+                <Line
+                  dataKey="cappedIncomeGuideAmount"
+                  name="Avg income"
+                  type="linear"
+                  stroke="#22c55e"
+                  strokeDasharray="8 4"
+                  strokeOpacity={0.7}
+                  strokeWidth={1.5}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+              </>
+            )}
+            {lastHistoricalMonth && (
+              <ReferenceLine
+                x={lastHistoricalMonth}
+                stroke="hsl(var(--muted-foreground))"
+                strokeDasharray="3 3"
+                isFront
+                label={{ value: "Today", position: "top" }}
+              />
+            )}
+            {chartValueMode === "percentage" && (
+              <>
+                <ReferenceLine y={20} stroke="#f59e0b" strokeDasharray="4 4" strokeOpacity={0.55} strokeWidth={1.5} isFront />
+                <ReferenceLine y={40} stroke="#22c55e" strokeDasharray="4 4" strokeOpacity={0.55} strokeWidth={1.5} isFront />
+                <ReferenceLine y={60} stroke="#60a5fa" strokeDasharray="4 4" strokeOpacity={0.4} strokeWidth={1.5} isFront />
+              </>
+            )}
+            {chartValueMode === "absolute" && (
+              <>
+                <ReferenceLine
+                  y={chartData[0]?.cappedAtemporalGuideAmount ?? 0}
+                  stroke="#d4d4d8"
+                  strokeDasharray="6 4"
+                  strokeOpacity={1}
+                  strokeWidth={1.5}
+                  isFront
+                  label={{
+                    value: `Avg always required ${formatCurrency(avgAtemporalAmount, baseCurrency)}`,
+                    position: "insideTopLeft",
+                    fontSize: 10,
+                    fill: "#d4d4d8",
+                  }}
+                />
+                <ReferenceLine
+                  y={chartData[0]?.cappedRequiredGuideAmount ?? 0}
+                  stroke="#f5f5f5"
+                  strokeDasharray="3 5"
+                  strokeOpacity={1}
+                  strokeWidth={1.5}
+                  isFront
+                  label={{
+                    value: `Avg required ${formatCurrency(avgAtemporalAmount + avgTemporalAmount, baseCurrency)}`,
+                    position: "insideTopLeft",
+                    fontSize: 10,
+                    fill: "#f5f5f5",
+                  }}
+                />
+                <ReferenceLine
+                  y={chartData[0]?.cappedIncomeGuideAmount ?? 0}
+                  stroke="#22c55e"
+                  strokeDasharray="8 4"
+                  strokeOpacity={0.7}
+                  strokeWidth={1.5}
+                  isFront
+                  label={{
+                    value: `Avg income ${formatCurrency(avgIncomeAmount, baseCurrency)}`,
+                    position: "insideTopLeft",
+                    fontSize: 10,
+                    fill: "#22c55e",
+                  }}
+                />
+              </>
+            )}
             <ChartLegend content={<ChartLegendContent />} />
           </ComposedChart>
         </ChartContainer>
