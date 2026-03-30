@@ -24,14 +24,13 @@ export default async function ReportsPage({ searchParams }: PageProps) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex-1 space-y-6 overflow-y-auto px-4">
         <WorkspaceFinancialReportToolbar
           workspaceId={report.workspace.id}
           workspaceName={report.workspace.name}
           initialFrom={report.period.from ?? undefined}
           initialTo={report.period.to ?? undefined}
         />
-
+      <div className="flex-1 overflow-y-auto px-4 space-y-6 pb-6">
         <section className="grid gap-4 lg:grid-cols-4">
           <div className="rounded-xl border p-4">
             <p className="text-muted-foreground text-sm">Current balances</p>
