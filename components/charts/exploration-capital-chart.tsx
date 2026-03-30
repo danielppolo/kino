@@ -73,6 +73,9 @@ type ChartPoint = {
   cappedTemporalAmount?: number;
   cappedDiscretionaryAmount?: number;
   cappedIncomeAmount?: number;
+  cappedAtemporalGuideAmount?: number;
+  cappedRequiredGuideAmount?: number;
+  cappedIncomeGuideAmount?: number;
   _absoluteOriginal?: Partial<
     Record<
       | "atemporalAmount"
@@ -128,6 +131,10 @@ function toMonthlyAmount(amount: number, intervalType: string) {
 function mean(values: number[]) {
   if (values.length === 0) return 0;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
 }
 
 function toPercentPoint(point: Omit<ChartPoint, "atemporalPct" | "temporalPct" | "discretionaryPct" | "incomePct">): ChartPoint {
@@ -432,6 +439,12 @@ export function ExplorationCapitalChart({
         .filter((value) => value > 0),
     );
 
+    const projectedAtemporalBaseline = calculateTrimmedMean(
+      historicalMonths
+        .map((month) => byMonth.get(month)?.atemporalAmount ?? 0)
+        .filter((value) => value > 0),
+    );
+
     const projectedCategoryAmounts = new Map<string, number>();
     obligationCategories.forEach((category) => {
       const activeHistory = (categoryHistory.get(category.id) ?? []).slice(-12);
@@ -457,13 +470,7 @@ export function ExplorationCapitalChart({
           "yyyy-MM-dd",
         );
 
-        const atemporalAmount = obligationCategories
-          .filter((category) => getObligationKind(category) === "atemporal")
-          .reduce(
-            (sum, category) =>
-              sum + (projectedCategoryAmounts.get(category.id) ?? 0),
-            0,
-          );
+        const atemporalAmount = projectedAtemporalBaseline;
 
         const temporalAmountFromBills =
           bills?.reduce((sum, bill) => {
@@ -577,6 +584,49 @@ export function ExplorationCapitalChart({
       peakNormalizationPercentile,
     );
 
+    const historicalOnlyRaw = rawChartData.filter((point) => !point.isForecast);
+
+    const historicalAverage = (selector: (point: ChartPoint) => number) =>
+      historicalOnlyRaw.length > 0
+        ? historicalOnlyRaw.reduce((sum, point) => sum + selector(point), 0) /
+          historicalOnlyRaw.length
+        : 0;
+
+    const avgAtemporalPctHistorical = historicalAverage(
+      (point) => point.atemporalPct,
+    );
+    const avgTemporalPctHistorical = historicalAverage(
+      (point) => point.temporalPct,
+    );
+    const avgIncomePctHistorical = historicalAverage((point) => point.incomePct);
+    const avgAtemporalAmountHistorical = historicalAverage(
+      (point) => point.atemporalAmount,
+    );
+    const avgTemporalAmountHistorical = historicalAverage(
+      (point) => point.temporalAmount,
+    );
+    const avgIncomeAmountHistorical = historicalAverage(
+      (point) => point.incomeAmount,
+    );
+
+    const cappedAmountSeries = absoluteCapped.data.flatMap((point) => [
+      point.atemporalAmount ?? 0,
+      (point.atemporalAmount ?? 0) + (point.temporalAmount ?? 0),
+      point.incomeAmount ?? 0,
+    ]);
+    const cappedGuideMax =
+      cappedAmountSeries.length > 0
+        ? Math.max(...cappedAmountSeries, 0)
+        : 0;
+    const rawGuideMax = Math.max(
+      avgAtemporalAmountHistorical,
+      avgAtemporalAmountHistorical + avgTemporalAmountHistorical,
+      avgIncomeAmountHistorical,
+      0,
+    );
+    const guideScale =
+      rawGuideMax > 0 && cappedGuideMax > 0 ? cappedGuideMax / rawGuideMax : 1;
+
     const normalizedChartData = rawChartData.map((point, index) => {
       const cappedPoint = absoluteCapped.data[index];
       return {
@@ -588,6 +638,27 @@ export function ExplorationCapitalChart({
         cappedDiscretionaryAmount:
           cappedPoint?.discretionaryAmount ?? point.discretionaryAmount,
         cappedIncomeAmount: cappedPoint?.incomeAmount ?? point.incomeAmount,
+        cappedAtemporalGuideAmount:
+          avgAtemporalAmountHistorical > 0
+            ? clamp(
+                avgAtemporalAmountHistorical * guideScale,
+                0,
+                cappedGuideMax,
+              )
+            : 0,
+        cappedRequiredGuideAmount:
+          avgAtemporalAmountHistorical + avgTemporalAmountHistorical > 0
+            ? clamp(
+                (avgAtemporalAmountHistorical + avgTemporalAmountHistorical) *
+                  guideScale,
+                0,
+                cappedGuideMax,
+              )
+            : 0,
+        cappedIncomeGuideAmount:
+          avgIncomeAmountHistorical > 0
+            ? clamp(avgIncomeAmountHistorical * guideScale, 0, cappedGuideMax)
+            : 0,
         _absoluteOriginal: cappedPoint?._original ?? {},
       };
     });
@@ -595,12 +666,6 @@ export function ExplorationCapitalChart({
     const historicalOnly = normalizedChartData.filter((point) => !point.isForecast);
     const currentHistoricalPoint =
       historicalOnly[historicalOnly.length - 1] ?? null;
-
-    const average = (selector: (point: ChartPoint) => number) =>
-      normalizedChartData.length > 0
-        ? normalizedChartData.reduce((sum, point) => sum + selector(point), 0) /
-          normalizedChartData.length
-        : 0;
 
     return {
       chartData: normalizedChartData,
@@ -622,14 +687,16 @@ export function ExplorationCapitalChart({
       currentDiscretionaryPct: currentHistoricalPoint?.discretionaryPct ?? 0,
       currentDiscretionaryAmount:
         currentHistoricalPoint?.discretionaryAmount ?? 0,
-      avgDiscretionaryPct: average((point) => point.discretionaryPct),
-      avgDiscretionaryAmount: average((point) => point.discretionaryAmount),
-      avgAtemporalPct: average((point) => point.atemporalPct),
-      avgTemporalPct: average((point) => point.temporalPct),
-      avgIncomePct: average((point) => point.incomePct),
-      avgAtemporalAmount: average((point) => point.atemporalAmount),
-      avgTemporalAmount: average((point) => point.temporalAmount),
-      avgIncomeAmount: average((point) => point.incomeAmount),
+      avgDiscretionaryPct: historicalAverage((point) => point.discretionaryPct),
+      avgDiscretionaryAmount: historicalAverage(
+        (point) => point.discretionaryAmount,
+      ),
+      avgAtemporalPct: avgAtemporalPctHistorical,
+      avgTemporalPct: avgTemporalPctHistorical,
+      avgIncomePct: avgIncomePctHistorical,
+      avgAtemporalAmount: avgAtemporalAmountHistorical,
+      avgTemporalAmount: avgTemporalAmountHistorical,
+      avgIncomeAmount: avgIncomeAmountHistorical,
       lastHistoricalMonth: lastMonth,
       currentPoint: currentHistoricalPoint,
     };
@@ -901,22 +968,25 @@ export function ExplorationCapitalChart({
             {chartValueMode === "absolute" && (
               <>
                 <ReferenceLine
-                  y={avgAtemporalAmount}
-                  stroke="#a1a1aa"
-                  strokeDasharray="6 4"
-                  strokeOpacity={0.8}
-                />
-                <ReferenceLine
-                  y={avgAtemporalAmount + avgTemporalAmount}
+                  y={chartData[0]?.cappedAtemporalGuideAmount ?? 0}
                   stroke="#d4d4d8"
-                  strokeDasharray="3 5"
-                  strokeOpacity={0.9}
+                  strokeDasharray="6 4"
+                  strokeOpacity={1}
+                  strokeWidth={1.5}
                 />
                 <ReferenceLine
-                  y={avgIncomeAmount}
+                  y={chartData[0]?.cappedRequiredGuideAmount ?? 0}
+                  stroke="#f5f5f5"
+                  strokeDasharray="3 5"
+                  strokeOpacity={1}
+                  strokeWidth={1.5}
+                />
+                <ReferenceLine
+                  y={chartData[0]?.cappedIncomeGuideAmount ?? 0}
                   stroke="#22c55e"
                   strokeDasharray="8 4"
-                  strokeOpacity={0.45}
+                  strokeOpacity={0.7}
+                  strokeWidth={1.5}
                 />
               </>
             )}
