@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-
 import { z } from "zod";
 
 import {
-  buildFinancialBriefing,
   buildFinanceIntentPrompt,
   buildFinanceSystemPrompt,
+  buildFinancialBriefing,
   detectFinanceIntent,
   executeFinanceTool,
   type FinanceChatReply,
@@ -330,7 +329,7 @@ function extractFunctionCalls(payload: OpenAIResponsePayload) {
   );
 }
 
-function extractOutputText(payload: any) {
+function extractOutputText(payload: OpenAIResponsePayload | null | undefined) {
   if (
     typeof payload?.output_text === "string" &&
     payload.output_text.length > 0
@@ -340,8 +339,8 @@ function extractOutputText(payload: any) {
 
   const parts: string[] = [];
 
-  (payload?.output ?? []).forEach((item: any) => {
-    (item?.content ?? []).forEach((content: any) => {
+  (payload?.output ?? []).forEach((item) => {
+    (item?.content ?? []).forEach((content) => {
       if (typeof content?.text === "string") {
         parts.push(content.text);
       }
@@ -743,6 +742,12 @@ export async function POST(request: NextRequest) {
         baseCurrency: briefing.scope.baseCurrency,
         totalBalanceCents: briefing.currentPosition.totalBalanceCents,
         totalOwedCents: briefing.currentPosition.totalOwedCents,
+        totalEstimatedAssetValueCents: briefing.assets.totalEstimatedAssetValueCents,
+        assetSignals: [
+          ...briefing.assets.signals.staleValuations,
+          ...briefing.assets.signals.concentration,
+          ...briefing.assets.signals.missingPurchaseContext,
+        ].slice(0, 4),
         notableSignals: briefing.notableSignals,
       },
     });

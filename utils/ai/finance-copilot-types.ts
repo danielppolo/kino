@@ -1,4 +1,5 @@
 import type { Wallet } from "@/utils/supabase/types";
+import type { RealEstateAsset } from "@/utils/supabase/types";
 import type {
   FinanceMemory,
   FinanceMemoryDerivedContext,
@@ -116,6 +117,34 @@ export interface FinancialBriefing {
     latestBillBurdenPercent: number | null;
     latestNetAfterBillsCents: number | null;
   };
+  assets: {
+    totalEstimatedAssetValueCents: number;
+    assetsByType: Array<{
+      assetType: string;
+      assetCount: number;
+      totalEstimatedValueCents: number;
+    }>;
+    realEstateAssets: Array<{
+      assetId: string;
+      name: string;
+      status: string;
+      assetType: string;
+      currency: string;
+      acquiredOn: string | null;
+      originTransactionId: string | null;
+      latestValuation: {
+        valuationDate: string;
+        valuationAmountCents: number;
+        valuationMethod: string | null;
+      } | null;
+      valuationAgeDays: number | null;
+    }>;
+    signals: {
+      staleValuations: string[];
+      concentration: string[];
+      missingPurchaseContext: string[];
+    };
+  };
   recentTransactions: Array<{
     id: string;
     date: string;
@@ -159,6 +188,7 @@ export interface WorkspaceContext {
     finance_memory: FinanceMemory | null;
   };
   wallets: Wallet[];
+  realEstateAssets: RealEstateAsset[];
 }
 
 export interface FinancialBriefingScope {

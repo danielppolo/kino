@@ -11,6 +11,10 @@ export type Label = Database["public"]["Tables"]["labels"]["Row"];
 export type Wallet = Database["public"]["Tables"]["wallets"]["Row"];
 export type Tag = Database["public"]["Tables"]["tags"]["Row"];
 export type View = Database["public"]["Tables"]["views"]["Row"];
+export type RealEstateAsset =
+  Database["public"]["Tables"]["real_estate_assets"]["Row"];
+export type RealEstateAssetValuation =
+  Database["public"]["Tables"]["real_estate_asset_valuations"]["Row"];
 export type TransactionTemplate =
   Database["public"]["Tables"]["transaction_templates"]["Row"];
 export type Bill = Database["public"]["Tables"]["bills"]["Row"];

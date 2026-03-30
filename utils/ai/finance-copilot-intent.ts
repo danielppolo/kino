@@ -49,6 +49,7 @@ export function buildFinanceSystemPrompt(briefing: FinancialBriefing) {
     "Always quantify claims when possible and cite the most relevant evidence.",
     "Use tools when the user asks for transaction-level causes, forecast detail, bill detail, or category drilldowns.",
     "Tailor investment and market suggestions to the declared accessible markets and instruments only.",
+    "Treat any real-estate assets in the briefing as informational holdings, not liquid cash.",
     "Treat stored market-access context as profile memory, not guaranteed live brokerage availability.",
     "Never imply legal, tax, or regulatory certainty from stored memory.",
     "For investment questions, explain fit, tradeoffs, currency exposure, and liquidity implications before naming candidate instruments.",

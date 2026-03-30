@@ -1,16 +1,18 @@
+import type { BillInsightsResult, WorkspaceContext } from "./finance-copilot-types";
+
+import { Json } from "@/utils/supabase/database.types";
 import {
   getBillBurdenRatio,
   getCashFlowAfterBills,
+  listRealEstateAssets,
   listWallets,
 } from "@/utils/supabase/queries";
 import { createClient } from "@/utils/supabase/server";
 import {
   createEmptyFinanceMemory,
-  parseFinanceMemory,
   type FinanceMemory,
+  parseFinanceMemory,
 } from "@/utils/types/finance-memory";
-
-import type { BillInsightsResult, WorkspaceContext } from "./finance-copilot-types";
 
 export async function resolveWorkspaceContext(): Promise<WorkspaceContext> {
   const supabase = await createClient();
@@ -58,8 +60,12 @@ export async function resolveWorkspaceContext(): Promise<WorkspaceContext> {
     throw new Error("No active workspace found");
   }
 
-  const walletsResult = await listWallets(supabase, activeMembership.workspace_id);
+  const [walletsResult, assetsResult] = await Promise.all([
+    listWallets(supabase, activeMembership.workspace_id),
+    listRealEstateAssets(supabase, activeMembership.workspace_id),
+  ]);
   if (walletsResult.error) throw walletsResult.error;
+  if (assetsResult.error) throw assetsResult.error;
 
   return {
     workspace: {
@@ -69,6 +75,7 @@ export async function resolveWorkspaceContext(): Promise<WorkspaceContext> {
         : null,
     },
     wallets: walletsResult.data ?? [],
+    realEstateAssets: assetsResult.data ?? [],
   };
 }
 
@@ -146,7 +153,7 @@ export async function syncWorkspaceFinanceMemory(
 
   const { error } = await client
     .from("workspaces")
-    .update({ finance_memory: nextMemory as any })
+    .update({ finance_memory: nextMemory as unknown as Json })
     .eq("id", workspaceId);
 
   if (error) {

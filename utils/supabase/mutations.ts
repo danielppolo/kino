@@ -39,6 +39,70 @@ export const createWallet = async ({
   return data;
 };
 
+export const createRealEstateAsset = async (
+  data: Database["public"]["Tables"]["real_estate_assets"]["Insert"],
+) => {
+  const supabase = await createClient();
+  const { data: result, error } = await supabase
+    .from("real_estate_assets")
+    .insert(data)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return result;
+};
+
+export const updateRealEstateAsset = async (
+  data: Database["public"]["Tables"]["real_estate_assets"]["Update"] & {
+    id: string;
+  },
+) => {
+  const supabase = await createClient();
+  const { id, ...updates } = data;
+  const { data: result, error } = await supabase
+    .from("real_estate_assets")
+    .update(updates)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return result;
+};
+
+export const createRealEstateAssetValuation = async (
+  data: Database["public"]["Tables"]["real_estate_asset_valuations"]["Insert"],
+) => {
+  const supabase = await createClient();
+  const { data: result, error } = await supabase
+    .from("real_estate_asset_valuations")
+    .insert(data)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return result;
+};
+
+export const updateRealEstateAssetValuation = async (
+  data: Database["public"]["Tables"]["real_estate_asset_valuations"]["Update"] & {
+    id: string;
+  },
+) => {
+  const supabase = await createClient();
+  const { id, ...updates } = data;
+  const { data: result, error } = await supabase
+    .from("real_estate_asset_valuations")
+    .update(updates)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return result;
+};
+
 export const createCategory = async (
   data: Database["public"]["Tables"]["categories"]["Insert"],
 ) => {
@@ -259,6 +323,24 @@ export const deleteTransactions = async (ids: string[]) => {
 export const deleteWallet = async (id: string) => {
   const supabase = await createClient();
   const { error } = await supabase.from("wallets").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+};
+
+export const deleteRealEstateAsset = async (id: string) => {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("real_estate_assets")
+    .delete()
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+};
+
+export const deleteRealEstateAssetValuation = async (id: string) => {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("real_estate_asset_valuations")
+    .delete()
+    .eq("id", id);
   if (error) throw new Error(error.message);
 };
 

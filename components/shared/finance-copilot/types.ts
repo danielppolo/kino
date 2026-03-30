@@ -50,5 +50,7 @@ export interface BriefingSummary {
   baseCurrency: string;
   totalBalanceCents: number;
   totalOwedCents: number;
+  totalEstimatedAssetValueCents: number;
+  assetSignals: string[];
   notableSignals: string[];
 }
