@@ -8,7 +8,7 @@ import type { Database } from "@/utils/supabase/database.types";
 
 const TransactionSchema = z.object({
   id: z.string().uuid().optional(),
-  amount: z.coerce.number().positive(),
+  amount: z.coerce.number(),
   type: z.enum(["expense", "income", "transfer"]),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   description: z.string().trim().optional(),
@@ -90,7 +90,8 @@ export const createTransaction = async (
 
     // Type assertion needed because database types haven't been regenerated
     // The base_currency column exists in the database (see migration 20260128000005)
-    const baseCurrency = (workspace as { base_currency?: string }).base_currency;
+    const baseCurrency = (workspace as { base_currency?: string })
+      .base_currency;
 
     // Fetch conversion rate to base currency only when needed
     let rate = 1;
@@ -111,9 +112,10 @@ export const createTransaction = async (
       }
     }
 
+    const normalizedAmount = Math.round(Math.abs(amount) * 100);
     const signedAmount =
-      type === "expense" ? -Math.round(amount * 100) : Math.round(amount * 100);
-    const baseAmount = Math.round(amount * 100 * rate);
+      type === "expense" ? -normalizedAmount : normalizedAmount;
+    const baseAmount = Math.round(normalizedAmount * rate);
     const signedBaseAmount = type === "expense" ? -baseAmount : baseAmount;
 
     const { error, data } = await supabase
