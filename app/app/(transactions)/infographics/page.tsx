@@ -44,6 +44,7 @@ async function InfographicsPage({ searchParams }: PageParams) {
     "expenses",
     ...(featureFlags.bills_enabled ? ["bills"] : []),
     ...(featureFlags.infographics_autonomy_enabled ? ["autonomy"] : []),
+    ...(featureFlags.fire_enabled ? ["fire"] : []),
   ];
   const defaultTab = validTabs.includes(filters.tab ?? "")
     ? filters.tab!
@@ -54,6 +55,7 @@ async function InfographicsPage({ searchParams }: PageParams) {
       filters={{ from: filters.from, to: filters.to }}
       billsEnabled={featureFlags.bills_enabled}
       autonomyEnabled={featureFlags.infographics_autonomy_enabled}
+      fireEnabled={featureFlags.fire_enabled}
       defaultTab={defaultTab}
     />
   );

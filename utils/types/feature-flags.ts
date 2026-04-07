@@ -4,6 +4,7 @@
 export interface FeatureFlags {
   bills_enabled: boolean;
   infographics_autonomy_enabled: boolean;
+  fire_enabled: boolean;
   // Future flags:
   // analytics_enabled?: boolean;
   // ai_insights_enabled?: boolean;
@@ -12,6 +13,7 @@ export interface FeatureFlags {
 export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   bills_enabled: true,
   infographics_autonomy_enabled: true,
+  fire_enabled: true,
 };
 
 /**

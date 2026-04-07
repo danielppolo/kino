@@ -4,6 +4,11 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { AccumulatedAreaChart } from "@/components/charts/accumulated-area-chart";
+import { FireProjectionChart } from "@/components/charts/fire-projection-chart";
+import { FireStressTestChart } from "@/components/charts/fire-stress-test-chart";
+import { FireTargetProgressChart } from "@/components/charts/fire-target-progress-chart";
+import { PortfolioLayerChart } from "@/components/charts/portfolio-layer-chart";
+import { SavingsRateToFireChart } from "@/components/charts/savings-rate-to-fire-chart";
 import { AutonomyHorizonChart } from "@/components/charts/autonomy-horizon-chart";
 import { AvgSpendingVsIncomeChart } from "@/components/charts/avg-spending-vs-income-chart";
 import { BillBurdenRatioChart } from "@/components/charts/bill-burden-ratio-chart";
@@ -43,6 +48,7 @@ interface InfographicsTabsProps {
   filters: { from?: string; to?: string };
   billsEnabled: boolean;
   autonomyEnabled: boolean;
+  fireEnabled: boolean;
   defaultTab: string;
 }
 
@@ -50,6 +56,7 @@ export function InfographicsTabs({
   filters,
   billsEnabled,
   autonomyEnabled,
+  fireEnabled,
   defaultTab,
 }: InfographicsTabsProps) {
   const router = useRouter();
@@ -71,12 +78,16 @@ export function InfographicsTabs({
           {autonomyEnabled && (
             <TabsTrigger value="autonomy">Autonomy</TabsTrigger>
           )}
+          {fireEnabled && (
+            <TabsTrigger value="fire">FIRE</TabsTrigger>
+          )}
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
           <TabsTrigger value="expenses">Expenses</TabsTrigger>
           {billsEnabled && <TabsTrigger value="bills">Bills</TabsTrigger>}
         </TabsList>
         <ChartHeaderControls
           showAutonomyControls={autonomyEnabled}
+          showFireControls={fireEnabled}
         />
       </PageHeader>
 
@@ -98,6 +109,28 @@ export function InfographicsTabs({
               </div>
               <div className="md:col-span-2 lg:col-span-4">
                 <ExplorationCapitalChart from={filters.from} to={filters.to} />
+              </div>
+            </div>
+          </TabsContent>
+        )}
+
+        {fireEnabled && (
+          <TabsContent value="fire">
+            <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="md:col-span-2 lg:col-span-4">
+                <FireTargetProgressChart from={filters.from} to={filters.to} />
+              </div>
+              <div className="md:col-span-2 lg:col-span-4">
+                <FireProjectionChart from={filters.from} to={filters.to} />
+              </div>
+              <div className="md:col-span-2 lg:col-span-2">
+                <SavingsRateToFireChart from={filters.from} to={filters.to} />
+              </div>
+              <div className="md:col-span-2 lg:col-span-2">
+                <PortfolioLayerChart />
+              </div>
+              <div className="md:col-span-2 lg:col-span-4">
+                <FireStressTestChart from={filters.from} to={filters.to} />
               </div>
             </div>
           </TabsContent>
