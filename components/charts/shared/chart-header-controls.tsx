@@ -37,6 +37,7 @@ import {
 
 interface ChartHeaderControlsProps {
   showAutonomyControls?: boolean;
+  showFireControls?: boolean;
 }
 
 function formatSpendTriggerValue(value: number) {
@@ -67,6 +68,7 @@ function formatForecastSpendModeLabel(
 
 export function ChartHeaderControls({
   showAutonomyControls = false,
+  showFireControls = false,
 }: ChartHeaderControlsProps) {
   const controls = useChartControls();
   const { baseCurrency } = useCurrency();
@@ -346,6 +348,166 @@ export function ChartHeaderControls({
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </>
+      )}
+
+      {showFireControls && (
+        <>
+          {/* Withdrawal Rate */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <TooltipButton variant="ghost" size="sm" tooltip="Withdrawal rate (WR)">
+                <span className="min-w-10 text-xs font-medium tabular-nums">
+                  WR {((controls.selectedWR ?? 0.035) * 100).toFixed(1)}%
+                </span>
+              </TooltipButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64 p-0">
+              <DropdownMenuLabel>Withdrawal Rate</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <div className="space-y-3 p-3">
+                <div className="text-muted-foreground text-xs">
+                  Annual % drawn from your portfolio. 3.0%–3.5% recommended for
+                  long (40–50y) horizons.
+                </div>
+                <Slider
+                  min={20}
+                  max={50}
+                  step={5}
+                  value={[Math.round((controls.selectedWR ?? 0.035) * 1000)]}
+                  onValueChange={([v]) => controls.setSelectedWR(v / 1000)}
+                />
+                <div className="text-muted-foreground flex justify-between text-xs">
+                  <span>2.0%</span>
+                  <span className="font-medium">
+                    {((controls.selectedWR ?? 0.035) * 100).toFixed(1)}%
+                  </span>
+                  <span>5.0%</span>
+                </div>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Real Return */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <TooltipButton variant="ghost" size="sm" tooltip="Assumed real return">
+                <span className="min-w-10 text-xs font-medium tabular-nums">
+                  r {((controls.assumedRealReturn ?? 0.04) * 100).toFixed(0)}%
+                </span>
+              </TooltipButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64 p-0">
+              <DropdownMenuLabel>Assumed Real Return</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <div className="space-y-3 p-3">
+                <div className="text-muted-foreground text-xs">
+                  Annual portfolio real return (after inflation). 4% is a
+                  common planning assumption for a globally diversified
+                  portfolio.
+                </div>
+                <Slider
+                  min={2}
+                  max={8}
+                  step={1}
+                  value={[Math.round((controls.assumedRealReturn ?? 0.04) * 100)]}
+                  onValueChange={([v]) => controls.setAssumedRealReturn(v / 100)}
+                />
+                <div className="text-muted-foreground flex justify-between text-xs">
+                  <span>2%</span>
+                  <span className="font-medium">
+                    {((controls.assumedRealReturn ?? 0.04) * 100).toFixed(0)}%
+                  </span>
+                  <span>8%</span>
+                </div>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Portfolio Layers */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <TooltipButton variant="ghost" size="sm" tooltip="Portfolio layer targets">
+                <span className="min-w-8 text-xs font-medium tabular-nums">
+                  L{controls.liquidityMonths ?? 12}m
+                </span>
+              </TooltipButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72 p-0">
+              <DropdownMenuLabel>Portfolio Layer Targets</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <div className="space-y-4 p-3">
+                <div className="space-y-2">
+                  <span className="text-xs font-medium">
+                    Liquidity runway:{" "}
+                    <strong>{controls.liquidityMonths ?? 12} months</strong>
+                  </span>
+                  <Slider
+                    min={6}
+                    max={24}
+                    step={3}
+                    value={[controls.liquidityMonths ?? 12]}
+                    onValueChange={([v]) => controls.setLiquidityMonths(v)}
+                  />
+                  <div className="text-muted-foreground flex justify-between text-xs">
+                    <span>6 mo</span>
+                    <span>24 mo</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <span className="text-xs font-medium">
+                    Inflation defense:{" "}
+                    <strong>
+                      {((controls.inflationDefensePct ?? 0.3) * 100).toFixed(
+                        0,
+                      )}
+                      %
+                    </strong>{" "}
+                    of portfolio
+                  </span>
+                  <Slider
+                    min={10}
+                    max={50}
+                    step={5}
+                    value={[
+                      Math.round(
+                        (controls.inflationDefensePct ?? 0.3) * 100,
+                      ),
+                    ]}
+                    onValueChange={([v]) =>
+                      controls.setInflationDefensePct(v / 100)
+                    }
+                  />
+                  <div className="text-muted-foreground flex justify-between text-xs">
+                    <span>10%</span>
+                    <span>50%</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <span className="text-xs font-medium">
+                    FX / USD exposure:{" "}
+                    <strong>
+                      {((controls.fxExposurePct ?? 0.5) * 100).toFixed(0)}%
+                    </strong>{" "}
+                    of portfolio
+                  </span>
+                  <Slider
+                    min={0}
+                    max={80}
+                    step={10}
+                    value={[
+                      Math.round((controls.fxExposurePct ?? 0.5) * 100),
+                    ]}
+                    onValueChange={([v]) => controls.setFxExposurePct(v / 100)}
+                  />
+                  <div className="text-muted-foreground flex justify-between text-xs">
+                    <span>0%</span>
+                    <span>80%</span>
+                  </div>
+                </div>
               </div>
             </DropdownMenuContent>
           </DropdownMenu>

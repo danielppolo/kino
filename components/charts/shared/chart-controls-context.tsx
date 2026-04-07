@@ -42,6 +42,17 @@ interface ChartControlsContextValue {
   setForecastMode: (value: "with-income" | "no-income") => void;
   chartValueMode: "percentage" | "absolute";
   setChartValueMode: (value: "percentage" | "absolute") => void;
+  // FIRE planning controls
+  selectedWR: number;
+  setSelectedWR: (value: number) => void;
+  assumedRealReturn: number;
+  setAssumedRealReturn: (value: number) => void;
+  liquidityMonths: number;
+  setLiquidityMonths: (value: number) => void;
+  inflationDefensePct: number;
+  setInflationDefensePct: (value: number) => void;
+  fxExposurePct: number;
+  setFxExposurePct: (value: number) => void;
 }
 
 const ChartControlsContext = createContext<ChartControlsContextValue | null>(
@@ -56,6 +67,12 @@ const DEFAULT_FORECAST_MODE = "with-income";
 const DEFAULT_FUTURE_LUMP_SUM = 0;
 const DEFAULT_CHART_VALUE_MODE = "percentage";
 const DEFAULT_FORECAST_SPEND_MODE = "historical-average";
+// FIRE defaults
+const DEFAULT_SELECTED_WR = 0.035;
+const DEFAULT_ASSUMED_REAL_RETURN = 0.04;
+const DEFAULT_LIQUIDITY_MONTHS = 12;
+const DEFAULT_INFLATION_DEFENSE_PCT = 0.3;
+const DEFAULT_FX_EXPOSURE_PCT = 0.5;
 
 export function ChartControlsProvider({
   children,
@@ -82,6 +99,12 @@ export function ChartControlsProvider({
   const [chartValueMode, setChartValueMode] = useState<
     "percentage" | "absolute"
   >(DEFAULT_CHART_VALUE_MODE);
+  // FIRE controls
+  const [selectedWR, setSelectedWR] = useState(DEFAULT_SELECTED_WR);
+  const [assumedRealReturn, setAssumedRealReturn] = useState(DEFAULT_ASSUMED_REAL_RETURN);
+  const [liquidityMonths, setLiquidityMonths] = useState(DEFAULT_LIQUIDITY_MONTHS);
+  const [inflationDefensePct, setInflationDefensePct] = useState(DEFAULT_INFLATION_DEFENSE_PCT);
+  const [fxExposurePct, setFxExposurePct] = useState(DEFAULT_FX_EXPOSURE_PCT);
 
   const { data: monthlyStats } = useQuery({
     queryKey: ["chart-controls-stats", walletId, from, to, baseCurrency],
@@ -230,6 +253,16 @@ export function ChartControlsProvider({
       setForecastMode,
       chartValueMode,
       setChartValueMode,
+      selectedWR,
+      setSelectedWR,
+      assumedRealReturn,
+      setAssumedRealReturn,
+      liquidityMonths,
+      setLiquidityMonths,
+      inflationDefensePct,
+      setInflationDefensePct,
+      fxExposurePct,
+      setFxExposurePct,
     }),
     [
       monthlySpend,
@@ -243,6 +276,11 @@ export function ChartControlsProvider({
       forecastHorizonYears,
       forecastMode,
       chartValueMode,
+      selectedWR,
+      assumedRealReturn,
+      liquidityMonths,
+      inflationDefensePct,
+      fxExposurePct,
     ],
   );
 
