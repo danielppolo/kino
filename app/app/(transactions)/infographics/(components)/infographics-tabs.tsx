@@ -4,11 +4,6 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { AccumulatedAreaChart } from "@/components/charts/accumulated-area-chart";
-import { FireProjectionChart } from "@/components/charts/fire-projection-chart";
-import { FireStressTestChart } from "@/components/charts/fire-stress-test-chart";
-import { FireTargetProgressChart } from "@/components/charts/fire-target-progress-chart";
-import { PortfolioLayerChart } from "@/components/charts/portfolio-layer-chart";
-import { SavingsRateToFireChart } from "@/components/charts/savings-rate-to-fire-chart";
 import { AutonomyHorizonChart } from "@/components/charts/autonomy-horizon-chart";
 import { AvgSpendingVsIncomeChart } from "@/components/charts/avg-spending-vs-income-chart";
 import { BillBurdenRatioChart } from "@/components/charts/bill-burden-ratio-chart";
@@ -25,10 +20,16 @@ import { CurrencyExposureChart } from "@/components/charts/currency-exposure-cha
 import { ExpenseConcentrationChart } from "@/components/charts/expense-concentration-chart";
 import { ExpensePredictabilityChart } from "@/components/charts/expense-predictability-chart";
 import { ExplorationCapitalChart } from "@/components/charts/exploration-capital-chart";
+import { FireProjectionChart } from "@/components/charts/fire-projection-chart";
+import { FireStressTestChart } from "@/components/charts/fire-stress-test-chart";
+import { FireTargetJustification } from "@/components/charts/fire-target-justification";
+import { FireTargetProgressChart } from "@/components/charts/fire-target-progress-chart";
 import { ForecastLineChart } from "@/components/charts/forecast-line-chart";
 import { FreedomMultiplierChart } from "@/components/charts/freedom-multiplier-chart";
 import LabelPieChart from "@/components/charts/label-pie-chart";
+import { PortfolioLayerChart } from "@/components/charts/portfolio-layer-chart";
 import { RecurringVsOnetimeBillsChart } from "@/components/charts/recurring-vs-onetime-bills-chart";
+import { SavingsRateToFireChart } from "@/components/charts/savings-rate-to-fire-chart";
 import { ChartControlsProvider } from "@/components/charts/shared/chart-controls-context";
 import { ChartHeaderControls } from "@/components/charts/shared/chart-header-controls";
 import { SufficiencyRatioChart } from "@/components/charts/sufficiency-ratio-chart";
@@ -37,12 +38,7 @@ import { TransactionTypeDistributionChart } from "@/components/charts/transactio
 import { TrendsChart } from "@/components/charts/trends-chart";
 import { WalletNetBalanceLineChart } from "@/components/charts/wallet-net-balance-line-chart";
 import PageHeader from "@/components/shared/page-header";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface InfographicsTabsProps {
   filters: { from?: string; to?: string };
@@ -78,9 +74,7 @@ export function InfographicsTabs({
           {autonomyEnabled && (
             <TabsTrigger value="autonomy">Autonomy</TabsTrigger>
           )}
-          {fireEnabled && (
-            <TabsTrigger value="fire">FIRE</TabsTrigger>
-          )}
+          {fireEnabled && <TabsTrigger value="fire">FIRE</TabsTrigger>}
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
           <TabsTrigger value="expenses">Expenses</TabsTrigger>
           {billsEnabled && <TabsTrigger value="bills">Bills</TabsTrigger>}
@@ -118,6 +112,9 @@ export function InfographicsTabs({
           <TabsContent value="fire">
             <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
               <div className="md:col-span-2 lg:col-span-4">
+                <FireTargetJustification from={filters.from} to={filters.to} />
+              </div>
+              <div className="md:col-span-2 lg:col-span-4">
                 <FireTargetProgressChart from={filters.from} to={filters.to} />
               </div>
               <div className="md:col-span-2 lg:col-span-4">
@@ -145,10 +142,7 @@ export function InfographicsTabs({
               <AccumulatedAreaChart from={filters.from} to={filters.to} />
             </div>
             <div className="md:col-span-2 lg:col-span-4">
-              <AvgSpendingVsIncomeChart
-                from={filters.from}
-                to={filters.to}
-              />
+              <AvgSpendingVsIncomeChart from={filters.from} to={filters.to} />
             </div>
           </div>
         </TabsContent>
@@ -246,7 +240,10 @@ export function InfographicsTabs({
                 <BillDebtFlowChart from={filters.from} to={filters.to} />
               </div>
               <div className="md:col-span-2 lg:col-span-4">
-                <WalletNetBalanceLineChart from={filters.from} to={filters.to} />
+                <WalletNetBalanceLineChart
+                  from={filters.from}
+                  to={filters.to}
+                />
               </div>
               <div className="md:col-span-2 lg:col-span-4">
                 <RecurringVsOnetimeBillsChart
@@ -255,10 +252,7 @@ export function InfographicsTabs({
                 />
               </div>
               <div className="md:col-span-2 lg:col-span-4">
-                <BillPaymentTimelineChart
-                  from={filters.from}
-                  to={filters.to}
-                />
+                <BillPaymentTimelineChart from={filters.from} to={filters.to} />
               </div>
               <div className="md:col-span-2 lg:col-span-2">
                 <BillPaymentRateChart from={filters.from} to={filters.to} />
@@ -270,7 +264,10 @@ export function InfographicsTabs({
                 <BillCoverageRatioChart />
               </div>
               <div className="md:col-span-2 lg:col-span-4">
-                <BillsVsDiscretionaryChart from={filters.from} to={filters.to} />
+                <BillsVsDiscretionaryChart
+                  from={filters.from}
+                  to={filters.to}
+                />
               </div>
               <div className="md:col-span-2 lg:col-span-2">
                 <BillBurdenRatioChart from={filters.from} to={filters.to} />

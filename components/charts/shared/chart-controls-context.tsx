@@ -53,6 +53,8 @@ interface ChartControlsContextValue {
   setInflationDefensePct: (value: number) => void;
   fxExposurePct: number;
   setFxExposurePct: (value: number) => void;
+  targetLowerMonthlyIncome: number;
+  setTargetLowerMonthlyIncome: (value: number) => void;
 }
 
 const ChartControlsContext = createContext<ChartControlsContextValue | null>(
@@ -73,6 +75,7 @@ const DEFAULT_ASSUMED_REAL_RETURN = 0.04;
 const DEFAULT_LIQUIDITY_MONTHS = 12;
 const DEFAULT_INFLATION_DEFENSE_PCT = 0.3;
 const DEFAULT_FX_EXPOSURE_PCT = 0.5;
+const DEFAULT_TARGET_LOWER_MONTHLY_INCOME = 0;
 
 export function ChartControlsProvider({
   children,
@@ -105,6 +108,9 @@ export function ChartControlsProvider({
   const [liquidityMonths, setLiquidityMonths] = useState(DEFAULT_LIQUIDITY_MONTHS);
   const [inflationDefensePct, setInflationDefensePct] = useState(DEFAULT_INFLATION_DEFENSE_PCT);
   const [fxExposurePct, setFxExposurePct] = useState(DEFAULT_FX_EXPOSURE_PCT);
+  const [targetLowerMonthlyIncome, setTargetLowerMonthlyIncome] = useState(
+    DEFAULT_TARGET_LOWER_MONTHLY_INCOME,
+  );
 
   const { data: monthlyStats } = useQuery({
     queryKey: ["chart-controls-stats", walletId, from, to, baseCurrency],
@@ -263,6 +269,8 @@ export function ChartControlsProvider({
       setInflationDefensePct,
       fxExposurePct,
       setFxExposurePct,
+      targetLowerMonthlyIncome,
+      setTargetLowerMonthlyIncome,
     }),
     [
       monthlySpend,
@@ -281,6 +289,7 @@ export function ChartControlsProvider({
       liquidityMonths,
       inflationDefensePct,
       fxExposurePct,
+      targetLowerMonthlyIncome,
     ],
   );
 

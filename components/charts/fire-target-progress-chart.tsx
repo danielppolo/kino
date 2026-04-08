@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-
-import { useQuery } from "@tanstack/react-query";
+import { CircleHelp } from "lucide-react";
 
 import { useChartControls } from "@/components/charts/shared/chart-controls-context";
+import { useFirePlanData } from "@/components/charts/shared/use-fire-plan-data";
 import { useForecastQuery } from "@/components/charts/shared/use-forecast-query";
 import {
   Card,
@@ -13,12 +13,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useCurrency, useWallets } from "@/contexts/settings-context";
-import { useTotalBalance } from "@/hooks/use-total-balance";
-import { calculateTrimmedMean, formatCurrency } from "@/utils/chart-helpers";
-import { convertCurrency } from "@/utils/currency-conversion";
-import { createClient } from "@/utils/supabase/client";
-import { getMonthlyStats } from "@/utils/supabase/queries";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { formatCurrency } from "@/utils/chart-helpers";
+import {
+  computeDownshiftTarget,
+  computeFireTarget,
+  computeMonthsToTarget,
+} from "@/utils/fire-plan";
 
 interface FireTargetProgressChartProps {
   walletId?: string;
@@ -28,26 +33,79 @@ interface FireTargetProgressChartProps {
 
 const WR_SCENARIOS = [0.02, 0.03, 0.035, 0.04, 0.05];
 
+function getProgressColor(progressPct: number) {
+  if (progressPct >= 1) return "#22c55e";
+  if (progressPct >= 0.5) return "#f59e0b";
+  return "#ef4444";
+}
+
+function formatYearsLabel(years: number | null) {
+  if (years == null) return "No projected timeline";
+  if (years === 0) return "Ready now";
+  return `${years.toFixed(1)} years`;
+}
+
+function TermHelp({
+  term,
+  description,
+  iconOnly = false,
+}: {
+  term: string;
+  description: string;
+  iconOnly?: boolean;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      {!iconOnly && <span>{term}</span>}
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="text-muted-foreground hover:text-foreground inline-flex"
+            aria-label={`Explain ${term}`}
+          >
+            <CircleHelp className="size-3.5" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="max-w-64 text-xs leading-relaxed">
+          {description}
+        </PopoverContent>
+      </Popover>
+    </span>
+  );
+}
+
 export function FireTargetProgressChart({
   walletId,
   from,
   to,
 }: FireTargetProgressChartProps) {
-  const { totalBalance } = useTotalBalance();
-  const { conversionRates, baseCurrency } = useCurrency();
-  const [wallets, walletMap] = useWallets();
   const controls = useChartControls();
-  const effectiveMonthlySpend = controls?.effectiveMonthlySpend ?? 0;
-  const selectedWR = controls?.selectedWR ?? 0.035;
   const assumedRealReturn = controls?.assumedRealReturn ?? 0.04;
+  const forecastHorizonYears = controls?.forecastHorizonYears ?? 1;
+  const horizonMonths = forecastHorizonYears * 12;
 
-  const workspaceWalletIds = useMemo(
-    () => wallets.map((w) => w.id),
-    [wallets],
-  );
-  const horizonMonths = (controls?.forecastHorizonYears ?? 1) * 12;
+  const {
+    baseCurrency,
+    contextualAssetValue,
+    conversionRates,
+    downshiftFireNumber,
+    effectiveMonthlySpend,
+    fullFireNumber,
+    hasContextualAssets,
+    historicalNetMonthlySavings,
+    investableBalance,
+    isLoading: loadingFirePlan,
+    selectedWR,
+    targetLowerMonthlyIncome,
+    workspaceWalletIds,
+  } = useFirePlanData({
+    walletId,
+    from,
+    to,
+  });
 
-  const { data: forecastData } = useForecastQuery({
+  const { data: forecastData, isLoading: loadingForecast } = useForecastQuery({
     walletId,
     walletIds: workspaceWalletIds,
     horizonMonths,
@@ -55,281 +113,358 @@ export function FireTargetProgressChart({
     conversionRates,
   });
 
-  const { data: monthlyStats } = useQuery({
-    queryKey: ["fire-target-stats", walletId, from, to, baseCurrency],
-    queryFn: async () => {
-      const supabase = await createClient();
-      const { data, error } = await getMonthlyStats(supabase, {
-        walletId,
-        from,
-        to,
-      });
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
+  const isLoading = loadingFirePlan || loadingForecast;
+  const hasSeparateDownshiftTarget =
+    targetLowerMonthlyIncome > 0 && downshiftFireNumber < fullFireNumber;
 
-  const { netMonthlySavings } = useMemo(() => {
-    if (!monthlyStats || monthlyStats.length === 0) {
-      return { netMonthlySavings: 0 };
+  const fullProgressPct =
+    fullFireNumber > 0 ? Math.min(1, investableBalance / fullFireNumber) : 0;
+  const downshiftProgressPct =
+    downshiftFireNumber > 0
+      ? Math.min(1, investableBalance / downshiftFireNumber)
+      : targetLowerMonthlyIncome > 0
+        ? 1
+        : 0;
+
+  const fullMonthsToFI = useMemo(
+    () =>
+      computeMonthsToTarget({
+        currentBalance: investableBalance,
+        targetBalance: fullFireNumber,
+        monthlyContribution: historicalNetMonthlySavings,
+        annualRealReturn: assumedRealReturn,
+      }),
+    [
+      assumedRealReturn,
+      fullFireNumber,
+      historicalNetMonthlySavings,
+      investableBalance,
+    ],
+  );
+
+  const downshiftMonthsToFI = useMemo(
+    () =>
+      computeMonthsToTarget({
+        currentBalance: investableBalance,
+        targetBalance: downshiftFireNumber,
+        monthlyContribution: historicalNetMonthlySavings,
+        annualRealReturn: assumedRealReturn,
+      }),
+    [
+      assumedRealReturn,
+      downshiftFireNumber,
+      historicalNetMonthlySavings,
+      investableBalance,
+    ],
+  );
+
+  const fullYearsToFI =
+    fullMonthsToFI == null ? null : Math.max(0, fullMonthsToFI / 12);
+  const downshiftYearsToFI =
+    downshiftMonthsToFI == null ? null : Math.max(0, downshiftMonthsToFI / 12);
+
+  const forecastRange = useMemo(() => {
+    if (!forecastData?.forecast?.length) {
+      return {
+        downshiftOptimistic: null,
+        downshiftPessimistic: null,
+        fullOptimistic: null,
+        fullPessimistic: null,
+      };
     }
 
-    const incomeByMonth: Record<string, number> = {};
-    const expenseByMonth: Record<string, number> = {};
-
-    monthlyStats.forEach((stat) => {
-      if (!incomeByMonth[stat.month]) incomeByMonth[stat.month] = 0;
-      if (!expenseByMonth[stat.month]) expenseByMonth[stat.month] = 0;
-
-      const wallet = walletMap.get(stat.wallet_id ?? "");
-      const currency = wallet?.currency ?? baseCurrency;
-
-      incomeByMonth[stat.month] +=
-        convertCurrency(
-          stat.income_cents,
-          currency,
-          baseCurrency,
-          conversionRates,
-        ) / 100;
-      expenseByMonth[stat.month] +=
-        Math.abs(
-          convertCurrency(
-            stat.outcome_cents,
-            currency,
-            baseCurrency,
-            conversionRates,
-          ),
-        ) / 100;
+    const lastPoint = forecastData.forecast[forecastData.forecast.length - 1];
+    const optimisticDownshiftMonths = computeMonthsToTarget({
+      currentBalance: Math.max(0, lastPoint.upper),
+      targetBalance: downshiftFireNumber,
+      monthlyContribution: historicalNetMonthlySavings,
+      annualRealReturn: assumedRealReturn,
+    });
+    const pessimisticDownshiftMonths = computeMonthsToTarget({
+      currentBalance: Math.max(0, lastPoint.lower),
+      targetBalance: downshiftFireNumber,
+      monthlyContribution: historicalNetMonthlySavings,
+      annualRealReturn: assumedRealReturn,
+    });
+    const optimisticFullMonths = computeMonthsToTarget({
+      currentBalance: Math.max(0, lastPoint.upper),
+      targetBalance: fullFireNumber,
+      monthlyContribution: historicalNetMonthlySavings,
+      annualRealReturn: assumedRealReturn,
+    });
+    const pessimisticFullMonths = computeMonthsToTarget({
+      currentBalance: Math.max(0, lastPoint.lower),
+      targetBalance: fullFireNumber,
+      monthlyContribution: historicalNetMonthlySavings,
+      annualRealReturn: assumedRealReturn,
     });
 
-    const avgIncome = calculateTrimmedMean(
-      Object.values(incomeByMonth).filter((v) => v > 0),
-    );
-    const avgExpense = calculateTrimmedMean(
-      Object.values(expenseByMonth).filter((v) => v > 0),
-    );
-
-    return { netMonthlySavings: avgIncome - avgExpense };
-  }, [monthlyStats, walletMap, baseCurrency, conversionRates]);
-
-  const currentBalance = totalBalance / 100;
-  const annualSpend = effectiveMonthlySpend * 12;
-  const fireNumber =
-    selectedWR > 0 && annualSpend > 0 ? annualSpend / selectedWR : 0;
-  const progressPct =
-    fireNumber > 0 ? Math.min(1, currentBalance / fireNumber) : 0;
-  const deficit = fireNumber > 0 ? Math.max(0, fireNumber - currentBalance) : 0;
-
-  const forecastImpliedNetSavings = useMemo(() => {
-    if (!forecastData?.forecast?.length) return null;
-    const lastForecastValue =
-      forecastData.forecast[forecastData.forecast.length - 1].value;
-    return (lastForecastValue - currentBalance) / horizonMonths;
-  }, [forecastData, currentBalance, horizonMonths]);
-
-  const effectiveNetMonthlySavings =
-    forecastImpliedNetSavings ?? netMonthlySavings;
-
-  const monthsToFI = useMemo(() => {
-    if (currentBalance >= fireNumber || fireNumber <= 0) return 0;
-    const r = assumedRealReturn / 12;
-    if (effectiveNetMonthlySavings <= 0) return Infinity;
-    if (r === 0)
-      return Math.ceil(
-        (fireNumber - currentBalance) / effectiveNetMonthlySavings,
-      );
-    const top = Math.log(
-      (fireNumber * r + effectiveNetMonthlySavings) /
-        (currentBalance * r + effectiveNetMonthlySavings),
-    );
-    const bottom = Math.log(1 + r);
-    if (bottom === 0 || top <= 0) return Infinity;
-    return Math.ceil(top / bottom);
-  }, [currentBalance, fireNumber, effectiveNetMonthlySavings, assumedRealReturn]);
-
-  const yearsToFI = monthsToFI === Infinity ? null : monthsToFI / 12;
-
-  const { optimisticYearsToFI, pessimisticYearsToFI } = useMemo(() => {
-    if (!forecastData?.forecast?.length || fireNumber <= 0) {
-      return { optimisticYearsToFI: null, pessimisticYearsToFI: null };
-    }
-    const r = assumedRealReturn / 12;
-    const lastPoint = forecastData.forecast[forecastData.forecast.length - 1];
-    const upperImpliedSavings =
-      (lastPoint.upper - currentBalance) / horizonMonths;
-    const lowerImpliedSavings =
-      (lastPoint.lower - currentBalance) / horizonMonths;
-
-    function monthsFromBalance(
-      startBalance: number,
-      monthlySavings: number,
-    ): number | null {
-      if (startBalance >= fireNumber) return 0;
-      if (monthlySavings <= 0) return null;
-      if (r === 0) return (fireNumber - startBalance) / monthlySavings;
-      const top = Math.log(
-        (fireNumber * r + monthlySavings) /
-          (startBalance * r + monthlySavings),
-      );
-      const bottom = Math.log(1 + r);
-      if (bottom === 0 || top <= 0) return null;
-      return top / bottom;
-    }
-
-    const optMonths = monthsFromBalance(lastPoint.upper, upperImpliedSavings);
-    const pessMonths = monthsFromBalance(lastPoint.lower, lowerImpliedSavings);
-
     return {
-      optimisticYearsToFI:
-        optMonths != null ? (horizonMonths + optMonths) / 12 : null,
-      pessimisticYearsToFI:
-        pessMonths != null ? (horizonMonths + pessMonths) / 12 : null,
+      downshiftOptimistic:
+        optimisticDownshiftMonths == null
+          ? null
+          : (horizonMonths + optimisticDownshiftMonths) / 12,
+      downshiftPessimistic:
+        pessimisticDownshiftMonths == null
+          ? null
+          : (horizonMonths + pessimisticDownshiftMonths) / 12,
+      fullOptimistic:
+        optimisticFullMonths == null
+          ? null
+          : (horizonMonths + optimisticFullMonths) / 12,
+      fullPessimistic:
+        pessimisticFullMonths == null
+          ? null
+          : (horizonMonths + pessimisticFullMonths) / 12,
     };
   }, [
-    forecastData,
-    currentBalance,
-    fireNumber,
     assumedRealReturn,
+    downshiftFireNumber,
+    forecastData,
+    fullFireNumber,
+    historicalNetMonthlySavings,
     horizonMonths,
   ]);
 
-  const progressColor =
-    progressPct >= 1
-      ? "#22c55e"
-      : progressPct >= 0.5
-        ? "#f59e0b"
-        : "#ef4444";
+  const wrScenarios = WR_SCENARIOS.map((withdrawalRate) => {
+    const scenarioFullTarget = computeFireTarget(
+      effectiveMonthlySpend,
+      withdrawalRate,
+    );
+    const scenarioDownshiftTarget = computeDownshiftTarget(
+      effectiveMonthlySpend,
+      targetLowerMonthlyIncome,
+      withdrawalRate,
+    );
 
-  const wrScenarios = WR_SCENARIOS.map((wr) => ({
-    wr,
-    fireNumber: annualSpend > 0 ? annualSpend / wr : 0,
-    progress:
-      annualSpend > 0 ? Math.min(1, currentBalance / (annualSpend / wr)) : 0,
-  }));
+    return {
+      downshiftTarget: scenarioDownshiftTarget,
+      fullProgress:
+        scenarioFullTarget > 0
+          ? Math.min(1, investableBalance / scenarioFullTarget)
+          : 0,
+      fullTarget: scenarioFullTarget,
+      withdrawalRate,
+    };
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Escape Plan Progress</CardTitle>
+          <CardDescription>
+            Tracking downshift readiness and full FIRE progress.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex h-64 items-center justify-center">Loading...</div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>
-          FIRE Target Progress
-          <span
-            className="ml-3 text-2xl font-bold tabular-nums"
-            style={{ color: progressColor }}
-          >
-            {(progressPct * 100).toFixed(1)}%
-          </span>
-        </CardTitle>
+        <CardTitle>Escape Plan Progress</CardTitle>
         <CardDescription>
-          {fireNumber > 0 ? (
+          {hasSeparateDownshiftTarget ? (
             <>
-              At {(selectedWR * 100).toFixed(1)}% withdrawal rate, your FIRE
-              number is{" "}
-              <strong>{formatCurrency(fireNumber, baseCurrency)}</strong>.{" "}
-              {monthsToFI === 0
-                ? "You have reached financial independence."
-                : optimisticYearsToFI !== null &&
-                    pessimisticYearsToFI !== null ? (
-                  <>
-                    ARIMA forecast implies FI in{" "}
-                    <strong>
-                      {optimisticYearsToFI.toFixed(1)}–
-                      {pessimisticYearsToFI.toFixed(1)} years
-                    </strong>{" "}
-                    (optimistic → pessimistic) at{" "}
-                    {(assumedRealReturn * 100).toFixed(0)}% real return.
-                  </>
-                ) : yearsToFI !== null ? (
-                  `Estimated ${yearsToFI.toFixed(1)} years to FI at ${formatCurrency(effectiveNetMonthlySavings, baseCurrency)}/mo net savings and ${(assumedRealReturn * 100).toFixed(0)}% real return.`
-                ) : (
-                  "Increase net savings to project a timeline."
-                )}
+              Downshift readiness asks when your portfolio plus{" "}
+              <strong>
+                {formatCurrency(targetLowerMonthlyIncome, baseCurrency)}/mo
+              </strong>{" "}
+              lower-income work can cover spending. Full FIRE asks when the
+              portfolio can do it alone.
             </>
           ) : (
-            "Set a monthly spend to calculate your FIRE number."
+            <>
+              Downshift readiness currently matches full FIRE because
+              lower-income work is set to{" "}
+              <strong>
+                {formatCurrency(targetLowerMonthlyIncome, baseCurrency)}/mo
+              </strong>
+              . Set a non-zero lower-income target to separate the two
+              thresholds.
+            </>
+          )}
+          {hasContextualAssets && (
+            <>
+              {" "}
+              Tracked assets (
+              <strong>{formatCurrency(contextualAssetValue, baseCurrency)}</strong>)
+              stay separate as contextual fallback capital.
+            </>
           )}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Progress bar */}
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="font-medium tabular-nums">
-              {formatCurrency(currentBalance, baseCurrency)}
-            </span>
-            <span className="text-muted-foreground tabular-nums">
-              {fireNumber > 0 ? formatCurrency(fireNumber, baseCurrency) : "—"}
+        {!hasSeparateDownshiftTarget && (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm">
+            <span className="font-medium text-amber-500">
+              Why both cards match:
+            </span>{" "}
+            <span className="text-muted-foreground">
+              with MX$0/mo lower-income work, the downshift gap is the same as
+              full spending, so both thresholds use the same target.
             </span>
           </div>
-          <div className="bg-muted h-3 w-full overflow-hidden rounded-full">
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${(progressPct * 100).toFixed(2)}%`,
-                backgroundColor: progressColor,
-              }}
-            />
-          </div>
-          {deficit > 0 && (
-            <div className="text-muted-foreground text-right text-xs">
-              {formatCurrency(deficit, baseCurrency)} remaining
+        )}
+        <div className="grid gap-4 md:grid-cols-2">
+          {[
+            {
+              color: getProgressColor(downshiftProgressPct),
+              label: hasSeparateDownshiftTarget
+                ? "Downshift readiness"
+                : "Downshift readiness (same as full FIRE)",
+              progressPct: downshiftProgressPct,
+              range:
+                forecastRange.downshiftOptimistic != null &&
+                forecastRange.downshiftPessimistic != null
+                  ? `${forecastRange.downshiftOptimistic.toFixed(1)}–${forecastRange.downshiftPessimistic.toFixed(1)}y forecast range`
+                  : null,
+              target: downshiftFireNumber,
+              years: downshiftYearsToFI,
+            },
+            {
+              color: getProgressColor(fullProgressPct),
+              label: "Full FIRE progress",
+              progressPct: fullProgressPct,
+              range:
+                forecastRange.fullOptimistic != null &&
+                forecastRange.fullPessimistic != null
+                  ? `${forecastRange.fullOptimistic.toFixed(1)}–${forecastRange.fullPessimistic.toFixed(1)}y forecast range`
+                  : null,
+              target: fullFireNumber,
+              years: fullYearsToFI,
+            },
+          ].map((item) => (
+            <div key={item.label} className="space-y-2 rounded-lg border p-4">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-sm font-medium">{item.label}</span>
+                {item.label.startsWith("Downshift") ? (
+                  <TermHelp
+                    term="Downshift readiness"
+                    description="Downshift readiness measures when your liquid portfolio plus lower-income work can cover spending, so you can step away from maximizing income."
+                    iconOnly
+                  />
+                ) : (
+                  <TermHelp
+                    term="Full FIRE progress"
+                    description="Full FIRE progress measures when the liquid portfolio alone can support the spending target without depending on any work income."
+                    iconOnly
+                  />
+                )}
+                <span
+                  className="text-lg font-semibold tabular-nums"
+                  style={{ color: item.color }}
+                >
+                  {(item.progressPct * 100).toFixed(1)}%
+                </span>
+              </div>
+              <div className="bg-muted h-3 w-full overflow-hidden rounded-full">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${(item.progressPct * 100).toFixed(2)}%`,
+                    backgroundColor: item.color,
+                  }}
+                />
+              </div>
+              <div className="flex justify-between text-xs tabular-nums">
+                <span>{formatCurrency(investableBalance, baseCurrency)}</span>
+                <span className="text-muted-foreground">
+                  {formatCurrency(item.target, baseCurrency)}
+                </span>
+              </div>
+              <div className="text-muted-foreground text-xs">
+                {item.years === 0
+                  ? "Ready now."
+                  : `${formatYearsLabel(item.years)} at ${formatCurrency(
+                      historicalNetMonthlySavings,
+                      baseCurrency,
+                    )}/mo historical net savings and ${(
+                      assumedRealReturn * 100
+                    ).toFixed(0)}% real return.`}
+              </div>
+              {!hasSeparateDownshiftTarget &&
+                item.label.startsWith("Downshift") && (
+                  <div className="text-muted-foreground text-xs">
+                    This matches full FIRE because no lower-income earnings are
+                    offsetting spend yet.
+                  </div>
+                )}
+              {item.range && (
+                <div className="text-muted-foreground text-xs">{item.range}</div>
+              )}
             </div>
-          )}
-          {forecastImpliedNetSavings != null && (
-            <div className="text-muted-foreground text-xs">
-              Net savings derived from{" "}
-              {forecastData?.metadata?.method ?? "ARIMA"} forecast
-            </div>
-          )}
+          ))}
         </div>
 
-        {/* WR scenario table */}
         <div className="overflow-hidden rounded-lg border">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-muted/50 border-b">
                 <th className="text-muted-foreground px-3 py-2 text-left font-medium">
-                  Withdrawal Rate
+                  <TermHelp
+                    term="Withdrawal Rate"
+                    description="The percentage of your portfolio you plan to spend each year. Lower rates mean a larger target but a more conservative plan."
+                  />
                 </th>
                 <th className="text-muted-foreground px-3 py-2 text-right font-medium">
-                  FIRE Number
+                  <TermHelp
+                    term="Full FIRE target"
+                    description="The liquid portfolio needed for your investments alone to support the full annual spending target at the selected withdrawal rate."
+                  />
                 </th>
                 <th className="text-muted-foreground px-3 py-2 text-right font-medium">
-                  Progress
+                  <TermHelp
+                    term="Downshift target"
+                    description="The liquid portfolio needed if lower-income work keeps covering part of monthly spending, so the portfolio only funds the remaining gap."
+                  />
+                </th>
+                <th className="text-muted-foreground px-3 py-2 text-right font-medium">
+                  <TermHelp
+                    term="Full FIRE progress"
+                    description="How much of the full FIRE target is already covered by your current investable portfolio."
+                  />
                 </th>
               </tr>
             </thead>
             <tbody>
-              {wrScenarios.map(({ wr, fireNumber: fn, progress }) => {
-                const color =
-                  progress >= 1
-                    ? "#22c55e"
-                    : progress >= 0.5
-                      ? "#f59e0b"
-                      : "#ef4444";
-                return (
-                  <tr
-                    key={wr}
-                    className={`border-b last:border-0 ${wr === selectedWR ? "bg-muted/30 font-medium" : ""}`}
-                  >
-                    <td className="px-3 py-2">
-                      {(wr * 100).toFixed(1)}%
-                      {wr === selectedWR && (
-                        <span className="text-muted-foreground ml-1 text-xs">
-                          (active)
-                        </span>
-                      )}
-                    </td>
-                    <td className="tabular-nums px-3 py-2 text-right">
-                      {fn > 0 ? formatCurrency(fn, baseCurrency) : "—"}
-                    </td>
-                    <td className="tabular-nums px-3 py-2 text-right">
-                      <span style={{ color }}>
-                        {(progress * 100).toFixed(1)}%
+              {wrScenarios.map((scenario) => (
+                <tr
+                  key={scenario.withdrawalRate}
+                  className={`border-b last:border-0 ${
+                    scenario.withdrawalRate === selectedWR
+                      ? "bg-muted/30 font-medium"
+                      : ""
+                  }`}
+                >
+                  <td className="px-3 py-2">
+                    {(scenario.withdrawalRate * 100).toFixed(1)}%
+                    {scenario.withdrawalRate === selectedWR && (
+                      <span className="text-muted-foreground ml-1 text-xs">
+                        (active)
                       </span>
-                    </td>
-                  </tr>
-                );
-              })}
+                    )}
+                  </td>
+                  <td className="tabular-nums px-3 py-2 text-right">
+                    {formatCurrency(scenario.fullTarget, baseCurrency)}
+                  </td>
+                  <td className="tabular-nums px-3 py-2 text-right">
+                    {hasSeparateDownshiftTarget
+                      ? formatCurrency(scenario.downshiftTarget, baseCurrency)
+                      : "Same as full FIRE"}
+                  </td>
+                  <td className="tabular-nums px-3 py-2 text-right">
+                    <span style={{ color: getProgressColor(scenario.fullProgress) }}>
+                      {(scenario.fullProgress * 100).toFixed(1)}%
+                    </span>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
