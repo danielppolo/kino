@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BanknoteArrowUp, BanknoteX } from "lucide-react";
+import { BanknoteArrowUp, BanknoteX, SlidersHorizontal } from "lucide-react";
 
 import { useChartControls } from "./chart-controls-context";
 import { NormalizationLevelIcon } from "./chart-normalization-toggle";
@@ -44,12 +44,7 @@ function formatSpendTriggerValue(value: number) {
   if (value >= 1000) {
     return `${Math.round(value / 1000)}k`;
   }
-
   return `${value}`;
-}
-
-function formatForecastHorizonTriggerValue(value: number) {
-  return `${value}y`;
 }
 
 function formatForecastSpendModeLabel(
@@ -88,12 +83,10 @@ export function ChartHeaderControls({
 
   const handleFutureLumpSumChange = (value: string) => {
     setFutureLumpSumInput(value);
-
     if (value.trim() === "") {
       controls.setFutureLumpSum(0);
       return;
     }
-
     const parsed = Number(value);
     if (!Number.isNaN(parsed)) {
       controls.setFutureLumpSum(Math.max(0, parsed));
@@ -107,126 +100,111 @@ export function ChartHeaderControls({
         onValueChange={controls.setChartValueMode}
       />
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <TooltipButton
-            variant="ghost"
-            size="sm"
-            tooltip="Forecast years"
-            className="gap-1.5"
-          >
-            <span className="min-w-8 text-xs font-medium tabular-nums">
-              {formatForecastHorizonTriggerValue(controls.forecastHorizonYears)}
-            </span>
-          </TooltipButton>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-40">
-          <DropdownMenuLabel>Forecast years</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuRadioGroup
-            value={String(controls.forecastHorizonYears)}
-            onValueChange={(value) =>
-              controls.setForecastHorizonYears(Number(value))
-            }
-          >
-            {[1, 2, 3].map((years) => (
-              <DropdownMenuRadioItem key={years} value={String(years)}>
-                {years} year{years > 1 ? "s" : ""}
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <Toggle
-        size="sm"
-        variant="outline"
-        pressed={controls.forecastMode === "no-income"}
-        onPressedChange={(pressed) =>
-          controls.setForecastMode(pressed ? "no-income" : "with-income")
-        }
-        aria-label={
-          controls.forecastMode === "no-income"
-            ? "No income forecast"
-            : "With income forecast"
-        }
-        className="px-2"
-      >
-        {controls.forecastMode === "no-income" ? (
-          <BanknoteX className="size-4" />
-        ) : (
-          <BanknoteArrowUp className="size-4" />
-        )}
-      </Toggle>
+      {showAutonomyControls && (
+        <Toggle
+          size="sm"
+          variant="outline"
+          pressed={controls.forecastMode === "no-income"}
+          onPressedChange={(pressed) =>
+            controls.setForecastMode(pressed ? "no-income" : "with-income")
+          }
+          aria-label={
+            controls.forecastMode === "no-income"
+              ? "No income forecast"
+              : "With income forecast"
+          }
+          className="px-2"
+        >
+          {controls.forecastMode === "no-income" ? (
+            <BanknoteX className="size-4" />
+          ) : (
+            <BanknoteArrowUp className="size-4" />
+          )}
+        </Toggle>
+      )}
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <TooltipButton
-            variant="ghost"
-            size="sm"
-            tooltip="Future lump sum"
-            className="gap-1.5"
-          >
-            <span className="text-xs font-medium tabular-nums">
-              {controls.futureLumpSum > 0
-                ? `+${formatCurrency(controls.futureLumpSum, baseCurrency)}`
-                : "+0"}
-            </span>
+          <TooltipButton variant="ghost" size="sm" tooltip="Chart settings">
+            <SlidersHorizontal className="size-4" />
           </TooltipButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-72 p-0">
-          <DropdownMenuLabel>Future lump sum</DropdownMenuLabel>
+
+          {/* ── Forecast ── */}
+          <DropdownMenuLabel>Forecast</DropdownMenuLabel>
           <DropdownMenuSeparator />
+
           <div className="space-y-3 p-3">
-            <div className="text-muted-foreground text-xs">
-              Add a one-time amount to the final forecast month to see where the
-              projection lands.
-            </div>
-            <Input
-              type="number"
-              min="0"
-              step="100"
-              value={futureLumpSumInput}
-              onChange={(event) =>
-                handleFutureLumpSumChange(event.target.value)
-              }
-              placeholder="0"
-              className="h-8 text-xs"
-            />
-            <div className="flex items-center justify-between gap-4">
+            {/* Forecast horizon */}
+            <div className="space-y-1.5">
               <span className="text-muted-foreground text-xs font-medium">
-                Applied amount
+                Horizon
               </span>
-              <span className="text-sm font-medium tabular-nums">
-                <Money
-                  cents={Math.round(controls.futureLumpSum * 100)}
-                  currency={baseCurrency}
-                />
+              <DropdownMenuRadioGroup
+                value={String(controls.forecastHorizonYears)}
+                onValueChange={(value) =>
+                  controls.setForecastHorizonYears(Number(value))
+                }
+              >
+                <div className="flex gap-1">
+                  {[1, 2, 3].map((years) => (
+                    <DropdownMenuRadioItem
+                      key={years}
+                      value={String(years)}
+                      className="flex-1 justify-center text-xs"
+                    >
+                      {years}y
+                    </DropdownMenuRadioItem>
+                  ))}
+                </div>
+              </DropdownMenuRadioGroup>
+            </div>
+
+            {/* Future lump sum */}
+            <div className="space-y-1.5">
+              <span className="text-muted-foreground text-xs font-medium">
+                Future lump sum
               </span>
+              <Input
+                type="number"
+                min="0"
+                step="100"
+                value={futureLumpSumInput}
+                onChange={(e) => handleFutureLumpSumChange(e.target.value)}
+                placeholder="0"
+                className="h-8 text-xs"
+              />
+              {controls.futureLumpSum > 0 && (
+                <div className="text-muted-foreground flex justify-end text-xs">
+                  <Money
+                    cents={Math.round(controls.futureLumpSum * 100)}
+                    currency={baseCurrency}
+                  />
+                </div>
+              )}
             </div>
           </div>
-        </DropdownMenuContent>
-      </DropdownMenu>
 
-      {showAutonomyControls && (
-        <>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <TooltipButton variant="ghost" size="sm" tooltip="Monthly spend">
-                <span className="min-w-10 text-xs font-medium tabular-nums">
-                  {formatForecastSpendModeLabel(controls.forecastSpendMode)}{" "}
-                  {formatSpendTriggerValue(effectiveMonthlySpend)}
-                </span>
-              </TooltipButton>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-72 p-0">
-              <DropdownMenuLabel>Forecast monthly spend</DropdownMenuLabel>
+          {/* ── Autonomy ── */}
+          {showAutonomyControls && (
+            <>
               <DropdownMenuSeparator />
+              <DropdownMenuLabel>Autonomy</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+
               <div className="space-y-3 p-3">
-                <div className="space-y-2">
-                  <span className="text-muted-foreground text-xs font-medium">
-                    Spend source
-                  </span>
+                {/* Monthly spend */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground text-xs font-medium">
+                      Monthly spend
+                    </span>
+                    <span className="text-xs font-medium tabular-nums">
+                      {formatForecastSpendModeLabel(controls.forecastSpendMode)}{" "}
+                      {formatSpendTriggerValue(effectiveMonthlySpend)}
+                    </span>
+                  </div>
                   <Select
                     value={controls.forecastSpendMode}
                     onValueChange={(value) =>
@@ -245,10 +223,7 @@ export function ChartHeaderControls({
                       <SelectItem value="required-spend" className="text-xs">
                         Required spend average
                       </SelectItem>
-                      <SelectItem
-                        value="historical-average"
-                        className="text-xs"
-                      >
+                      <SelectItem value="historical-average" className="text-xs">
                         Historical spend average
                       </SelectItem>
                       <SelectItem value="custom" className="text-xs">
@@ -256,195 +231,132 @@ export function ChartHeaderControls({
                       </SelectItem>
                     </SelectContent>
                   </Select>
+                  {controls.forecastSpendMode === "custom" && (
+                    <>
+                      <Slider
+                        min={0}
+                        max={100000}
+                        step={10000}
+                        value={[
+                          Math.max(0, Math.min(100000, controls.monthlySpend ?? 0)),
+                        ]}
+                        onValueChange={([value]) =>
+                          controls.setMonthlySpend(value)
+                        }
+                      />
+                      <div className="text-muted-foreground flex justify-between text-xs">
+                        <span>{formatCurrency(0, baseCurrency)}</span>
+                        <span>{formatCurrency(100000, baseCurrency)}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted-foreground text-xs font-medium">
-                    Current value
-                  </span>
-                  <span className="text-sm font-medium tabular-nums">
-                    <Money
-                      cents={Math.round(effectiveMonthlySpend * 100)}
-                      currency={baseCurrency}
-                    />
-                  </span>
-                </div>
-                {controls.forecastSpendMode === "required-spend" && (
-                  <div className="text-muted-foreground text-xs">
-                    Uses the trimmed monthly average of atemporal
-                    `required_spend_kind` expenses.
+
+                {/* Peak normalization */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground text-xs font-medium">
+                      Peak normalization
+                    </span>
+                    <NormalizationLevelIcon level={controls.peakNormalization} />
                   </div>
-                )}
-                {controls.forecastSpendMode === "historical-average" && (
-                  <div className="text-muted-foreground text-xs">
-                    Uses the trimmed monthly average of total spending over the
-                    selected history.
-                  </div>
-                )}
-                {controls.forecastSpendMode === "custom" && (
-                  <>
-                    <Slider
-                      min={0}
-                      max={100000}
-                      step={10000}
-                      value={[
-                        Math.max(
-                          0,
-                          Math.min(100000, controls.monthlySpend ?? 0),
-                        ),
-                      ]}
-                      onValueChange={([value]) => controls.setMonthlySpend(value)}
-                    />
-                    <div className="text-muted-foreground flex justify-between text-xs">
-                      <span>{formatCurrency(0, baseCurrency)}</span>
-                      <span>{formatCurrency(100000, baseCurrency)}</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <TooltipButton
-                variant="ghost"
-                size="sm"
-                tooltip="Peak normalization"
-              >
-                <NormalizationLevelIcon level={controls.peakNormalization} />
-              </TooltipButton>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 p-0">
-              <DropdownMenuLabel>Peak normalization</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <div className="space-y-3 p-3">
-                <div className="text-muted-foreground text-xs">
-                  Compress isolated peaks to make the underlying trend easier to
-                  read.
-                </div>
-                <Select
-                  value={controls.peakNormalization}
-                  onValueChange={(value) =>
-                    controls.setPeakNormalization(
-                      value as ChartNormalizationPreset,
-                    )
-                  }
-                >
-                  <SelectTrigger className="h-8 w-full text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(
-                      Object.entries(CHART_NORMALIZATION_PRESETS) as Array<
-                        [
-                          ChartNormalizationPreset,
-                          (typeof CHART_NORMALIZATION_PRESETS)[ChartNormalizationPreset],
-                        ]
-                      >
-                    ).map(([key, preset]) => (
-                      <SelectItem key={key} value={key} className="text-xs">
-                        {preset.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </>
-      )}
-
-      {showFireControls && (
-        <>
-          {/* Withdrawal Rate */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <TooltipButton variant="ghost" size="sm" tooltip="Withdrawal rate (WR)">
-                <span className="min-w-10 text-xs font-medium tabular-nums">
-                  WR {((controls.selectedWR ?? 0.035) * 100).toFixed(1)}%
-                </span>
-              </TooltipButton>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64 p-0">
-              <DropdownMenuLabel>Withdrawal Rate</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <div className="space-y-3 p-3">
-                <div className="text-muted-foreground text-xs">
-                  Annual % drawn from your portfolio. 3.0%–3.5% recommended for
-                  long (40–50y) horizons.
-                </div>
-                <Slider
-                  min={20}
-                  max={50}
-                  step={5}
-                  value={[Math.round((controls.selectedWR ?? 0.035) * 1000)]}
-                  onValueChange={([v]) => controls.setSelectedWR(v / 1000)}
-                />
-                <div className="text-muted-foreground flex justify-between text-xs">
-                  <span>2.0%</span>
-                  <span className="font-medium">
-                    {((controls.selectedWR ?? 0.035) * 100).toFixed(1)}%
-                  </span>
-                  <span>5.0%</span>
+                  <Select
+                    value={controls.peakNormalization}
+                    onValueChange={(value) =>
+                      controls.setPeakNormalization(
+                        value as ChartNormalizationPreset,
+                      )
+                    }
+                  >
+                    <SelectTrigger className="h-8 w-full text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(
+                        Object.entries(CHART_NORMALIZATION_PRESETS) as Array<
+                          [
+                            ChartNormalizationPreset,
+                            (typeof CHART_NORMALIZATION_PRESETS)[ChartNormalizationPreset],
+                          ]
+                        >
+                      ).map(([key, preset]) => (
+                        <SelectItem key={key} value={key} className="text-xs">
+                          {preset.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </>
+          )}
 
-          {/* Real Return */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <TooltipButton variant="ghost" size="sm" tooltip="Assumed real return">
-                <span className="min-w-10 text-xs font-medium tabular-nums">
-                  r {((controls.assumedRealReturn ?? 0.04) * 100).toFixed(0)}%
-                </span>
-              </TooltipButton>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64 p-0">
-              <DropdownMenuLabel>Assumed Real Return</DropdownMenuLabel>
+          {/* ── FIRE ── */}
+          {showFireControls && (
+            <>
               <DropdownMenuSeparator />
-              <div className="space-y-3 p-3">
-                <div className="text-muted-foreground text-xs">
-                  Annual portfolio real return (after inflation). 4% is a
-                  common planning assumption for a globally diversified
-                  portfolio.
-                </div>
-                <Slider
-                  min={2}
-                  max={8}
-                  step={1}
-                  value={[Math.round((controls.assumedRealReturn ?? 0.04) * 100)]}
-                  onValueChange={([v]) => controls.setAssumedRealReturn(v / 100)}
-                />
-                <div className="text-muted-foreground flex justify-between text-xs">
-                  <span>2%</span>
-                  <span className="font-medium">
-                    {((controls.assumedRealReturn ?? 0.04) * 100).toFixed(0)}%
-                  </span>
-                  <span>8%</span>
-                </div>
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              <DropdownMenuLabel>FIRE</DropdownMenuLabel>
+              <DropdownMenuSeparator />
 
-          {/* Portfolio Layers */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <TooltipButton variant="ghost" size="sm" tooltip="Portfolio layer targets">
-                <span className="min-w-8 text-xs font-medium tabular-nums">
-                  L{controls.liquidityMonths ?? 12}m
-                </span>
-              </TooltipButton>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-72 p-0">
-              <DropdownMenuLabel>Portfolio Layer Targets</DropdownMenuLabel>
-              <DropdownMenuSeparator />
               <div className="space-y-4 p-3">
-                <div className="space-y-2">
-                  <span className="text-xs font-medium">
-                    Liquidity runway:{" "}
-                    <strong>{controls.liquidityMonths ?? 12} months</strong>
-                  </span>
+                {/* Withdrawal rate */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground text-xs font-medium">
+                      Withdrawal rate
+                    </span>
+                    <span className="text-xs font-medium tabular-nums">
+                      {((controls.selectedWR ?? 0.035) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <Slider
+                    min={20}
+                    max={50}
+                    step={5}
+                    value={[Math.round((controls.selectedWR ?? 0.035) * 1000)]}
+                    onValueChange={([v]) => controls.setSelectedWR(v / 1000)}
+                  />
+                  <div className="text-muted-foreground flex justify-between text-xs">
+                    <span>2.0%</span>
+                    <span>5.0%</span>
+                  </div>
+                </div>
+
+                {/* Real return */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground text-xs font-medium">
+                      Assumed real return
+                    </span>
+                    <span className="text-xs font-medium tabular-nums">
+                      {((controls.assumedRealReturn ?? 0.04) * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                  <Slider
+                    min={2}
+                    max={8}
+                    step={1}
+                    value={[
+                      Math.round((controls.assumedRealReturn ?? 0.04) * 100),
+                    ]}
+                    onValueChange={([v]) => controls.setAssumedRealReturn(v / 100)}
+                  />
+                  <div className="text-muted-foreground flex justify-between text-xs">
+                    <span>2%</span>
+                    <span>8%</span>
+                  </div>
+                </div>
+
+                {/* Liquidity months */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground text-xs font-medium">
+                      Liquidity runway
+                    </span>
+                    <span className="text-xs font-medium tabular-nums">
+                      {controls.liquidityMonths ?? 12} mo
+                    </span>
+                  </div>
                   <Slider
                     min={6}
                     max={24}
@@ -457,25 +369,24 @@ export function ChartHeaderControls({
                     <span>24 mo</span>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <span className="text-xs font-medium">
-                    Inflation defense:{" "}
-                    <strong>
-                      {((controls.inflationDefensePct ?? 0.3) * 100).toFixed(
-                        0,
-                      )}
-                      %
-                    </strong>{" "}
-                    of portfolio
-                  </span>
+
+                {/* Inflation defense */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground text-xs font-medium">
+                      Inflation defense
+                    </span>
+                    <span className="text-xs font-medium tabular-nums">
+                      {((controls.inflationDefensePct ?? 0.3) * 100).toFixed(0)}
+                      % of portfolio
+                    </span>
+                  </div>
                   <Slider
                     min={10}
                     max={50}
                     step={5}
                     value={[
-                      Math.round(
-                        (controls.inflationDefensePct ?? 0.3) * 100,
-                      ),
+                      Math.round((controls.inflationDefensePct ?? 0.3) * 100),
                     ]}
                     onValueChange={([v]) =>
                       controls.setInflationDefensePct(v / 100)
@@ -486,14 +397,18 @@ export function ChartHeaderControls({
                     <span>50%</span>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <span className="text-xs font-medium">
-                    FX / USD exposure:{" "}
-                    <strong>
-                      {((controls.fxExposurePct ?? 0.5) * 100).toFixed(0)}%
-                    </strong>{" "}
-                    of portfolio
-                  </span>
+
+                {/* FX exposure */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground text-xs font-medium">
+                      FX / USD exposure
+                    </span>
+                    <span className="text-xs font-medium tabular-nums">
+                      {((controls.fxExposurePct ?? 0.5) * 100).toFixed(0)}% of
+                      portfolio
+                    </span>
+                  </div>
                   <Slider
                     min={0}
                     max={80}
@@ -509,10 +424,11 @@ export function ChartHeaderControls({
                   </div>
                 </div>
               </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </>
-      )}
+            </>
+          )}
+
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
