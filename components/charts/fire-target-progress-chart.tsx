@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { useChartControls } from "@/components/charts/shared/chart-controls-context";
+import { useForecastQuery } from "@/components/charts/shared/use-forecast-query";
 import {
   Card,
   CardContent,
@@ -34,11 +35,25 @@ export function FireTargetProgressChart({
 }: FireTargetProgressChartProps) {
   const { totalBalance } = useTotalBalance();
   const { conversionRates, baseCurrency } = useCurrency();
-  const [, walletMap] = useWallets();
+  const [wallets, walletMap] = useWallets();
   const controls = useChartControls();
   const effectiveMonthlySpend = controls?.effectiveMonthlySpend ?? 0;
   const selectedWR = controls?.selectedWR ?? 0.035;
   const assumedRealReturn = controls?.assumedRealReturn ?? 0.04;
+
+  const workspaceWalletIds = useMemo(
+    () => wallets.map((w) => w.id),
+    [wallets],
+  );
+  const horizonMonths = (controls?.forecastHorizonYears ?? 1) * 12;
+
+  const { data: forecastData } = useForecastQuery({
+    walletId,
+    walletIds: workspaceWalletIds,
+    horizonMonths,
+    baseCurrency,
+    conversionRates,
+  });
 
   const { data: monthlyStats } = useQuery({
     queryKey: ["fire-target-stats", walletId, from, to, baseCurrency],
@@ -105,22 +120,78 @@ export function FireTargetProgressChart({
     fireNumber > 0 ? Math.min(1, currentBalance / fireNumber) : 0;
   const deficit = fireNumber > 0 ? Math.max(0, fireNumber - currentBalance) : 0;
 
+  const forecastImpliedNetSavings = useMemo(() => {
+    if (!forecastData?.forecast?.length) return null;
+    const lastForecastValue =
+      forecastData.forecast[forecastData.forecast.length - 1].value;
+    return (lastForecastValue - currentBalance) / horizonMonths;
+  }, [forecastData, currentBalance, horizonMonths]);
+
+  const effectiveNetMonthlySavings =
+    forecastImpliedNetSavings ?? netMonthlySavings;
+
   const monthsToFI = useMemo(() => {
     if (currentBalance >= fireNumber || fireNumber <= 0) return 0;
     const r = assumedRealReturn / 12;
-    if (netMonthlySavings <= 0) return Infinity;
+    if (effectiveNetMonthlySavings <= 0) return Infinity;
     if (r === 0)
-      return Math.ceil((fireNumber - currentBalance) / netMonthlySavings);
+      return Math.ceil(
+        (fireNumber - currentBalance) / effectiveNetMonthlySavings,
+      );
     const top = Math.log(
-      (fireNumber * r + netMonthlySavings) /
-        (currentBalance * r + netMonthlySavings),
+      (fireNumber * r + effectiveNetMonthlySavings) /
+        (currentBalance * r + effectiveNetMonthlySavings),
     );
     const bottom = Math.log(1 + r);
     if (bottom === 0 || top <= 0) return Infinity;
     return Math.ceil(top / bottom);
-  }, [currentBalance, fireNumber, netMonthlySavings, assumedRealReturn]);
+  }, [currentBalance, fireNumber, effectiveNetMonthlySavings, assumedRealReturn]);
 
   const yearsToFI = monthsToFI === Infinity ? null : monthsToFI / 12;
+
+  const { optimisticYearsToFI, pessimisticYearsToFI } = useMemo(() => {
+    if (!forecastData?.forecast?.length || fireNumber <= 0) {
+      return { optimisticYearsToFI: null, pessimisticYearsToFI: null };
+    }
+    const r = assumedRealReturn / 12;
+    const lastPoint = forecastData.forecast[forecastData.forecast.length - 1];
+    const upperImpliedSavings =
+      (lastPoint.upper - currentBalance) / horizonMonths;
+    const lowerImpliedSavings =
+      (lastPoint.lower - currentBalance) / horizonMonths;
+
+    function monthsFromBalance(
+      startBalance: number,
+      monthlySavings: number,
+    ): number | null {
+      if (startBalance >= fireNumber) return 0;
+      if (monthlySavings <= 0) return null;
+      if (r === 0) return (fireNumber - startBalance) / monthlySavings;
+      const top = Math.log(
+        (fireNumber * r + monthlySavings) /
+          (startBalance * r + monthlySavings),
+      );
+      const bottom = Math.log(1 + r);
+      if (bottom === 0 || top <= 0) return null;
+      return top / bottom;
+    }
+
+    const optMonths = monthsFromBalance(lastPoint.upper, upperImpliedSavings);
+    const pessMonths = monthsFromBalance(lastPoint.lower, lowerImpliedSavings);
+
+    return {
+      optimisticYearsToFI:
+        optMonths != null ? (horizonMonths + optMonths) / 12 : null,
+      pessimisticYearsToFI:
+        pessMonths != null ? (horizonMonths + pessMonths) / 12 : null,
+    };
+  }, [
+    forecastData,
+    currentBalance,
+    fireNumber,
+    assumedRealReturn,
+    horizonMonths,
+  ]);
 
   const progressColor =
     progressPct >= 1
@@ -156,9 +227,22 @@ export function FireTargetProgressChart({
               <strong>{formatCurrency(fireNumber, baseCurrency)}</strong>.{" "}
               {monthsToFI === 0
                 ? "You have reached financial independence."
-                : yearsToFI !== null
-                  ? `Estimated ${yearsToFI.toFixed(1)} years to FI at ${formatCurrency(netMonthlySavings, baseCurrency)}/mo net savings and ${(assumedRealReturn * 100).toFixed(0)}% real return.`
-                  : "Increase net savings to project a timeline."}
+                : optimisticYearsToFI !== null &&
+                    pessimisticYearsToFI !== null ? (
+                  <>
+                    ARIMA forecast implies FI in{" "}
+                    <strong>
+                      {optimisticYearsToFI.toFixed(1)}–
+                      {pessimisticYearsToFI.toFixed(1)} years
+                    </strong>{" "}
+                    (optimistic → pessimistic) at{" "}
+                    {(assumedRealReturn * 100).toFixed(0)}% real return.
+                  </>
+                ) : yearsToFI !== null ? (
+                  `Estimated ${yearsToFI.toFixed(1)} years to FI at ${formatCurrency(effectiveNetMonthlySavings, baseCurrency)}/mo net savings and ${(assumedRealReturn * 100).toFixed(0)}% real return.`
+                ) : (
+                  "Increase net savings to project a timeline."
+                )}
             </>
           ) : (
             "Set a monthly spend to calculate your FIRE number."
@@ -188,6 +272,12 @@ export function FireTargetProgressChart({
           {deficit > 0 && (
             <div className="text-muted-foreground text-right text-xs">
               {formatCurrency(deficit, baseCurrency)} remaining
+            </div>
+          )}
+          {forecastImpliedNetSavings != null && (
+            <div className="text-muted-foreground text-xs">
+              Net savings derived from{" "}
+              {forecastData?.metadata?.method ?? "ARIMA"} forecast
             </div>
           )}
         </div>
