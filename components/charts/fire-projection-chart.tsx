@@ -12,6 +12,7 @@ import {
 } from "recharts";
 
 import { useChartControls } from "@/components/charts/shared/chart-controls-context";
+import { useFirePlanData } from "@/components/charts/shared/use-fire-plan-data";
 import { useForecastQuery } from "@/components/charts/shared/use-forecast-query";
 import {
   Card,
@@ -28,8 +29,6 @@ import {
   ChartLegendContent,
   ChartTooltip,
 } from "@/components/ui/chart";
-import { useCurrency, useWallets } from "@/contexts/settings-context";
-import { useTotalBalance } from "@/hooks/use-total-balance";
 import { formatCurrency } from "@/utils/chart-helpers";
 
 interface FireProjectionChartProps {
@@ -42,8 +41,12 @@ const MAX_PROJECTION_YEARS = 30;
 
 const chartConfig: ChartConfig = {
   balance: {
-    label: "Portfolio",
+    label: "Investable portfolio",
     color: "#3b82f6",
+  },
+  contextualAssetValue: {
+    label: "Tracked assets (context only)",
+    color: "#64748b",
   },
 };
 
@@ -52,30 +55,56 @@ type ChartPoint = {
   balance: number | null;
   ciLower: number | null;
   ciUpper: number | null;
+  contextualAssetValue: number | null;
   isForecast: boolean;
   isProjection: boolean;
 };
 
+function findFirstYearAtTarget(
+  data: ChartPoint[],
+  targetBalance: number,
+): number | null {
+  if (targetBalance <= 0) return 0;
+
+  for (const point of data) {
+    if (point.balance != null && point.balance >= targetBalance) {
+      return point.year;
+    }
+  }
+
+  return null;
+}
+
 export function FireProjectionChart({
   walletId,
+  from,
+  to,
 }: FireProjectionChartProps) {
-  const { totalBalance } = useTotalBalance();
-  const loadingStats = false;
-  const { conversionRates, baseCurrency } = useCurrency();
-  const [wallets] = useWallets();
   const controls = useChartControls();
-  const effectiveMonthlySpend = controls?.effectiveMonthlySpend ?? 0;
-  const selectedWR = controls?.selectedWR ?? 0.035;
   const assumedRealReturn = controls?.assumedRealReturn ?? 0.04;
   const forecastHorizonYears = controls?.forecastHorizonYears ?? 1;
   const horizonMonths = forecastHorizonYears * 12;
 
-  const workspaceWalletIds = wallets.map((w) => w.id);
-
   const {
-    data: forecastData,
-    isLoading: loadingForecast,
-  } = useForecastQuery({
+    baseCurrency,
+    conversionRates,
+    contextualAssetValue,
+    downshiftFireNumber,
+    fullFireNumber,
+    hasContextualAssets,
+    historicalNetMonthlySavings,
+    investableBalance,
+    isLoading: loadingFirePlan,
+    selectedWR,
+    targetLowerMonthlyIncome,
+    workspaceWalletIds,
+  } = useFirePlanData({
+    walletId,
+    from,
+    to,
+  });
+
+  const { data: forecastData, isLoading: loadingForecast } = useForecastQuery({
     walletId,
     walletIds: workspaceWalletIds,
     horizonMonths,
@@ -83,239 +112,206 @@ export function FireProjectionChart({
     conversionRates,
   });
 
-  const isLoading = !!loadingStats || loadingForecast;
+  const isLoading = loadingFirePlan || loadingForecast;
 
-  const { chartData, fireNumber, fiYear, fiYearOptimistic, fiYearPessimistic, netMonthlySavings } = useMemo(() => {
-    const currentBalance = totalBalance / 100;
-    const annualSpend = effectiveMonthlySpend * 12;
-    const fn =
-      selectedWR > 0 && annualSpend > 0 ? annualSpend / selectedWR : 0;
-    const r = assumedRealReturn / 12;
-    const stopAfterFIMonths = 36; // show 3 years past FI date
-
+  const {
+    chartData,
+    downshiftYear,
+    fullFireYear,
+    fullFireYearOptimistic,
+    fullFireYearPessimistic,
+  } = useMemo(() => {
+    const monthlyRate = assumedRealReturn / 12;
+    const stopAfterTargetMonths = 36;
     const forecast = forecastData?.forecast ?? [];
     const hasForecast = forecast.length > 0;
-
-    // Compute net monthly savings implied by ARIMA forecast:
-    // (lastForecastValue - currentBalance) / horizonMonths
-    const lastForecastValue = hasForecast
-      ? forecast[forecast.length - 1].value
-      : currentBalance;
-    const forecastImpliedNetMonthlySavings = hasForecast
-      ? (lastForecastValue - currentBalance) / horizonMonths
-      : 0;
-
-    // Sample ARIMA forecast at yearly intervals (year 0 = current balance)
-    // ARIMA forecast is monthly — pick the point closest to each year boundary
-    const arimaYearlyPoints: Array<{
-      year: number;
-      balance: number;
-      ciLower: number;
-      ciUpper: number;
-    }> = [];
-
-    if (hasForecast) {
-      // Year 0 = current balance (no CI)
-      arimaYearlyPoints.push({
-        year: 0,
-        balance: currentBalance,
-        ciLower: currentBalance,
-        ciUpper: currentBalance,
-      });
-
-      for (let yr = 1; yr <= forecastHorizonYears; yr++) {
-        const targetMonth = yr * 12 - 1; // 0-indexed: month 11 = year 1, etc.
-        const idx = Math.min(targetMonth, forecast.length - 1);
-        const pt = forecast[idx];
-        arimaYearlyPoints.push({
-          year: yr,
-          balance: pt.value,
-          ciLower: pt.lower,
-          ciUpper: pt.upper,
-        });
-      }
-    }
-
-    // Build the chart data array
     const data: ChartPoint[] = [];
 
+    const contextualValue = hasContextualAssets ? contextualAssetValue : null;
+
     if (hasForecast) {
-      // Near-term: use ARIMA yearly samples
-      for (const pt of arimaYearlyPoints) {
+      data.push({
+        year: 0,
+        balance: Math.max(0, investableBalance),
+        ciLower: null,
+        ciUpper: null,
+        contextualAssetValue: contextualValue,
+        isForecast: true,
+        isProjection: false,
+      });
+
+      for (let year = 1; year <= forecastHorizonYears; year++) {
+        const targetMonth = Math.min(year * 12 - 1, forecast.length - 1);
+        const point = forecast[targetMonth];
+
         data.push({
-          year: pt.year,
-          balance: Math.max(0, pt.balance),
-          ciLower: pt.year === 0 ? null : Math.max(0, pt.ciLower),
-          ciUpper: pt.year === 0 ? null : Math.max(0, pt.ciUpper),
+          year,
+          balance: Math.max(0, point.value),
+          ciLower: Math.max(0, point.lower),
+          ciUpper: Math.max(0, point.upper),
+          contextualAssetValue: contextualValue,
           isForecast: true,
           isProjection: false,
         });
       }
 
-      // Tail: compound-interest projection from last ARIMA value
-      const tailStartBalance = lastForecastValue;
-      let balance = tailStartBalance;
-      let fiYear: number | null = null;
-      let monthsPastFI = 0;
+      let balance = forecast[forecast.length - 1].value;
+      let monthsPastTarget = 0;
+      let reachedAnyTarget = false;
 
-      const startYear = forecastHorizonYears;
-      for (let m = 0; m <= (MAX_PROJECTION_YEARS - startYear) * 12; m++) {
-        const absYear = startYear + m / 12;
+      for (let month = 1; month <= (MAX_PROJECTION_YEARS - forecastHorizonYears) * 12; month++) {
+        balance = balance * (1 + monthlyRate) + historicalNetMonthlySavings;
+        const absoluteYear = forecastHorizonYears + month / 12;
 
-        if (m % 12 === 0 && m > 0) {
+        if (month % 12 === 0) {
           data.push({
-            year: absYear,
+            year: absoluteYear,
             balance: Math.max(0, balance),
             ciLower: null,
             ciUpper: null,
+            contextualAssetValue: contextualValue,
             isForecast: false,
             isProjection: true,
           });
         }
 
-        if (fn > 0 && balance >= fn && fiYear === null) {
-          fiYear = absYear;
-        }
-        if (fiYear !== null) {
-          monthsPastFI++;
-          if (monthsPastFI > stopAfterFIMonths) break;
+        if (
+          !reachedAnyTarget &&
+          ((downshiftFireNumber > 0 && balance >= downshiftFireNumber) ||
+            (fullFireNumber > 0 && balance >= fullFireNumber))
+        ) {
+          reachedAnyTarget = true;
         }
 
-        balance = balance * (1 + r) + forecastImpliedNetMonthlySavings;
-      }
-
-      // Find FI year from central line
-      let centralFiYear: number | null = null;
-      for (const pt of data) {
-        if (fn > 0 && pt.balance != null && pt.balance >= fn) {
-          centralFiYear = pt.year;
-          break;
+        if (reachedAnyTarget) {
+          monthsPastTarget += 1;
+          if (monthsPastTarget > stopAfterTargetMonths) break;
         }
       }
 
-      // Optimistic FI: extrapolate from last ARIMA ciUpper
-      let fiYearOptimistic: number | null = null;
-      if (fn > 0 && hasForecast) {
-        const lastPt = forecast[forecast.length - 1];
-        let bal = lastPt.upper;
-        for (let m = 1; m <= (MAX_PROJECTION_YEARS - forecastHorizonYears) * 12 + 1; m++) {
-          bal = bal * (1 + r) + forecastImpliedNetMonthlySavings;
-          if (bal >= fn) {
-            fiYearOptimistic = forecastHorizonYears + m / 12;
-            break;
+      let optimisticYear: number | null = null;
+      let pessimisticYear: number | null = null;
+
+      if (fullFireNumber > 0) {
+        const upperStart = forecast[forecast.length - 1].upper;
+        if (upperStart >= fullFireNumber) {
+          optimisticYear = forecastHorizonYears;
+        } else {
+          let balanceUpper = upperStart;
+          for (
+            let month = 1;
+            month <= (MAX_PROJECTION_YEARS - forecastHorizonYears) * 12;
+            month++
+          ) {
+            balanceUpper =
+              balanceUpper * (1 + monthlyRate) + historicalNetMonthlySavings;
+            if (balanceUpper >= fullFireNumber) {
+              optimisticYear = forecastHorizonYears + month / 12;
+              break;
+            }
           }
         }
-        // Also check if upper bound already past FI at horizon
-        if (lastPt.upper >= fn) {
-          fiYearOptimistic = forecastHorizonYears;
-        }
-      }
 
-      // Pessimistic FI: extrapolate from last ARIMA ciLower
-      let fiYearPessimistic: number | null = null;
-      if (fn > 0 && hasForecast) {
-        const lastPt = forecast[forecast.length - 1];
-        let bal = lastPt.lower;
-        for (let m = 1; m <= (MAX_PROJECTION_YEARS - forecastHorizonYears) * 12 + 1; m++) {
-          bal = bal * (1 + r) + forecastImpliedNetMonthlySavings;
-          if (bal >= fn) {
-            fiYearPessimistic = forecastHorizonYears + m / 12;
-            break;
+        const lowerStart = forecast[forecast.length - 1].lower;
+        if (lowerStart >= fullFireNumber) {
+          pessimisticYear = forecastHorizonYears;
+        } else {
+          let balanceLower = lowerStart;
+          for (
+            let month = 1;
+            month <= (MAX_PROJECTION_YEARS - forecastHorizonYears) * 12;
+            month++
+          ) {
+            balanceLower =
+              balanceLower * (1 + monthlyRate) + historicalNetMonthlySavings;
+            if (balanceLower >= fullFireNumber) {
+              pessimisticYear = forecastHorizonYears + month / 12;
+              break;
+            }
           }
-        }
-        if (lastPt.lower >= fn) {
-          fiYearPessimistic = forecastHorizonYears;
         }
       }
 
       return {
         chartData: data,
-        fireNumber: fn,
-        fiYear: centralFiYear,
-        fiYearOptimistic,
-        fiYearPessimistic,
-        netMonthlySavings: forecastImpliedNetMonthlySavings,
+        downshiftYear: findFirstYearAtTarget(data, downshiftFireNumber),
+        fullFireYear: findFirstYearAtTarget(data, fullFireNumber),
+        fullFireYearOptimistic: optimisticYear,
+        fullFireYearPessimistic: pessimisticYear,
       };
     }
 
-    // No forecast: classic compound-interest projection
-    let balance = currentBalance;
-    let fiYear: number | null = null;
-    let monthsPastFI = 0;
+    let balance = investableBalance;
+    let monthsPastTarget = 0;
+    let reachedAnyTarget = false;
 
-    for (let m = 0; m <= MAX_PROJECTION_YEARS * 12; m++) {
-      if (m % 12 === 0) {
+    for (let month = 0; month <= MAX_PROJECTION_YEARS * 12; month++) {
+      if (month % 12 === 0) {
         data.push({
-          year: m / 12,
+          year: month / 12,
           balance: Math.max(0, balance),
           ciLower: null,
           ciUpper: null,
+          contextualAssetValue: contextualValue,
           isForecast: false,
           isProjection: true,
         });
       }
 
-      if (fn > 0 && balance >= fn && fiYear === null) {
-        fiYear = m / 12;
-      }
-      if (fiYear !== null) {
-        monthsPastFI++;
-        if (monthsPastFI > stopAfterFIMonths) break;
+      if (
+        !reachedAnyTarget &&
+        ((downshiftFireNumber > 0 && balance >= downshiftFireNumber) ||
+          (fullFireNumber > 0 && balance >= fullFireNumber))
+      ) {
+        reachedAnyTarget = true;
       }
 
-      balance = balance * (1 + r) + effectiveMonthlySpend;
+      if (reachedAnyTarget) {
+        monthsPastTarget += 1;
+        if (monthsPastTarget > stopAfterTargetMonths) break;
+      }
+
+      balance = balance * (1 + monthlyRate) + historicalNetMonthlySavings;
     }
 
     return {
       chartData: data,
-      fireNumber: fn,
-      fiYear,
-      fiYearOptimistic: null,
-      fiYearPessimistic: null,
-      netMonthlySavings: effectiveMonthlySpend,
+      downshiftYear: findFirstYearAtTarget(data, downshiftFireNumber),
+      fullFireYear: findFirstYearAtTarget(data, fullFireNumber),
+      fullFireYearOptimistic: null,
+      fullFireYearPessimistic: null,
     };
   }, [
-    totalBalance,
-    effectiveMonthlySpend,
-    selectedWR,
     assumedRealReturn,
+    contextualAssetValue,
+    downshiftFireNumber,
     forecastData,
     forecastHorizonYears,
-    horizonMonths,
+    fullFireNumber,
+    hasContextualAssets,
+    historicalNetMonthlySavings,
+    investableBalance,
   ]);
 
-  const horizonYears = forecastHorizonYears;
-
-  const yAxisFormatter = (v: number) => {
-    if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
-    if (v >= 1_000) return `${(v / 1_000).toFixed(0)}k`;
-    return v.toFixed(0);
+  const yAxisFormatter = (value: number) => {
+    if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+    if (value >= 1_000) return `${(value / 1_000).toFixed(0)}k`;
+    return value.toFixed(0);
   };
 
   const methodLabel = forecastData?.metadata?.method ?? null;
-
-  const fiDescription = fiYear !== null
-    ? (() => {
-        let desc = `FI in ~${fiYear.toFixed(1)}y`;
-        if (fiYearOptimistic !== null || fiYearPessimistic !== null) {
-          const parts: string[] = [];
-          if (fiYearOptimistic !== null)
-            parts.push(`optimistic: ${fiYearOptimistic.toFixed(1)}y`);
-          if (fiYearPessimistic !== null)
-            parts.push(`pessimistic: ${fiYearPessimistic.toFixed(1)}y`);
-          if (parts.length > 0) desc += ` (${parts.join(" / ")})`;
-        }
-        return desc;
-      })()
-    : null;
+  const showDownshiftTarget =
+    targetLowerMonthlyIncome > 0 &&
+    downshiftFireNumber > 0 &&
+    downshiftFireNumber < fullFireNumber;
 
   if (isLoading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>FIRE Projection</CardTitle>
+          <CardTitle>Escape Plan Projection</CardTitle>
           <CardDescription>
-            Projected portfolio growth toward your FIRE target.
+            Projected portfolio growth against your escape-plan thresholds.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -329,27 +325,40 @@ export function FireProjectionChart({
     <Card>
       <CardHeader>
         <CardTitle>
-          FIRE Projection
-          {fiYear !== null && (
-            <span className="ml-3 text-lg font-normal text-green-500">
-              FI in ~{fiYear.toFixed(1)} years
+          Escape Plan Projection
+          {showDownshiftTarget && downshiftYear !== null && (
+            <span className="ml-3 text-lg font-normal text-amber-500">
+              Downshift in ~{downshiftYear.toFixed(1)} years
             </span>
           )}
         </CardTitle>
         <CardDescription>
-          Portfolio trajectory at{" "}
-          {(assumedRealReturn * 100).toFixed(0)}% real return.{" "}
+          Investable portfolio only.{" "}
           {methodLabel
-            ? `Near-term uses the ${methodLabel} model; beyond year ${horizonYears} uses compound-interest projection.`
-            : `Compound-interest projection at ${formatCurrency(netMonthlySavings, baseCurrency)}/mo net savings.`}{" "}
-          Targeting{" "}
-          {fireNumber > 0
-            ? formatCurrency(fireNumber, baseCurrency)
-            : "—"}{" "}
-          ({(selectedWR * 100).toFixed(1)}% WR).
-          {fiDescription && (
-            <span className="block mt-1 text-green-600 dark:text-green-400">
-              {fiDescription}
+            ? `Near-term uses ${methodLabel}; beyond year ${forecastHorizonYears} uses a long-term projection with ${formatCurrency(historicalNetMonthlySavings, baseCurrency)}/mo historical net savings.`
+            : `Long-term projection uses ${formatCurrency(historicalNetMonthlySavings, baseCurrency)}/mo historical net savings.`}{" "}
+          Full FIRE target:{" "}
+          <strong>{formatCurrency(fullFireNumber, baseCurrency)}</strong>{" "}
+          at {(selectedWR * 100).toFixed(1)}% WR.
+          {showDownshiftTarget && (
+            <>
+              {" "}
+              Downshift target:{" "}
+              <strong>{formatCurrency(downshiftFireNumber, baseCurrency)}</strong>
+              {" "}with{" "}
+              <strong>
+                {formatCurrency(targetLowerMonthlyIncome, baseCurrency)}/mo
+              </strong>{" "}
+              lower-income work.
+            </>
+          )}
+          {fullFireYear !== null && (
+            <span className="mt-1 block text-green-600 dark:text-green-400">
+              Full FIRE in ~{fullFireYear.toFixed(1)}y
+              {fullFireYearOptimistic !== null && fullFireYearPessimistic !== null
+                ? ` (${fullFireYearOptimistic.toFixed(1)}–${fullFireYearPessimistic.toFixed(1)}y forecast range)`
+                : ""}
+              .
             </span>
           )}
         </CardDescription>
@@ -366,7 +375,7 @@ export function FireProjectionChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(v) => `${v}y`}
+              tickFormatter={(value) => `${value}y`}
             />
             <YAxis
               tickLine={false}
@@ -378,40 +387,62 @@ export function FireProjectionChart({
               cursor={false}
               content={({ active, payload }) => {
                 if (!active || !payload?.length) return null;
-                const d = payload[0].payload as ChartPoint;
+                const point = payload[0].payload as ChartPoint;
+
                 return (
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
                     <div className="mb-1 text-sm font-medium">
-                      Year {d.year}
+                      Year {point.year}
                     </div>
                     <div className="text-sm">
                       <span className="font-bold">
-                        {d.balance != null
-                          ? formatCurrency(d.balance, baseCurrency)
+                        {point.balance != null
+                          ? formatCurrency(point.balance, baseCurrency)
                           : "—"}
                       </span>
                     </div>
-                    {d.ciLower != null && d.ciUpper != null && (
+                    {showDownshiftTarget && point.balance != null && (
                       <div className="text-muted-foreground mt-1 text-xs">
-                        95% CI: {formatCurrency(d.ciLower, baseCurrency)} —{" "}
-                        {formatCurrency(d.ciUpper, baseCurrency)}
+                        {point.balance >= downshiftFireNumber
+                          ? "Supports lower-income work"
+                          : `${formatCurrency(
+                              downshiftFireNumber - point.balance,
+                              baseCurrency,
+                            )} to downshift`}
                       </div>
                     )}
-                    {d.isForecast && (
+                    {fullFireNumber > 0 && point.balance != null && (
                       <div className="text-muted-foreground mt-0.5 text-xs">
-                        ARIMA forecast
+                        {point.balance >= fullFireNumber
+                          ? "Full FIRE reached"
+                          : `${formatCurrency(
+                              fullFireNumber - point.balance,
+                              baseCurrency,
+                            )} to full FIRE`}
                       </div>
                     )}
-                    {d.isProjection && (
-                      <div className="text-muted-foreground mt-0.5 text-xs">
-                        Compound-interest projection
-                      </div>
-                    )}
-                    {fireNumber > 0 && d.balance != null && (
+                    {point.ciLower != null && point.ciUpper != null && (
                       <div className="text-muted-foreground mt-1 text-xs">
-                        {d.balance >= fireNumber
-                          ? "FIRE reached"
-                          : `${formatCurrency(fireNumber - d.balance, baseCurrency)} to go`}
+                        Forecast range: {formatCurrency(point.ciLower, baseCurrency)}
+                        {" — "}
+                        {formatCurrency(point.ciUpper, baseCurrency)}
+                      </div>
+                    )}
+                    {point.contextualAssetValue != null && (
+                      <div className="text-muted-foreground mt-1 text-xs">
+                        Tracked assets:{" "}
+                        {formatCurrency(point.contextualAssetValue, baseCurrency)}{" "}
+                        excluded from FIRE capital
+                      </div>
+                    )}
+                    {point.isForecast && (
+                      <div className="text-muted-foreground mt-0.5 text-xs">
+                        Near-term forecast
+                      </div>
+                    )}
+                    {point.isProjection && (
+                      <div className="text-muted-foreground mt-0.5 text-xs">
+                        Long-term projection
                       </div>
                     )}
                   </div>
@@ -419,30 +450,28 @@ export function FireProjectionChart({
               }}
             />
 
-            {/* 95% CI band for ARIMA near-term points */}
             {chartData
-              .filter((p) => p.ciLower != null && p.ciUpper != null)
-              .map((p) => (
+              .filter((point) => point.ciLower != null && point.ciUpper != null)
+              .map((point) => (
                 <ReferenceArea
-                  key={p.year}
-                  x1={p.year - 1}
-                  x2={p.year}
-                  y1={p.ciLower!}
-                  y2={p.ciUpper!}
+                  key={point.year}
+                  x1={point.year - 1}
+                  x2={point.year}
+                  y1={point.ciLower!}
+                  y2={point.ciUpper!}
                   fill="#3b82f6"
                   fillOpacity={0.06}
                   stroke="none"
                 />
               ))}
 
-            {/* ARIMA → compound-interest horizon boundary */}
-            {horizonYears > 0 && forecastData && (
+            {forecastData && forecastHorizonYears > 0 && (
               <ReferenceLine
-                x={horizonYears}
+                x={forecastHorizonYears}
                 stroke="hsl(var(--muted-foreground))"
                 strokeDasharray="3 3"
                 label={{
-                  value: "ARIMA →",
+                  value: "Forecast →",
                   position: "top",
                   fontSize: 9,
                   fill: "hsl(var(--muted-foreground))",
@@ -450,14 +479,27 @@ export function FireProjectionChart({
               />
             )}
 
-            {/* FIRE target horizontal line */}
-            {fireNumber > 0 && (
+            {showDownshiftTarget && (
               <ReferenceLine
-                y={fireNumber}
+                y={downshiftFireNumber}
+                stroke="#f59e0b"
+                strokeDasharray="4 4"
+                label={{
+                  value: "Downshift target",
+                  position: "insideTopLeft",
+                  fontSize: 10,
+                  fill: "#f59e0b",
+                }}
+              />
+            )}
+
+            {fullFireNumber > 0 && (
+              <ReferenceLine
+                y={fullFireNumber}
                 stroke="#22c55e"
                 strokeDasharray="4 4"
                 label={{
-                  value: "FIRE target",
+                  value: "Full FIRE",
                   position: "insideTopRight",
                   fontSize: 10,
                   fill: "#22c55e",
@@ -465,14 +507,27 @@ export function FireProjectionChart({
               />
             )}
 
-            {/* FI date vertical line on central line */}
-            {fiYear !== null && (
+            {showDownshiftTarget && downshiftYear !== null && (
               <ReferenceLine
-                x={Math.round(fiYear)}
+                x={Math.round(downshiftYear)}
+                stroke="#f59e0b"
+                strokeDasharray="4 4"
+                label={{
+                  value: `Downshift ~${downshiftYear.toFixed(1)}y`,
+                  position: "top",
+                  fontSize: 10,
+                  fill: "#f59e0b",
+                }}
+              />
+            )}
+
+            {fullFireYear !== null && (
+              <ReferenceLine
+                x={Math.round(fullFireYear)}
                 stroke="#22c55e"
                 strokeDasharray="4 4"
                 label={{
-                  value: `FI ~${fiYear.toFixed(1)}y`,
+                  value: `Full FIRE ~${fullFireYear.toFixed(1)}y`,
                   position: "top",
                   fontSize: 10,
                   fill: "#22c55e",
@@ -482,7 +537,7 @@ export function FireProjectionChart({
 
             <Area
               dataKey="balance"
-              name="Portfolio"
+              name="Investable portfolio"
               type="monotone"
               fill="#3b82f6"
               fillOpacity={0.15}
@@ -491,18 +546,33 @@ export function FireProjectionChart({
               dot={false}
               connectNulls
             />
+            {hasContextualAssets && (
+              <Area
+                dataKey="contextualAssetValue"
+                name="Tracked assets (context only)"
+                type="monotone"
+                fill="#64748b"
+                fillOpacity={0}
+                stroke="#64748b"
+                strokeDasharray="5 5"
+                strokeWidth={2}
+                dot={false}
+                connectNulls
+              />
+            )}
             <ChartLegend content={<ChartLegendContent />} />
           </AreaChart>
         </ChartContainer>
       </CardContent>
-      {netMonthlySavings <= 0 && (
-        <CardFooter>
-          <div className="text-muted-foreground text-xs">
-            Net monthly savings is negative or zero — increase income or reduce
-            expenses to project a FI date.
-          </div>
-        </CardFooter>
-      )}
+      <CardFooter>
+        <div className="text-muted-foreground text-xs">
+          {historicalNetMonthlySavings <= 0
+            ? "Historical net savings is flat or negative, so timelines rely mostly on current capital and returns."
+            : `Projection uses ${formatCurrency(historicalNetMonthlySavings, baseCurrency)}/mo historical net savings after the forecast horizon.`}
+          {hasContextualAssets &&
+            ` Tracked assets (${formatCurrency(contextualAssetValue, baseCurrency)}) stay separate as contextual fallback capital.`}
+        </div>
+      </CardFooter>
     </Card>
   );
 }

@@ -1,4 +1,4 @@
-Short answer: **it can help—but for your specific situation, it’s not obviously the best move.**
+Short answer: **it can help, but mostly as optionality after you reach escape velocity, not as the default engine that gets you there.**
 Let’s break this with your numbers, not generic advice.
 
 ---
@@ -172,11 +172,12 @@ Difference:
 
 ## 8. Strategic insight (this is the important part)
 
-For **your FIRE plan**, real estate is not a growth tool
+For an **escape-plan-first FIRE workflow**, real estate is usually not the main
+tool that gets you to freedom.
 
-It is:
+It is better understood as:
 
-👉 a **stability tool after you reach FIRE**
+👉 a **stability and fallback tool after you reach downshift readiness or full FIRE**
 
 ---
 
@@ -184,11 +185,11 @@ It is:
 
 ### Phase 1 — Now (0–24 months)
 
-* Stay in liquid investments
-* Maximize compounding
-* Reach $500k–$650k
+* Stay focused on liquid, investable capital
+* Maximize compounding and optionality
+* Build the portfolio that lets you stop depending on high income
 
-👉 **Do NOT buy real estate here**
+👉 **Do NOT let illiquid assets blur the escape-plan math here**
 
 ---
 
@@ -196,10 +197,11 @@ It is:
 
 Then consider:
 
-* moving 20–40% into real estate
-* for income stability
+* moving part of the capital base into real estate
+* for income stability or lifestyle alignment
 
-👉 This is when real estate starts making sense
+👉 This is when real estate starts making more sense, because you are solving for
+stability rather than speed
 
 ---
 
@@ -223,8 +225,8 @@ Examples:
 
 Is real estate a good instrument for your FIRE plan?
 
-👉 **Not as a primary vehicle to reach FIRE**
-👉 **Yes as a secondary instrument after reaching it**
+👉 **Not as a primary vehicle to reach escape velocity**
+👉 **Yes as a secondary instrument after reaching downshift readiness or full FIRE**
 
 ---
 
@@ -236,4 +238,4 @@ Not:
 
 But:
 
-> “At what point does reducing volatility become more valuable than accelerating growth?”
+> “At what point does reducing volatility and adding fallback capital become more valuable than accelerating liquid portfolio growth?”

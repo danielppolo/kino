@@ -1,5 +1,24 @@
 # FIRE in Mexico for a Middle-Class Resident
 
+## Product framing: escape plan first, full retirement second
+
+For this product, FIRE should not be treated as a single binary event. There are
+two useful thresholds:
+
+- **Downshift / escape threshold**: the amount of liquid, investable capital
+  needed so portfolio support plus lower-income work can cover ongoing spend.
+- **Full FIRE threshold**: the amount of liquid, investable capital needed so
+  the portfolio can cover ongoing spend on its own.
+
+This distinction matters because the practical question is often not "when can I
+never work again?" but "when can I stop optimizing for high income and spend my
+time on lower-paid, more meaningful work?"
+
+Tracked real-estate assets should be treated as **contextual net worth**, not as
+default FIRE capital. They can strengthen optionality, but they are illiquid,
+costly to sell, and should not be silently merged into the liquid portfolio used
+for retirement timing.
+
 ## Executive summary
 
 Achieving FIRE (financial independence / retire early) in Mexico is often more feasible than in many high-cost countries **if** you manage three Mexico-specific risks carefully: (a) inflation that can spike and hit essentials (especially food and healthcare), (b) a portfolio that is too concentrated in pesos or too concentrated in Mexico, and (c) health and long-term-care uncertainty, where one major medical event can dominate lifetime spending. Mexico’s policy framework also creates a distinctive opportunity: **high nominal yields on government securities** can support a conservative “liability-matching” layer (CETES/Bonos/UDIBONOS), while global equity exposure (often via the SIC) can hedge long horizons and currency uncertainty. citeturn21view0turn10search8turn4search11turn4search15
@@ -17,7 +36,7 @@ From there, the nest-egg target depends mostly on (1) your annual spending and (
 
 A rigorous Mexico-appropriate approach is to plan across a **2%–5%** range and then “earn” the higher end only if you adopt (a) low fees, (b) global diversification, and (c) flexible spending rules (guardrails/dynamic withdrawals). Vanguard’s FIRE-focused Monte Carlo work (50-year horizon, 85% success criterion) illustrates this spectrum: **~2.6%** under restrictive assumptions (domestic-only, high fees, rigid inflation spending) versus **~4.0%** with global diversification, low fees, and dynamic spending. citeturn12view1turn12view0
 
-**Recommended planning stance (housing covered):** anchor your “base FIRE” at **3.0%–3.5%** and treat **4.0%** as an *earned* rate requiring a resilient portfolio + flexible spending and/or supplemental income. citeturn12view1turn5search36turn5search37
+**Recommended planning stance (housing covered):** anchor your “base FIRE” at **3.0%–3.5%** and treat **4.0%** as an *earned* rate requiring a resilient portfolio + flexible spending and/or supplemental income. In product terms, that means using conservative assumptions to judge the **escape threshold** and a stricter standard before declaring **full FIRE**. citeturn12view1turn5search36turn5search37
 
 ---
 
