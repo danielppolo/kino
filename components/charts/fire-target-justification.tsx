@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 
+import { useChartControls } from "@/components/charts/shared/chart-controls-context";
 import { useFirePlanData } from "@/components/charts/shared/use-fire-plan-data";
 import {
   Accordion,
@@ -23,6 +24,7 @@ export function FireTargetJustification({
   from,
   to,
 }: FireTargetJustificationProps) {
+  const controls = useChartControls();
   const {
     baseCurrency,
     contextualAssetValue,
@@ -40,6 +42,7 @@ export function FireTargetJustification({
     from,
     to,
   });
+  const forecastHorizonYears = controls?.forecastHorizonYears ?? 1;
 
   const hasSeparateDownshiftTarget =
     targetLowerMonthlyIncome > 0 && downshiftFireNumber < fullFireNumber;
@@ -164,8 +167,12 @@ export function FireTargetJustification({
                 <strong>
                   {formatCurrency(historicalNetMonthlySavings, baseCurrency)}/mo
                 </strong>
-                . That is the recurring contribution used for long-term projection
-                tails after the forecast horizon.
+                . That is the recurring contribution used while you are still in
+                accumulation mode. If you set a forecast horizon above 0, the
+                forecast controls the near-term path for the first{" "}
+                <strong>{forecastHorizonYears} year(s)</strong>. If you set it to{" "}
+                <strong>0y</strong>, the chart skips the forecast entirely and
+                projects directly from today.
               </p>
               {hasContextualAssets ? (
                 <p>
@@ -219,6 +226,13 @@ export function FireTargetJustification({
                   <> Because the downshift target is the same right now, the two
                   progress meters match.</>
                 )}
+              </p>
+              <p>
+                Once the portfolio hits the first qualifying threshold, the FIRE
+                projection changes phase. It stops treating monthly cashflow as
+                savings and starts treating it as withdrawals to fund spending.
+                That inflection point is the model’s estimate of when retirement
+                or downshifting becomes possible.
               </p>
               <p>
                 The point of this section is not to claim a single “correct”
