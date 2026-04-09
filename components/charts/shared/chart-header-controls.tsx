@@ -12,8 +12,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
@@ -192,27 +190,30 @@ export function ChartHeaderControls({
             summary={`${controls.forecastHorizonYears}y horizon`}
           >
             <div className="space-y-1.5">
-              <span className="text-muted-foreground text-xs font-medium">
-                Horizon
-              </span>
-              <DropdownMenuRadioGroup
-                value={String(controls.forecastHorizonYears)}
-                onValueChange={(value) =>
-                  controls.setForecastHorizonYears(Number(value))
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground text-xs font-medium">
+                  Horizon
+                </span>
+                <span className="text-xs font-medium tabular-nums">
+                  {controls.forecastHorizonYears}y
+                </span>
+              </div>
+              <Slider
+                min={0}
+                max={10}
+                step={1}
+                value={[controls.forecastHorizonYears]}
+                onValueChange={([value]) =>
+                  controls.setForecastHorizonYears(value)
                 }
-              >
-                <div className="flex gap-1">
-                  {[1, 2, 3].map((years) => (
-                    <DropdownMenuRadioItem
-                      key={years}
-                      value={String(years)}
-                      className="flex-1 justify-center text-xs"
-                    >
-                      {years}y
-                    </DropdownMenuRadioItem>
-                  ))}
-                </div>
-              </DropdownMenuRadioGroup>
+              />
+              <div className="text-muted-foreground flex justify-between text-xs">
+                <span>0y</span>
+                <span>10y</span>
+              </div>
+              <div className="text-muted-foreground text-xs">
+                0y skips the forecast and projects directly from today.
+              </div>
             </div>
 
             <div className="space-y-1.5">

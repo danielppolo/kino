@@ -30,6 +30,11 @@ import {
   ChartTooltip,
 } from "@/components/ui/chart";
 import { formatCurrency } from "@/utils/chart-helpers";
+import {
+  FireProjectionMonthPoint,
+  getDownshiftMonthlyWithdrawal,
+  simulateFireProjection,
+} from "@/utils/fire-plan";
 
 interface FireStressTestChartProps {
   walletId?: string;
@@ -38,6 +43,7 @@ interface FireStressTestChartProps {
 }
 
 const STRESS_YEARS = 20;
+const STRESS_MONTHS = STRESS_YEARS * 12;
 const INFLATION_SHOCK_YEARS = 3;
 const DRAWDOWN_SHOCK_PCT = 0.35;
 const SHOCK_MONTH = 12;
@@ -50,6 +56,13 @@ const chartConfig: ChartConfig = {
 };
 
 type ScenarioName = "baseline" | "inflation" | "drawdown" | "fx";
+
+type ScenarioMonthPoint = {
+  month: number;
+  year: number;
+  balance: number;
+  phase: FireProjectionMonthPoint["phase"];
+};
 
 function getScenarioStatusLabel({
   balance,
@@ -67,6 +80,102 @@ function getScenarioStatusLabel({
     return "still supports downshift";
   }
   return "falls below downshift";
+}
+
+function sampleYearlyBalances(points: ScenarioMonthPoint[]) {
+  return points
+    .filter((point) => point.month === 0 || point.month % 12 === 0)
+    .map((point) => ({
+      balance: point.balance,
+      phase: point.phase,
+      year: point.year,
+    }));
+}
+
+function simulateStressScenario({
+  baselinePoints,
+  downshiftTarget,
+  fullFireTarget,
+  monthlySavings,
+  monthlySpend,
+  targetLowerMonthlyIncome,
+  annualRealReturn,
+  shockBalanceMultiplier,
+  shockExtraMonthlyOutflow = 0,
+  shockReturnDelta = 0,
+  shockMonths = 0,
+}: {
+  baselinePoints: FireProjectionMonthPoint[];
+  downshiftTarget: number;
+  fullFireTarget: number;
+  monthlySavings: number;
+  monthlySpend: number;
+  targetLowerMonthlyIncome: number;
+  annualRealReturn: number;
+  shockBalanceMultiplier: number;
+  shockExtraMonthlyOutflow?: number;
+  shockReturnDelta?: number;
+  shockMonths?: number;
+}): ScenarioMonthPoint[] {
+  const downshiftWithdrawal = getDownshiftMonthlyWithdrawal(
+    monthlySpend,
+    targetLowerMonthlyIncome,
+  );
+  const monthlyRate = annualRealReturn / 12;
+  const points: ScenarioMonthPoint[] = baselinePoints
+    .filter((point) => point.month <= SHOCK_MONTH)
+    .map((point) => ({
+      month: point.month,
+      year: point.year,
+      balance: point.balance,
+      phase: point.phase,
+    }));
+
+  let balance = (baselinePoints[SHOCK_MONTH]?.balance ?? baselinePoints[0]?.balance ?? 0) *
+    shockBalanceMultiplier;
+  let phase = baselinePoints[SHOCK_MONTH]?.phase ?? "accumulation";
+
+  for (let month = SHOCK_MONTH + 1; month <= STRESS_MONTHS; month++) {
+    const monthsIntoShock = month - SHOCK_MONTH - 1;
+    const inShock = monthsIntoShock < shockMonths;
+    const adjustedRate = inShock ? monthlyRate + shockReturnDelta / 12 : monthlyRate;
+
+    let cashflow = monthlySavings;
+    if (phase === "downshift-retired") {
+      cashflow = -downshiftWithdrawal;
+    } else if (phase === "full-fire-retired") {
+      cashflow = -Math.max(0, monthlySpend);
+    }
+
+    if (inShock) {
+      cashflow -= shockExtraMonthlyOutflow;
+    }
+
+    balance = Math.max(0, balance * (1 + adjustedRate) + cashflow);
+
+    if (phase === "accumulation") {
+      if (
+        downshiftTarget > 0 &&
+        downshiftTarget < fullFireTarget &&
+        balance >= downshiftTarget
+      ) {
+        phase = "downshift-retired";
+      } else if (fullFireTarget > 0 && balance >= fullFireTarget) {
+        phase = "full-fire-retired";
+      }
+    } else if (phase === "downshift-retired" && balance >= fullFireTarget) {
+      phase = "full-fire-retired";
+    }
+
+    points.push({
+      month,
+      year: month / 12,
+      balance,
+      phase,
+    });
+  }
+
+  return points;
 }
 
 export function FireStressTestChart({
@@ -109,72 +218,79 @@ export function FireStressTestChart({
 
   const isLoading = loadingFirePlan || loadingForecast;
 
-  const { chartData, forecastMethod, scenarioSummary } = useMemo(() => {
-    const forecastPoints = forecastData?.forecast ?? [];
-    const monthlyRate = assumedRealReturn / 12;
-    const totalMonths = STRESS_YEARS * 12;
-    const monthlyBaseline: number[] = [];
+  const {
+    chartData,
+    retirementInflectionYear,
+    retirementInflectionType,
+    scenarioSummary,
+  } = useMemo(() => {
+    const forecastBalances = (forecastData?.forecast ?? []).map(
+      (point) => point.value,
+    );
 
-    monthlyBaseline.push(investableBalance);
+    const baseline = simulateFireProjection({
+      annualRealReturn: assumedRealReturn,
+      downshiftTarget: downshiftFireNumber,
+      forecastBalances,
+      fullFireTarget: fullFireNumber,
+      monthlySavings: historicalNetMonthlySavings,
+      monthlySpend: effectiveMonthlySpend,
+      startBalance: investableBalance,
+      targetLowerMonthlyIncome,
+      totalMonths: STRESS_MONTHS,
+    });
 
-    for (let month = 1; month <= totalMonths; month++) {
-      if (month <= forecastPoints.length) {
-        monthlyBaseline.push(Math.max(0, forecastPoints[month - 1].value));
-      } else {
-        const previous = monthlyBaseline[month - 1] ?? investableBalance;
-        monthlyBaseline.push(
-          Math.max(0, previous * (1 + monthlyRate) + historicalNetMonthlySavings),
-        );
-      }
-    }
+    const inflation = simulateStressScenario({
+      annualRealReturn: assumedRealReturn,
+      baselinePoints: baseline.points,
+      downshiftTarget: downshiftFireNumber,
+      fullFireTarget: fullFireNumber,
+      monthlySavings: historicalNetMonthlySavings,
+      monthlySpend: effectiveMonthlySpend,
+      shockBalanceMultiplier: 1,
+      shockExtraMonthlyOutflow: effectiveMonthlySpend * 0.08,
+      shockMonths: INFLATION_SHOCK_YEARS * 12,
+      shockReturnDelta: -0.02,
+      targetLowerMonthlyIncome,
+    });
 
-    const baselineYearly = monthlyBaseline.filter((_, index) => index % 12 === 0);
-    const shockStartBalance = monthlyBaseline[SHOCK_MONTH] ?? investableBalance;
-    const preShockYearly = baselineYearly.slice(0, Math.floor(SHOCK_MONTH / 12) + 1);
-    const inflationShockMonths = INFLATION_SHOCK_YEARS * 12;
+    const drawdown = simulateStressScenario({
+      annualRealReturn: assumedRealReturn,
+      baselinePoints: baseline.points,
+      downshiftTarget: downshiftFireNumber,
+      fullFireTarget: fullFireNumber,
+      monthlySavings: historicalNetMonthlySavings,
+      monthlySpend: effectiveMonthlySpend,
+      shockBalanceMultiplier: 1 - DRAWDOWN_SHOCK_PCT,
+      targetLowerMonthlyIncome,
+    });
 
-    const inflationYearly: number[] = [...preShockYearly];
-    {
-      let balance = shockStartBalance;
-      for (let month = SHOCK_MONTH; month <= totalMonths; month++) {
-        if (month > SHOCK_MONTH && (month - SHOCK_MONTH) % 12 === 0) {
-          inflationYearly.push(Math.max(0, balance));
-        }
-        const monthsIntoShock = month - SHOCK_MONTH;
-        const inShock = monthsIntoShock < inflationShockMonths;
-        const stressedRate = inShock ? (assumedRealReturn - 0.02) / 12 : monthlyRate;
-        const stressedContribution = inShock
-          ? historicalNetMonthlySavings - effectiveMonthlySpend * 0.08
-          : historicalNetMonthlySavings;
-        balance = balance * (1 + stressedRate) + stressedContribution;
-      }
-    }
+    const fx = simulateStressScenario({
+      annualRealReturn: assumedRealReturn,
+      baselinePoints: baseline.points,
+      downshiftTarget: downshiftFireNumber,
+      fullFireTarget: fullFireNumber,
+      monthlySavings: historicalNetMonthlySavings,
+      monthlySpend: effectiveMonthlySpend,
+      shockBalanceMultiplier: 1 - fxExposurePct * 0.2,
+      targetLowerMonthlyIncome,
+    });
 
-    const drawdownYearly: number[] = [...preShockYearly];
-    {
-      let balance = shockStartBalance * (1 - DRAWDOWN_SHOCK_PCT);
-      for (let month = SHOCK_MONTH; month <= totalMonths; month++) {
-        if (month > SHOCK_MONTH && (month - SHOCK_MONTH) % 12 === 0) {
-          drawdownYearly.push(Math.max(0, balance));
-        }
-        balance = balance * (1 + monthlyRate) + historicalNetMonthlySavings;
-      }
-    }
-
-    const fxYearly: number[] = [...preShockYearly];
-    {
-      let balance = shockStartBalance * (1 - fxExposurePct * 0.2);
-      for (let month = SHOCK_MONTH; month <= totalMonths; month++) {
-        if (month > SHOCK_MONTH && (month - SHOCK_MONTH) % 12 === 0) {
-          fxYearly.push(Math.max(0, balance));
-        }
-        balance = balance * (1 + monthlyRate) + historicalNetMonthlySavings;
-      }
-    }
+    const baselineYearly = sampleYearlyBalances(
+      baseline.points.map((point) => ({
+        month: point.month,
+        year: point.year,
+        balance: point.balance,
+        phase: point.phase,
+      })),
+    );
+    const inflationYearly = sampleYearlyBalances(inflation);
+    const drawdownYearly = sampleYearlyBalances(drawdown);
+    const fxYearly = sampleYearlyBalances(fx);
 
     const ciByYear: Record<number, { lower: number; upper: number }> = {};
     for (let year = 1; year <= forecastHorizonYears; year++) {
-      const point = forecastPoints[year * 12 - 1];
+      const point = forecastData?.forecast?.[year * 12 - 1];
       if (point) {
         ciByYear[year] = {
           lower: Math.max(0, point.lower),
@@ -183,14 +299,15 @@ export function FireStressTestChart({
       }
     }
 
-    const data = baselineYearly.map((baselineValue, index) => ({
-      baseline: baselineValue,
-      ciLower: ciByYear[index]?.lower ?? null,
-      ciUpper: ciByYear[index]?.upper ?? null,
-      drawdown: drawdownYearly[index] ?? 0,
-      fx: fxYearly[index] ?? 0,
-      inflation: inflationYearly[index] ?? 0,
-      year: index,
+    const data = baselineYearly.map((point, index) => ({
+      baseline: point.balance,
+      ciLower: ciByYear[point.year]?.lower ?? null,
+      ciUpper: ciByYear[point.year]?.upper ?? null,
+      drawdown: drawdownYearly[index]?.balance ?? 0,
+      fx: fxYearly[index]?.balance ?? 0,
+      inflation: inflationYearly[index]?.balance ?? 0,
+      phase: point.phase,
+      year: point.year,
     }));
 
     const finalPoint = data[data.length - 1];
@@ -235,7 +352,8 @@ export function FireStressTestChart({
 
     return {
       chartData: data,
-      forecastMethod: forecastData?.metadata?.method ?? "forecast",
+      retirementInflectionType: baseline.retirementInflectionType,
+      retirementInflectionYear: baseline.retirementInflectionYear,
       scenarioSummary: summaries,
     };
   }, [
@@ -248,11 +366,12 @@ export function FireStressTestChart({
     fullFireNumber,
     historicalNetMonthlySavings,
     investableBalance,
+    targetLowerMonthlyIncome,
   ]);
 
   const yAxisFormatter = (value: number) => {
-    if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
-    if (value >= 1_000) return `${(value / 1_000).toFixed(0)}k`;
+    if (Math.abs(value) >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+    if (Math.abs(value) >= 1_000) return `${(value / 1_000).toFixed(0)}k`;
     return value.toFixed(0);
   };
 
@@ -277,16 +396,23 @@ export function FireStressTestChart({
       <CardHeader>
         <CardTitle>Stress Test Scenarios</CardTitle>
         <CardDescription>
-          {STRESS_YEARS}-year investable portfolio trajectories. Near-term uses{" "}
-          {forecastMethod}; the tail uses{" "}
-          {formatCurrency(historicalNetMonthlySavings, baseCurrency)}/mo
-          historical net savings. Shocks branch off at year 1.
-          {targetLowerMonthlyIncome > 0 && (
+          {STRESS_YEARS}-year investable portfolio trajectories.{" "}
+          {forecastHorizonYears > 0
+            ? `Forecast controls the first ${forecastHorizonYears} year(s) until the shock branches at year 1.`
+            : "0y forecast projects directly from today before the stress branches."}{" "}
+          Each scenario now switches from saving to retirement withdrawals at the
+          first qualifying threshold.
+          {retirementInflectionYear !== null && (
             <>
               {" "}
-              Downshift target assumes{" "}
-              <strong>{formatCurrency(targetLowerMonthlyIncome, baseCurrency)}/mo</strong>{" "}
-              lower-income work.
+              Baseline retirement inflection:
+              {" "}
+              <strong>
+                {retirementInflectionType === "downshift"
+                  ? `downshift at ~${retirementInflectionYear.toFixed(1)}y`
+                  : `full retirement at ~${retirementInflectionYear.toFixed(1)}y`}
+              </strong>
+              .
             </>
           )}
         </CardDescription>
@@ -315,42 +441,36 @@ export function FireStressTestChart({
               cursor={false}
               content={({ active, label, payload }) => {
                 if (!active || !payload?.length) return null;
+                const point = payload[0].payload as (typeof chartData)[0];
 
                 return (
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
                     <div className="mb-1 text-sm font-medium">Year {label}</div>
-                    {payload.map((entry) => {
-                      const balance = Number(entry.value ?? 0);
-
-                      return (
-                        <div
-                          key={String(entry.dataKey)}
-                          className="flex items-center justify-between gap-3 text-xs"
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <div
-                              className="h-2 w-2 rounded-full"
-                              style={{ backgroundColor: entry.color }}
-                            />
-                            <span>{entry.name}</span>
-                          </div>
-                          <span className="tabular-nums font-medium">
-                            {formatCurrency(balance, baseCurrency)}
-                          </span>
+                    {payload.map((entry) => (
+                      <div
+                        key={String(entry.dataKey)}
+                        className="flex items-center justify-between gap-3 text-xs"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <div
+                            className="h-2 w-2 rounded-full"
+                            style={{ backgroundColor: entry.color }}
+                          />
+                          <span>{entry.name}</span>
                         </div>
-                      );
-                    })}
-                    {downshiftFireNumber > 0 && (
-                      <div className="text-muted-foreground mt-1 border-t pt-1 text-xs">
-                        Downshift target:{" "}
-                        {formatCurrency(downshiftFireNumber, baseCurrency)}
+                        <span className="tabular-nums font-medium">
+                          {formatCurrency(Number(entry.value ?? 0), baseCurrency)}
+                        </span>
                       </div>
-                    )}
-                    {fullFireNumber > 0 && (
-                      <div className="text-muted-foreground text-xs">
-                        Full FIRE: {formatCurrency(fullFireNumber, baseCurrency)}
-                      </div>
-                    )}
+                    ))}
+                    <div className="text-muted-foreground mt-1 border-t pt-1 text-xs">
+                      Baseline phase:{" "}
+                      {point.phase === "accumulation"
+                        ? "Accumulation"
+                        : point.phase === "downshift-retired"
+                          ? "Downshift retirement"
+                          : "Full retirement"}
+                    </div>
                   </div>
                 );
               }}
@@ -371,7 +491,7 @@ export function FireStressTestChart({
                 />
               ))}
 
-            {forecastData && forecastHorizonYears > 0 && (
+            {forecastHorizonYears > 0 && forecastData && (
               <ReferenceLine
                 x={forecastHorizonYears}
                 stroke="hsl(var(--muted-foreground))"
@@ -381,6 +501,23 @@ export function FireStressTestChart({
                   position: "top",
                   fontSize: 9,
                   fill: "hsl(var(--muted-foreground))",
+                }}
+              />
+            )}
+
+            {retirementInflectionYear !== null && (
+              <ReferenceLine
+                x={retirementInflectionYear}
+                stroke="#f59e0b"
+                strokeDasharray="4 4"
+                label={{
+                  value:
+                    retirementInflectionType === "downshift"
+                      ? `Downshift ~${retirementInflectionYear.toFixed(1)}y`
+                      : `Retire ~${retirementInflectionYear.toFixed(1)}y`,
+                  position: "top",
+                  fontSize: 10,
+                  fill: "#f59e0b",
                 }}
               />
             )}
@@ -471,6 +608,8 @@ export function FireStressTestChart({
               contextualAssetValue,
               baseCurrency,
             )}) is contextual and illiquid, not counted as retireable capital.`}
+          {" "}The baseline and shocked paths now stop accumulating once they
+          cross into retirement mode and begin funding spend from the portfolio.
         </div>
       </CardFooter>
     </Card>
