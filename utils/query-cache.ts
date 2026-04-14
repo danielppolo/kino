@@ -16,7 +16,67 @@ const AUTHENTICATED_QUERY_CACHE_VERSION =
 
 export const AUTHENTICATED_QUERY_CACHE_PREFIX = "kino-react-query-cache";
 
-const NON_PERSISTED_QUERY_ROOTS = new Set(["transfer-options"]);
+const PERSISTED_QUERY_ROOTS = new Set([
+  "transactions",
+  "wallets",
+  "workspace-wallets",
+  "wallet-owed-amounts",
+  "cashflow-breakdown",
+  "bills",
+  "bills-with-payments",
+  "recurrent-bills",
+  "recurring-transactions",
+  "unassociated-transactions",
+  "income-transactions",
+  "categories",
+  "category-transaction-counts",
+  "labels",
+  "tags",
+  "tag-transaction-counts",
+  "views",
+  "transaction-templates",
+  "real-estate-assets",
+  "real-estate-asset-valuations",
+  "workspace-members",
+  "wallet-members",
+  "workspace-currency-conversions",
+  "workspaces",
+  "user-preferences",
+  "category-pie-chart",
+  "label-pie-chart",
+  "category-trends",
+  "label-area-chart",
+  "label-trends",
+  "expense-concentration",
+  "forecast-line-chart-balances",
+  "freedom-multiplier-stats",
+  "wallet-net-balance",
+  "transaction-type-distribution",
+  "autonomy-horizon-balances",
+  "expense-predictability",
+  "bills-vs-discretionary",
+  "transfer-flow-diagram",
+  "burn-rate-drift-stats",
+  "burn-rate-drift-recurring",
+  "accumulated-area-chart",
+  "avg-spending-vs-income",
+  "currency-exposure",
+  "bill-payment-rate",
+  "bill-burden-ratio",
+  "bill-balance-line-chart",
+  "bill-debt-flow",
+  "transaction-size-distribution",
+  "sufficiency-ratio-balances",
+  "sufficiency-ratio-stats",
+  "cash-flow-after-bills",
+  "bills-history-chart",
+  "recurring-vs-onetime-bills",
+  "bill-coverage-ratio",
+  "bill-payment-timeline",
+  "chart-controls-stats",
+  "bill-velocity",
+  "workspace-members-with-emails",
+]);
 
 const WORKSPACE_INVALIDATION_ROOTS: ReadonlyArray<readonly [string]> = [
   ["transactions"],
@@ -59,6 +119,7 @@ export const createAppQueryClient = () =>
         gcTime: DAY_IN_MS,
         staleTime: 15 * SECOND_IN_MS,
         refetchOnMount: true,
+        refetchOnReconnect: true,
       },
     },
   });
@@ -79,11 +140,28 @@ export const shouldDehydrateAuthenticatedQuery = (query: Query) => {
   }
 
   const [rootKey] = query.queryKey;
-  if (typeof rootKey === "string" && NON_PERSISTED_QUERY_ROOTS.has(rootKey)) {
+  if (typeof rootKey !== "string") {
+    return false;
+  }
+
+  if (!PERSISTED_QUERY_ROOTS.has(rootKey)) {
     return false;
   }
 
   return query.state.data !== undefined;
+};
+
+export const hasPersistedQueryData = () => {
+  if (typeof window === "undefined") return false;
+
+  for (let index = 0; index < window.localStorage.length; index += 1) {
+    const key = window.localStorage.key(index);
+    if (key?.startsWith(`${AUTHENTICATED_QUERY_CACHE_PREFIX}:`)) {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 export const clearPersistedQueryCaches = () => {

@@ -3,10 +3,13 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Kino",
-    short_name: "Kino Finance",
-    description: "Tracking your finances made easy",
+    short_name: "Kino",
+    description: "A finance workspace for tracking cash flow, bills, and wallets.",
+    id: "/",
     start_url: "/",
+    scope: "/",
     display: "standalone",
+    display_override: ["window-controls-overlay", "standalone"],
     background_color: "#ffffff",
     theme_color: "#000000",
     icons: [
@@ -18,6 +21,12 @@ export default function manifest(): MetadataRoute.Manifest {
       {
         src: "/android-chrome-512x512.png",
         sizes: "512x512",
+        type: "image/png",
+        purpose: "any maskable",
+      },
+      {
+        src: "/apple-touch-icon.png",
+        sizes: "180x180",
         type: "image/png",
       },
     ],

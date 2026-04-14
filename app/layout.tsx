@@ -1,7 +1,8 @@
-import type { Viewport } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { ThemeProvider } from "next-themes";
 
+import PwaRuntime from "@/components/shared/pwa-runtime";
 import { Providers } from "./providers";
 
 import "./globals.css";
@@ -46,14 +47,27 @@ const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
   : "http://localhost:3000";
 
-export const metadata = {
+export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Kino",
-  description: "Kino is finance app",
-  other: {
-    "apple-mobile-web-app-title": "cuatrocientosdos",
-    "apple-mobile-web-app-capable": "yes",
-    "apple-mobile-web-app-status-bar-style": "black-translucent",
+  applicationName: "Kino",
+  title: {
+    default: "Kino",
+    template: "%s | Kino",
+  },
+  description: "Kino is a finance workspace for transactions, wallets, and bills.",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Kino",
   },
 };
 
@@ -62,6 +76,7 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: light)", color: "hsl(0 0% 100%)" },
     { media: "(prefers-color-scheme: dark)", color: "hsl(0 0% 3.9%)" },
   ],
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -84,6 +99,7 @@ export default function RootLayout({
         >
           <Providers>
             <main className="flex min-h-screen flex-col">{children}</main>
+            <PwaRuntime />
             <Toaster />
           </Providers>
         </ThemeProvider>

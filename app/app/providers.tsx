@@ -54,6 +54,9 @@ export default function AuthenticatedProviders({
     <PersistQueryClientProvider
       client={queryClient}
       persistOptions={persistOptions}
+      onSuccess={() => {
+        queryClient.resumePausedMutations();
+      }}
     >
       {children}
     </PersistQueryClientProvider>
