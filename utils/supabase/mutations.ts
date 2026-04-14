@@ -1,9 +1,19 @@
-import { createClient } from "./client";
+import { createClient as createBrowserClient } from "./client";
 import { Database } from "./database.types";
 import { FeatureFlags } from "@/utils/types/feature-flags";
 import { FinanceMemory } from "@/utils/types/finance-memory";
 
 const BATCH_SIZE = 20;
+export const OFFLINE_MUTATION_ERROR_MESSAGE =
+  "Kino is offline. Reconnect to save changes.";
+
+const createClient = async () => {
+  if (typeof window !== "undefined" && !window.navigator.onLine) {
+    throw new Error(OFFLINE_MUTATION_ERROR_MESSAGE);
+  }
+
+  return createBrowserClient();
+};
 
 // Helper to chunk array into batches
 function chunk<T>(arr: T[], size: number): T[][] {
