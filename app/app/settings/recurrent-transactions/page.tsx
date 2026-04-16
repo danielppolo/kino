@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { Loader2, Play, Plus } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 
 import RecurringTransactionsSection from "./(components)/recurring-transactions-section";
 
@@ -15,6 +16,7 @@ import { RecurringTransaction } from "@/utils/supabase/types";
 export default function Page() {
   const [open, setOpen] = useState(false);
   const [editItem, setEditItem] = useState<RecurringTransaction | null>(null);
+  const [running, setRunning] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -31,6 +33,24 @@ export default function Page() {
   const handleClose = () => {
     setOpen(false);
     setEditItem(null);
+  };
+
+  const handleRunNow = async () => {
+    setRunning(true);
+    try {
+      const res = await fetch("/api/run-recurring", { method: "POST" });
+      if (!res.ok) {
+        const { error } = await res.json();
+        throw new Error(error ?? "Unknown error");
+      }
+      toast.success("Recurring transactions processed");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to run recurring",
+      );
+    } finally {
+      setRunning(false);
+    }
   };
 
   const handleTabChange = (value: string) => {
@@ -58,6 +78,19 @@ export default function Page() {
             </TabsList>
           </div>
           <div className="flex gap-2">
+            <TooltipButton
+              size="sm"
+              variant="outline"
+              tooltip="Run recurring transactions now"
+              onClick={handleRunNow}
+              disabled={running}
+            >
+              {running ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Play className="size-4" />
+              )}
+            </TooltipButton>
             <TooltipButton
               size="sm"
               variant="outline"
