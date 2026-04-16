@@ -2,12 +2,13 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { ThemeProvider } from "next-themes";
 
-import PwaRuntime from "@/components/shared/pwa-runtime";
-import { Providers } from "./providers";
-
 import "./globals.css";
 import "lucide-static/font/lucide.css";
+
 import { Toaster } from "@/components/ui/sonner";
+import PwaRuntime from "@/components/shared/pwa-runtime";
+
+import { Providers } from "./providers";
 
 const display = localFont({
   src: "./fonts/OpticianSans/Optician-Sans.otf",

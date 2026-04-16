@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { createTransaction } from "@/actions/create-transaction";
+import { processRecurringTransactions } from "@/actions/process-recurring-transactions";
 import { fetchAllConversions } from "@/utils/fetch-conversions-server";
 import { calculateNextRunDate } from "@/utils/recurring-transaction";
 import { createClient } from "@/utils/supabase/server";
@@ -44,61 +44,7 @@ async function handle(request: NextRequest) {
 
     // Task 2: Run Recurring Transactions
     try {
-      const supabase = await createClient();
-
-      const { data: recurrences, error } = await supabase
-        .from("recurring_transactions")
-        .select("*");
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      const today = new Date();
-
-      for (const r of recurrences || []) {
-        const runDate = r.next_run_date || r.start_date;
-        if (!runDate || !r.wallet_id || !r.label_id) continue;
-
-        const endDate = r.end_date ? new Date(r.end_date) : null;
-        let current = new Date(runDate);
-
-        while (current <= today && (!endDate || current <= endDate)) {
-          const dateStr = current.toISOString().split("T")[0];
-
-          const result = await createTransaction(
-            {
-              amount: r.amount_cents / 100,
-              type: r.type,
-              date: dateStr,
-              description: r.description ?? undefined,
-              category_id: r.category_id,
-              label_id: r.label_id ?? undefined,
-              wallet_id: r.wallet_id,
-              currency: r.currency,
-              tags: r.tags ?? undefined,
-            },
-            supabase,
-          );
-
-          if (!result.success) {
-            throw new Error(result.error ?? "Failed to create transaction");
-          }
-
-          // Update next_run_date for next iteration
-          current = calculateNextRunDate(current, r.interval_type);
-        }
-
-        await supabase
-          .from("recurring_transactions")
-          .update({ next_run_date: current.toISOString().split("T")[0] })
-          .eq("id", r.id);
-      }
-
-      results.runRecurring = {
-        success: true,
-        timestamp: new Date().toISOString(),
-      };
+      results.runRecurring = await processRecurringTransactions();
     } catch (error) {
       console.error("Run recurring error:", error);
       results.errors.push(`Run recurring failed: ${error}`);

@@ -1,5 +1,6 @@
 import { createClient as createBrowserClient } from "./client";
 import { Database } from "./database.types";
+
 import { FeatureFlags } from "@/utils/types/feature-flags";
 import { FinanceMemory } from "@/utils/types/finance-memory";
 
@@ -1139,7 +1140,10 @@ export const updateWorkspaceFeatureFlags = async (
 
   const { data, error } = await supabase
     .from("workspaces")
-    .update({ feature_flags: featureFlags as any })
+    .update({
+      feature_flags:
+        featureFlags as Database["public"]["Tables"]["workspaces"]["Update"]["feature_flags"],
+    })
     .eq("id", workspaceId)
     .select()
     .single();
@@ -1173,7 +1177,10 @@ export const updateWorkspaceFinanceMemory = async (
 
   const { data, error } = await supabase
     .from("workspaces")
-    .update({ finance_memory: financeMemory as any })
+    .update({
+      finance_memory:
+        financeMemory as Database["public"]["Tables"]["workspaces"]["Update"]["finance_memory"],
+    })
     .eq("id", workspaceId)
     .select()
     .single();
