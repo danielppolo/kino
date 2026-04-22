@@ -36,20 +36,6 @@ const TagBadges = ({ transaction, className }: TagBadgesProps) => {
         className,
       )}
     >
-      {!!transaction.label_id && labelMap.get(transaction.label_id)?.color && (
-        <button
-          type="button"
-          onClick={() => handleLabelClick(transaction.label_id!)}
-          className="mx-2 cursor-pointer rounded-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          aria-label="Filter by label"
-        >
-          <Color
-            size="sm"
-            color={labelMap.get(transaction.label_id!)?.color ?? ""}
-            className="size-1.5"
-          />
-        </button>
-      )}
       {transaction.tag_ids?.map((tagId: string, index) => {
         const tag = tagMap.get(tagId);
         if (!tag) return null;
@@ -87,6 +73,20 @@ const TagBadges = ({ transaction, className }: TagBadgesProps) => {
         >
           {transaction.transfer_id.slice(-4)}
         </Badge>
+      )}
+      {!!transaction.label_id && labelMap.get(transaction.label_id)?.color && (
+        <button
+          type="button"
+          onClick={() => handleLabelClick(transaction.label_id!)}
+          className="mx-2 cursor-pointer rounded-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          aria-label="Filter by label"
+        >
+          <Color
+            size="sm"
+            color={labelMap.get(transaction.label_id!)?.color ?? ""}
+            className="size-1.5"
+          />
+        </button>
       )}
     </div>
   );
