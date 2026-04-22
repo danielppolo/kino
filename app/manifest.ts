@@ -10,8 +10,8 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     display: "standalone",
     display_override: ["window-controls-overlay", "standalone"],
-    background_color: "#ffffff",
-    theme_color: "#000000",
+    background_color: "#fafafa",
+    theme_color: "#fafafa",
     icons: [
       {
         src: "/android-chrome-192x192.png",
