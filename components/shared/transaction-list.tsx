@@ -22,6 +22,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../ui/alert-dialog";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "../ui/context-menu";
 import { RowLoading } from "../ui/row";
 import { TooltipButton } from "../ui/tooltip-button";
 import { BulkActions } from "./bulk-actions";
@@ -38,7 +45,7 @@ import { PAGE_SIZE } from "@/utils/constants";
 import { convertTransactionsToCSV, downloadCSV } from "@/utils/csv-export";
 import { canUseGlobalShortcuts } from "@/utils/keyboard-shortcuts";
 import { createClient } from "@/utils/supabase/client";
-import { deleteTransactions } from "@/utils/supabase/mutations";
+import { deleteTransactions, duplicateTransaction } from "@/utils/supabase/mutations";
 import { listTransactions } from "@/utils/supabase/queries";
 import { type Transaction, type TransactionList } from "@/utils/supabase/types";
 
@@ -62,6 +69,7 @@ export default function TransactionList() {
   const [wallets] = useWallets();
   const [bulkOpen, setBulkOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [singleDeleteId, setSingleDeleteId] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(-1);
   const queryClient = useQueryClient();
 
@@ -144,12 +152,33 @@ export default function TransactionList() {
     },
   });
 
+  const duplicateMutation = useMutation({
+    mutationFn: duplicateTransaction,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["wallets"] });
+      queryClient.invalidateQueries({ queryKey: ["workspace-wallets"] });
+      toast.success("Transaction duplicated");
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to duplicate transaction: ${error.message}`);
+    },
+  });
+
   const handleDeleteClick = () => {
     setDeleteConfirmOpen(true);
   };
 
   const handleDeleteConfirm = () => {
-    deleteMutation.mutate(selected);
+    if (singleDeleteId) {
+      deleteMutation.mutate([singleDeleteId], {
+        onSuccess: () => {
+          setSingleDeleteId(null);
+        },
+      });
+    } else {
+      deleteMutation.mutate(selected);
+    }
   };
 
   const toggleSelected = (id: string, shiftKey = false) => {
@@ -445,22 +474,55 @@ export default function TransactionList() {
                     transaction.id!,
                   );
                   return (
-                    <TransactionRow
-                      key={`${transaction.id}-${transaction.amount_cents}-${transaction.description ?? ""}-${transaction.tag_ids?.join(",") ?? ""}-${transaction.category_id}-${transaction.label_id}`}
-                      transaction={transaction}
-                      onClick={(e) => {
-                        if (typeof transactionIndex === "number") {
-                          setActiveIndex(transactionIndex);
-                        }
-                        handleTransactionClick(e, transaction);
-                      }}
-                      selected={selected.includes(transaction.id!)}
-                      selectionMode={selectedCount > 0}
-                      active={transactionIndex === activeIndex}
-                      onToggleSelect={(e) =>
-                        toggleSelected(transaction.id!, e.shiftKey)
-                      }
-                    />
+                    <ContextMenu key={`${transaction.id}-${transaction.amount_cents}-${transaction.description ?? ""}-${transaction.tag_ids?.join(",") ?? ""}-${transaction.category_id}-${transaction.label_id}`}>
+                      <ContextMenuTrigger className="block w-full">
+                        <TransactionRow
+                          transaction={transaction}
+                          onClick={(e) => {
+                            if (typeof transactionIndex === "number") {
+                              setActiveIndex(transactionIndex);
+                            }
+                            handleTransactionClick(e, transaction);
+                          }}
+                          selected={selected.includes(transaction.id!)}
+                          selectionMode={selectedCount > 0}
+                          active={transactionIndex === activeIndex}
+                          onToggleSelect={(e) =>
+                            toggleSelected(transaction.id!, e.shiftKey)
+                          }
+                        />
+                      </ContextMenuTrigger>
+                      <ContextMenuContent>
+                        <ContextMenuItem
+                          onClick={() =>
+                            openForm({
+                              type: transaction.type!,
+                              walletId: transaction.wallet_id!,
+                              initialData: transaction as unknown as Transaction,
+                            })
+                          }
+                        >
+                          Edit
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          onClick={() =>
+                            duplicateMutation.mutate(transaction.id!)
+                          }
+                        >
+                          Duplicate
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => {
+                            setSingleDeleteId(transaction.id!);
+                            setDeleteConfirmOpen(true);
+                          }}
+                        >
+                          Delete
+                        </ContextMenuItem>
+                      </ContextMenuContent>
+                    </ContextMenu>
                   );
                 })}
               </div>
@@ -521,16 +583,19 @@ export default function TransactionList() {
           clearSelection();
         }}
       />
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={(open) => {
+        setDeleteConfirmOpen(open);
+        if (!open) setSingleDeleteId(null);
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <Trash2 className="text-destructive size-5" />
-              Delete {selectedCount} transaction{selectedCount === 1 ? "" : "s"}
+              Delete {singleDeleteId ? "1" : selectedCount} transaction{(singleDeleteId ? 1 : selectedCount) === 1 ? "" : "s"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete{" "}
-              {selectedCount} transaction{selectedCount === 1 ? "" : "s"} from
+              {singleDeleteId ? "1" : selectedCount} transaction{(singleDeleteId ? 1 : selectedCount) === 1 ? "" : "s"} from
               your wallet.
             </AlertDialogDescription>
           </AlertDialogHeader>

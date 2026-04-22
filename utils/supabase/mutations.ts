@@ -316,6 +316,29 @@ export const deleteTransaction = async (id: string) => {
   if (error) throw new Error(error.message);
 };
 
+export const duplicateTransaction = async (id: string): Promise<void> => {
+  const supabase = await createClient();
+
+  const { data: original, error: fetchError } = await supabase
+    .from("transactions")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (fetchError) throw new Error(fetchError.message);
+  if (!original) throw new Error("Transaction not found");
+
+  const today = new Date().toISOString().split("T")[0];
+
+  const { id: _id, created_at: _created_at, ...fields } = original;
+
+  const { error: insertError } = await supabase
+    .from("transactions")
+    .insert({ ...fields, date: today });
+
+  if (insertError) throw new Error(insertError.message);
+};
+
 export const deleteTransactions = async (ids: string[]) => {
   if (ids.length === 0) return;
 
