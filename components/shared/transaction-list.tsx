@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
-import { Download, Pencil, Trash2 } from "lucide-react";
+import { Copy, Download, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -502,6 +502,7 @@ export default function TransactionList() {
                             })
                           }
                         >
+                          <Pencil className="mr-2 size-4" />
                           Edit
                         </ContextMenuItem>
                         <ContextMenuItem
@@ -509,16 +510,17 @@ export default function TransactionList() {
                             duplicateMutation.mutate(transaction.id!)
                           }
                         >
+                          <Copy className="mr-2 size-4" />
                           Duplicate
                         </ContextMenuItem>
                         <ContextMenuSeparator />
                         <ContextMenuItem
-                          className="text-destructive focus:text-destructive"
                           onClick={() => {
                             setSingleDeleteId(transaction.id!);
                             setDeleteConfirmOpen(true);
                           }}
                         >
+                          <Trash2 className="mr-2 size-4" />
                           Delete
                         </ContextMenuItem>
                       </ContextMenuContent>
