@@ -7,6 +7,7 @@ import "lucide-static/font/lucide.css";
 
 import { Toaster } from "@/components/ui/sonner";
 import PwaRuntime from "@/components/shared/pwa-runtime";
+import PwaThemeColor from "@/components/shared/pwa-theme-color";
 
 import { Providers } from "./providers";
 
@@ -101,6 +102,7 @@ export default function RootLayout({
           <Providers>
             <main className="flex min-h-screen flex-col">{children}</main>
             <PwaRuntime />
+            <PwaThemeColor />
             <Toaster />
           </Providers>
         </ThemeProvider>
