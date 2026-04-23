@@ -11,7 +11,6 @@ import { AddTransactionDropdown } from "@/components/shared/add-transaction-drop
 import { BillsSheet } from "@/components/shared/bills-sheet";
 import { FiltersDropdown } from "@/components/shared/filters-dropdown";
 import PageHeader from "@/components/shared/page-header";
-import SaveViewButton from "@/components/shared/save-view-button";
 import { SortDropdown } from "@/components/shared/sort-dropdown";
 import TransactionTotal from "@/components/shared/transaction-total";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -58,7 +57,6 @@ export function TransactionsHeader() {
         <div className="flex items-center gap-2">
           {bills_enabled && <BillsBalanceBadge />}
           <TransactionTotal />
-          <SaveViewButton />
           {bills_enabled && (
             <BillsToggle onOpenSheet={() => setBillsSheetOpen(true)} />
           )}
