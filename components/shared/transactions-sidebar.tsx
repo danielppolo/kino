@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { endOfMonth, format, startOfMonth } from "date-fns";
-import { Bot, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import Link from "next/link";
 import {
   useParams,
@@ -14,6 +14,7 @@ import { toast } from "sonner";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import SaveViewDialog from "./save-view-dialog";
 import { SidebarWrapper } from "./sidebar-wrapper";
 import { TransactionLink } from "./transaction-link";
 import { WalletTypeIcon } from "./wallet-type-icon";
@@ -22,6 +23,7 @@ import { Kbd } from "@/components/ui/kbd";
 import { Money } from "@/components/ui/money";
 import {
   SidebarGroup,
+  SidebarGroupAction,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
@@ -38,6 +40,7 @@ import { canUseGlobalShortcuts } from "@/utils/keyboard-shortcuts";
 import { deleteViews } from "@/utils/supabase/mutations";
 
 export function TransactionsSidebar() {
+  const [saveViewOpen, setSaveViewOpen] = useState(false);
   const [filters] = useTransactionQueryState();
   const { walletId } = useParams();
   const pathname = usePathname();
@@ -137,35 +140,36 @@ export function TransactionsSidebar() {
         </SidebarGroupContent>
       </SidebarGroup>
 
-      {views.length > 0 && (
-        <SidebarGroup>
-          <SidebarGroupLabel>Views</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {views.map((view) => (
-                <SidebarMenuItem key={view.id}>
-                  <SidebarMenuButton asChild>
-                    <Link href={`/app/transactions?${view.query_params}`}>
-                      {view.name}
-                    </Link>
-                  </SidebarMenuButton>
-                  <SidebarMenuAction
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleDeleteClick(view.id);
-                    }}
-                    disabled={deleteMutation.isPending}
-                    showOnHover
-                  >
-                    <X />
-                  </SidebarMenuAction>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      )}
+      <SidebarGroup>
+        <SidebarGroupLabel>Views</SidebarGroupLabel>
+        <SidebarGroupAction onClick={() => setSaveViewOpen(true)} title="Save current view">
+          <Plus />
+        </SidebarGroupAction>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {views.map((view) => (
+              <SidebarMenuItem key={view.id}>
+                <SidebarMenuButton asChild>
+                  <Link href={`/app/transactions?${view.query_params}`}>
+                    {view.name}
+                  </Link>
+                </SidebarMenuButton>
+                <SidebarMenuAction
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDeleteClick(view.id);
+                  }}
+                  disabled={deleteMutation.isPending}
+                  showOnHover
+                >
+                  <X />
+                </SidebarMenuAction>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
       {Object.entries(walletsByCurrency).map(([currency, currencyWallets]) => (
         <SidebarGroup key={currency}>
           <SidebarGroupLabel className="flex items-center justify-between">
@@ -222,6 +226,7 @@ export function TransactionsSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       ))}
+      <SaveViewDialog open={saveViewOpen} onOpenChange={setSaveViewOpen} />
     </SidebarWrapper>
   );
 }
