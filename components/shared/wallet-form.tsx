@@ -12,7 +12,7 @@ import { Textarea } from "../ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import Color from "./color";
 import CurrencyPicker from "./currency-picker";
-import { getWalletTypeLabel,WalletTypeIcon } from "./wallet-type-icon";
+import { getWalletTypeLabel, WalletTypeIcon } from "./wallet-type-icon";
 
 import { SubmitButton } from "@/components/submit-button";
 import {
@@ -35,8 +35,11 @@ interface WalletFormProps {
 }
 
 type WalletFormValues = Database["public"]["Tables"]["wallets"]["Insert"];
-const WALLET_TYPE_OPTIONS: Array<Database["public"]["Enums"]["wallet_type"]> =
-  ["bank_account", "card", "cash"];
+const WALLET_TYPE_OPTIONS: Array<Database["public"]["Enums"]["wallet_type"]> = [
+  "bank_account",
+  "card",
+  "cash",
+];
 
 const WalletForm = ({ onSuccess, wallet }: WalletFormProps) => {
   const { activeWorkspace } = useWorkspace();
@@ -208,7 +211,10 @@ const WalletForm = ({ onSuccess, wallet }: WalletFormProps) => {
                       value={walletType}
                       className="gap-2"
                     >
-                      <WalletTypeIcon walletType={walletType} className="size-4" />
+                      <WalletTypeIcon
+                        walletType={walletType}
+                        className="size-4"
+                      />
                       {getWalletTypeLabel(walletType)}
                     </ToggleGroupItem>
                   ))}
