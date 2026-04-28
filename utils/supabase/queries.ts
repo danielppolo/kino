@@ -17,6 +17,7 @@ export interface Filters {
   sortOrder?: string | undefined;
   min_amount?: string | undefined;
   max_amount?: string | undefined;
+  review_status?: string | undefined;
 }
 
 export const listTransactions = async (
@@ -85,6 +86,10 @@ export const listTransactions = async (
   // Filter by id if available
   if (params?.id) {
     query = query.eq("id", params.id);
+  }
+
+  if (params?.review_status === "needs_review") {
+    query = query.eq("needs_review", true);
   }
 
   // Filter by min_amount if available (convert to cents)
@@ -1714,25 +1719,36 @@ export const getTransactionTypeDistribution = async (
   // Group RPC rows (one per month/wallet/type) back into the existing shape
   // so the chart component needs no changes.
   const monthlyData: Record<string, TransactionTypeData> = {};
-  (data as Array<{ month: string; wallet_id: string; type: string; amount_cents: number }>)
-    .forEach((row) => {
-      const key = `${row.wallet_id}-${row.month}`;
-      if (!monthlyData[key]) {
-        monthlyData[key] = {
-          month: row.month,
-          wallet_id: row.wallet_id,
-          income_cents: 0,
-          expense_cents: 0,
-          transfer_cents: 0,
-        };
-      }
-      if (row.type === "income") monthlyData[key].income_cents += row.amount_cents;
-      else if (row.type === "expense") monthlyData[key].expense_cents += row.amount_cents;
-      else if (row.type === "transfer") monthlyData[key].transfer_cents += row.amount_cents;
-    });
+  (
+    data as Array<{
+      month: string;
+      wallet_id: string;
+      type: string;
+      amount_cents: number;
+    }>
+  ).forEach((row) => {
+    const key = `${row.wallet_id}-${row.month}`;
+    if (!monthlyData[key]) {
+      monthlyData[key] = {
+        month: row.month,
+        wallet_id: row.wallet_id,
+        income_cents: 0,
+        expense_cents: 0,
+        transfer_cents: 0,
+      };
+    }
+    if (row.type === "income")
+      monthlyData[key].income_cents += row.amount_cents;
+    else if (row.type === "expense")
+      monthlyData[key].expense_cents += row.amount_cents;
+    else if (row.type === "transfer")
+      monthlyData[key].transfer_cents += row.amount_cents;
+  });
 
   return {
-    data: Object.values(monthlyData).sort((a, b) => a.month.localeCompare(b.month)),
+    data: Object.values(monthlyData).sort((a, b) =>
+      a.month.localeCompare(b.month),
+    ),
     error: null,
   };
 };
@@ -1984,7 +2000,12 @@ export const getTagCloudAnalytics = async (
 
   // Map RPC field names to the existing TagCloudData shape so the chart is unchanged.
   const result: TagCloudData[] = (
-    data as Array<{ tag_id: string; tag_title: string; transaction_count: number; total_amount_cents: number }>
+    data as Array<{
+      tag_id: string;
+      tag_title: string;
+      transaction_count: number;
+      total_amount_cents: number;
+    }>
   ).map((row) => ({
     tag: row.tag_id,
     count: row.transaction_count,
@@ -2023,7 +2044,11 @@ export const getTransactionSizeDistribution = async (
 
   // Map RPC field names to the existing TransactionSizeData shape.
   const result: TransactionSizeData[] = (
-    data as Array<{ range: string; transaction_count: number; total_amount_cents: number }>
+    data as Array<{
+      range: string;
+      transaction_count: number;
+      total_amount_cents: number;
+    }>
   ).map((row) => ({
     range: row.range,
     count: row.transaction_count,

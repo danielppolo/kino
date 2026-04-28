@@ -750,6 +750,48 @@ export type Database = {
           },
         ];
       };
+      plaid_transaction_rules: {
+        Row: {
+          category_id: string;
+          created_at: string;
+          id: string;
+          merchant_key: string;
+          updated_at: string;
+          wallet_id: string;
+        };
+        Insert: {
+          category_id: string;
+          created_at?: string;
+          id?: string;
+          merchant_key: string;
+          updated_at?: string;
+          wallet_id: string;
+        };
+        Update: {
+          category_id?: string;
+          created_at?: string;
+          id?: string;
+          merchant_key?: string;
+          updated_at?: string;
+          wallet_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "plaid_transaction_rules_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "categories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "plaid_transaction_rules_wallet_id_fkey";
+            columns: ["wallet_id"];
+            isOneToOne: false;
+            referencedRelation: "wallets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       transactions: {
         Row: {
           amount_cents: number;
@@ -763,6 +805,9 @@ export type Database = {
           id: string;
           label_id: string | null;
           note: string | null;
+          plaid_merchant_key: string | null;
+          plaid_merchant_name: string | null;
+          plaid_personal_finance_category_primary: string | null;
           plaid_transaction_id: string | null;
           tags: string[] | null;
           transfer_id: string | null;
@@ -781,6 +826,9 @@ export type Database = {
           id?: string;
           label_id?: string | null;
           note?: string | null;
+          plaid_merchant_key?: string | null;
+          plaid_merchant_name?: string | null;
+          plaid_personal_finance_category_primary?: string | null;
           plaid_transaction_id?: string | null;
           tags?: string[] | null;
           transfer_id?: string | null;
@@ -799,6 +847,9 @@ export type Database = {
           id?: string;
           label_id?: string | null;
           note?: string | null;
+          plaid_merchant_key?: string | null;
+          plaid_merchant_name?: string | null;
+          plaid_personal_finance_category_primary?: string | null;
           plaid_transaction_id?: string | null;
           tags?: string[] | null;
           transfer_id?: string | null;
@@ -1144,7 +1195,12 @@ export type Database = {
           description: string | null;
           id: string | null;
           label_id: string | null;
+          needs_review: boolean | null;
           note: string | null;
+          plaid_merchant_key: string | null;
+          plaid_merchant_name: string | null;
+          plaid_personal_finance_category_primary: string | null;
+          plaid_transaction_id: string | null;
           tag_ids: string[] | null;
           tags: string[] | null;
           transfer_id: string | null;

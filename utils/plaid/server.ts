@@ -11,7 +11,11 @@ import {
   decryptPlaidAccessToken,
   encryptPlaidAccessToken,
 } from "./token-encryption";
-import { PlaidTransactionPreview, PlaidWalletConnection } from "./types";
+import {
+  PlaidFetchedTransaction,
+  PlaidTransactionPreview,
+  PlaidWalletConnection,
+} from "./types";
 
 import { Database } from "@/utils/supabase/database.types";
 
@@ -162,20 +166,35 @@ function isPlaidProductNotReadyError(error: unknown) {
   return false;
 }
 
+export function normalizePlaidMerchantKey(value: string | null | undefined) {
+  const normalized = (value ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+
+  return normalized || null;
+}
+
 function mapPlaidTransaction(
   transaction: Transaction,
-): PlaidTransactionPreview {
+): PlaidFetchedTransaction {
   const datetime =
     transaction.authorized_datetime ??
     transaction.datetime ??
     `${transaction.authorized_date ?? transaction.date}T00:00:00.000Z`;
+  const plaidMerchantName = transaction.merchant_name ?? null;
+  const plaidCategoryPrimary =
+    transaction.personal_finance_category?.primary ??
+    transaction.category?.[0] ??
+    null;
+  const plaidMerchantKey = normalizePlaidMerchantKey(
+    plaidMerchantName ?? transaction.name,
+  );
 
   return {
     amount: transaction.amount,
-    category:
-      transaction.personal_finance_category?.primary ??
-      transaction.category?.[0] ??
-      "Uncategorized",
+    category: plaidCategoryPrimary ?? "Uncategorized",
     currency:
       transaction.iso_currency_code ??
       transaction.unofficial_currency_code ??
@@ -185,6 +204,9 @@ function mapPlaidTransaction(
     merchant_name: transaction.merchant_name ?? "",
     name: transaction.name,
     pending: transaction.pending,
+    plaid_merchant_key: plaidMerchantKey,
+    plaid_merchant_name: plaidMerchantName,
+    plaid_personal_finance_category_primary: plaidCategoryPrimary,
     plaid_transaction_id: transaction.transaction_id,
   };
 }
@@ -225,7 +247,7 @@ export async function fetchPlaidTransactions({
     attempt++
   ) {
     try {
-      const transactions: PlaidTransactionPreview[] = [];
+      const transactions: PlaidFetchedTransaction[] = [];
       let offset = 0;
       let totalTransactions = 0;
 
@@ -261,13 +283,37 @@ export async function fetchPlaidTransactions({
 }
 
 export function getPlaidPreviewTransactions(
-  transactions: PlaidTransactionPreview[],
+  transactions: PlaidFetchedTransaction[],
 ) {
-  return transactions.slice(0, PLAID_TRANSACTION_PREVIEW_LIMIT);
+  return transactions
+    .slice(0, PLAID_TRANSACTION_PREVIEW_LIMIT)
+    .map(
+      ({
+        amount,
+        category,
+        currency,
+        date,
+        datetime,
+        merchant_name,
+        name,
+        pending,
+        plaid_transaction_id,
+      }) => ({
+        amount,
+        category,
+        currency,
+        date,
+        datetime,
+        merchant_name,
+        name,
+        pending,
+        plaid_transaction_id,
+      }),
+    );
 }
 
 export function transactionMatchesImportStart(
-  transaction: PlaidTransactionPreview,
+  transaction: Pick<PlaidFetchedTransaction, "date" | "datetime">,
   startAt: string | null,
 ) {
   if (!startAt) {

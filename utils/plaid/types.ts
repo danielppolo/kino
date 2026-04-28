@@ -1,5 +1,5 @@
 export interface PlaidTransactionPreview {
-  [key: string]: string | number | boolean;
+  [key: string]: string | number | boolean | null;
   category: string;
   currency: string;
   date: string;
@@ -9,6 +9,12 @@ export interface PlaidTransactionPreview {
   name: string;
   pending: boolean;
   plaid_transaction_id: string;
+}
+
+export interface PlaidFetchedTransaction extends PlaidTransactionPreview {
+  plaid_merchant_key: string | null;
+  plaid_merchant_name: string | null;
+  plaid_personal_finance_category_primary: string | null;
 }
 
 export interface PlaidPreviewAccount {
