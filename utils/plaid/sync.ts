@@ -58,6 +58,31 @@ export async function syncWalletPlaidTransactions({
     transactionMatchesImportStart(transaction, effectiveImportStartAt),
   );
 
+  const merchantKeys = Array.from(
+    new Set(
+      transactionsToStore
+        .map((transaction) => transaction.plaid_merchant_key)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+
+  const { data: learnedRules, error: learnedRulesError } =
+    merchantKeys.length === 0
+      ? { data: [], error: null }
+      : await supabase
+          .from("plaid_transaction_rules")
+          .select("merchant_key, category_id")
+          .eq("wallet_id", wallet.id)
+          .in("merchant_key", merchantKeys);
+
+  if (learnedRulesError) {
+    throw learnedRulesError;
+  }
+
+  const learnedRuleCategoryByMerchantKey = new Map(
+    (learnedRules ?? []).map((rule) => [rule.merchant_key, rule.category_id]),
+  );
+
   const plaidTransactionIds = transactionsToStore.map(
     (transaction) => transaction.plaid_transaction_id,
   );
@@ -91,13 +116,24 @@ export async function syncWalletPlaidTransactions({
 
       return {
         amount_cents: amountData.amount_cents,
-        category_id: existingTransaction?.category_id ?? null,
+        category_id:
+          existingTransaction?.category_id ??
+          (transaction.plaid_merchant_key
+            ? (learnedRuleCategoryByMerchantKey.get(
+                transaction.plaid_merchant_key,
+              ) ?? null)
+            : null),
         conversion_rate_to_base: null,
         currency: transaction.currency || wallet.currency,
         date: transactionDate,
         description: transaction.merchant_name || transaction.name,
         label_id: existingTransaction?.label_id ?? null,
         note: existingTransaction?.note ?? null,
+        plaid_merchant_key: transaction.plaid_merchant_key,
+        plaid_merchant_name:
+          transaction.plaid_merchant_name ?? transaction.merchant_name ?? null,
+        plaid_personal_finance_category_primary:
+          transaction.plaid_personal_finance_category_primary,
         plaid_transaction_id: transaction.plaid_transaction_id,
         type: amountData.type,
         wallet_id: wallet.id,
@@ -105,13 +141,8 @@ export async function syncWalletPlaidTransactions({
     },
   );
 
-  let savedTransactions: Array<{
-    id: string;
-    plaid_transaction_id: string | null;
-  }> = [];
-
   if (transactionRows.length > 0) {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("transactions")
       .upsert(transactionRows, { onConflict: "plaid_transaction_id" })
       .select("id, plaid_transaction_id");
@@ -119,8 +150,6 @@ export async function syncWalletPlaidTransactions({
     if (error) {
       throw error;
     }
-
-    savedTransactions = data ?? [];
   }
 
   const importedCount = transactionsToStore.filter(

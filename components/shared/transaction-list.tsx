@@ -45,7 +45,10 @@ import { PAGE_SIZE } from "@/utils/constants";
 import { convertTransactionsToCSV, downloadCSV } from "@/utils/csv-export";
 import { canUseGlobalShortcuts } from "@/utils/keyboard-shortcuts";
 import { createClient } from "@/utils/supabase/client";
-import { deleteTransactions, duplicateTransaction } from "@/utils/supabase/mutations";
+import {
+  deleteTransactions,
+  duplicateTransaction,
+} from "@/utils/supabase/mutations";
 import { listTransactions } from "@/utils/supabase/queries";
 import { type Transaction, type TransactionList } from "@/utils/supabase/types";
 
@@ -104,6 +107,12 @@ export default function TransactionList() {
             currency: t.currency ?? "USD",
             date: t.date ?? new Date().toISOString().split("T")[0],
             id: t.id ?? "",
+            needs_review: t.needs_review ?? false,
+            plaid_merchant_key: t.plaid_merchant_key ?? null,
+            plaid_merchant_name: t.plaid_merchant_name ?? null,
+            plaid_personal_finance_category_primary:
+              t.plaid_personal_finance_category_primary ?? null,
+            plaid_transaction_id: t.plaid_transaction_id ?? null,
             wallet_id: t.wallet_id ?? "",
             type: t.type ?? "expense",
           })) ?? [],
@@ -474,7 +483,9 @@ export default function TransactionList() {
                     transaction.id!,
                   );
                   return (
-                    <ContextMenu key={`${transaction.id}-${transaction.amount_cents}-${transaction.description ?? ""}-${transaction.tag_ids?.join(",") ?? ""}-${transaction.category_id}-${transaction.label_id}`}>
+                    <ContextMenu
+                      key={`${transaction.id}-${transaction.amount_cents}-${transaction.description ?? ""}-${transaction.tag_ids?.join(",") ?? ""}-${transaction.category_id}-${transaction.label_id}`}
+                    >
                       <ContextMenuTrigger className="block w-full">
                         <TransactionRow
                           transaction={transaction}
@@ -498,7 +509,8 @@ export default function TransactionList() {
                             openForm({
                               type: transaction.type!,
                               walletId: transaction.wallet_id!,
-                              initialData: transaction as unknown as Transaction,
+                              initialData:
+                                transaction as unknown as Transaction,
                             })
                           }
                         >
@@ -585,20 +597,25 @@ export default function TransactionList() {
           clearSelection();
         }}
       />
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={(open) => {
-        setDeleteConfirmOpen(open);
-        if (!open) setSingleDeleteId(null);
-      }}>
+      <AlertDialog
+        open={deleteConfirmOpen}
+        onOpenChange={(open) => {
+          setDeleteConfirmOpen(open);
+          if (!open) setSingleDeleteId(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <Trash2 className="text-destructive size-5" />
-              Delete {singleDeleteId ? "1" : selectedCount} transaction{(singleDeleteId ? 1 : selectedCount) === 1 ? "" : "s"}
+              Delete {singleDeleteId ? "1" : selectedCount} transaction
+              {(singleDeleteId ? 1 : selectedCount) === 1 ? "" : "s"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete{" "}
-              {singleDeleteId ? "1" : selectedCount} transaction{(singleDeleteId ? 1 : selectedCount) === 1 ? "" : "s"} from
-              your wallet.
+              {singleDeleteId ? "1" : selectedCount} transaction
+              {(singleDeleteId ? 1 : selectedCount) === 1 ? "" : "s"} from your
+              wallet.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

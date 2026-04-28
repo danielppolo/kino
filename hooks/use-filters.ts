@@ -18,6 +18,7 @@ type Filters = {
   type: string;
   description: string;
   id: string;
+  review_status: string;
 };
 
 function useFilters(): Filters {

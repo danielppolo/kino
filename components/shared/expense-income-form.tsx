@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { v4 as randomUUID } from "uuid";
+import { toast } from "sonner";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -14,6 +15,7 @@ import LabelCombobox from "./label-combobox";
 import TagMultiSelect from "./tag-multi-select";
 
 import { createTransaction } from "@/actions/create-transaction";
+import { createPlaidTransactionRule } from "@/actions/create-plaid-transaction-rule";
 import CategoryCombobox from "@/components/shared/category-combobox";
 import { EntityForm } from "@/components/shared/entity-form";
 import {
@@ -108,7 +110,8 @@ const ExpenseIncomeForm = ({
   >({
     mutationFn: async (values) => {
       const result = await createTransaction(values);
-      if (!result.success) throw new Error(result.error ?? "Failed to create transaction");
+      if (!result.success)
+        throw new Error(result.error ?? "Failed to create transaction");
       return { data: result.data ?? [] };
     },
     onMutate: async (newTransaction) => {
@@ -134,7 +137,12 @@ const ExpenseIncomeForm = ({
         currency: newTransaction.currency,
         date: newTransaction.date,
         description: newTransaction.description ?? null,
+        needs_review: false,
         note: null,
+        plaid_merchant_key: null,
+        plaid_merchant_name: null,
+        plaid_personal_finance_category_primary: null,
+        plaid_transaction_id: null,
         tag_ids: newTransaction.tags ?? null,
         tags: newTransaction.tags ?? null,
         transfer_id: null,
@@ -173,10 +181,7 @@ const ExpenseIncomeForm = ({
     },
     onError: (_err, _newTransaction, context) => {
       if (context?.previousData) {
-        queryClient.setQueryData(
-          transactionsQueryKey,
-          context.previousData,
-        );
+        queryClient.setQueryData(transactionsQueryKey, context.previousData);
       }
     },
     onSuccess: (data, _variables, context) => {
@@ -195,10 +200,17 @@ const ExpenseIncomeForm = ({
         currency: saved.currency,
         date: saved.date,
         description: saved.description ?? null,
+        needs_review: !saved.category_id || !saved.label_id,
         note: (saved as { note?: string | null }).note ?? null,
+        plaid_merchant_key: saved.plaid_merchant_key ?? null,
+        plaid_merchant_name: saved.plaid_merchant_name ?? null,
+        plaid_personal_finance_category_primary:
+          saved.plaid_personal_finance_category_primary ?? null,
+        plaid_transaction_id: saved.plaid_transaction_id ?? null,
         tag_ids: savedTags,
         tags: savedTags,
-        transfer_id: (saved as { transfer_id?: string | null }).transfer_id ?? null,
+        transfer_id:
+          (saved as { transfer_id?: string | null }).transfer_id ?? null,
         transfer_wallet_id: null,
         type: saved.type,
       };
@@ -230,6 +242,23 @@ const ExpenseIncomeForm = ({
         queryClient.invalidateQueries({ queryKey: ["workspace-wallets"] }),
         queryClient.invalidateQueries({ queryKey: ["cashflow-breakdown"] }),
       ]);
+    },
+  });
+
+  const learnPlaidRuleMutation = useMutation({
+    mutationFn: createPlaidTransactionRule,
+    onSuccess: (result) => {
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success(
+        `Future Plaid imports from ${result.merchantName} will use this category.`,
+      );
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to save Plaid category rule: ${error.message}`);
     },
   });
 
@@ -318,6 +347,32 @@ const ExpenseIncomeForm = ({
           queryClient.invalidateQueries({ queryKey: ["bills"] });
           queryClient.invalidateQueries({ queryKey: ["bills-with-payments"] });
         }
+      }
+
+      const shouldOfferPlaidRuleLearning =
+        !!initialData?.id &&
+        !!initialData.plaid_transaction_id &&
+        !!initialData.plaid_merchant_key &&
+        values.category_id !== (initialData.category_id ?? "");
+
+      if (shouldOfferPlaidRuleLearning) {
+        const merchantName =
+          initialData.plaid_merchant_name ??
+          initialData.description ??
+          "this merchant";
+
+        toast.message("Learn category for future Plaid imports?", {
+          action: {
+            label: "Save rule",
+            onClick: () => {
+              learnPlaidRuleMutation.mutate({
+                categoryId: values.category_id,
+                transactionId: initialData.id!,
+              });
+            },
+          },
+          description: `${merchantName} in ${walletMap.get(values.wallet_id)?.name ?? "this wallet"}.`,
+        });
       }
 
       return {
@@ -436,18 +491,18 @@ const ExpenseIncomeForm = ({
           )}
         />
         <FormField
-        name="description"
-        render={({ field }) => (
-          <FormItem>
-            <FormControl>
-              <DescriptionInput
-                {...field}
-                value={field.value ?? ""}
-                workspaceId={activeWorkspace?.id}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <DescriptionInput
+                  {...field}
+                  value={field.value ?? ""}
+                  workspaceId={activeWorkspace?.id}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
         />
       </div>
