@@ -74,6 +74,7 @@ export async function POST(request: Request) {
           plaid_institution_name: null,
           plaid_item_id: null,
           plaid_last_refreshed_at: null,
+          plaid_sync_enabled: true,
           plaid_sync_start_at: null,
         })
         .eq("id", existingLinkedWallet.id);
@@ -95,6 +96,7 @@ export async function POST(request: Request) {
       plaid_institution_name: body.institutionName ?? null,
       plaid_item_id: exchanged.item_id,
       plaid_last_refreshed_at: plaidLastRefreshedAt,
+      plaid_sync_enabled: true,
       plaid_sync_start_at: body.plaidSyncStartAt,
     };
 

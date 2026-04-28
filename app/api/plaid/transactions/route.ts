@@ -41,6 +41,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!wallet.plaid_sync_enabled) {
+      return NextResponse.json(
+        { error: "Plaid sync is paused for this wallet" },
+        { status: 400 },
+      );
+    }
+
     const effectiveImportStartAt =
       plaidSyncStartAt ?? wallet.plaid_sync_start_at;
     if (!effectiveImportStartAt) {
