@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { CheckCircle2, Landmark, Link2 } from "lucide-react";
+import { Landmark, Link2, RefreshCcw, Unplug } from "lucide-react";
 import { usePlaidLink } from "react-plaid-link";
 import { toast } from "sonner";
 
@@ -11,15 +11,18 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import TransactionListPreview from "@/app/app/settings/wallets/[walletId]/(components)/transaction-list-preview";
 import EmptyState from "@/components/shared/empty-state";
 import PageHeader from "@/components/shared/page-header";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -28,6 +31,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { Text } from "@/components/ui/typography";
 import { useWallets } from "@/contexts/settings-context";
 import { invalidateWorkspaceQueries } from "@/utils/query-cache";
@@ -36,6 +41,9 @@ import {
   PlaidPreviewResponse,
   PlaidTransactionsResponse,
 } from "@/utils/plaid/types";
+import { Database } from "@/utils/supabase/database.types";
+
+type WalletRow = Database["public"]["Tables"]["wallets"]["Row"];
 
 function toLocalDateTimeInputValue(isoValue: string | null | undefined) {
   if (!isoValue) return "";
@@ -50,9 +58,13 @@ function fromLocalDateTimeInputValue(value: string) {
   return new Date(value).toISOString();
 }
 
-async function postJson<T>(url: string, body: Record<string, unknown>) {
+async function requestJson<T>(
+  url: string,
+  method: "DELETE" | "PATCH" | "POST",
+  body: Record<string, unknown>,
+) {
   const response = await fetch(url, {
-    method: "POST",
+    method,
     headers: {
       "Content-Type": "application/json",
     },
@@ -75,18 +87,6 @@ export default function IntegrationsPage() {
     () => wallets.filter((wallet) => wallet.wallet_type === "bank_account"),
     [wallets],
   );
-
-  const [linkToken, setLinkToken] = useState<string | null>(null);
-  const [shouldOpenLink, setShouldOpenLink] = useState(false);
-  const [previewAccounts, setPreviewAccounts] = useState<PlaidPreviewAccount[]>(
-    [],
-  );
-  const [selectedAccountId, setSelectedAccountId] = useState("");
-  const [selectedWalletId, setSelectedWalletId] = useState("");
-  const [syncStartAt, setSyncStartAt] = useState("");
-  const [lastSyncResult, setLastSyncResult] =
-    useState<PlaidTransactionsResponse | null>(null);
-
   const linkedWallets = useMemo(
     () => bankWallets.filter((wallet) => wallet.plaid_account_id),
     [bankWallets],
@@ -105,10 +105,26 @@ export default function IntegrationsPage() {
     [linkedWallets],
   );
 
+  const [linkToken, setLinkToken] = useState<string | null>(null);
+  const [shouldOpenLink, setShouldOpenLink] = useState(false);
+  const [previewAccounts, setPreviewAccounts] = useState<PlaidPreviewAccount[]>(
+    [],
+  );
+  const [selectedAccountId, setSelectedAccountId] = useState("");
+  const [selectedWalletId, setSelectedWalletId] = useState("");
+  const [syncStartAt, setSyncStartAt] = useState("");
+  const [lastSyncResult, setLastSyncResult] =
+    useState<PlaidTransactionsResponse | null>(null);
+  const [disconnectWalletId, setDisconnectWalletId] = useState<string | null>(
+    null,
+  );
+
   const selectedAccount =
     previewAccounts.find((account) => account.id === selectedAccountId) ?? null;
   const selectedWallet =
     (selectedWalletId ? walletById.get(selectedWalletId) : null) ?? null;
+  const disconnectWallet =
+    (disconnectWalletId ? walletById.get(disconnectWalletId) : null) ?? null;
 
   useEffect(() => {
     if (previewAccounts.length === 0) return;
@@ -132,7 +148,7 @@ export default function IntegrationsPage() {
 
   const linkTokenMutation = useMutation({
     mutationFn: async () =>
-      postJson<{ linkToken: string }>("/api/plaid/link-token", {}),
+      requestJson<{ linkToken: string }>("/api/plaid/link-token", "POST", {}),
     onSuccess: ({ linkToken: nextLinkToken }) => {
       setLinkToken(nextLinkToken);
     },
@@ -154,7 +170,7 @@ export default function IntegrationsPage() {
       institutionName: string | null;
       publicToken: string;
     }) =>
-      postJson<PlaidPreviewResponse>("/api/plaid/preview", {
+      requestJson<PlaidPreviewResponse>("/api/plaid/preview", "POST", {
         institutionName,
         publicToken,
       }),
@@ -174,7 +190,16 @@ export default function IntegrationsPage() {
     },
   });
 
-  const connectMutation = useMutation({
+  const connectMutation = useMutation<
+    PlaidTransactionsResponse,
+    Error,
+    {
+      accountId: string;
+      institutionName: string | null;
+      sessionToken: string;
+      walletId: string;
+    }
+  >({
     mutationFn: async ({
       accountId,
       institutionName,
@@ -191,23 +216,19 @@ export default function IntegrationsPage() {
         throw new Error("Select a start datetime");
       }
 
-      return postJson<PlaidTransactionsResponse>("/api/plaid/connect", {
-        accountId,
-        institutionName,
-        plaidSyncStartAt: isoSyncStartAt,
-        sessionToken,
-        walletId,
-      });
+      return requestJson<PlaidTransactionsResponse>(
+        "/api/plaid/connect",
+        "POST",
+        {
+          accountId,
+          institutionName,
+          plaidSyncStartAt: isoSyncStartAt,
+          sessionToken,
+          walletId,
+        },
+      );
     },
-    onSuccess: async (
-      result,
-      variables: {
-        accountId: string;
-        institutionName: string | null;
-        sessionToken: string;
-        walletId: string;
-      },
-    ) => {
+    onSuccess: async (result, variables) => {
       setLastSyncResult(result);
       setPreviewAccounts([]);
       setSelectedAccountId("");
@@ -224,6 +245,87 @@ export default function IntegrationsPage() {
         error instanceof Error
           ? error.message
           : "Failed to connect bank account to wallet",
+      );
+    },
+  });
+
+  const refreshMutation = useMutation({
+    mutationFn: async ({
+      plaidSyncStartAt,
+      walletId,
+    }: {
+      plaidSyncStartAt: string;
+      walletId: string;
+    }) =>
+      requestJson<PlaidTransactionsResponse>(
+        "/api/plaid/transactions",
+        "POST",
+        {
+          plaidSyncStartAt,
+          walletId,
+        },
+      ),
+    onSuccess: async (result) => {
+      setLastSyncResult(result);
+      await invalidateWorkspaceQueries(queryClient);
+      toast.success(
+        result.importedCount > 0
+          ? `${result.importedCount} transactions imported`
+          : "Transactions refreshed",
+      );
+    },
+    onError: (error: unknown) => {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to refresh transactions",
+      );
+    },
+  });
+
+  const syncStatusMutation = useMutation({
+    mutationFn: async ({
+      enabled,
+      walletId,
+    }: {
+      enabled: boolean;
+      walletId: string;
+    }) =>
+      requestJson<{ wallet: WalletRow }>("/api/plaid/connection", "PATCH", {
+        enabled,
+        walletId,
+      }),
+    onSuccess: async (_result, variables) => {
+      await invalidateWorkspaceQueries(queryClient);
+      toast.success(
+        variables.enabled ? "Plaid sync resumed" : "Plaid sync paused",
+      );
+    },
+    onError: (error: unknown) => {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update Plaid sync status",
+      );
+    },
+  });
+
+  const disconnectMutation = useMutation({
+    mutationFn: async ({ walletId }: { walletId: string }) =>
+      requestJson<{ wallet: WalletRow }>("/api/plaid/connection", "DELETE", {
+        walletId,
+      }),
+    onSuccess: async () => {
+      setDisconnectWalletId(null);
+      setLastSyncResult(null);
+      await invalidateWorkspaceQueries(queryClient);
+      toast.success("Plaid disconnected from wallet");
+    },
+    onError: (error: unknown) => {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to disconnect Plaid account",
       );
     },
   });
@@ -251,6 +353,18 @@ export default function IntegrationsPage() {
   const handleStartLink = () => {
     setShouldOpenLink(true);
     linkTokenMutation.mutate();
+  };
+
+  const handleRefreshWallet = (wallet: WalletRow) => {
+    if (!wallet.plaid_sync_start_at) {
+      toast.error("Set a Plaid sync start datetime before refreshing");
+      return;
+    }
+
+    refreshMutation.mutate({
+      plaidSyncStartAt: wallet.plaid_sync_start_at,
+      walletId: wallet.id,
+    });
   };
 
   const isOpeningLink =
@@ -287,36 +401,163 @@ export default function IntegrationsPage() {
         </div>
       </PageHeader>
 
-      <div className="overflow-auto p-4">
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="text-base">Plaid</CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Connect Plaid once, inspect each returned bank account, then map
-              the correct account to a wallet and choose when imports should
-              start.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-3 rounded-lg border p-4">
-              <div className="flex items-center justify-between gap-4">
+      <div className="overflow-auto p-6">
+        <div className="mx-auto max-w-6xl space-y-8">
+          <section className="space-y-3">
+            <div className="space-y-1">
+              <h1 className="text-2xl font-semibold tracking-tight">Plaid</h1>
+              <Text muted className="text-sm">
+                Connect Plaid once, inspect returned bank accounts, then map the
+                correct account to a wallet. Linked wallets can be paused,
+                resumed, refreshed, or disconnected from here.
+              </Text>
+            </div>
+            <Separator />
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="space-y-1">
+                <h2 className="text-lg font-semibold">Connect Plaid</h2>
+                <Text muted className="text-sm">
+                  Start a Plaid session to load the bank accounts available for
+                  linking.
+                </Text>
+              </div>
+              <Button onClick={handleStartLink} disabled={isOpeningLink}>
+                {isOpeningLink ? "Opening Plaid..." : "Connect Plaid account"}
+              </Button>
+            </div>
+          </section>
+
+          {linkedWallets.length > 0 ? (
+            <>
+              <Separator />
+              <section className="space-y-4">
                 <div className="space-y-1">
-                  <Text strong>1. Connect Plaid account</Text>
+                  <h2 className="text-lg font-semibold">Connected wallets</h2>
                   <Text muted className="text-sm">
-                    Start a new Plaid session to load the bank accounts
-                    available for linking.
+                    Manage sync state for wallets already linked to Plaid.
                   </Text>
                 </div>
-                <Button onClick={handleStartLink} disabled={isOpeningLink}>
-                  {isOpeningLink ? "Opening Plaid..." : "Connect Plaid account"}
-                </Button>
-              </div>
-            </div>
 
-            {previewAccounts.length > 0 ? (
-              <div className="space-y-4 rounded-lg border p-4">
+                <div className="space-y-4">
+                  {linkedWallets.map((wallet) => {
+                    const isUpdatingStatus =
+                      syncStatusMutation.isPending &&
+                      syncStatusMutation.variables?.walletId === wallet.id;
+                    const isDisconnecting =
+                      disconnectMutation.isPending &&
+                      disconnectMutation.variables?.walletId === wallet.id;
+                    const isRefreshing =
+                      refreshMutation.isPending &&
+                      refreshMutation.variables?.walletId === wallet.id;
+
+                    return (
+                      <section
+                        key={wallet.id}
+                        className="border-border/70 space-y-3 rounded-lg border p-4"
+                      >
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="text-base font-semibold">
+                                {wallet.name}
+                              </h3>
+                              <Badge
+                                variant={
+                                  wallet.plaid_sync_enabled
+                                    ? "secondary"
+                                    : "outline"
+                                }
+                              >
+                                {wallet.plaid_sync_enabled
+                                  ? "Active"
+                                  : "Paused"}
+                              </Badge>
+                            </div>
+                            <Text muted className="text-sm">
+                              {wallet.plaid_institution_name || "Institution"} ·{" "}
+                              {wallet.plaid_account_name || "Account"}
+                              {wallet.plaid_account_mask
+                                ? ` •••• ${wallet.plaid_account_mask}`
+                                : ""}
+                            </Text>
+                            <Text muted className="text-xs">
+                              Import starts{" "}
+                              {wallet.plaid_sync_start_at
+                                ? format(
+                                    new Date(wallet.plaid_sync_start_at),
+                                    "PPp",
+                                  )
+                                : "-"}
+                            </Text>
+                            <Text muted className="text-xs">
+                              Last refreshed{" "}
+                              {wallet.plaid_last_refreshed_at
+                                ? format(
+                                    new Date(wallet.plaid_last_refreshed_at),
+                                    "PPp",
+                                  )
+                                : "-"}
+                            </Text>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={wallet.plaid_sync_enabled}
+                                disabled={isUpdatingStatus}
+                                onCheckedChange={(checked) => {
+                                  syncStatusMutation.mutate({
+                                    enabled: checked,
+                                    walletId: wallet.id,
+                                  });
+                                }}
+                                aria-label={`Toggle Plaid sync for ${wallet.name}`}
+                              />
+                              <Text muted className="text-sm">
+                                {wallet.plaid_sync_enabled
+                                  ? "Active"
+                                  : "Paused"}
+                              </Text>
+                            </div>
+
+                            <Button
+                              variant="outline"
+                              onClick={() => handleRefreshWallet(wallet)}
+                              disabled={
+                                isRefreshing || !wallet.plaid_sync_enabled
+                              }
+                            >
+                              <RefreshCcw className="mr-2 size-4" />
+                              {isRefreshing ? "Refreshing..." : "Refresh"}
+                            </Button>
+
+                            <Button
+                              variant="outline"
+                              onClick={() => setDisconnectWalletId(wallet.id)}
+                              disabled={isDisconnecting}
+                            >
+                              <Unplug className="mr-2 size-4" />
+                              Disconnect
+                            </Button>
+                          </div>
+                        </div>
+                      </section>
+                    );
+                  })}
+                </div>
+              </section>
+            </>
+          ) : null}
+
+          {previewAccounts.length > 0 ? (
+            <>
+              <Separator />
+              <section className="space-y-4">
                 <div className="space-y-1">
-                  <Text strong>2. Select the bank account</Text>
+                  <h2 className="text-lg font-semibold">Select bank account</h2>
                   <Text muted className="text-sm">
                     Review the preview for each returned account so you can map
                     the right bank account to the right wallet.
@@ -379,23 +620,25 @@ export default function IntegrationsPage() {
                     );
                   })}
                 </div>
-              </div>
-            ) : null}
+              </section>
+            </>
+          ) : null}
 
-            {selectedAccount ? (
-              <div className="space-y-4 rounded-lg border p-4">
+          {selectedAccount ? (
+            <>
+              <Separator />
+              <section className="space-y-4">
                 <div className="space-y-1">
-                  <Text strong>3. Select the target wallet</Text>
+                  <h2 className="text-lg font-semibold">Connect to wallet</h2>
                   <Text muted className="text-sm">
-                    The selected bank account will sync into exactly one wallet.
+                    Link the selected Plaid account to exactly one wallet and
+                    define when imports should begin.
                   </Text>
                 </div>
 
-                <div className="grid gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
-                  <div className="space-y-2">
-                    <Text muted small>
-                      Target wallet
-                    </Text>
+                <div className="grid gap-6 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
+                  <section className="space-y-2">
+                    <h3 className="text-sm font-medium">Target wallet</h3>
                     <Select
                       value={selectedWalletId}
                       onValueChange={setSelectedWalletId}
@@ -412,29 +655,30 @@ export default function IntegrationsPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
+                  </section>
 
-                  <div className="rounded-md border border-dashed p-4">
+                  <section className="space-y-2 rounded-lg border border-dashed p-4">
+                    <h3 className="text-sm font-medium">
+                      Selected bank account
+                    </h3>
                     <Text muted className="text-sm">
-                      Selected account:{" "}
-                      <span className="text-foreground font-medium">
-                        {selectedAccount.name || "Account"}
-                        {selectedAccount.mask
-                          ? ` •••• ${selectedAccount.mask}`
-                          : ""}
-                      </span>
+                      {selectedAccount.name || "Account"}
+                      {selectedAccount.mask
+                        ? ` •••• ${selectedAccount.mask}`
+                        : ""}
                     </Text>
-                    <Text muted className="mt-1 text-sm">
-                      Institution:{" "}
+                    <Text muted className="text-sm">
                       {selectedAccount.institution_name || "Linked institution"}
                     </Text>
-                  </div>
+                  </section>
                 </div>
 
                 {selectedWallet ? (
-                  <div className="bg-muted/30 space-y-4 rounded-lg p-4">
+                  <section className="border-border/70 space-y-4 rounded-lg border p-4">
                     <div className="space-y-1">
-                      <Text strong>4. Choose when imports should start</Text>
+                      <h3 className="text-sm font-medium">
+                        Import start datetime
+                      </h3>
                       <Text muted className="text-sm">
                         Transactions on or after this datetime will be fetched
                         and stored in{" "}
@@ -446,9 +690,6 @@ export default function IntegrationsPage() {
                     </div>
 
                     <div className="max-w-sm space-y-2">
-                      <Text muted small>
-                        Start datetime
-                      </Text>
                       <Input
                         type="datetime-local"
                         value={syncStartAt}
@@ -473,58 +714,23 @@ export default function IntegrationsPage() {
                         ? "Connecting account..."
                         : "Connect account to wallet"}
                     </Button>
-                  </div>
+                  </section>
                 ) : null}
-              </div>
-            ) : null}
+              </section>
+            </>
+          ) : null}
 
-            {linkedWallets.length > 0 ? (
-              <div className="space-y-3 rounded-lg border p-4">
-                <div className="space-y-1">
-                  <Text strong>Existing linked wallets</Text>
-                  <Text muted className="text-sm">
-                    Wallets already connected to Plaid accounts.
-                  </Text>
-                </div>
-
-                <div className="grid gap-3 lg:grid-cols-2">
-                  {linkedWallets.map((wallet) => (
-                    <div
-                      key={wallet.id}
-                      className="rounded-md border border-dashed p-4"
-                    >
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="size-4 text-emerald-600" />
-                        <Text strong>{wallet.name}</Text>
-                      </div>
-                      <Text muted className="mt-2 text-sm">
-                        {wallet.plaid_institution_name || "Institution"} ·{" "}
-                        {wallet.plaid_account_name || "Account"}
-                        {wallet.plaid_account_mask
-                          ? ` •••• ${wallet.plaid_account_mask}`
-                          : ""}
-                      </Text>
-                      <Text muted className="mt-1 text-xs">
-                        Import starts{" "}
-                        {wallet.plaid_sync_start_at
-                          ? format(new Date(wallet.plaid_sync_start_at), "PPp")
-                          : "-"}
-                      </Text>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            {lastSyncResult ? (
-              <div className="rounded-lg border p-4">
-                <Text strong>Last import</Text>
-                <Text muted className="mt-2 text-sm">
+          {lastSyncResult ? (
+            <>
+              <Separator />
+              <section className="space-y-2">
+                <h2 className="text-lg font-semibold">Last import</h2>
+                <Text muted className="text-sm">
                   {lastSyncResult.importedCount > 0
                     ? `${lastSyncResult.importedCount} transactions imported.`
                     : "No new transactions were imported."}
                 </Text>
-                <Text muted className="mt-1 text-sm">
+                <Text muted className="text-sm">
                   Last refreshed{" "}
                   {lastSyncResult.connection.plaid_last_refreshed_at
                     ? format(
@@ -535,11 +741,44 @@ export default function IntegrationsPage() {
                       )
                     : "-"}
                 </Text>
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
+              </section>
+            </>
+          ) : null}
+        </div>
       </div>
+
+      <AlertDialog
+        open={!!disconnectWalletId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDisconnectWalletId(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Disconnect Plaid from wallet?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {disconnectWallet
+                ? `This will disconnect ${disconnectWallet.name} from Plaid and stop future syncs. Imported transactions already stored in the wallet will remain.`
+                : "This will disconnect the wallet from Plaid and stop future syncs."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                if (!disconnectWalletId) return;
+                disconnectMutation.mutate({ walletId: disconnectWalletId });
+              }}
+              disabled={disconnectMutation.isPending}
+            >
+              {disconnectMutation.isPending ? "Disconnecting..." : "Disconnect"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

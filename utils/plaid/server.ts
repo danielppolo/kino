@@ -338,6 +338,7 @@ export function serializeWalletPlaidConnection(
     | "plaid_institution_name"
     | "plaid_item_id"
     | "plaid_last_refreshed_at"
+    | "plaid_sync_enabled"
     | "plaid_sync_start_at"
   >,
 ): PlaidWalletConnection {
@@ -352,6 +353,7 @@ export function serializeWalletPlaidConnection(
     plaid_institution_name: wallet.plaid_institution_name,
     plaid_item_id: wallet.plaid_item_id,
     plaid_last_refreshed_at: wallet.plaid_last_refreshed_at,
+    plaid_sync_enabled: wallet.plaid_sync_enabled,
     plaid_sync_start_at: wallet.plaid_sync_start_at,
   };
 }

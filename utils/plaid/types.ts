@@ -34,6 +34,7 @@ export interface PlaidWalletConnection {
   plaid_institution_name: string | null;
   plaid_item_id: string;
   plaid_last_refreshed_at: string | null;
+  plaid_sync_enabled: boolean;
   plaid_sync_start_at: string | null;
 }
 
