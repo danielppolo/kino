@@ -11,6 +11,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import TransactionListPreview from "@/app/app/settings/wallets/[walletId]/(components)/transaction-list-preview";
 import EmptyState from "@/components/shared/empty-state";
 import PageHeader from "@/components/shared/page-header";
+import WalletPicker from "@/components/shared/wallet-picker";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,13 +25,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Text } from "@/components/ui/typography";
@@ -639,22 +633,13 @@ export default function IntegrationsPage() {
                 <div className="grid gap-6 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
                   <section className="space-y-2">
                     <h3 className="text-sm font-medium">Target wallet</h3>
-                    <Select
+                    <WalletPicker
+                      walletType="bank_account"
                       value={selectedWalletId}
-                      onValueChange={setSelectedWalletId}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a wallet" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {bankWallets.map((wallet) => (
-                          <SelectItem key={wallet.id} value={wallet.id}>
-                            {wallet.name}
-                            {wallet.plaid_account_id ? " (linked)" : ""}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onChange={setSelectedWalletId}
+                      placeholder="Select a wallet"
+                      className="w-full"
+                    />
                   </section>
 
                   <section className="space-y-2 rounded-lg border border-dashed p-4">
