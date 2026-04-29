@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { AlertTriangle } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import MonthPagination from "../transactions/(components)/month-pagination";
 import BillsBalanceBadge from "./bills-balance-badge";
 import BillsToggle from "./bills-toggle";
 import ChartToggle from "./chart-toggle";
+import { PlaidSyncButton } from "./plaid-sync-button";
 
 import { AddTransactionDropdown } from "@/components/shared/add-transaction-dropdown";
 import { BillsSheet } from "@/components/shared/bills-sheet";
@@ -18,7 +20,6 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { TooltipButton } from "@/components/ui/tooltip-button";
 import { useFeatureFlags } from "@/contexts/settings-context";
 import { useTransactionQueryState } from "@/hooks/use-transaction-query";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 export function TransactionsHeader() {
   const [billsSheetOpen, setBillsSheetOpen] = useState(false);
@@ -73,6 +74,7 @@ export function TransactionsHeader() {
             <BillsToggle onOpenSheet={() => setBillsSheetOpen(true)} />
           )}
           <ChartToggle />
+          <PlaidSyncButton />
           <TooltipButton
             variant={reviewFilterActive ? "secondary" : "ghost"}
             size="sm"
