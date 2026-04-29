@@ -807,6 +807,7 @@ export type Database = {
           note: string | null;
           plaid_merchant_key: string | null;
           plaid_merchant_name: string | null;
+          plaid_pending_transaction_id: string | null;
           plaid_personal_finance_category_primary: string | null;
           plaid_transaction_id: string | null;
           tags: string[] | null;
@@ -828,6 +829,7 @@ export type Database = {
           note?: string | null;
           plaid_merchant_key?: string | null;
           plaid_merchant_name?: string | null;
+          plaid_pending_transaction_id?: string | null;
           plaid_personal_finance_category_primary?: string | null;
           plaid_transaction_id?: string | null;
           tags?: string[] | null;
@@ -849,6 +851,7 @@ export type Database = {
           note?: string | null;
           plaid_merchant_key?: string | null;
           plaid_merchant_name?: string | null;
+          plaid_pending_transaction_id?: string | null;
           plaid_personal_finance_category_primary?: string | null;
           plaid_transaction_id?: string | null;
           tags?: string[] | null;
@@ -1202,6 +1205,7 @@ export type Database = {
           note: string | null;
           plaid_merchant_key: string | null;
           plaid_merchant_name: string | null;
+          plaid_pending_transaction_id: string | null;
           plaid_personal_finance_category_primary: string | null;
           plaid_transaction_id: string | null;
           tag_ids: string[] | null;

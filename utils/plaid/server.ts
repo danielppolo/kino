@@ -204,6 +204,7 @@ function mapPlaidTransaction(
     merchant_name: transaction.merchant_name ?? "",
     name: transaction.name,
     pending: transaction.pending,
+    pending_transaction_id: transaction.pending_transaction_id ?? null,
     plaid_merchant_key: plaidMerchantKey,
     plaid_merchant_name: plaidMerchantName,
     plaid_personal_finance_category_primary: plaidCategoryPrimary,
@@ -297,6 +298,7 @@ export function getPlaidPreviewTransactions(
         merchant_name,
         name,
         pending,
+        pending_transaction_id,
         plaid_transaction_id,
       }) => ({
         amount,
@@ -307,6 +309,7 @@ export function getPlaidPreviewTransactions(
         merchant_name,
         name,
         pending,
+        pending_transaction_id,
         plaid_transaction_id,
       }),
     );

@@ -16,6 +16,7 @@ import { Database } from "@/utils/supabase/database.types";
 type TypedSupabaseClient = SupabaseClient<Database>;
 type WalletRow = Database["public"]["Tables"]["wallets"]["Row"];
 type TransactionInsert = Database["public"]["Tables"]["transactions"]["Insert"];
+type TransactionUpdate = Database["public"]["Tables"]["transactions"]["Update"];
 
 function mapPlaidAmountToTransaction(
   amount: number,
@@ -36,9 +37,22 @@ function mapPlaidAmountToTransaction(
 }
 
 function getUniquePlaidTransactions(transactions: PlaidFetchedTransaction[]) {
+  const postedPendingIds = new Set(
+    transactions
+      .filter((transaction) => !transaction.pending)
+      .map((transaction) => transaction.pending_transaction_id)
+      .filter((value): value is string => Boolean(value)),
+  );
   const transactionByPlaidId = new Map<string, PlaidFetchedTransaction>();
 
   transactions.forEach((transaction) => {
+    if (
+      transaction.pending &&
+      postedPendingIds.has(transaction.plaid_transaction_id)
+    ) {
+      return;
+    }
+
     const existingTransaction = transactionByPlaidId.get(
       transaction.plaid_transaction_id,
     );
@@ -109,17 +123,24 @@ export async function syncWalletPlaidTransactions({
     (learnedRules ?? []).map((rule) => [rule.merchant_key, rule.category_id]),
   );
 
-  const plaidTransactionIds = transactionsToStore.map(
-    (transaction) => transaction.plaid_transaction_id,
-  );
+  const plaidLookupIds = Array.from(
+    new Set(
+      transactionsToStore.flatMap((transaction) => [
+        transaction.plaid_transaction_id,
+        transaction.pending_transaction_id,
+      ]),
+    ),
+  ).filter((value): value is string => Boolean(value));
 
   const { data: existingTransactions, error: existingTransactionsError } =
-    plaidTransactionIds.length === 0
+    plaidLookupIds.length === 0
       ? { data: [], error: null }
       : await supabase
           .from("transactions")
-          .select("id, category_id, label_id, note, plaid_transaction_id")
-          .in("plaid_transaction_id", plaidTransactionIds);
+          .select(
+            "id, category_id, label_id, note, plaid_pending_transaction_id, plaid_transaction_id",
+          )
+          .in("plaid_transaction_id", plaidLookupIds);
 
   if (existingTransactionsError) {
     throw existingTransactionsError;
@@ -132,40 +153,94 @@ export async function syncWalletPlaidTransactions({
     ]),
   );
 
-  const transactionRows: TransactionInsert[] = transactionsToStore.map(
-    (transaction) => {
-      const transactionDate = transaction.date;
-      const amountData = mapPlaidAmountToTransaction(transaction.amount);
-      const existingTransaction = existingByPlaidId.get(
-        transaction.plaid_transaction_id,
-      );
+  const transactionRows: TransactionInsert[] = [];
+  const pendingTransactionUpdates: Array<{
+    id: string;
+    row: TransactionUpdate;
+  }> = [];
+  const pendingTransactionIdsToDelete = new Set<string>();
 
-      return {
-        amount_cents: amountData.amount_cents,
-        category_id:
-          existingTransaction?.category_id ??
-          (transaction.plaid_merchant_key
-            ? (learnedRuleCategoryByMerchantKey.get(
-                transaction.plaid_merchant_key,
-              ) ?? null)
-            : null),
-        conversion_rate_to_base: null,
-        currency: transaction.currency || wallet.currency,
-        date: transactionDate,
-        description: transaction.merchant_name || transaction.name,
-        label_id: existingTransaction?.label_id ?? null,
-        note: existingTransaction?.note ?? null,
-        plaid_merchant_key: transaction.plaid_merchant_key,
-        plaid_merchant_name:
-          transaction.plaid_merchant_name ?? transaction.merchant_name ?? null,
-        plaid_personal_finance_category_primary:
-          transaction.plaid_personal_finance_category_primary,
-        plaid_transaction_id: transaction.plaid_transaction_id,
-        type: amountData.type,
-        wallet_id: wallet.id,
-      };
-    },
-  );
+  transactionsToStore.forEach((transaction) => {
+    const transactionDate = transaction.date;
+    const amountData = mapPlaidAmountToTransaction(transaction.amount);
+    const currentExistingTransaction = existingByPlaidId.get(
+      transaction.plaid_transaction_id,
+    );
+    const pendingExistingTransaction = transaction.pending_transaction_id
+      ? existingByPlaidId.get(transaction.pending_transaction_id)
+      : undefined;
+    const existingTransaction =
+      currentExistingTransaction ?? pendingExistingTransaction;
+
+    if (
+      currentExistingTransaction?.id &&
+      pendingExistingTransaction?.id &&
+      currentExistingTransaction.id !== pendingExistingTransaction.id
+    ) {
+      pendingTransactionIdsToDelete.add(pendingExistingTransaction.id);
+    }
+
+    const transactionRow = {
+      amount_cents: amountData.amount_cents,
+      category_id:
+        existingTransaction?.category_id ??
+        (transaction.plaid_merchant_key
+          ? (learnedRuleCategoryByMerchantKey.get(
+              transaction.plaid_merchant_key,
+            ) ?? null)
+          : null),
+      conversion_rate_to_base: null,
+      currency: transaction.currency || wallet.currency,
+      date: transactionDate,
+      description: transaction.merchant_name || transaction.name,
+      label_id: existingTransaction?.label_id ?? null,
+      note: existingTransaction?.note ?? null,
+      plaid_merchant_key: transaction.plaid_merchant_key,
+      plaid_merchant_name:
+        transaction.plaid_merchant_name ?? transaction.merchant_name ?? null,
+      plaid_pending_transaction_id: transaction.pending_transaction_id,
+      plaid_personal_finance_category_primary:
+        transaction.plaid_personal_finance_category_primary,
+      plaid_transaction_id: transaction.plaid_transaction_id,
+      type: amountData.type,
+      wallet_id: wallet.id,
+    } satisfies TransactionInsert;
+
+    if (!currentExistingTransaction && pendingExistingTransaction?.id) {
+      pendingTransactionUpdates.push({
+        id: pendingExistingTransaction.id,
+        row: transactionRow,
+      });
+      return;
+    }
+
+    transactionRows.push({
+      ...transactionRow,
+      id: currentExistingTransaction?.id,
+    });
+  });
+
+  for (const { id, row } of pendingTransactionUpdates) {
+    const { error } = await supabase
+      .from("transactions")
+      .update(row)
+      .eq("id", id);
+
+    if (error) {
+      throw error;
+    }
+  }
+
+  if (pendingTransactionIdsToDelete.size > 0) {
+    const { error } = await supabase
+      .from("transactions")
+      .delete()
+      .in("id", Array.from(pendingTransactionIdsToDelete));
+
+    if (error) {
+      throw error;
+    }
+  }
 
   if (transactionRows.length > 0) {
     const { error } = await supabase
@@ -179,7 +254,10 @@ export async function syncWalletPlaidTransactions({
   }
 
   const importedCount = transactionsToStore.filter(
-    (transaction) => !existingByPlaidId.has(transaction.plaid_transaction_id),
+    (transaction) =>
+      !existingByPlaidId.has(transaction.plaid_transaction_id) &&
+      (!transaction.pending_transaction_id ||
+        !existingByPlaidId.has(transaction.pending_transaction_id)),
   ).length;
 
   return {

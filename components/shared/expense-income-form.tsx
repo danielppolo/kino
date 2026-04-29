@@ -141,6 +141,7 @@ const ExpenseIncomeForm = ({
         note: null,
         plaid_merchant_key: null,
         plaid_merchant_name: null,
+        plaid_pending_transaction_id: null,
         plaid_personal_finance_category_primary: null,
         plaid_transaction_id: null,
         tag_ids: newTransaction.tags ?? null,
@@ -204,6 +205,8 @@ const ExpenseIncomeForm = ({
         note: (saved as { note?: string | null }).note ?? null,
         plaid_merchant_key: saved.plaid_merchant_key ?? null,
         plaid_merchant_name: saved.plaid_merchant_name ?? null,
+        plaid_pending_transaction_id:
+          saved.plaid_pending_transaction_id ?? null,
         plaid_personal_finance_category_primary:
           saved.plaid_personal_finance_category_primary ?? null,
         plaid_transaction_id: saved.plaid_transaction_id ?? null,

@@ -8,6 +8,7 @@ export interface PlaidTransactionPreview {
   merchant_name: string;
   name: string;
   pending: boolean;
+  pending_transaction_id: string | null;
   plaid_transaction_id: string;
 }
 
