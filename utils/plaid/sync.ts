@@ -214,10 +214,14 @@ export async function syncWalletPlaidTransactions({
       return;
     }
 
-    transactionRows.push({
-      ...transactionRow,
-      id: currentExistingTransaction?.id,
-    });
+    if (currentExistingTransaction?.id) {
+      transactionRows.push({
+        ...transactionRow,
+        id: currentExistingTransaction.id,
+      });
+    } else {
+      transactionRows.push(transactionRow);
+    }
   });
 
   for (const { id, row } of pendingTransactionUpdates) {
