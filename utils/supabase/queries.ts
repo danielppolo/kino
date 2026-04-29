@@ -2,6 +2,211 @@ import { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 
 import { BillWithPayments, TypedSupabaseClient } from "@/utils/supabase/types";
 
+type InsightQueryParams = {
+  walletId?: string;
+  workspaceWalletIds?: string[];
+  from?: string;
+  to?: string;
+};
+
+type ExpenseTransactionInsightRow = {
+  amount_cents: number | null;
+  date: string | null;
+  wallet_id: string | null;
+  label_id: string | null;
+  category_id: string | null;
+  labels:
+    | {
+        id: string;
+        name: string | null;
+        color: string | null;
+      }
+    | {
+        id: string;
+        name: string | null;
+        color: string | null;
+      }[]
+    | null;
+  categories:
+    | {
+        id: string;
+        name: string | null;
+      }
+    | {
+        id: string;
+        name: string | null;
+      }[]
+    | null;
+};
+
+export type CategoryLabelHeatmapCell = {
+  wallet_id: string | null;
+  category_id: string | null;
+  category_name: string;
+  label_id: string | null;
+  label_name: string;
+  label_color: string | null;
+  amount_cents: number;
+  transaction_count: number;
+};
+
+export type LabelVolatilityPoint = {
+  wallet_id: string;
+  month: string;
+  label_id: string | null;
+  label_name: string;
+  label_color: string | null;
+  amount_cents: number;
+  transaction_count: number;
+};
+
+export type LabelShareTrendPoint = LabelVolatilityPoint;
+
+export type LabelWeekdayPatternCell = {
+  wallet_id: string | null;
+  weekday: number;
+  label_id: string | null;
+  label_name: string;
+  label_color: string | null;
+  amount_cents: number;
+  transaction_count: number;
+};
+
+const UNKNOWN_LABEL_NAME = "Unknown";
+const UNKNOWN_CATEGORY_NAME = "Unknown";
+
+const PAGE_SIZE = 1000;
+
+async function fetchAllPages<T>(
+  buildQuery: () => {
+    range: (from: number, to: number) => unknown;
+  },
+) {
+  let fromIndex = 0;
+  let allData: T[] = [];
+
+  while (true) {
+    const { data, error } = (await buildQuery().range(
+      fromIndex,
+      fromIndex + PAGE_SIZE - 1,
+    )) as {
+      data: T[] | null;
+      error: PostgrestError | null;
+    };
+
+    if (error) {
+      return { data: null, error } as const;
+    }
+
+    allData = allData.concat(data ?? []);
+
+    if (!data || data.length < PAGE_SIZE) {
+      break;
+    }
+
+    fromIndex += PAGE_SIZE;
+  }
+
+  return { data: allData, error: null } as const;
+}
+
+function unwrapRelation<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value ?? null;
+}
+
+function buildExpenseTransactionInsightQuery(
+  client: TypedSupabaseClient,
+  params: InsightQueryParams,
+) {
+  let query = client
+    .from("transactions")
+    .select(
+      `
+        amount_cents,
+        date,
+        wallet_id,
+        label_id,
+        category_id,
+        labels (
+          id,
+          name,
+          color
+        ),
+        categories (
+          id,
+          name
+        )
+      `,
+    )
+    .eq("type", "expense")
+    .order("date", { ascending: true });
+
+  if (params.walletId) {
+    query = query.eq("wallet_id", params.walletId);
+  } else if (params.workspaceWalletIds && params.workspaceWalletIds.length > 0) {
+    query = query.in("wallet_id", params.workspaceWalletIds);
+  }
+
+  if (params.from) {
+    query = query.gte("date", params.from);
+  }
+
+  if (params.to) {
+    query = query.lte("date", params.to);
+  }
+
+  return query;
+}
+
+function getMonthStartKey(date: string) {
+  return `${date.slice(0, 7)}-01`;
+}
+
+function aggregateMonthlyLabelPoints(
+  data: ExpenseTransactionInsightRow[],
+): LabelVolatilityPoint[] {
+  const aggregated = new Map<string, LabelVolatilityPoint>();
+
+  data.forEach((row) => {
+    if (!row.wallet_id || !row.date) return;
+
+    const amountCents = Math.abs(row.amount_cents ?? 0);
+    if (amountCents === 0) return;
+
+    const label = unwrapRelation(row.labels);
+    const labelId = row.label_id ?? null;
+    const month = getMonthStartKey(row.date);
+    const key = `${row.wallet_id}::${month}::${labelId ?? "unknown-label"}`;
+    const existing = aggregated.get(key);
+
+    if (existing) {
+      existing.amount_cents += amountCents;
+      existing.transaction_count += 1;
+      return;
+    }
+
+    aggregated.set(key, {
+      wallet_id: row.wallet_id,
+      month,
+      label_id: labelId,
+      label_name: label?.name?.trim() || UNKNOWN_LABEL_NAME,
+      label_color: label?.color ?? null,
+      amount_cents: amountCents,
+      transaction_count: 1,
+    });
+  });
+
+  return Array.from(aggregated.values()).sort((left, right) => {
+    const monthCompare = left.month.localeCompare(right.month);
+    if (monthCompare !== 0) return monthCompare;
+    return left.label_name.localeCompare(right.label_name);
+  });
+}
+
 export interface Filters {
   label_id?: string | undefined;
   category_id?: string | undefined;
@@ -651,6 +856,137 @@ export const getMonthlyLabelStats = async (
   }
 
   return { data: allData, error: null } as const;
+};
+
+export const getCategoryLabelHeatmapData = async (
+  client: TypedSupabaseClient,
+  params: InsightQueryParams,
+) => {
+  const { data, error } = await fetchAllPages<ExpenseTransactionInsightRow>(() =>
+    buildExpenseTransactionInsightQuery(client, params),
+  );
+
+  if (error || !data) {
+    return { data: null, error } as const;
+  }
+
+  const aggregated = new Map<string, CategoryLabelHeatmapCell>();
+
+  data.forEach((row) => {
+    const amountCents = Math.abs(row.amount_cents ?? 0);
+    if (amountCents === 0) return;
+
+    const label = unwrapRelation(row.labels);
+    const category = unwrapRelation(row.categories);
+
+    const categoryId = row.category_id ?? null;
+    const labelId = row.label_id ?? null;
+    const walletId = row.wallet_id ?? null;
+    const key = `${walletId ?? "unknown-wallet"}::${categoryId ?? "unknown-category"}::${labelId ?? "unknown-label"}`;
+
+    const existing = aggregated.get(key);
+
+    if (existing) {
+      existing.amount_cents += amountCents;
+      existing.transaction_count += 1;
+      return;
+    }
+
+    aggregated.set(key, {
+      wallet_id: walletId,
+      category_id: categoryId,
+      category_name: category?.name?.trim() || UNKNOWN_CATEGORY_NAME,
+      label_id: labelId,
+      label_name: label?.name?.trim() || UNKNOWN_LABEL_NAME,
+      label_color: label?.color ?? null,
+      amount_cents: amountCents,
+      transaction_count: 1,
+    });
+  });
+
+  return {
+    data: Array.from(aggregated.values()),
+    error: null,
+  } as const;
+};
+
+export const getLabelVolatilityData = async (
+  client: TypedSupabaseClient,
+  params: InsightQueryParams,
+) => {
+  const { data, error } = await fetchAllPages<ExpenseTransactionInsightRow>(() =>
+    buildExpenseTransactionInsightQuery(client, params),
+  );
+
+  if (error || !data) {
+    return { data: null, error } as const;
+  }
+
+  return { data: aggregateMonthlyLabelPoints(data), error: null } as const;
+};
+
+export const getLabelShareTrends = async (
+  client: TypedSupabaseClient,
+  params: InsightQueryParams,
+) => {
+  const { data, error } = await fetchAllPages<ExpenseTransactionInsightRow>(() =>
+    buildExpenseTransactionInsightQuery(client, params),
+  );
+
+  if (error || !data) {
+    return { data: null, error } as const;
+  }
+
+  return { data: aggregateMonthlyLabelPoints(data), error: null } as const;
+};
+
+export const getLabelWeekdayPatternData = async (
+  client: TypedSupabaseClient,
+  params: InsightQueryParams,
+) => {
+  const { data, error } = await fetchAllPages<ExpenseTransactionInsightRow>(() =>
+    buildExpenseTransactionInsightQuery(client, params),
+  );
+
+  if (error || !data) {
+    return { data: null, error } as const;
+  }
+
+  const aggregated = new Map<string, LabelWeekdayPatternCell>();
+
+  data.forEach((row) => {
+    const amountCents = Math.abs(row.amount_cents ?? 0);
+    if (amountCents === 0 || !row.date) return;
+
+    const label = unwrapRelation(row.labels);
+    const labelId = row.label_id ?? null;
+    const walletId = row.wallet_id ?? null;
+    // Monday-first mapping: Monday=0 ... Sunday=6.
+    const weekday = (new Date(row.date).getUTCDay() + 6) % 7;
+    const key = `${walletId ?? "unknown-wallet"}::${weekday}::${labelId ?? "unknown-label"}`;
+    const existing = aggregated.get(key);
+
+    if (existing) {
+      existing.amount_cents += amountCents;
+      existing.transaction_count += 1;
+      return;
+    }
+
+    aggregated.set(key, {
+      wallet_id: walletId,
+      weekday,
+      label_id: labelId,
+      label_name: label?.name?.trim() || UNKNOWN_LABEL_NAME,
+      label_color: label?.color ?? null,
+      amount_cents: amountCents,
+      transaction_count: 1,
+    });
+  });
+
+  return {
+    data: Array.from(aggregated.values()),
+    error: null,
+  } as const;
 };
 
 // Get category pie chart data for a specific month or date range

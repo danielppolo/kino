@@ -6,7 +6,10 @@ import {
   serializeWalletPlaidConnection,
   transactionMatchesImportStart,
 } from "./server";
-import { PlaidTransactionsResponse } from "./types";
+import type {
+  PlaidFetchedTransaction,
+  PlaidTransactionsResponse,
+} from "./types";
 
 import { Database } from "@/utils/supabase/database.types";
 
@@ -32,6 +35,27 @@ function mapPlaidAmountToTransaction(
   };
 }
 
+function getUniquePlaidTransactions(transactions: PlaidFetchedTransaction[]) {
+  const transactionByPlaidId = new Map<string, PlaidFetchedTransaction>();
+
+  transactions.forEach((transaction) => {
+    const existingTransaction = transactionByPlaidId.get(
+      transaction.plaid_transaction_id,
+    );
+
+    if (!existingTransaction) {
+      transactionByPlaidId.set(transaction.plaid_transaction_id, transaction);
+      return;
+    }
+
+    if (existingTransaction.pending && !transaction.pending) {
+      transactionByPlaidId.set(transaction.plaid_transaction_id, transaction);
+    }
+  });
+
+  return Array.from(transactionByPlaidId.values());
+}
+
 export async function syncWalletPlaidTransactions({
   supabase,
   wallet,
@@ -54,8 +78,10 @@ export async function syncWalletPlaidTransactions({
     startDate: effectiveImportStartAt ?? undefined,
   });
 
-  const transactionsToStore = transactions.filter((transaction) =>
-    transactionMatchesImportStart(transaction, effectiveImportStartAt),
+  const transactionsToStore = getUniquePlaidTransactions(
+    transactions.filter((transaction) =>
+      transactionMatchesImportStart(transaction, effectiveImportStartAt),
+    ),
   );
 
   const merchantKeys = Array.from(
@@ -168,6 +194,8 @@ export async function syncWalletPlaidTransactions({
       plaid_sync_start_at: effectiveImportStartAt ?? null,
     }),
     importedCount,
-    transactions: getPlaidPreviewTransactions(transactions),
+    transactions: getPlaidPreviewTransactions(
+      getUniquePlaidTransactions(transactions),
+    ),
   };
 }

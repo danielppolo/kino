@@ -12,9 +12,13 @@ import { BillVelocityGaugeChart } from "@/components/charts/bill-velocity-gauge-
 import { BillsHistoryChart } from "@/components/charts/bills-history-chart";
 import { BillsVsDiscretionaryChart } from "@/components/charts/bills-vs-discretionary-chart";
 import { CashFlowAfterBillsChart } from "@/components/charts/cash-flow-after-bills-chart";
+import { CategoryLabelHeatmapChart } from "@/components/charts/category-label-heatmap-chart";
 import { CurrencyExposureChart } from "@/components/charts/currency-exposure-chart";
 import { ExpenseConcentrationChart } from "@/components/charts/expense-concentration-chart";
 import { ExpensePredictabilityChart } from "@/components/charts/expense-predictability-chart";
+import { LabelDriftChart } from "@/components/charts/label-drift-chart";
+import { LabelTimingHeatmapChart } from "@/components/charts/label-timing-heatmap-chart";
+import { LabelVolatilityScatterChart } from "@/components/charts/label-volatility-scatter-chart";
 import { RecurringVsOnetimeBillsChart } from "@/components/charts/recurring-vs-onetime-bills-chart";
 import { TransactionSizeDistributionChart } from "@/components/charts/transaction-size-distribution-chart";
 import { TransactionTypeDistributionChart } from "@/components/charts/transaction-type-distribution-chart";
@@ -120,6 +124,44 @@ async function InfographicsPage({ params, searchParams }: PageParams) {
           to={filters.to}
           type="income"
           title="Income Trends by Label"
+        />
+      </div>
+      <div className="md:col-span-2 lg:col-span-3">
+        <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 px-4 py-3">
+          <div className="text-sm font-semibold tracking-[0.08em] text-foreground">
+            Subjective Insights
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Read labels as intention, not category, to spot drift, volatility, timing, and mismatch.
+          </p>
+        </div>
+      </div>
+      <div className="md:col-span-2 lg:col-span-3">
+        <CategoryLabelHeatmapChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
+        />
+      </div>
+      <div className="md:col-span-2 lg:col-span-2">
+        <LabelVolatilityScatterChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
+        />
+      </div>
+      <div className="md:col-span-2 lg:col-span-1">
+        <LabelTimingHeatmapChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
+        />
+      </div>
+      <div className="md:col-span-2 lg:col-span-3">
+        <LabelDriftChart
+          walletId={walletId}
+          from={filters.from}
+          to={filters.to}
         />
       </div>
 
