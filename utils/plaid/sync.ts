@@ -1,4 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
+import { v4 as randomUUID } from "uuid";
 
 import {
   fetchPlaidTransactions,
@@ -220,7 +221,10 @@ export async function syncWalletPlaidTransactions({
         id: currentExistingTransaction.id,
       });
     } else {
-      transactionRows.push(transactionRow);
+      transactionRows.push({
+        ...transactionRow,
+        id: randomUUID(),
+      });
     }
   });
 
