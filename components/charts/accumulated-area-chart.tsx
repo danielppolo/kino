@@ -24,7 +24,11 @@ import {
 import { Money } from "@/components/ui/money";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
-import { calculateMonthlyTotals, formatCurrency, parseMonthDate } from "@/utils/chart-helpers";
+import {
+  calculateMonthlyTotals,
+  formatCurrency,
+  parseMonthDate,
+} from "@/utils/chart-helpers";
 import { createClient } from "@/utils/supabase/client";
 import { getWalletMonthlyBalances } from "@/utils/supabase/queries";
 
@@ -116,6 +120,30 @@ export function AccumulatedAreaChart({
   };
 
   const percentageChange = calculatePercentageChange();
+
+  const getTotalBalance = (dataPoint: (typeof chartData)[number]) =>
+    visibleWallets.reduce((total, wallet) => {
+      const balance = (dataPoint[wallet.id] as number) || 0;
+      return total + balance;
+    }, 0);
+
+  const getSlopeStats = (month: string, currentTotal: number) => {
+    const currentIndex = chartData.findIndex((point) => point.month === month);
+    if (currentIndex <= 0) return null;
+
+    const previousTotal = getTotalBalance(chartData[currentIndex - 1]);
+    const delta = currentTotal - previousTotal;
+    const growthPercentage =
+      previousTotal === 0 ? null : (delta / Math.abs(previousTotal)) * 100;
+    const slopeFactor =
+      previousTotal === 0 ? null : currentTotal / previousTotal;
+
+    return {
+      delta,
+      growthPercentage,
+      slopeFactor,
+    };
+  };
 
   if (isLoading) {
     return (
@@ -211,7 +239,9 @@ export function AccumulatedAreaChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => format(parseMonthDate(value), "MMM yyyy")}
+              tickFormatter={(value) =>
+                format(parseMonthDate(value), "MMM yyyy")
+              }
             />
             <YAxis
               tickLine={false}
@@ -221,21 +251,25 @@ export function AccumulatedAreaChart({
             />
             <ChartTooltip
               cursor={false}
-              labelFormatter={(value) => format(parseMonthDate(value), "MMMM yyyy")}
+              labelFormatter={(value) =>
+                format(parseMonthDate(value), "MMMM yyyy")
+              }
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
 
+                const month = String(label);
                 const total = payload.reduce(
                   (sum, item) => sum + (item.value as number),
                   0,
                 );
+                const slopeStats = getSlopeStats(month, total);
 
                 return (
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
                     <div className="grid gap-2">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-medium">
-                          {format(parseMonthDate(label), "MMMM yyyy")}
+                          {format(parseMonthDate(month), "MMMM yyyy")}
                         </span>
                         <span className="text-sm font-medium">
                           <Money
@@ -244,6 +278,39 @@ export function AccumulatedAreaChart({
                           />
                         </span>
                       </div>
+                      {slopeStats && (
+                        <div className="border-border grid gap-1 border-t pt-2">
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-muted-foreground text-xs">
+                              Slope factor
+                            </span>
+                            <span className="text-xs font-medium">
+                              {slopeStats.slopeFactor === null
+                                ? "N/A"
+                                : `${slopeStats.slopeFactor.toFixed(2)}x`}
+                              {slopeStats.growthPercentage !== null && (
+                                <span className="text-muted-foreground">
+                                  {" "}
+                                  ({slopeStats.growthPercentage > 0 ? "+" : ""}
+                                  {slopeStats.growthPercentage.toFixed(1)}%)
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-muted-foreground text-xs">
+                              Monthly change
+                            </span>
+                            <span className="text-xs font-medium">
+                              <Money
+                                cents={Math.round(slopeStats.delta * 100)}
+                                currency={baseCurrency}
+                                showSign
+                              />
+                            </span>
+                          </div>
+                        </div>
+                      )}
                       <div className="grid gap-1">
                         {payload
                           .filter((item) => !!item.value)
