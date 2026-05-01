@@ -312,7 +312,9 @@ export const updateTransactionTemplate = async (
 // Delete Functions
 export const deleteTransaction = async (id: string) => {
   const supabase = await createClient();
-  const { error } = await supabase.from("transactions").delete().eq("id", id);
+  const { error } = await supabase.rpc("delete_transactions_with_plaid_ignore", {
+    transaction_ids: [id],
+  });
   if (error) throw new Error(error.message);
 };
 
@@ -346,10 +348,12 @@ export const deleteTransactions = async (ids: string[]) => {
   const batches = chunk(ids, BATCH_SIZE);
 
   for (const batchIds of batches) {
-    const { error } = await supabase
-      .from("transactions")
-      .delete()
-      .in("id", batchIds);
+    const { error } = await supabase.rpc(
+      "delete_transactions_with_plaid_ignore",
+      {
+        transaction_ids: batchIds,
+      },
+    );
     if (error) throw new Error(error.message);
   }
 };

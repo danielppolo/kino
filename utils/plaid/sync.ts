@@ -98,10 +98,45 @@ export async function syncWalletPlaidTransactions({
     startDate: effectiveImportStartAt ?? undefined,
   });
 
-  const transactionsToStore = getUniquePlaidTransactions(
+  const importableTransactions = getUniquePlaidTransactions(
     transactions.filter((transaction) =>
       transactionMatchesImportStart(transaction, effectiveImportStartAt),
     ),
+  );
+
+  const plaidLookupIds = Array.from(
+    new Set(
+      importableTransactions.flatMap((transaction) => [
+        transaction.plaid_transaction_id,
+        transaction.pending_transaction_id,
+      ]),
+    ),
+  ).filter((value): value is string => Boolean(value));
+
+  const { data: ignoredTransactions, error: ignoredTransactionsError } =
+    plaidLookupIds.length === 0
+      ? { data: [], error: null }
+      : await supabase
+          .from("plaid_ignored_transaction_ids")
+          .select("plaid_transaction_id")
+          .eq("wallet_id", wallet.id)
+          .in("plaid_transaction_id", plaidLookupIds);
+
+  if (ignoredTransactionsError) {
+    throw ignoredTransactionsError;
+  }
+
+  const ignoredPlaidTransactionIds = new Set(
+    (ignoredTransactions ?? []).map(
+      (transaction) => transaction.plaid_transaction_id,
+    ),
+  );
+
+  const transactionsToStore = importableTransactions.filter(
+    (transaction) =>
+      !ignoredPlaidTransactionIds.has(transaction.plaid_transaction_id) &&
+      (!transaction.pending_transaction_id ||
+        !ignoredPlaidTransactionIds.has(transaction.pending_transaction_id)),
   );
 
   const merchantKeys = Array.from(
@@ -174,15 +209,6 @@ export async function syncWalletPlaidTransactions({
       );
     }),
   );
-
-  const plaidLookupIds = Array.from(
-    new Set(
-      transactionsToStore.flatMap((transaction) => [
-        transaction.plaid_transaction_id,
-        transaction.pending_transaction_id,
-      ]),
-    ),
-  ).filter((value): value is string => Boolean(value));
 
   const { data: existingTransactions, error: existingTransactionsError } =
     plaidLookupIds.length === 0

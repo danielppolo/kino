@@ -792,6 +792,41 @@ export type Database = {
           },
         ];
       };
+      plaid_ignored_transaction_ids: {
+        Row: {
+          created_at: string;
+          deleted_transaction_id: string | null;
+          id: string;
+          plaid_transaction_id: string;
+          updated_at: string;
+          wallet_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          deleted_transaction_id?: string | null;
+          id?: string;
+          plaid_transaction_id: string;
+          updated_at?: string;
+          wallet_id: string;
+        };
+        Update: {
+          created_at?: string;
+          deleted_transaction_id?: string | null;
+          id?: string;
+          plaid_transaction_id?: string;
+          updated_at?: string;
+          wallet_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "plaid_ignored_transaction_ids_wallet_id_fkey";
+            columns: ["wallet_id"];
+            isOneToOne: false;
+            referencedRelation: "wallets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       transactions: {
         Row: {
           amount_cents: number;
@@ -1270,6 +1305,10 @@ export type Database = {
       backfill_wallet_monthly_balances: { Args: never; Returns: undefined };
       backfill_wallet_monthly_owed: { Args: never; Returns: undefined };
       calculate_wallet_owed: { Args: { p_wallet_id: string }; Returns: number };
+      delete_transactions_with_plaid_ignore: {
+        Args: { transaction_ids: string[] };
+        Returns: undefined;
+      };
       get_cashflow_breakdown: {
         Args: {
           p_category_id?: string;

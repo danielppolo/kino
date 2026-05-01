@@ -615,7 +615,8 @@ export default function TransactionList() {
               This action cannot be undone. This will permanently delete{" "}
               {singleDeleteId ? "1" : selectedCount} transaction
               {(singleDeleteId ? 1 : selectedCount) === 1 ? "" : "s"} from your
-              wallet.
+              wallet. Deleted Plaid-synced transactions will not be imported
+              again by future syncs.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
