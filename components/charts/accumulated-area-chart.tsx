@@ -121,30 +121,6 @@ export function AccumulatedAreaChart({
 
   const percentageChange = calculatePercentageChange();
 
-  const getTotalBalance = (dataPoint: (typeof chartData)[number]) =>
-    visibleWallets.reduce((total, wallet) => {
-      const balance = (dataPoint[wallet.id] as number) || 0;
-      return total + balance;
-    }, 0);
-
-  const getSlopeStats = (month: string, currentTotal: number) => {
-    const currentIndex = chartData.findIndex((point) => point.month === month);
-    if (currentIndex <= 0) return null;
-
-    const previousTotal = getTotalBalance(chartData[currentIndex - 1]);
-    const delta = currentTotal - previousTotal;
-    const growthPercentage =
-      previousTotal === 0 ? null : (delta / Math.abs(previousTotal)) * 100;
-    const slopeFactor =
-      previousTotal === 0 ? null : currentTotal / previousTotal;
-
-    return {
-      delta,
-      growthPercentage,
-      slopeFactor,
-    };
-  };
-
   if (isLoading) {
     return (
       <Card>
@@ -262,7 +238,6 @@ export function AccumulatedAreaChart({
                   (sum, item) => sum + (item.value as number),
                   0,
                 );
-                const slopeStats = getSlopeStats(month, total);
 
                 return (
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
@@ -278,39 +253,6 @@ export function AccumulatedAreaChart({
                           />
                         </span>
                       </div>
-                      {slopeStats && (
-                        <div className="border-border grid gap-1 border-t pt-2">
-                          <div className="flex items-center justify-between gap-4">
-                            <span className="text-muted-foreground text-xs">
-                              Slope factor
-                            </span>
-                            <span className="text-xs font-medium">
-                              {slopeStats.slopeFactor === null
-                                ? "N/A"
-                                : `${slopeStats.slopeFactor.toFixed(2)}x`}
-                              {slopeStats.growthPercentage !== null && (
-                                <span className="text-muted-foreground">
-                                  {" "}
-                                  ({slopeStats.growthPercentage > 0 ? "+" : ""}
-                                  {slopeStats.growthPercentage.toFixed(1)}%)
-                                </span>
-                              )}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between gap-4">
-                            <span className="text-muted-foreground text-xs">
-                              Monthly change
-                            </span>
-                            <span className="text-xs font-medium">
-                              <Money
-                                cents={Math.round(slopeStats.delta * 100)}
-                                currency={baseCurrency}
-                                showSign
-                              />
-                            </span>
-                          </div>
-                        </div>
-                      )}
                       <div className="grid gap-1">
                         {payload
                           .filter((item) => !!item.value)

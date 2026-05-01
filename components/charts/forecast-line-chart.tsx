@@ -191,6 +191,27 @@ export function ForecastLineChart({
     forecastMode === "with-income" ? withIncomeForecast : noIncomeForecast;
   const chartData: ChartPoint[] = [...historical, ...activeForecast];
 
+  const getChartPointValue = (point: ChartPoint) =>
+    point.total ?? point.forecast ?? 0;
+
+  const getSlopeStats = (month: string, currentValue: number) => {
+    const currentIndex = chartData.findIndex((point) => point.month === month);
+    if (currentIndex <= 0) return null;
+
+    const previousValue = getChartPointValue(chartData[currentIndex - 1]);
+    const delta = currentValue - previousValue;
+    const growthPercentage =
+      previousValue === 0 ? null : (delta / Math.abs(previousValue)) * 100;
+    const slopeFactor =
+      previousValue === 0 ? null : currentValue / previousValue;
+
+    return {
+      delta,
+      growthPercentage,
+      slopeFactor,
+    };
+  };
+
   const chartConfig: ChartConfig = {
     total: {
       label: "Total Balance",
@@ -326,6 +347,7 @@ export function ForecastLineChart({
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
 
+                const month = String(label);
                 const totalEntry = payload.find((p) => p.dataKey === "total");
                 const forecastEntry = payload.find(
                   (p) => p.dataKey === "forecast",
@@ -335,12 +357,13 @@ export function ForecastLineChart({
                 const value = (entry?.value as number) ?? 0;
                 const lower = (entry?.payload as ChartPoint)?.lower;
                 const upper = (entry?.payload as ChartPoint)?.upper;
+                const slopeStats = getSlopeStats(month, value);
 
                 return (
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
                     <div className="grid gap-1.5">
                       <span className="text-sm font-medium">
-                        {format(parseMonthDate(label), "MMMM yyyy")}
+                        {format(parseMonthDate(month), "MMMM yyyy")}
                       </span>
                       <div className="flex items-center justify-between gap-4">
                         <span
@@ -359,6 +382,39 @@ export function ForecastLineChart({
                           />
                         </span>
                       </div>
+                      {slopeStats && (
+                        <div className="border-border grid gap-1 border-t pt-2">
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-muted-foreground text-xs">
+                              Slope factor
+                            </span>
+                            <span className="text-xs font-medium">
+                              {slopeStats.slopeFactor === null
+                                ? "N/A"
+                                : `${slopeStats.slopeFactor.toFixed(2)}x`}
+                              {slopeStats.growthPercentage !== null && (
+                                <span className="text-muted-foreground">
+                                  {" "}
+                                  ({slopeStats.growthPercentage > 0 ? "+" : ""}
+                                  {slopeStats.growthPercentage.toFixed(1)}%)
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-muted-foreground text-xs">
+                              Monthly change
+                            </span>
+                            <span className="text-xs font-medium">
+                              <Money
+                                cents={Math.round(slopeStats.delta * 100)}
+                                currency={baseCurrency}
+                                showSign
+                              />
+                            </span>
+                          </div>
+                        </div>
+                      )}
                       {isForecast &&
                         forecastMode === "with-income" &&
                         lower != null &&
