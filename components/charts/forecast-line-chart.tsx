@@ -1,6 +1,6 @@
 "use client";
 
-import { format } from "date-fns";
+import { differenceInCalendarMonths, format } from "date-fns";
 import {
   CartesianGrid,
   Line,
@@ -198,16 +198,32 @@ export function ForecastLineChart({
     const currentIndex = chartData.findIndex((point) => point.month === month);
     if (currentIndex <= 0) return null;
 
-    const previousValue = getChartPointValue(chartData[currentIndex - 1]);
+    const previousPoint = chartData[currentIndex - 1];
+    const previousValue = getChartPointValue(previousPoint);
+    const monthsBetween = Math.max(
+      1,
+      Math.abs(
+        differenceInCalendarMonths(
+          parseMonthDate(month),
+          parseMonthDate(previousPoint.month),
+        ),
+      ),
+    );
     const delta = currentValue - previousValue;
-    const growthPercentage =
-      previousValue === 0 ? null : (delta / Math.abs(previousValue)) * 100;
+    const monthlySlope = delta / monthsBetween;
+    const savingSlope = Math.max(0, monthlySlope);
+    // 0 means no positive saving slope; 1 is approached as saving/month grows
+    // infinitely relative to monthly burn.
     const slopeFactor =
-      previousValue === 0 ? null : currentValue / previousValue;
+      effectiveMonthlyBurn > 0
+        ? savingSlope / (savingSlope + effectiveMonthlyBurn)
+        : savingSlope > 0
+          ? 1
+          : 0;
 
     return {
       delta,
-      growthPercentage,
+      monthlySlope,
       slopeFactor,
     };
   };
@@ -389,25 +405,21 @@ export function ForecastLineChart({
                               Slope factor
                             </span>
                             <span className="text-xs font-medium">
-                              {slopeStats.slopeFactor === null
-                                ? "N/A"
-                                : `${slopeStats.slopeFactor.toFixed(2)}x`}
-                              {slopeStats.growthPercentage !== null && (
-                                <span className="text-muted-foreground">
-                                  {" "}
-                                  ({slopeStats.growthPercentage > 0 ? "+" : ""}
-                                  {slopeStats.growthPercentage.toFixed(1)}%)
-                                </span>
-                              )}
+                              {slopeStats.slopeFactor.toFixed(2)}
                             </span>
+                          </div>
+                          <div className="text-muted-foreground text-xs">
+                            0 = no saving, 1 = unbounded saving slope
                           </div>
                           <div className="flex items-center justify-between gap-4">
                             <span className="text-muted-foreground text-xs">
-                              Monthly change
+                              Monthly slope
                             </span>
                             <span className="text-xs font-medium">
                               <Money
-                                cents={Math.round(slopeStats.delta * 100)}
+                                cents={Math.round(
+                                  slopeStats.monthlySlope * 100,
+                                )}
                                 currency={baseCurrency}
                                 showSign
                               />
