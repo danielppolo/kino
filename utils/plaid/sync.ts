@@ -2,6 +2,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { v4 as randomUUID } from "uuid";
 
 import {
+  decryptWalletAccessToken,
   fetchPlaidTransactions,
   getPlaidPreviewTransactions,
   serializeWalletPlaidConnection,
@@ -202,6 +203,7 @@ export async function syncWalletPlaidTransactions({
         sourceCurrency: baseCurrency,
         targetCurrency: currency,
         date,
+        supabaseClient: supabase,
       });
       conversionRatesByCurrencyDate.set(
         getRateKey(currency, date),
@@ -371,5 +373,98 @@ export async function syncWalletPlaidTransactions({
     transactions: getPlaidPreviewTransactions(
       getUniquePlaidTransactions(transactions),
     ),
+  };
+}
+
+export async function syncPlaidTransactionsForCron({
+  supabase,
+}: {
+  supabase: TypedSupabaseClient;
+}) {
+  const { data: wallets, error } = await supabase
+    .from("wallets")
+    .select("*")
+    .eq("wallet_type", "bank_account")
+    .eq("plaid_sync_enabled", true)
+    .not("plaid_access_token_encrypted", "is", null)
+    .not("plaid_account_id", "is", null)
+    .order("plaid_last_refreshed_at", {
+      ascending: true,
+      nullsFirst: true,
+    });
+
+  if (error) {
+    throw error;
+  }
+
+  let importedCount = 0;
+  const syncedWallets: Array<{
+    id: string;
+    importedCount: number;
+  }> = [];
+  const skippedWallets: Array<{
+    id: string;
+    reason: string;
+  }> = [];
+  const failedWallets: Array<{
+    id: string;
+    error: string;
+  }> = [];
+
+  for (const wallet of wallets ?? []) {
+    if (
+      !wallet.plaid_access_token_encrypted ||
+      !wallet.plaid_account_id ||
+      !wallet.plaid_sync_start_at
+    ) {
+      skippedWallets.push({
+        id: wallet.id,
+        reason: "Wallet is missing Plaid sync settings",
+      });
+      continue;
+    }
+
+    try {
+      const plaidLastRefreshedAt = new Date().toISOString();
+      const { data: updatedWallet, error: updateError } = await supabase
+        .from("wallets")
+        .update({ plaid_last_refreshed_at: plaidLastRefreshedAt })
+        .eq("id", wallet.id)
+        .select("*")
+        .single();
+
+      if (updateError || !updatedWallet) {
+        throw updateError ?? new Error("Failed to update wallet timestamp");
+      }
+
+      const syncResult = await syncWalletPlaidTransactions({
+        supabase,
+        wallet: updatedWallet,
+        accessToken: decryptWalletAccessToken(
+          wallet.plaid_access_token_encrypted,
+        ),
+        importStartAt: wallet.plaid_sync_start_at,
+      });
+
+      importedCount += syncResult.importedCount;
+      syncedWallets.push({
+        id: wallet.id,
+        importedCount: syncResult.importedCount,
+      });
+    } catch (error) {
+      failedWallets.push({
+        id: wallet.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  return {
+    success: failedWallets.length === 0,
+    importedCount,
+    syncedWallets,
+    skippedWallets,
+    failedWallets,
+    timestamp: new Date().toISOString(),
   };
 }

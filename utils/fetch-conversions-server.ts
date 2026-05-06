@@ -1,5 +1,8 @@
 "use server";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import type { Database } from "@/utils/supabase/database.types";
 import { createClient } from "@/utils/supabase/server";
 
 export interface CurrencyConversion {
@@ -12,11 +15,13 @@ export async function fetchConversion({
   sourceCurrency,
   targetCurrency,
   date,
+  supabaseClient,
 }: {
   sourceCurrency: string;
   // Usually the base currency
   targetCurrency: string;
   date?: string;
+  supabaseClient?: SupabaseClient<Database>;
 }): Promise<CurrencyConversion> {
   if (sourceCurrency === targetCurrency) {
     return {
@@ -26,7 +31,7 @@ export async function fetchConversion({
     };
   }
 
-  const supabase = await createClient();
+  const supabase = supabaseClient || (await createClient());
 
   // Check for cached record
   const { data: cachedRate, error: cacheError } = await supabase
@@ -127,10 +132,12 @@ export async function fetchAllConversions({
   currencies,
   baseCurrency,
   date,
+  supabaseClient,
 }: {
   currencies: string[];
   baseCurrency: string;
   date?: string;
+  supabaseClient?: SupabaseClient<Database>;
 }) {
   const conversions: Record<string, CurrencyConversion> = {};
 
@@ -141,6 +148,7 @@ export async function fetchAllConversions({
           sourceCurrency: baseCurrency,
           targetCurrency: currency,
           date,
+          supabaseClient,
         });
       }
     }),
