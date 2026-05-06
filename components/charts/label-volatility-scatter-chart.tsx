@@ -15,6 +15,7 @@ import {
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import {
   Card,
   CardContent,
@@ -22,7 +23,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ChartConfig, ChartContainer, ChartTooltip } from "@/components/ui/chart";
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+} from "@/components/ui/chart";
 import { Money } from "@/components/ui/money";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import { formatCurrency } from "@/utils/chart-helpers";
@@ -246,7 +251,7 @@ export function LabelVolatilityScatterChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">Loading...</div>
+          <ChartSkeleton variant="scatter" />
         </CardContent>
       </Card>
     );
@@ -356,7 +361,9 @@ export function LabelVolatilityScatterChart({
                           className="h-2.5 w-2.5 rounded-full"
                           style={{ backgroundColor: point.color }}
                         />
-                        <span className="text-sm font-medium">{point.name}</span>
+                        <span className="text-sm font-medium">
+                          {point.name}
+                        </span>
                       </div>
                       <div className="space-y-2 text-sm">
                         <div className="flex items-center justify-between gap-4">
@@ -387,12 +394,12 @@ export function LabelVolatilityScatterChart({
                       {point.labelId ? (
                         <Link
                           href={href}
-                          className="inline-flex text-sm font-medium text-primary underline-offset-4 hover:underline"
+                          className="text-primary inline-flex text-sm font-medium underline-offset-4 hover:underline"
                         >
                           Open matching transactions
                         </Link>
                       ) : (
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-muted-foreground text-xs">
                           Drill-down is only available for named labels.
                         </div>
                       )}
@@ -420,7 +427,7 @@ export function LabelVolatilityScatterChart({
                   />
                   <span className="font-medium">{point.name}</span>
                 </div>
-                <div className="flex items-center gap-4 text-muted-foreground">
+                <div className="text-muted-foreground flex items-center gap-4">
                   <span>
                     Total {formatCurrency(point.totalAmount, baseCurrency)}
                   </span>
@@ -452,7 +459,7 @@ export function LabelVolatilityScatterChart({
                   from,
                   to,
                 })}
-                className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition hover:bg-muted/50"
+                className="hover:bg-muted/50 flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition"
               >
                 {content}
               </Link>

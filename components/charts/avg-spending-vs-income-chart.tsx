@@ -13,6 +13,7 @@ import {
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import {
   Card,
   CardContent,
@@ -184,9 +185,7 @@ export function AvgSpendingVsIncomeChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
-            Loading...
-          </div>
+          <ChartSkeleton variant="bar" />
         </CardContent>
       </Card>
     );
@@ -369,7 +368,9 @@ export function AvgSpendingVsIncomeChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => format(parseMonthDate(value), "MMM yyyy")}
+              tickFormatter={(value) =>
+                format(parseMonthDate(value), "MMM yyyy")
+              }
             />
             <YAxis
               tickLine={false}
@@ -393,7 +394,9 @@ export function AvgSpendingVsIncomeChart({
             />
             <ChartTooltip
               cursor={false}
-              labelFormatter={(value) => format(parseMonthDate(value), "MMMM yyyy")}
+              labelFormatter={(value) =>
+                format(parseMonthDate(value), "MMMM yyyy")
+              }
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
 

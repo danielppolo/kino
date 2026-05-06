@@ -6,6 +6,7 @@ import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import {
   Card,
   CardContent,
@@ -92,7 +93,8 @@ export function BillsVsDiscretionaryChart({
       const rate = conversionRates[wallet.currency]?.rate ?? 1;
 
       const billsAmount = (stat.bill_expenses_cents * rate) / 100;
-      const discretionaryAmount = (stat.discretionary_expenses_cents * rate) / 100;
+      const discretionaryAmount =
+        (stat.discretionary_expenses_cents * rate) / 100;
 
       if (!monthGroups[stat.month][wallet.id]) {
         monthGroups[stat.month][wallet.id] = {
@@ -183,9 +185,7 @@ export function BillsVsDiscretionaryChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
-            Loading...
-          </div>
+          <ChartSkeleton variant="bar" />
         </CardContent>
       </Card>
     );
@@ -252,7 +252,9 @@ export function BillsVsDiscretionaryChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => format(parseMonthDate(value), "MMM yyyy")}
+              tickFormatter={(value) =>
+                format(parseMonthDate(value), "MMM yyyy")
+              }
             />
             <YAxis
               tickLine={false}
@@ -263,7 +265,9 @@ export function BillsVsDiscretionaryChart({
             />
             <ChartTooltip
               cursor={false}
-              labelFormatter={(value) => format(parseMonthDate(value), "MMMM yyyy")}
+              labelFormatter={(value) =>
+                format(parseMonthDate(value), "MMMM yyyy")
+              }
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
 
@@ -310,7 +314,10 @@ export function BillsVsDiscretionaryChart({
                                 <div className="flex items-center gap-2">
                                   <div
                                     className="h-2 w-2 rounded-full"
-                                    style={{ backgroundColor: wallet.color ?? undefined }}
+                                    style={{
+                                      backgroundColor:
+                                        wallet.color ?? undefined,
+                                    }}
                                   />
                                   <span className="text-sm font-medium">
                                     {wallet.name}
@@ -331,7 +338,9 @@ export function BillsVsDiscretionaryChart({
                                       Discretionary:
                                     </span>
                                     <Money
-                                      cents={Math.round(values.discretionary * 100)}
+                                      cents={Math.round(
+                                        values.discretionary * 100,
+                                      )}
                                       currency={baseCurrency}
                                     />
                                   </div>

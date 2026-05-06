@@ -6,6 +6,7 @@ import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import {
   Card,
   CardContent,
@@ -101,7 +102,9 @@ export function ExpensePredictabilityChart({
     const wallet = walletMap.get(walletId);
     visibleWallets = wallet ? [wallet] : [];
   } else {
-    const walletIds = new Set(predictabilityData?.map((b) => b.wallet_id) ?? []);
+    const walletIds = new Set(
+      predictabilityData?.map((b) => b.wallet_id) ?? [],
+    );
     visibleWallets = Array.from(walletMap.values()).filter((w) =>
       walletIds.has(w.id),
     );
@@ -131,14 +134,18 @@ export function ExpensePredictabilityChart({
 
   const calculatePercentageChange = () => {
     if (chartData.length < 2) return 0;
-    const current = visibleWallets.reduce((total: number, wallet: Wallet) => {
-      const score = (chartData[chartData.length - 1][wallet.id] as number) || 0;
-      return total + score;
-    }, 0) / visibleWallets.length;
-    const previous = visibleWallets.reduce((total: number, wallet: Wallet) => {
-      const score = (chartData[chartData.length - 2][wallet.id] as number) || 0;
-      return total + score;
-    }, 0) / visibleWallets.length;
+    const current =
+      visibleWallets.reduce((total: number, wallet: Wallet) => {
+        const score =
+          (chartData[chartData.length - 1][wallet.id] as number) || 0;
+        return total + score;
+      }, 0) / visibleWallets.length;
+    const previous =
+      visibleWallets.reduce((total: number, wallet: Wallet) => {
+        const score =
+          (chartData[chartData.length - 2][wallet.id] as number) || 0;
+        return total + score;
+      }, 0) / visibleWallets.length;
     if (previous === 0) return current > 0 ? 100 : 0;
     return ((current - previous) / previous) * 100;
   };
@@ -155,9 +162,7 @@ export function ExpensePredictabilityChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
-            Loading...
-          </div>
+          <ChartSkeleton variant="bar" />
         </CardContent>
       </Card>
     );
@@ -209,10 +214,8 @@ export function ExpensePredictabilityChart({
       </CardHeader>
       <CardContent>
         <div className="mb-4">
-          <div className="text-3xl font-bold">
-            {currentScore.toFixed(0)}
-          </div>
-          <p className="text-sm text-muted-foreground">
+          <div className="text-3xl font-bold">{currentScore.toFixed(0)}</div>
+          <p className="text-muted-foreground text-sm">
             Current predictability score
           </p>
         </div>
@@ -232,7 +235,9 @@ export function ExpensePredictabilityChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => format(parseMonthDate(value), "MMM yyyy")}
+              tickFormatter={(value) =>
+                format(parseMonthDate(value), "MMM yyyy")
+              }
             />
             <YAxis
               tickLine={false}
@@ -242,7 +247,9 @@ export function ExpensePredictabilityChart({
             />
             <ChartTooltip
               cursor={false}
-              labelFormatter={(value) => format(parseMonthDate(value), "MMMM yyyy")}
+              labelFormatter={(value) =>
+                format(parseMonthDate(value), "MMMM yyyy")
+              }
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
 
@@ -260,11 +267,16 @@ export function ExpensePredictabilityChart({
                           if (!wallet) return null;
                           const score = item.value as number;
                           return (
-                            <div key={item.dataKey} className="flex items-center justify-between gap-2">
+                            <div
+                              key={item.dataKey}
+                              className="flex items-center justify-between gap-2"
+                            >
                               <div className="flex items-center gap-2">
                                 <div
                                   className="h-2 w-2 rounded-full"
-                                  style={{ backgroundColor: wallet.color ?? undefined }}
+                                  style={{
+                                    backgroundColor: wallet.color ?? undefined,
+                                  }}
                                 />
                                 <span className="text-sm">{wallet.name}</span>
                               </div>

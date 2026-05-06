@@ -5,6 +5,7 @@ import { Cell, Pie, PieChart } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import {
   Card,
   CardContent,
@@ -55,7 +56,14 @@ export function ExpenseConcentrationChart({
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["expense-concentration", walletId, workspaceWalletIds, from, to, topN],
+    queryKey: [
+      "expense-concentration",
+      walletId,
+      workspaceWalletIds,
+      from,
+      to,
+      topN,
+    ],
     queryFn: async () => {
       const supabase = await createClient();
       const { data, error } = await getExpenseConcentration(supabase, {
@@ -105,9 +113,7 @@ export function ExpenseConcentrationChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
-            Loading...
-          </div>
+          <ChartSkeleton variant="bar" />
         </CardContent>
       </Card>
     );
@@ -174,9 +180,11 @@ export function ExpenseConcentrationChart({
                           className="h-2 w-2 rounded-full"
                           style={{ backgroundColor: data.fill }}
                         />
-                        <span className="text-sm font-medium">{data.category}</span>
+                        <span className="text-sm font-medium">
+                          {data.category}
+                        </span>
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-muted-foreground text-xs">
                         <div className="flex items-center gap-2">
                           <span>Amount:</span>
                           <Money
@@ -209,7 +217,10 @@ export function ExpenseConcentrationChart({
         </ChartContainer>
         <div className="mt-4 grid gap-2">
           {chartData.map((item) => (
-            <div key={item.category} className="flex items-center justify-between">
+            <div
+              key={item.category}
+              className="flex items-center justify-between"
+            >
               <div className="flex items-center gap-2">
                 <div
                   className="h-2 w-2 rounded-full"
@@ -218,8 +229,13 @@ export function ExpenseConcentrationChart({
                 <span className="text-sm font-medium">{item.category}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground">{item.percentage.toFixed(1)}%</span>
-                <Money cents={Math.round(item.amount * 100)} currency={baseCurrency} />
+                <span className="text-muted-foreground">
+                  {item.percentage.toFixed(1)}%
+                </span>
+                <Money
+                  cents={Math.round(item.amount * 100)}
+                  currency={baseCurrency}
+                />
               </div>
             </div>
           ))}

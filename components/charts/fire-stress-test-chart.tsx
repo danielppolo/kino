@@ -11,6 +11,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import { useChartControls } from "@/components/charts/shared/chart-controls-context";
 import { useFirePlanData } from "@/components/charts/shared/use-fire-plan-data";
 import { useForecastQuery } from "@/components/charts/shared/use-forecast-query";
@@ -131,14 +132,17 @@ function simulateStressScenario({
       phase: point.phase,
     }));
 
-  let balance = (baselinePoints[SHOCK_MONTH]?.balance ?? baselinePoints[0]?.balance ?? 0) *
+  let balance =
+    (baselinePoints[SHOCK_MONTH]?.balance ?? baselinePoints[0]?.balance ?? 0) *
     shockBalanceMultiplier;
   let phase = baselinePoints[SHOCK_MONTH]?.phase ?? "accumulation";
 
   for (let month = SHOCK_MONTH + 1; month <= STRESS_MONTHS; month++) {
     const monthsIntoShock = month - SHOCK_MONTH - 1;
     const inShock = monthsIntoShock < shockMonths;
-    const adjustedRate = inShock ? monthlyRate + shockReturnDelta / 12 : monthlyRate;
+    const adjustedRate = inShock
+      ? monthlyRate + shockReturnDelta / 12
+      : monthlyRate;
 
     let cashflow = monthlySavings;
     if (phase === "downshift-retired") {
@@ -311,7 +315,11 @@ export function FireStressTestChart({
     }));
 
     const finalPoint = data[data.length - 1];
-    const summaries: Array<{ key: ScenarioName; label: string; status: string }> = [
+    const summaries: Array<{
+      key: ScenarioName;
+      label: string;
+      status: string;
+    }> = [
       {
         key: "baseline",
         label: "Baseline",
@@ -370,7 +378,8 @@ export function FireStressTestChart({
   ]);
 
   const yAxisFormatter = (value: number) => {
-    if (Math.abs(value) >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+    if (Math.abs(value) >= 1_000_000)
+      return `${(value / 1_000_000).toFixed(1)}M`;
     if (Math.abs(value) >= 1_000) return `${(value / 1_000).toFixed(0)}k`;
     return value.toFixed(0);
   };
@@ -385,7 +394,7 @@ export function FireStressTestChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">Loading...</div>
+          <ChartSkeleton />
         </CardContent>
       </Card>
     );
@@ -400,13 +409,12 @@ export function FireStressTestChart({
           {forecastHorizonYears > 0
             ? `Forecast controls the first ${forecastHorizonYears} year(s) until the shock branches at year 1.`
             : "0y forecast projects directly from today before the stress branches."}{" "}
-          Each scenario now switches from saving to retirement withdrawals at the
-          first qualifying threshold.
+          Each scenario now switches from saving to retirement withdrawals at
+          the first qualifying threshold.
           {retirementInflectionYear !== null && (
             <>
               {" "}
-              Baseline retirement inflection:
-              {" "}
+              Baseline retirement inflection:{" "}
               <strong>
                 {retirementInflectionType === "downshift"
                   ? `downshift at ~${retirementInflectionYear.toFixed(1)}y`
@@ -458,8 +466,11 @@ export function FireStressTestChart({
                           />
                           <span>{entry.name}</span>
                         </div>
-                        <span className="tabular-nums font-medium">
-                          {formatCurrency(Number(entry.value ?? 0), baseCurrency)}
+                        <span className="font-medium tabular-nums">
+                          {formatCurrency(
+                            Number(entry.value ?? 0),
+                            baseCurrency,
+                          )}
                         </span>
                       </div>
                     ))}
@@ -594,7 +605,9 @@ export function FireStressTestChart({
               key={scenario.key}
               className="text-muted-foreground rounded-md border px-3 py-2 text-xs"
             >
-              <span className="font-medium text-foreground">{scenario.label}:</span>{" "}
+              <span className="text-foreground font-medium">
+                {scenario.label}:
+              </span>{" "}
               {scenario.status} by year {STRESS_YEARS}.
             </div>
           ))}
@@ -607,9 +620,9 @@ export function FireStressTestChart({
             ` Tracked property value (${formatCurrency(
               contextualAssetValue,
               baseCurrency,
-            )}) is contextual and illiquid, not counted as retireable capital.`}
-          {" "}The baseline and shocked paths now stop accumulating once they
-          cross into retirement mode and begin funding spend from the portfolio.
+            )}) is contextual and illiquid, not counted as retireable capital.`}{" "}
+          The baseline and shocked paths now stop accumulating once they cross
+          into retirement mode and begin funding spend from the portfolio.
         </div>
       </CardFooter>
     </Card>

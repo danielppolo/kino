@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { useChartControls } from "./chart-controls-context";
+import { ChartSkeleton } from "./chart-skeleton";
 
 import {
   Card,
@@ -72,9 +73,7 @@ export function StackedTrendsChart({
           <CardDescription>{description}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
-            Loading...
-          </div>
+          <ChartSkeleton variant="bar" />
         </CardContent>
       </Card>
     );
@@ -137,7 +136,9 @@ export function StackedTrendsChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => format(parseMonthDate(value), "MMM yyyy")}
+              tickFormatter={(value) =>
+                format(parseMonthDate(value), "MMM yyyy")
+              }
             />
             <YAxis
               tickLine={false}
@@ -152,7 +153,9 @@ export function StackedTrendsChart({
             />
             <ChartTooltip
               cursor={false}
-              labelFormatter={(value) => format(parseMonthDate(value), "MMMM yyyy")}
+              labelFormatter={(value) =>
+                format(parseMonthDate(value), "MMMM yyyy")
+              }
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
 
@@ -180,15 +183,18 @@ export function StackedTrendsChart({
                       <div className="grid gap-1">
                         {sortedPayload.map((item) => {
                           const dataItem = dataItems.find(
-                            (d) => d.id === item.dataKey
+                            (d) => d.id === item.dataKey,
                           );
                           if (!dataItem) return null;
 
                           // Check for original uncapped value
                           const originalAmount =
-                            originalValues[item.dataKey as string] ?? item.value;
+                            originalValues[item.dataKey as string] ??
+                            item.value;
                           const displayedAmount = item.value as number;
-                          const isCapped = showOutlierWarning && originalAmount > displayedAmount;
+                          const isCapped =
+                            showOutlierWarning &&
+                            originalAmount > displayedAmount;
 
                           return (
                             <div
@@ -204,12 +210,19 @@ export function StackedTrendsChart({
                               </div>
                               <div className="flex flex-col items-end gap-0.5">
                                 <Money
-                                  cents={Math.round((Number(originalAmount) || 0) * 100)}
+                                  cents={Math.round(
+                                    (Number(originalAmount) || 0) * 100,
+                                  )}
                                   currency={baseCurrency}
                                 />
                                 {isCapped && (
                                   <span className="text-muted-foreground text-xs">
-                                    (chart shows {formatCurrency(displayedAmount, baseCurrency)})
+                                    (chart shows{" "}
+                                    {formatCurrency(
+                                      displayedAmount,
+                                      baseCurrency,
+                                    )}
+                                    )
                                   </span>
                                 )}
                               </div>

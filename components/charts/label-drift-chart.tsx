@@ -7,6 +7,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import {
   Card,
   CardContent,
@@ -102,11 +103,7 @@ function getMonthsInRange(from?: string, to?: string) {
   return months;
 }
 
-export function LabelDriftChart({
-  walletId,
-  from,
-  to,
-}: LabelDriftChartProps) {
+export function LabelDriftChart({ walletId, from, to }: LabelDriftChartProps) {
   const [wallets, walletMap] = useWallets();
   const workspaceWalletIds = wallets.map((wallet) => wallet.id);
   const { baseCurrency, conversionRates } = useCurrency();
@@ -140,7 +137,12 @@ export function LabelDriftChart({
     const months = new Set<string>(explicitMonths);
     const labelTotals = new Map<
       string,
-      { labelId: string | null; name: string; color: string | null; totalCents: number }
+      {
+        labelId: string | null;
+        name: string;
+        color: string | null;
+        totalCents: number;
+      }
     >();
     const monthLabelTotals = new Map<string, Map<string, number>>();
 
@@ -171,8 +173,12 @@ export function LabelDriftChart({
         });
       }
 
-      const monthTotals = monthLabelTotals.get(point.month) ?? new Map<string, number>();
-      monthTotals.set(labelKey, (monthTotals.get(labelKey) ?? 0) + convertedCents);
+      const monthTotals =
+        monthLabelTotals.get(point.month) ?? new Map<string, number>();
+      monthTotals.set(
+        labelKey,
+        (monthTotals.get(labelKey) ?? 0) + convertedCents,
+      );
       monthLabelTotals.set(point.month, monthTotals);
     });
 
@@ -209,7 +215,8 @@ export function LabelDriftChart({
     const chartData = Array.from(months)
       .sort((left, right) => left.localeCompare(right))
       .map<DriftDataPoint>((month) => {
-        const monthAmounts = monthLabelTotals.get(month) ?? new Map<string, number>();
+        const monthAmounts =
+          monthLabelTotals.get(month) ?? new Map<string, number>();
         const totalsBySeries: Record<string, number> = {};
 
         series.forEach((item) => {
@@ -271,7 +278,7 @@ export function LabelDriftChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">Loading...</div>
+          <ChartSkeleton />
         </CardContent>
       </Card>
     );
@@ -340,7 +347,9 @@ export function LabelDriftChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => format(parseMonthDate(value), "MMM yyyy")}
+              tickFormatter={(value) =>
+                format(parseMonthDate(value), "MMM yyyy")
+              }
             />
             <YAxis
               tickLine={false}
@@ -355,7 +364,9 @@ export function LabelDriftChart({
                 if (!active || !payload?.length || !label) return null;
 
                 const month = String(label);
-                const monthData = drift.chartData.find((item) => item.month === month);
+                const monthData = drift.chartData.find(
+                  (item) => item.month === month,
+                );
                 const amounts = monthData?._amounts ?? {};
                 const sortedPayload = [...payload].sort(
                   (left, right) => Number(right.value) - Number(left.value),
@@ -389,7 +400,7 @@ export function LabelDriftChart({
                                     {series.name}
                                   </span>
                                 </div>
-                                <span className="text-xs text-muted-foreground">
+                                <span className="text-muted-foreground text-xs">
                                   {(share * 100).toFixed(0)}%
                                 </span>
                               </div>
@@ -399,7 +410,7 @@ export function LabelDriftChart({
                                   currency={baseCurrency}
                                 />
                                 {series.name === "Other" ? (
-                                  <span className="text-xs text-muted-foreground">
+                                  <span className="text-muted-foreground text-xs">
                                     Aggregated
                                   </span>
                                 ) : (
@@ -462,7 +473,7 @@ export function LabelDriftChart({
                   from,
                   to,
                 })}
-                className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition hover:bg-muted/50"
+                className="hover:bg-muted/50 flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition"
               >
                 <div className="flex items-center gap-2">
                   <span

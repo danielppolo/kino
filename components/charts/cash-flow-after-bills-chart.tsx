@@ -2,10 +2,18 @@
 
 import React from "react";
 import { format } from "date-fns";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ReferenceLine } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  ReferenceLine,
+} from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import {
   Card,
   CardContent,
@@ -152,9 +160,7 @@ export function CashFlowAfterBillsChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
-            Loading...
-          </div>
+          <ChartSkeleton variant="bar" />
         </CardContent>
       </Card>
     );
@@ -221,7 +227,9 @@ export function CashFlowAfterBillsChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => format(parseMonthDate(value), "MMM yyyy")}
+              tickFormatter={(value) =>
+                format(parseMonthDate(value), "MMM yyyy")
+              }
             />
             <YAxis
               tickLine={false}
@@ -229,10 +237,16 @@ export function CashFlowAfterBillsChart({
               tickMargin={8}
               tickFormatter={(value) => formatCurrency(value, baseCurrency)}
             />
-            <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" />
+            <ReferenceLine
+              y={0}
+              stroke="hsl(var(--muted-foreground))"
+              strokeDasharray="3 3"
+            />
             <ChartTooltip
               cursor={false}
-              labelFormatter={(value) => format(parseMonthDate(value), "MMMM yyyy")}
+              labelFormatter={(value) =>
+                format(parseMonthDate(value), "MMMM yyyy")
+              }
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
 
@@ -250,11 +264,16 @@ export function CashFlowAfterBillsChart({
                           if (!wallet) return null;
                           const net = item.value as number;
                           return (
-                            <div key={item.dataKey} className="flex items-center justify-between gap-2">
+                            <div
+                              key={item.dataKey}
+                              className="flex items-center justify-between gap-2"
+                            >
                               <div className="flex items-center gap-2">
                                 <div
                                   className="h-2 w-2 rounded-full"
-                                  style={{ backgroundColor: wallet.color ?? undefined }}
+                                  style={{
+                                    backgroundColor: wallet.color ?? undefined,
+                                  }}
                                 />
                                 <span className="text-sm">{wallet.name}</span>
                               </div>

@@ -5,6 +5,7 @@ import { Fragment, useMemo } from "react";
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import {
   Card,
   CardContent,
@@ -118,7 +119,12 @@ export function LabelTimingHeatmapChart({
     const aggregated = new Map<string, TimingCell>();
     const labelTotals = new Map<
       string,
-      { labelId: string | null; labelName: string; labelColor: string | null; totalCents: number }
+      {
+        labelId: string | null;
+        labelName: string;
+        labelColor: string | null;
+        totalCents: number;
+      }
     >();
 
     data.forEach((cell: LabelWeekdayPatternCell) => {
@@ -221,16 +227,17 @@ export function LabelTimingHeatmapChart({
         labelName: "Other",
         labelColor: null,
         totalCents: otherTotalCents,
-        cells: WEEKDAYS.map((_, weekday) => (
-          otherCells.get(weekday) ?? {
-            weekday,
-            labelId: null,
-            labelName: "Other",
-            labelColor: null,
-            amountCents: 0,
-            transactionCount: 0,
-          }
-        )),
+        cells: WEEKDAYS.map(
+          (_, weekday) =>
+            otherCells.get(weekday) ?? {
+              weekday,
+              labelId: null,
+              labelName: "Other",
+              labelColor: null,
+              amountCents: 0,
+              transactionCount: 0,
+            },
+        ),
       });
     }
 
@@ -252,7 +259,7 @@ export function LabelTimingHeatmapChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">Loading...</div>
+          <ChartSkeleton variant="heatmap" />
         </CardContent>
       </Card>
     );
@@ -308,17 +315,18 @@ export function LabelTimingHeatmapChart({
           <div
             className="grid gap-2"
             style={{
-              gridTemplateColumns: "minmax(180px, 220px) repeat(7, minmax(92px, 1fr))",
+              gridTemplateColumns:
+                "minmax(180px, 220px) repeat(7, minmax(92px, 1fr))",
               minWidth: "900px",
             }}
           >
-            <div className="sticky left-0 z-10 bg-background py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <div className="bg-background text-muted-foreground sticky left-0 z-10 py-2 text-xs font-medium tracking-wide uppercase">
               Label
             </div>
             {WEEKDAYS.map((weekday) => (
               <div
                 key={weekday}
-                className="py-2 text-center text-sm font-medium text-muted-foreground"
+                className="text-muted-foreground py-2 text-center text-sm font-medium"
               >
                 {weekday}
               </div>
@@ -326,9 +334,7 @@ export function LabelTimingHeatmapChart({
 
             {timing.rows.map((row) => (
               <Fragment key={row.labelId ?? row.labelName}>
-                <div
-                  className="sticky left-0 z-10 flex flex-col justify-center bg-background pr-3"
-                >
+                <div className="bg-background sticky left-0 z-10 flex flex-col justify-center pr-3">
                   <div className="flex items-center gap-2">
                     <span
                       className="h-2.5 w-2.5 rounded-full"
@@ -345,7 +351,7 @@ export function LabelTimingHeatmapChart({
                     cents={row.totalCents}
                     currency={baseCurrency}
                     as="span"
-                    className="text-xs text-muted-foreground"
+                    className="text-muted-foreground text-xs"
                   />
                 </div>
                 {row.cells.map((cell) => {
@@ -371,7 +377,7 @@ export function LabelTimingHeatmapChart({
                             "flex min-h-16 w-full items-end justify-start rounded-lg border p-3 text-left transition hover:-translate-y-0.5",
                             cell.amountCents > 0
                               ? "border-border/60"
-                              : "border-dashed border-border/40",
+                              : "border-border/40 border-dashed",
                           )}
                           style={{
                             backgroundColor:
@@ -399,13 +405,15 @@ export function LabelTimingHeatmapChart({
                           <div className="text-sm font-semibold">
                             {row.labelName} on {WEEKDAYS[cell.weekday]}
                           </div>
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-muted-foreground text-xs">
                             Weekday pattern for this subjective label
                           </div>
                         </div>
                         <div className="space-y-2 text-sm">
                           <div className="flex items-center justify-between gap-3">
-                            <span className="text-muted-foreground">Amount</span>
+                            <span className="text-muted-foreground">
+                              Amount
+                            </span>
                             <Money
                               cents={cell.amountCents}
                               currency={baseCurrency}
@@ -421,12 +429,12 @@ export function LabelTimingHeatmapChart({
                         {row.labelName !== "Other" ? (
                           <Link
                             href={href}
-                            className="inline-flex text-sm font-medium text-primary underline-offset-4 hover:underline"
+                            className="text-primary inline-flex text-sm font-medium underline-offset-4 hover:underline"
                           >
                             Open matching transactions
                           </Link>
                         ) : (
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-muted-foreground text-xs">
                             Drill-down is only available for named labels.
                           </div>
                         )}

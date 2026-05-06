@@ -9,6 +9,7 @@ import {
   Tooltip,
 } from "recharts";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import { Title } from "@/components/ui/typography";
 import { useGoogleCalendar } from "@/hooks/use-google-calendar";
 
@@ -31,9 +32,7 @@ export default function GoogleCalendarChart() {
       {signedIn && (
         <div className="h-72 w-full">
           {loading ? (
-            <div className="flex h-full items-center justify-center">
-              Loading...
-            </div>
+            <ChartSkeleton variant="pie" className="h-full" />
           ) : totals.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>

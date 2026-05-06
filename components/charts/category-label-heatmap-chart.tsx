@@ -5,6 +5,7 @@ import { Fragment, useMemo } from "react";
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import {
   Card,
   CardContent,
@@ -112,7 +113,13 @@ export function CategoryLabelHeatmapChart({
   const { baseCurrency, conversionRates } = useCurrency();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["category-label-heatmap", walletId, workspaceWalletIds, from, to],
+    queryKey: [
+      "category-label-heatmap",
+      walletId,
+      workspaceWalletIds,
+      from,
+      to,
+    ],
     queryFn: async () => {
       const supabase = await createClient();
       const { data, error } = await getCategoryLabelHeatmapData(supabase, {
@@ -174,7 +181,10 @@ export function CategoryLabelHeatmapChart({
       });
     });
 
-    const categoryTotals = new Map<string, { id: string | null; name: string; totalCents: number }>();
+    const categoryTotals = new Map<
+      string,
+      { id: string | null; name: string; totalCents: number }
+    >();
     const labelTotals = new Map<
       string,
       {
@@ -226,7 +236,13 @@ export function CategoryLabelHeatmapChart({
       totalCents: category.totalCents,
       cells: labels.map((label) => {
         const key = `${category.id ?? "unknown-category"}::${label.id ?? "unknown-label"}`;
-        return aggregated.get(key) ?? { ...EMPTY_CELL, categoryName: category.name, labelName: label.name };
+        return (
+          aggregated.get(key) ?? {
+            ...EMPTY_CELL,
+            categoryName: category.name,
+            labelName: label.name,
+          }
+        );
       }),
     }));
 
@@ -257,7 +273,7 @@ export function CategoryLabelHeatmapChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">Loading...</div>
+          <ChartSkeleton variant="heatmap" />
         </CardContent>
       </Card>
     );
@@ -317,7 +333,7 @@ export function CategoryLabelHeatmapChart({
               minWidth: `${220 + heatmap.labels.length * 104}px`,
             }}
           >
-            <div className="sticky left-0 z-10 bg-background py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <div className="bg-background text-muted-foreground sticky left-0 z-10 py-2 text-xs font-medium tracking-wide uppercase">
               Category
             </div>
             {heatmap.labels.map((label) => (
@@ -337,7 +353,7 @@ export function CategoryLabelHeatmapChart({
                     {label.labelName}
                   </span>
                 </div>
-                <div className="text-xs text-muted-foreground">
+                <div className="text-muted-foreground text-xs">
                   {formatCompactCurrency(label.totalCents, baseCurrency)}
                 </div>
               </div>
@@ -345,13 +361,11 @@ export function CategoryLabelHeatmapChart({
 
             {heatmap.rows.map((row) => (
               <Fragment key={row.categoryId ?? row.categoryName}>
-                <div
-                  className="sticky left-0 z-10 flex flex-col justify-center bg-background pr-3"
-                >
+                <div className="bg-background sticky left-0 z-10 flex flex-col justify-center pr-3">
                   <span className="truncate text-sm font-medium">
                     {row.categoryName}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground text-xs">
                     {formatCompactCurrency(row.totalCents, baseCurrency)}
                   </span>
                 </div>
@@ -379,7 +393,7 @@ export function CategoryLabelHeatmapChart({
                             "flex min-h-20 w-full items-end justify-start rounded-lg border p-3 text-left transition hover:-translate-y-0.5",
                             cell.amountCents > 0
                               ? "border-border/60"
-                              : "border-dashed border-border/40",
+                              : "border-border/40 border-dashed",
                           )}
                           style={{
                             backgroundColor:
@@ -410,13 +424,15 @@ export function CategoryLabelHeatmapChart({
                           <div className="text-sm font-semibold">
                             {row.categoryName} × {cell.labelName}
                           </div>
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-muted-foreground text-xs">
                             Subjective intent inside this category
                           </div>
                         </div>
                         <div className="space-y-2 text-sm">
                           <div className="flex items-center justify-between gap-3">
-                            <span className="text-muted-foreground">Amount</span>
+                            <span className="text-muted-foreground">
+                              Amount
+                            </span>
                             <Money
                               cents={cell.amountCents}
                               currency={baseCurrency}
@@ -431,7 +447,7 @@ export function CategoryLabelHeatmapChart({
                         </div>
                         <Link
                           href={href}
-                          className="inline-flex text-sm font-medium text-primary underline-offset-4 hover:underline"
+                          className="text-primary inline-flex text-sm font-medium underline-offset-4 hover:underline"
                         >
                           Open matching transactions
                         </Link>

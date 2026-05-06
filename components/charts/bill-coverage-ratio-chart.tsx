@@ -1,10 +1,18 @@
 "use client";
 
 import React from "react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ReferenceLine } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  ReferenceLine,
+} from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import {
   Card,
   CardContent,
@@ -62,20 +70,22 @@ export function BillCoverageRatioChart({
   const chartData: ChartDataPoint[] = React.useMemo(() => {
     if (!coverageData) return [];
 
-    return coverageData.map((data) => {
-      const wallet = walletMap.get(data.wallet_id);
-      if (!wallet) return null;
+    return coverageData
+      .map((data) => {
+        const wallet = walletMap.get(data.wallet_id);
+        if (!wallet) return null;
 
-      const rate = conversionRates[wallet.currency]?.rate ?? 1;
+        const rate = conversionRates[wallet.currency]?.rate ?? 1;
 
-      return {
-        wallet: data.wallet_name,
-        balance: (data.current_balance_cents * rate) / 100,
-        bills_30: (data.upcoming_bills_30_days_cents * rate) / 100,
-        bills_60: (data.upcoming_bills_60_days_cents * rate) / 100,
-        bills_90: (data.upcoming_bills_90_days_cents * rate) / 100,
-      };
-    }).filter((d): d is ChartDataPoint => d !== null);
+        return {
+          wallet: data.wallet_name,
+          balance: (data.current_balance_cents * rate) / 100,
+          bills_30: (data.upcoming_bills_30_days_cents * rate) / 100,
+          bills_60: (data.upcoming_bills_60_days_cents * rate) / 100,
+          bills_90: (data.upcoming_bills_90_days_cents * rate) / 100,
+        };
+      })
+      .filter((d): d is ChartDataPoint => d !== null);
   }, [coverageData, conversionRates, walletMap]);
 
   const chartConfig: ChartConfig = {
@@ -107,9 +117,7 @@ export function BillCoverageRatioChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
-            Loading...
-          </div>
+          <ChartSkeleton variant="bar" />
         </CardContent>
       </Card>
     );
@@ -189,14 +197,25 @@ export function BillCoverageRatioChart({
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
 
-                const balance = payload.find((p) => p.dataKey === "balance")?.value as number || 0;
-                const bills30 = payload.find((p) => p.dataKey === "bills_30")?.value as number || 0;
-                const bills60 = payload.find((p) => p.dataKey === "bills_60")?.value as number || 0;
-                const bills90 = payload.find((p) => p.dataKey === "bills_90")?.value as number || 0;
+                const balance =
+                  (payload.find((p) => p.dataKey === "balance")
+                    ?.value as number) || 0;
+                const bills30 =
+                  (payload.find((p) => p.dataKey === "bills_30")
+                    ?.value as number) || 0;
+                const bills60 =
+                  (payload.find((p) => p.dataKey === "bills_60")
+                    ?.value as number) || 0;
+                const bills90 =
+                  (payload.find((p) => p.dataKey === "bills_90")
+                    ?.value as number) || 0;
 
-                const ratio30 = bills30 > 0 ? (balance / bills30).toFixed(2) : "∞";
-                const ratio60 = bills60 > 0 ? (balance / bills60).toFixed(2) : "∞";
-                const ratio90 = bills90 > 0 ? (balance / bills90).toFixed(2) : "∞";
+                const ratio30 =
+                  bills30 > 0 ? (balance / bills30).toFixed(2) : "∞";
+                const ratio60 =
+                  bills60 > 0 ? (balance / bills60).toFixed(2) : "∞";
+                const ratio90 =
+                  bills90 > 0 ? (balance / bills90).toFixed(2) : "∞";
 
                 return (
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
@@ -206,28 +225,48 @@ export function BillCoverageRatioChart({
                       </div>
                       <div className="grid gap-1 text-xs">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-muted-foreground">Balance:</span>
-                          <Money cents={Math.round(balance * 100)} currency={baseCurrency} />
+                          <span className="text-muted-foreground">
+                            Balance:
+                          </span>
+                          <Money
+                            cents={Math.round(balance * 100)}
+                            currency={baseCurrency}
+                          />
                         </div>
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-muted-foreground">30-Day Bills:</span>
-                          <Money cents={Math.round(bills30 * 100)} currency={baseCurrency} />
+                          <span className="text-muted-foreground">
+                            30-Day Bills:
+                          </span>
+                          <Money
+                            cents={Math.round(bills30 * 100)}
+                            currency={baseCurrency}
+                          />
                         </div>
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-muted-foreground">Ratio:</span>
                           <span className="font-medium">{ratio30}x</span>
                         </div>
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-muted-foreground">60-Day Bills:</span>
-                          <Money cents={Math.round(bills60 * 100)} currency={baseCurrency} />
+                          <span className="text-muted-foreground">
+                            60-Day Bills:
+                          </span>
+                          <Money
+                            cents={Math.round(bills60 * 100)}
+                            currency={baseCurrency}
+                          />
                         </div>
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-muted-foreground">Ratio:</span>
                           <span className="font-medium">{ratio60}x</span>
                         </div>
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-muted-foreground">90-Day Bills:</span>
-                          <Money cents={Math.round(bills90 * 100)} currency={baseCurrency} />
+                          <span className="text-muted-foreground">
+                            90-Day Bills:
+                          </span>
+                          <Money
+                            cents={Math.round(bills90 * 100)}
+                            currency={baseCurrency}
+                          />
                         </div>
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-muted-foreground">Ratio:</span>

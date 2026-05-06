@@ -17,6 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { Money } from "../ui/money";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import { useChartControls } from "@/components/charts/shared/chart-controls-context";
 import {
   Card,
@@ -70,8 +71,7 @@ export function BurnRateDriftChart({
   const [, walletMap] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
   const controls = useChartControls();
-  const normalizationPercentile =
-    controls?.peakNormalizationPercentile ?? 0.9;
+  const normalizationPercentile = controls?.peakNormalizationPercentile ?? 0.9;
   const horizonYears = controls?.forecastHorizonYears ?? 1;
   const horizonMonths = horizonYears * 12;
   const effectiveMonthlySpend = controls?.effectiveMonthlySpend ?? 0;
@@ -90,22 +90,30 @@ export function BurnRateDriftChart({
     },
   });
 
-  const { data: recurringTransactions, isLoading: loadingRecurring } = useQuery({
-    queryKey: ["burn-rate-drift-recurring", walletId],
-    queryFn: async () => {
-      const supabase = await createClient();
-      const { data, error } = await listRecurringTransactions(supabase, {
-        walletId,
-        type: "expense",
-      });
-      if (error) throw error;
-      return data ?? [];
+  const { data: recurringTransactions, isLoading: loadingRecurring } = useQuery(
+    {
+      queryKey: ["burn-rate-drift-recurring", walletId],
+      queryFn: async () => {
+        const supabase = await createClient();
+        const { data, error } = await listRecurringTransactions(supabase, {
+          walletId,
+          type: "expense",
+        });
+        if (error) throw error;
+        return data ?? [];
+      },
     },
-  });
+  );
 
   const isLoading = loadingStats || loadingRecurring;
 
-  const { chartData, drift, fixedBaseline, cappedFixedBaseline, lastHistoricalMonth } = useMemo(() => {
+  const {
+    chartData,
+    drift,
+    fixedBaseline,
+    cappedFixedBaseline,
+    lastHistoricalMonth,
+  } = useMemo(() => {
     if (!monthlyStats || monthlyStats.length === 0) {
       return {
         chartData: [],
@@ -124,13 +132,19 @@ export function BurnRateDriftChart({
       const currency = wallet?.currency ?? baseCurrency;
       const expense =
         Math.abs(
-          convertCurrency(s.outcome_cents, currency, baseCurrency, conversionRates),
+          convertCurrency(
+            s.outcome_cents,
+            currency,
+            baseCurrency,
+            conversionRates,
+          ),
         ) / 100;
       byMonth[s.month] += expense;
     });
 
-    const months = Object.keys(byMonth)
-      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+    const months = Object.keys(byMonth).sort(
+      (a, b) => new Date(a).getTime() - new Date(b).getTime(),
+    );
 
     // 3-month rolling average
     const raw = months.map((month) => ({
@@ -145,10 +159,17 @@ export function BurnRateDriftChart({
     });
 
     // Compute drift: compare first 3-month avg to last 3-month avg
-    const firstWindow = historicalData.slice(0, Math.min(3, historicalData.length));
-    const lastWindow = historicalData.slice(Math.max(0, historicalData.length - 3));
-    const firstAvg = firstWindow.reduce((s, p) => s + p.expense, 0) / firstWindow.length;
-    const lastAvg = lastWindow.reduce((s, p) => s + p.expense, 0) / lastWindow.length;
+    const firstWindow = historicalData.slice(
+      0,
+      Math.min(3, historicalData.length),
+    );
+    const lastWindow = historicalData.slice(
+      Math.max(0, historicalData.length - 3),
+    );
+    const firstAvg =
+      firstWindow.reduce((s, p) => s + p.expense, 0) / firstWindow.length;
+    const lastAvg =
+      lastWindow.reduce((s, p) => s + p.expense, 0) / lastWindow.length;
     const driftPct = firstAvg > 0 ? ((lastAvg - firstAvg) / firstAvg) * 100 : 0;
 
     // Compute fixed baseline from recurring expenses
@@ -163,7 +184,12 @@ export function BurnRateDriftChart({
         let monthly = 0;
         const amtInBase =
           Math.abs(
-            convertCurrency(r.amount_cents, currency, baseCurrency, conversionRates),
+            convertCurrency(
+              r.amount_cents,
+              currency,
+              baseCurrency,
+              conversionRates,
+            ),
           ) / 100;
         switch (r.interval_type) {
           case "monthly":
@@ -251,7 +277,7 @@ export function BurnRateDriftChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">Loading...</div>
+          <ChartSkeleton />
         </CardContent>
       </Card>
     );
@@ -276,8 +302,7 @@ export function BurnRateDriftChart({
     );
   }
 
-  const driftColor =
-    drift > 10 ? "#ef4444" : drift > 0 ? "#f59e0b" : "#22c55e";
+  const driftColor = drift > 10 ? "#ef4444" : drift > 0 ? "#f59e0b" : "#22c55e";
   const driftLabel =
     drift > 10
       ? "Rising — coercion risk increasing"
@@ -341,15 +366,17 @@ export function BurnRateDriftChart({
                   | undefined;
                 const expense =
                   point?._original?.expense ??
-                  (payload.find((p) => p.dataKey === "expense")
-                    ?.value as number | undefined);
+                  (payload.find((p) => p.dataKey === "expense")?.value as
+                    | number
+                    | undefined);
                 const rolling =
                   point?._original?.rolling ??
-                  (payload.find((p) => p.dataKey === "rolling")
-                    ?.value as number | undefined);
+                  (payload.find((p) => p.dataKey === "rolling")?.value as
+                    | number
+                    | undefined);
                 return (
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
-                    <div className="text-sm font-medium mb-1">
+                    <div className="mb-1 text-sm font-medium">
                       {format(parseMonthDate(label), "MMMM yyyy")}
                       {point?.isForecast ? " · projected" : ""}
                     </div>

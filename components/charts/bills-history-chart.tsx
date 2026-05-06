@@ -6,6 +6,7 @@ import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import {
   Card,
   CardContent,
@@ -73,14 +74,16 @@ export function BillsHistoryChart({
 
     // Sort by month first
     const sortedStats = [...monthlyBillStats].sort((a, b) =>
-      a.month.localeCompare(b.month)
+      a.month.localeCompare(b.month),
     );
 
     // Track accumulated debt per wallet
     const accumulatedDebt: Record<string, number> = {};
 
     // Get all unique months
-    const allMonths = Array.from(new Set(sortedStats.map((s) => s.month))).sort();
+    const allMonths = Array.from(
+      new Set(sortedStats.map((s) => s.month)),
+    ).sort();
 
     // Calculate accumulated debt for each month
     return allMonths.map((month) => {
@@ -94,7 +97,8 @@ export function BillsHistoryChart({
         if (!wallet) return;
 
         const rate = conversionRates[wallet.currency]?.rate ?? 1;
-        const outstandingThisMonth = (stat.total_outstanding_cents * rate) / 100;
+        const outstandingThisMonth =
+          (stat.total_outstanding_cents * rate) / 100;
 
         // Initialize if first time seeing this wallet
         if (accumulatedDebt[wallet.id] === undefined) {
@@ -180,9 +184,7 @@ export function BillsHistoryChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
-            Loading...
-          </div>
+          <ChartSkeleton variant="bar" />
         </CardContent>
       </Card>
     );
@@ -235,9 +237,12 @@ export function BillsHistoryChart({
       <CardContent>
         <div className="mb-4">
           <div className="text-3xl font-bold">
-            <Money cents={Math.round(currentTotalDebt * 100)} currency={baseCurrency} />
+            <Money
+              cents={Math.round(currentTotalDebt * 100)}
+              currency={baseCurrency}
+            />
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Current accumulated debt
           </p>
         </div>
@@ -257,7 +262,9 @@ export function BillsHistoryChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => format(parseMonthDate(value), "MMM yyyy")}
+              tickFormatter={(value) =>
+                format(parseMonthDate(value), "MMM yyyy")
+              }
             />
             <YAxis
               tickLine={false}
@@ -268,7 +275,9 @@ export function BillsHistoryChart({
             />
             <ChartTooltip
               cursor={false}
-              labelFormatter={(value) => format(parseMonthDate(value), "MMMM yyyy")}
+              labelFormatter={(value) =>
+                format(parseMonthDate(value), "MMMM yyyy")
+              }
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
 
@@ -286,11 +295,16 @@ export function BillsHistoryChart({
                           if (!wallet) return null;
                           const debt = item.value as number;
                           return (
-                            <div key={item.dataKey} className="flex items-center justify-between gap-2">
+                            <div
+                              key={item.dataKey}
+                              className="flex items-center justify-between gap-2"
+                            >
                               <div className="flex items-center gap-2">
                                 <div
                                   className="h-2 w-2 rounded-full"
-                                  style={{ backgroundColor: wallet.color ?? undefined }}
+                                  style={{
+                                    backgroundColor: wallet.color ?? undefined,
+                                  }}
                                 />
                                 <span className="text-sm">{wallet.name}</span>
                               </div>

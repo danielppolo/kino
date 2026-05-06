@@ -6,6 +6,7 @@ import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import {
   Card,
   CardContent,
@@ -132,14 +133,18 @@ export function BillVelocityGaugeChart({
 
   const calculatePercentageChange = () => {
     if (chartData.length < 2) return 0;
-    const current = visibleWallets.reduce((total: number, wallet: Wallet) => {
-      const days = (chartData[chartData.length - 1][wallet.id] as number) || 0;
-      return total + days;
-    }, 0) / visibleWallets.length;
-    const previous = visibleWallets.reduce((total: number, wallet: Wallet) => {
-      const days = (chartData[chartData.length - 2][wallet.id] as number) || 0;
-      return total + days;
-    }, 0) / visibleWallets.length;
+    const current =
+      visibleWallets.reduce((total: number, wallet: Wallet) => {
+        const days =
+          (chartData[chartData.length - 1][wallet.id] as number) || 0;
+        return total + days;
+      }, 0) / visibleWallets.length;
+    const previous =
+      visibleWallets.reduce((total: number, wallet: Wallet) => {
+        const days =
+          (chartData[chartData.length - 2][wallet.id] as number) || 0;
+        return total + days;
+      }, 0) / visibleWallets.length;
     if (previous === 0) return current > 0 ? 100 : 0;
     // For velocity, lower is better, so invert the percentage
     return -((current - previous) / previous) * 100;
@@ -157,9 +162,7 @@ export function BillVelocityGaugeChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
-            Loading...
-          </div>
+          <ChartSkeleton variant="gauge" />
         </CardContent>
       </Card>
     );
@@ -214,7 +217,7 @@ export function BillVelocityGaugeChart({
           <div className="text-3xl font-bold">
             {currentVelocity.toFixed(1)} days
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Current average payment delay
           </p>
         </div>
@@ -234,7 +237,9 @@ export function BillVelocityGaugeChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => format(parseMonthDate(value), "MMM yyyy")}
+              tickFormatter={(value) =>
+                format(parseMonthDate(value), "MMM yyyy")
+              }
             />
             <YAxis
               tickLine={false}
@@ -245,7 +250,9 @@ export function BillVelocityGaugeChart({
             />
             <ChartTooltip
               cursor={false}
-              labelFormatter={(value) => format(parseMonthDate(value), "MMMM yyyy")}
+              labelFormatter={(value) =>
+                format(parseMonthDate(value), "MMMM yyyy")
+              }
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
 
@@ -263,11 +270,16 @@ export function BillVelocityGaugeChart({
                           if (!wallet) return null;
                           const days = item.value as number;
                           return (
-                            <div key={item.dataKey} className="flex items-center justify-between gap-2">
+                            <div
+                              key={item.dataKey}
+                              className="flex items-center justify-between gap-2"
+                            >
                               <div className="flex items-center gap-2">
                                 <div
                                   className="h-2 w-2 rounded-full"
-                                  style={{ backgroundColor: wallet.color ?? undefined }}
+                                  style={{
+                                    backgroundColor: wallet.color ?? undefined,
+                                  }}
                                 />
                                 <span className="text-sm">{wallet.name}</span>
                               </div>
