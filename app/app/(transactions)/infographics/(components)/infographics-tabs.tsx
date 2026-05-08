@@ -78,7 +78,7 @@ export function InfographicsTabs({
           {autonomyEnabled && (
             <TabsTrigger value="autonomy">Autonomy</TabsTrigger>
           )}
-          {fireEnabled && <TabsTrigger value="fire">FIRE</TabsTrigger>}
+          {/* {fireEnabled && <TabsTrigger value="fire">FIRE</TabsTrigger>} */}
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
           <TabsTrigger value="expenses">Expenses</TabsTrigger>
           {billsEnabled && <TabsTrigger value="bills">Bills</TabsTrigger>}
@@ -193,7 +193,7 @@ export function InfographicsTabs({
                 title="Income Trends by Label"
               />
             </div>
-            <div className="md:col-span-2 lg:col-span-4">
+            {/* <div className="md:col-span-2 lg:col-span-4">
               <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 px-4 py-3">
                 <div className="text-sm font-semibold tracking-[0.08em] text-foreground">
                   Subjective Insights
@@ -239,7 +239,7 @@ export function InfographicsTabs({
                 type="income"
                 title="Income by Label"
               />
-            </div>
+            </div> */}
           </div>
         </TabsContent>
 
