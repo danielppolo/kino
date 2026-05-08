@@ -10,6 +10,8 @@ import {
   type FinanceChatReply,
 } from "@/utils/ai/finance-copilot";
 
+export const maxDuration = 300;
+
 const MessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
   content: z.string().trim().min(1).max(4000),
