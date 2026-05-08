@@ -10,7 +10,7 @@ import {
   type FinanceChatReply,
 } from "@/utils/ai/finance-copilot";
 
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 const MessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
@@ -744,7 +744,8 @@ export async function POST(request: NextRequest) {
         baseCurrency: briefing.scope.baseCurrency,
         totalBalanceCents: briefing.currentPosition.totalBalanceCents,
         totalOwedCents: briefing.currentPosition.totalOwedCents,
-        totalEstimatedAssetValueCents: briefing.assets.totalEstimatedAssetValueCents,
+        totalEstimatedAssetValueCents:
+          briefing.assets.totalEstimatedAssetValueCents,
         assetSignals: [
           ...briefing.assets.signals.staleValuations,
           ...briefing.assets.signals.concentration,
