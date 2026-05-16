@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-import { v4 as randomUUID } from "uuid";
 import { toast } from "sonner";
+import { v4 as randomUUID } from "uuid";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -14,8 +14,8 @@ import { DescriptionInput } from "./description-input";
 import LabelCombobox from "./label-combobox";
 import TagMultiSelect from "./tag-multi-select";
 
-import { createTransaction } from "@/actions/create-transaction";
 import { createPlaidTransactionRule } from "@/actions/create-plaid-transaction-rule";
+import { createTransaction } from "@/actions/create-transaction";
 import CategoryCombobox from "@/components/shared/category-combobox";
 import { EntityForm } from "@/components/shared/entity-form";
 import {
@@ -32,6 +32,11 @@ import {
 import { useTransactionForm } from "@/contexts/transaction-form-context";
 import { useWorkspace } from "@/contexts/workspace-context";
 import useFilters from "@/hooks/use-filters";
+import {
+  applyOptimisticTransaction,
+  findTransactionById,
+  type InfiniteTransactionData,
+} from "@/utils/optimistic-transactions";
 import { createClient } from "@/utils/supabase/client";
 import {
   deleteTransaction,
@@ -39,17 +44,6 @@ import {
 } from "@/utils/supabase/mutations";
 import { getBillsForTransaction } from "@/utils/supabase/queries";
 import { Transaction, TransactionList } from "@/utils/supabase/types";
-
-interface TransactionPage {
-  data: TransactionList[];
-  error: null;
-  count: number;
-}
-
-interface InfiniteTransactionData {
-  pages: TransactionPage[];
-  pageParams: number[];
-}
 
 interface ExpenseIncomeFormProps {
   walletId: string;
@@ -121,61 +115,51 @@ const ExpenseIncomeForm = ({
 
       const previousData =
         queryClient.getQueryData<InfiniteTransactionData>(transactionsQueryKey);
+      const existingTransaction = findTransactionById(
+        previousData,
+        newTransaction.id,
+      );
 
       const amountCents =
         newTransaction.type === "expense"
           ? -Math.round(newTransaction.amount * 100)
           : Math.round(newTransaction.amount * 100);
       const optimisticTransaction: TransactionList = {
-        id: randomUUID(),
+        ...existingTransaction,
+        id: newTransaction.id ?? randomUUID(),
         wallet_id: newTransaction.wallet_id,
         category_id: newTransaction.category_id || null,
         label_id: newTransaction.label_id || null,
         amount_cents: amountCents,
-        base_amount_cents: null,
-        created_at: null,
+        base_amount_cents: existingTransaction?.base_amount_cents ?? null,
+        created_at: existingTransaction?.created_at ?? null,
         currency: newTransaction.currency,
         date: newTransaction.date,
         description: newTransaction.description ?? null,
-        needs_review: false,
-        note: null,
-        plaid_merchant_key: null,
-        plaid_merchant_name: null,
-        plaid_pending_transaction_id: null,
-        plaid_personal_finance_category_primary: null,
-        plaid_transaction_id: null,
+        needs_review: !newTransaction.category_id || !newTransaction.label_id,
+        note: existingTransaction?.note ?? null,
+        plaid_merchant_key: existingTransaction?.plaid_merchant_key ?? null,
+        plaid_merchant_name: existingTransaction?.plaid_merchant_name ?? null,
+        plaid_pending_transaction_id:
+          existingTransaction?.plaid_pending_transaction_id ?? null,
+        plaid_personal_finance_category_primary:
+          existingTransaction?.plaid_personal_finance_category_primary ?? null,
+        plaid_transaction_id: existingTransaction?.plaid_transaction_id ?? null,
         tag_ids: newTransaction.tags ?? null,
         tags: newTransaction.tags ?? null,
-        transfer_id: null,
-        transfer_wallet_id: null,
+        transfer_id: existingTransaction?.transfer_id ?? null,
+        transfer_wallet_id: existingTransaction?.transfer_wallet_id ?? null,
         type: newTransaction.type,
       };
 
       queryClient.setQueryData<InfiniteTransactionData>(
         transactionsQueryKey,
-        (old) => {
-          if (!old) {
-            return {
-              pages: [
-                {
-                  data: [optimisticTransaction],
-                  error: null,
-                  count: 1,
-                },
-              ],
-              pageParams: [0],
-            };
-          }
-
-          return {
-            ...old,
-            pages: old.pages.map((page, index) =>
-              index === 0
-                ? { ...page, data: [optimisticTransaction, ...page.data] }
-                : page,
-            ),
-          };
-        },
+        (old) =>
+          applyOptimisticTransaction(
+            old,
+            optimisticTransaction,
+            newTransaction.id,
+          ),
       );
 
       return { previousData, optimisticTransaction };
