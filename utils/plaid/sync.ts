@@ -218,7 +218,7 @@ export async function syncWalletPlaidTransactions({
       : await supabase
           .from("transactions")
           .select(
-            "id, category_id, label_id, note, plaid_pending_transaction_id, plaid_transaction_id",
+            "id, category_id, description, label_id, note, plaid_pending_transaction_id, plaid_transaction_id",
           )
           .in("plaid_transaction_id", plaidLookupIds);
 
@@ -283,7 +283,9 @@ export async function syncWalletPlaidTransactions({
       conversion_rate_to_base: conversionRate,
       currency,
       date: transactionDate,
-      description: transaction.merchant_name || transaction.name,
+      description:
+        existingTransaction?.description ??
+        (transaction.merchant_name || transaction.name),
       label_id: existingTransaction?.label_id ?? null,
       note: existingTransaction?.note ?? null,
       plaid_merchant_key: transaction.plaid_merchant_key,
