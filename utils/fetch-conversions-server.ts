@@ -32,43 +32,39 @@ export async function fetchConversion({
   }
 
   const supabase = supabaseClient || (await createClient());
+  const today = new Date().toISOString().split("T")[0];
+  const requestedDate = date ?? today;
+  const rateSourceCurrency = targetCurrency;
+  const rateTargetCurrency = sourceCurrency;
 
   // Check for cached record
   const { data: cachedRate, error: cacheError } = await supabase
     .from("currency_conversions")
     .select("*")
-    .eq("source_currency", targetCurrency)
-    .eq("target_currency", sourceCurrency)
-    .eq("date", date ?? new Date().toISOString().split("T")[0])
-    .single();
+    .eq("source_currency", rateSourceCurrency)
+    .eq("target_currency", rateTargetCurrency)
+    .eq("date", requestedDate)
+    .maybeSingle();
 
   if (!cacheError && cachedRate) {
-    const now = new Date();
-    const lastUpdated = new Date(cachedRate.updated_at);
-    const hoursSinceUpdate =
-      (now.getTime() - lastUpdated.getTime()) / (1000 * 60 * 60);
-
-    if (hoursSinceUpdate < 24) {
-      return {
-        rate: cachedRate.rate,
-        lastUpdated: cachedRate.updated_at,
-        source: "cache",
-      };
-    }
+    return {
+      rate: cachedRate.rate,
+      lastUpdated: cachedRate.updated_at,
+      source: "cache",
+    };
   }
 
-  const today = new Date().toISOString().split("T")[0];
-  const validatedDate = date && date !== today ? date : null;
+  const historicalDate = requestedDate !== today ? requestedDate : null;
   // Fetch fresh data from API
   const url = new URL(
-    `https://api.currencyapi.com/v3/${validatedDate ? "historical" : "latest"}`,
+    `https://api.currencyapi.com/v3/${historicalDate ? "historical" : "latest"}`,
   );
   url.searchParams.set("apikey", process.env.CURRENCY_API_TOKEN!);
-  url.searchParams.set("base_currency", targetCurrency);
-  url.searchParams.set("currencies", sourceCurrency);
+  url.searchParams.set("base_currency", rateSourceCurrency);
+  url.searchParams.set("currencies", rateTargetCurrency);
 
-  if (validatedDate) {
-    url.searchParams.set("date", validatedDate);
+  if (historicalDate) {
+    url.searchParams.set("date", historicalDate);
   }
 
   try {
@@ -89,11 +85,11 @@ export async function fetchConversion({
       .from("currency_conversions")
       .upsert(
         {
-          source_currency: targetCurrency,
-          target_currency: sourceCurrency,
+          source_currency: rateSourceCurrency,
+          target_currency: rateTargetCurrency,
           rate: rate,
           updated_at: new Date().toISOString(),
-          date: date ?? new Date().toISOString(),
+          date: requestedDate,
         },
         {
           onConflict: "source_currency,target_currency,date",
@@ -113,7 +109,7 @@ export async function fetchConversion({
     // If API fails, try to use cached value even if it's older than 24 hours
     if (cachedRate) {
       console.warn(
-        `API failed, using cached rate for ${sourceCurrency}->${targetCurrency}:`,
+        `API failed, using cached rate for ${rateTargetCurrency}->${rateSourceCurrency}:`,
         error,
       );
       return {
