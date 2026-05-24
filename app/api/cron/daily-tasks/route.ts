@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { processRecurringTransactions } from "@/actions/process-recurring-transactions";
 import { fetchAllConversions } from "@/utils/fetch-conversions-server";
+import { syncPlaidTransactionsForCron } from "@/utils/plaid/sync";
 import { calculateNextRunDate } from "@/utils/recurring-transaction";
-import { createClient } from "@/utils/supabase/server";
+import { createServiceRoleClient } from "@/utils/supabase/server";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function handle(request: NextRequest) {
@@ -16,12 +17,15 @@ async function handle(request: NextRequest) {
 
   const results = {
     dailyConversions: null as unknown,
+    fetchPlaidTransactions: null as unknown,
     runRecurring: null as unknown,
     runRecurringBills: null as unknown,
     errors: [] as string[],
   };
 
   try {
+    const supabase = createServiceRoleClient();
+
     // Task 1: Daily Conversions
     try {
       const conversions = await fetchAllConversions({
@@ -30,6 +34,7 @@ async function handle(request: NextRequest) {
         date: new Date(Date.now() - 24 * 60 * 60 * 1000)
           .toISOString()
           .split("T")[0],
+        supabaseClient: supabase,
       });
 
       results.dailyConversions = {
@@ -42,18 +47,33 @@ async function handle(request: NextRequest) {
       results.errors.push(`Daily conversions failed: ${error}`);
     }
 
-    // Task 2: Run Recurring Transactions
+    // Task 2: Fetch Plaid Transactions
     try {
-      results.runRecurring = await processRecurringTransactions();
+      const plaidResult = await syncPlaidTransactionsForCron({
+        supabase,
+      });
+      results.fetchPlaidTransactions = plaidResult;
+
+      if (!plaidResult.success) {
+        results.errors.push(
+          `Fetch Plaid transactions failed for ${plaidResult.failedWallets.length} wallet(s)`,
+        );
+      }
+    } catch (error) {
+      console.error("Fetch Plaid transactions error:", error);
+      results.errors.push(`Fetch Plaid transactions failed: ${error}`);
+    }
+
+    // Task 3: Run Recurring Transactions
+    try {
+      results.runRecurring = await processRecurringTransactions(supabase);
     } catch (error) {
       console.error("Run recurring error:", error);
       results.errors.push(`Run recurring failed: ${error}`);
     }
 
-    // Task 3: Process Recurring Bills
+    // Task 4: Process Recurring Bills
     try {
-      const supabase = await createClient();
-
       // Fetch all recurrent bills where next_due_date <= today
       const today = new Date().toISOString().split("T")[0];
       const { data: recurrentBills, error: billsError } = await supabase

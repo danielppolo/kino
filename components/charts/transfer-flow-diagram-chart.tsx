@@ -5,6 +5,7 @@ import { ArrowRight } from "lucide-react";
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import {
   Card,
   CardContent,
@@ -72,9 +73,7 @@ export function TransferFlowDiagramChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
-            Loading...
-          </div>
+          <ChartSkeleton variant="flow" />
         </CardContent>
       </Card>
     );
@@ -130,33 +129,37 @@ export function TransferFlowDiagramChart({
             const fromWallet = walletMap.get(transfer.from_wallet_id);
             const toWallet = walletMap.get(transfer.to_wallet_id);
 
-            const fromRate = fromWallet ? conversionRates[fromWallet.currency]?.rate ?? 1 : 1;
+            const fromRate = fromWallet
+              ? (conversionRates[fromWallet.currency]?.rate ?? 1)
+              : 1;
             const amount = (transfer.total_amount_cents * fromRate) / 100;
             const barWidth = getBarWidth(transfer.total_amount_cents);
 
             return (
               <div key={index} className="space-y-2">
                 <div className="flex items-center gap-4">
-                  <div className="flex-1 flex items-center gap-2">
+                  <div className="flex flex-1 items-center gap-2">
                     {fromWallet && (
                       <div
                         className="h-2 w-2 rounded-full"
-                        style={{ backgroundColor: fromWallet.color ?? undefined }}
+                        style={{
+                          backgroundColor: fromWallet.color ?? undefined,
+                        }}
                       />
                     )}
-                    <span className="text-sm font-medium truncate">
+                    <span className="truncate text-sm font-medium">
                       {transfer.from_wallet_name}
                     </span>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  <div className="flex-1 flex items-center gap-2">
+                  <ArrowRight className="text-muted-foreground h-4 w-4 flex-shrink-0" />
+                  <div className="flex flex-1 items-center gap-2">
                     {toWallet && (
                       <div
                         className="h-2 w-2 rounded-full"
                         style={{ backgroundColor: toWallet.color ?? undefined }}
                       />
                     )}
-                    <span className="text-sm font-medium truncate">
+                    <span className="truncate text-sm font-medium">
                       {transfer.to_wallet_name}
                     </span>
                   </div>
@@ -170,9 +173,13 @@ export function TransferFlowDiagramChart({
                     }}
                   />
                   <div className="flex items-center gap-2 text-sm">
-                    <Money cents={Math.round(amount * 100)} currency={baseCurrency} />
+                    <Money
+                      cents={Math.round(amount * 100)}
+                      currency={baseCurrency}
+                    />
                     <span className="text-muted-foreground">
-                      ({transfer.transfer_count} transfer{transfer.transfer_count !== 1 ? "s" : ""})
+                      ({transfer.transfer_count} transfer
+                      {transfer.transfer_count !== 1 ? "s" : ""})
                     </span>
                   </div>
                 </div>
@@ -181,7 +188,7 @@ export function TransferFlowDiagramChart({
           })}
         </div>
         {transferData.length === 0 && (
-          <div className="flex h-32 items-center justify-center text-muted-foreground">
+          <div className="text-muted-foreground flex h-32 items-center justify-center">
             No transfers found for this period
           </div>
         )}

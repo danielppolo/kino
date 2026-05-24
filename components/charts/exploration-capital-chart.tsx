@@ -17,6 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { useChartControls } from "./shared/chart-controls-context";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import {
   Card,
   CardContent,
@@ -800,9 +801,7 @@ export function ExplorationCapitalChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
-            Loading...
-          </div>
+          <ChartSkeleton variant="bar" />
         </CardContent>
       </Card>
     );
@@ -1131,9 +1130,30 @@ export function ExplorationCapitalChart({
             )}
             {chartValueMode === "percentage" && (
               <>
-                <ReferenceLine y={20} stroke="#f59e0b" strokeDasharray="4 4" strokeOpacity={0.55} strokeWidth={1.5} isFront />
-                <ReferenceLine y={40} stroke="#22c55e" strokeDasharray="4 4" strokeOpacity={0.55} strokeWidth={1.5} isFront />
-                <ReferenceLine y={60} stroke="#60a5fa" strokeDasharray="4 4" strokeOpacity={0.4} strokeWidth={1.5} isFront />
+                <ReferenceLine
+                  y={20}
+                  stroke="#f59e0b"
+                  strokeDasharray="4 4"
+                  strokeOpacity={0.55}
+                  strokeWidth={1.5}
+                  isFront
+                />
+                <ReferenceLine
+                  y={40}
+                  stroke="#22c55e"
+                  strokeDasharray="4 4"
+                  strokeOpacity={0.55}
+                  strokeWidth={1.5}
+                  isFront
+                />
+                <ReferenceLine
+                  y={60}
+                  stroke="#60a5fa"
+                  strokeDasharray="4 4"
+                  strokeOpacity={0.4}
+                  strokeWidth={1.5}
+                  isFront
+                />
               </>
             )}
             {chartValueMode === "absolute" && (

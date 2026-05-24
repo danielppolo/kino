@@ -6,6 +6,7 @@ import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import {
   Card,
   CardContent,
@@ -24,7 +25,11 @@ import {
 import { Money } from "@/components/ui/money";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
-import { calculateMonthlyTotals, formatCurrency, parseMonthDate } from "@/utils/chart-helpers";
+import {
+  calculateMonthlyTotals,
+  formatCurrency,
+  parseMonthDate,
+} from "@/utils/chart-helpers";
 import { createClient } from "@/utils/supabase/client";
 import { getWalletMonthlyBalances } from "@/utils/supabase/queries";
 
@@ -131,9 +136,7 @@ export function AccumulatedAreaChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
-            Loading...
-          </div>
+          <ChartSkeleton />
         </CardContent>
       </Card>
     );
@@ -211,7 +214,9 @@ export function AccumulatedAreaChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => format(parseMonthDate(value), "MMM yyyy")}
+              tickFormatter={(value) =>
+                format(parseMonthDate(value), "MMM yyyy")
+              }
             />
             <YAxis
               tickLine={false}
@@ -221,10 +226,13 @@ export function AccumulatedAreaChart({
             />
             <ChartTooltip
               cursor={false}
-              labelFormatter={(value) => format(parseMonthDate(value), "MMMM yyyy")}
+              labelFormatter={(value) =>
+                format(parseMonthDate(value), "MMMM yyyy")
+              }
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
 
+                const month = String(label);
                 const total = payload.reduce(
                   (sum, item) => sum + (item.value as number),
                   0,
@@ -235,7 +243,7 @@ export function AccumulatedAreaChart({
                     <div className="grid gap-2">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-medium">
-                          {format(parseMonthDate(label), "MMMM yyyy")}
+                          {format(parseMonthDate(month), "MMMM yyyy")}
                         </span>
                         <span className="text-sm font-medium">
                           <Money

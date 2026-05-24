@@ -10,6 +10,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import { useChartControls } from "@/components/charts/shared/chart-controls-context";
 import { useFirePlanData } from "@/components/charts/shared/use-fire-plan-data";
 import {
@@ -85,7 +86,8 @@ export function SavingsRateToFireChart({
 
   const chartData = useMemo(() => {
     const closestBucket = SAVINGS_RATE_BUCKETS.reduce((previous, current) =>
-      Math.abs(current - currentSavingsRate) < Math.abs(previous - currentSavingsRate)
+      Math.abs(current - currentSavingsRate) <
+      Math.abs(previous - currentSavingsRate)
         ? current
         : previous,
     );
@@ -144,7 +146,7 @@ export function SavingsRateToFireChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">Loading...</div>
+          <ChartSkeleton />
         </CardContent>
       </Card>
     );
@@ -157,8 +159,9 @@ export function SavingsRateToFireChart({
       <CardHeader>
         <CardTitle>Savings Rate → Escape Timing</CardTitle>
         <CardDescription>
-          Years from your current investable portfolio, not from zero. Bars compare
-          downshift timing against full FIRE timing at different savings rates.
+          Years from your current investable portfolio, not from zero. Bars
+          compare downshift timing against full FIRE timing at different savings
+          rates.
           {averageMonthlyIncome > 0 && (
             <>
               {" "}
@@ -170,8 +173,10 @@ export function SavingsRateToFireChart({
             <>
               {" "}
               Tracked assets (
-              <strong>{formatCurrency(contextualAssetValue, baseCurrency)}</strong>)
-              are excluded from the bars and treated as fallback capital.
+              <strong>
+                {formatCurrency(contextualAssetValue, baseCurrency)}
+              </strong>
+              ) are excluded from the bars and treated as fallback capital.
             </>
           )}
         </CardDescription>
@@ -264,7 +269,8 @@ export function SavingsRateToFireChart({
       <CardFooter>
         <div className="text-muted-foreground text-xs">
           Higher savings rates shorten both timelines, but downshift readiness
-          should arrive earlier whenever lower-income work covers part of the gap.
+          should arrive earlier whenever lower-income work covers part of the
+          gap.
         </div>
       </CardFooter>
     </Card>

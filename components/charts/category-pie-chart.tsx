@@ -11,6 +11,7 @@ import {
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import { createClient } from "@/utils/supabase/client";
 import { getCategoryPieChartData } from "@/utils/supabase/queries";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
@@ -55,7 +56,14 @@ export default function CategoryPieChart({
   const workspaceWalletIds = wallets.map((w) => w.id);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["category-pie-chart", walletId, workspaceWalletIds, from, to, type],
+    queryKey: [
+      "category-pie-chart",
+      walletId,
+      workspaceWalletIds,
+      from,
+      to,
+      type,
+    ],
     queryFn: async () => {
       const supabase = await createClient();
       const { data, error } = await getCategoryPieChartData(supabase, {
@@ -130,9 +138,7 @@ export default function CategoryPieChart({
   }
 
   if (isLoading) {
-    return (
-      <div className="flex h-64 items-center justify-center">Loading...</div>
-    );
+    return <ChartSkeleton variant="pie" />;
   }
 
   if (error) {

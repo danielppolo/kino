@@ -19,6 +19,7 @@ export const transactionQueryState = {
   id: parseAsString.withDefault(""),
   min_amount: parseAsString.withDefault(""),
   max_amount: parseAsString.withDefault(""),
+  review_status: parseAsString.withDefault(""),
 };
 
 export function useTransactionQueryState() {

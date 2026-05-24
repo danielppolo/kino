@@ -6,10 +6,14 @@ import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 import { useWallets } from "@/contexts/settings-context";
 import { Wallet } from "@/utils/supabase/types";
 
+const formatWalletLabel = (wallet: Wallet) =>
+  wallet.currency ? `${wallet.name} (${wallet.currency})` : wallet.name;
+
 interface WalletPickerProps {
   value?: string;
   currency?: string;
   exclude?: string;
+  walletType?: Wallet["wallet_type"];
   onChange?: (id: string) => void;
   size?: "sm" | "default" | "lg";
   variant?: "ghost" | "outline" | "default" | "secondary" | "destructive";
@@ -23,6 +27,7 @@ const WalletPicker = ({
   value,
   currency,
   exclude,
+  walletType,
   size = "default",
   variant = "outline",
   placeholder = "Select wallet...",
@@ -34,13 +39,14 @@ const WalletPicker = ({
   const filteredWallets = wallets
     .filter((wallet) => {
       if (exclude && wallet.id === exclude) return false;
+      if (walletType && wallet.wallet_type !== walletType) return false;
       return !currency || wallet.currency === currency;
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const options: ComboboxOption[] = filteredWallets.map((wallet) => ({
     value: wallet.id,
-    label: wallet.name,
+    label: formatWalletLabel(wallet),
     keywords: [wallet.name.toLowerCase(), wallet.currency ?? ""],
   }));
 

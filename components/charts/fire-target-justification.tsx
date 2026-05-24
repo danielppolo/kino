@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import { useChartControls } from "@/components/charts/shared/chart-controls-context";
 import { useFirePlanData } from "@/components/charts/shared/use-fire-plan-data";
 import {
@@ -59,11 +60,15 @@ export function FireTargetJustification({
     downshiftFireNumber - investableBalance,
   );
   const assetCoverageEquivalentMonths =
-    effectiveMonthlySpend > 0 ? contextualAssetValue / effectiveMonthlySpend : 0;
+    effectiveMonthlySpend > 0
+      ? contextualAssetValue / effectiveMonthlySpend
+      : 0;
   const coveragePct =
     fullFireNumber > 0 ? (investableBalance / fullFireNumber) * 100 : 0;
   const downshiftCoveragePct =
-    downshiftFireNumber > 0 ? (investableBalance / downshiftFireNumber) * 100 : 0;
+    downshiftFireNumber > 0
+      ? (investableBalance / downshiftFireNumber) * 100
+      : 0;
 
   const headline = useMemo(() => {
     if (hasSeparateDownshiftTarget) {
@@ -86,7 +91,7 @@ export function FireTargetJustification({
           <CardTitle>FIRE Target Logic</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex h-24 items-center justify-center">Loading...</div>
+          <ChartSkeleton variant="compact" className="h-24" />
         </CardContent>
       </Card>
     );
@@ -105,18 +110,18 @@ export function FireTargetJustification({
             <AccordionContent className="space-y-3">
               <p>
                 The product starts from your current monthly spend of{" "}
-                <strong>{formatCurrency(effectiveMonthlySpend, baseCurrency)}</strong>,
-                which implies annual spending of{" "}
+                <strong>
+                  {formatCurrency(effectiveMonthlySpend, baseCurrency)}
+                </strong>
+                , which implies annual spending of{" "}
                 <strong>{formatCurrency(annualSpend, baseCurrency)}</strong>.
               </p>
               <p>
-                Full FIRE uses:
-                {" "}
+                Full FIRE uses:{" "}
                 <strong>
                   annual spend / withdrawal rate ={" "}
                   {formatCurrency(fullFireNumber, baseCurrency)}
-                </strong>
-                {" "}
+                </strong>{" "}
                 at a {(selectedWR * 100).toFixed(1)}% withdrawal rate.
               </p>
               <p>
@@ -124,7 +129,8 @@ export function FireTargetJustification({
                   <>
                     Downshift readiness assumes lower-income work contributes{" "}
                     <strong>
-                      {formatCurrency(targetLowerMonthlyIncome, baseCurrency)}/mo
+                      {formatCurrency(targetLowerMonthlyIncome, baseCurrency)}
+                      /mo
                     </strong>
                     , leaving an uncovered gap of{" "}
                     <strong>
@@ -144,10 +150,11 @@ export function FireTargetJustification({
                   <>
                     Lower-income work is currently set to{" "}
                     <strong>
-                      {formatCurrency(targetLowerMonthlyIncome, baseCurrency)}/mo
+                      {formatCurrency(targetLowerMonthlyIncome, baseCurrency)}
+                      /mo
                     </strong>
-                    , so there is no separate downshift reduction. That makes the
-                    downshift target identical to the full FIRE target.
+                    , so there is no separate downshift reduction. That makes
+                    the downshift target identical to the full FIRE target.
                   </>
                 )}
               </p>
@@ -158,9 +165,11 @@ export function FireTargetJustification({
             <AccordionTrigger>What counts and what does not</AccordionTrigger>
             <AccordionContent className="space-y-3">
               <p>
-                The chart uses your liquid, investable portfolio only:
-                {" "}
-                <strong>{formatCurrency(investableBalance, baseCurrency)}</strong>.
+                The chart uses your liquid, investable portfolio only:{" "}
+                <strong>
+                  {formatCurrency(investableBalance, baseCurrency)}
+                </strong>
+                .
               </p>
               <p>
                 Historical net savings are estimated at{" "}
@@ -170,30 +179,34 @@ export function FireTargetJustification({
                 . That is the recurring contribution used while you are still in
                 accumulation mode. If you set a forecast horizon above 0, the
                 forecast controls the near-term path for the first{" "}
-                <strong>{forecastHorizonYears} year(s)</strong>. If you set it to{" "}
-                <strong>0y</strong>, the chart skips the forecast entirely and
-                projects directly from today.
+                <strong>{forecastHorizonYears} year(s)</strong>. If you set it
+                to <strong>0y</strong>, the chart skips the forecast entirely
+                and projects directly from today.
               </p>
               {hasContextualAssets ? (
                 <p>
                   Tracked assets are shown separately as contextual fallback
-                  capital:
-                  {" "}
-                  <strong>{formatCurrency(contextualAssetValue, baseCurrency)}</strong>.
-                  They are excluded from the FIRE target because they are
+                  capital:{" "}
+                  <strong>
+                    {formatCurrency(contextualAssetValue, baseCurrency)}
+                  </strong>
+                  . They are excluded from the FIRE target because they are
                   illiquid, may take time to sell, may have taxes or transaction
                   costs, and may serve lifestyle or optionality purposes instead
-                  of funding annual withdrawals. At your current spend, that asset
-                  base is roughly equivalent to{" "}
-                  <strong>{assetCoverageEquivalentMonths.toFixed(1)} months</strong>
-                  {" "}of expenses, but it is not treated as default retirement
+                  of funding annual withdrawals. At your current spend, that
+                  asset base is roughly equivalent to{" "}
+                  <strong>
+                    {assetCoverageEquivalentMonths.toFixed(1)} months
+                  </strong>{" "}
+                  of expenses, but it is not treated as default retirement
                   capital.
                 </p>
               ) : (
                 <p>
-                  No tracked assets are currently contributing contextual fallback
-                  capital. The target is therefore explained entirely by spend,
-                  withdrawal rate, investable balance, and savings rate.
+                  No tracked assets are currently contributing contextual
+                  fallback capital. The target is therefore explained entirely
+                  by spend, withdrawal rate, investable balance, and savings
+                  rate.
                 </p>
               )}
             </AccordionContent>
@@ -212,19 +225,25 @@ export function FireTargetJustification({
               </p>
               <p>
                 Today, you still need{" "}
-                <strong>{formatCurrency(remainingToFullFire, baseCurrency)}</strong>
-                {" "}to reach full FIRE.
+                <strong>
+                  {formatCurrency(remainingToFullFire, baseCurrency)}
+                </strong>{" "}
+                to reach full FIRE.
                 {hasSeparateDownshiftTarget ? (
                   <>
-                    {" "}You need{" "}
+                    {" "}
+                    You need{" "}
                     <strong>
                       {formatCurrency(remainingToDownshift, baseCurrency)}
-                    </strong>
-                    {" "}to reach the downshift threshold.
+                    </strong>{" "}
+                    to reach the downshift threshold.
                   </>
                 ) : (
-                  <> Because the downshift target is the same right now, the two
-                  progress meters match.</>
+                  <>
+                    {" "}
+                    Because the downshift target is the same right now, the two
+                    progress meters match.
+                  </>
                 )}
               </p>
               <p>

@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
+
 import { fetchAllConversions } from "@/utils/fetch-conversions-server";
+import {
+  createClient,
+  createServiceRoleClient,
+} from "@/utils/supabase/server";
 
 export async function POST(request: Request) {
   try {
@@ -12,9 +17,20 @@ export async function POST(request: Request) {
       );
     }
 
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const serviceRoleSupabase = createServiceRoleClient();
     const conversions = await fetchAllConversions({
       currencies,
       baseCurrency,
+      supabaseClient: serviceRoleSupabase,
     });
 
     return NextResponse.json({ conversions });

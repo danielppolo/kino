@@ -5,6 +5,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import {
   Card,
   CardContent,
@@ -86,9 +87,7 @@ export function TransactionSizeDistributionChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
-            Loading...
-          </div>
+          <ChartSkeleton variant="bar" />
         </CardContent>
       </Card>
     );
@@ -173,9 +172,11 @@ export function TransactionSizeDistributionChart({
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
                     <div className="grid gap-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{data.range}</span>
+                        <span className="text-sm font-medium">
+                          {data.range}
+                        </span>
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-muted-foreground text-xs">
                         <div>Count: {data.count}</div>
                         <div className="flex items-center gap-2">
                           <span>Total:</span>
@@ -190,11 +191,7 @@ export function TransactionSizeDistributionChart({
                 );
               }}
             />
-            <Bar
-              dataKey="count"
-              fill={chartConfig.count.color}
-              radius={4}
-            />
+            <Bar dataKey="count" fill={chartConfig.count.color} radius={4} />
           </BarChart>
         </ChartContainer>
       </CardContent>

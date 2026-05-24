@@ -77,7 +77,6 @@ const TransferForm = ({
     },
     onSuccess: () => {
       invalidateWorkspaceQueries(queryClient);
-      onSuccess?.();
     },
   });
 
@@ -92,7 +91,6 @@ const TransferForm = ({
     },
     onSuccess: () => {
       invalidateWorkspaceQueries(queryClient);
-      onSuccess?.();
     },
   });
 
@@ -104,7 +102,6 @@ const TransferForm = ({
     },
     onSuccess: () => {
       invalidateWorkspaceQueries(queryClient);
-      onSuccess?.();
     },
   });
 

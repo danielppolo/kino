@@ -6,6 +6,7 @@ import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import {
   Card,
   CardContent,
@@ -155,24 +156,20 @@ export function RecurringVsOnetimeBillsChart({
     if (chartData.length < 2) return 0;
     const current = visibleWallets.reduce((total: number, wallet: Wallet) => {
       const recurring =
-        (chartData[chartData.length - 1][
-          `${wallet.id}_recurring`
-        ] as number) || 0;
+        (chartData[chartData.length - 1][`${wallet.id}_recurring`] as number) ||
+        0;
       const oneTime =
-        (chartData[chartData.length - 1][
-          `${wallet.id}_one_time`
-        ] as number) || 0;
+        (chartData[chartData.length - 1][`${wallet.id}_one_time`] as number) ||
+        0;
       return total + recurring + oneTime;
     }, 0);
     const previous = visibleWallets.reduce((total: number, wallet: Wallet) => {
       const recurring =
-        (chartData[chartData.length - 2][
-          `${wallet.id}_recurring`
-        ] as number) || 0;
+        (chartData[chartData.length - 2][`${wallet.id}_recurring`] as number) ||
+        0;
       const oneTime =
-        (chartData[chartData.length - 2][
-          `${wallet.id}_one_time`
-        ] as number) || 0;
+        (chartData[chartData.length - 2][`${wallet.id}_one_time`] as number) ||
+        0;
       return total + recurring + oneTime;
     }, 0);
     if (previous === 0) return current > 0 ? 100 : 0;
@@ -191,9 +188,7 @@ export function RecurringVsOnetimeBillsChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
-            Loading...
-          </div>
+          <ChartSkeleton variant="bar" />
         </CardContent>
       </Card>
     );
@@ -260,7 +255,9 @@ export function RecurringVsOnetimeBillsChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => format(parseMonthDate(value), "MMM yyyy")}
+              tickFormatter={(value) =>
+                format(parseMonthDate(value), "MMM yyyy")
+              }
             />
             <YAxis
               tickLine={false}
@@ -271,7 +268,9 @@ export function RecurringVsOnetimeBillsChart({
             />
             <ChartTooltip
               cursor={false}
-              labelFormatter={(value) => format(parseMonthDate(value), "MMMM yyyy")}
+              labelFormatter={(value) =>
+                format(parseMonthDate(value), "MMMM yyyy")
+              }
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
 
@@ -318,7 +317,10 @@ export function RecurringVsOnetimeBillsChart({
                                 <div className="flex items-center gap-2">
                                   <div
                                     className="h-2 w-2 rounded-full"
-                                    style={{ backgroundColor: wallet.color ?? undefined }}
+                                    style={{
+                                      backgroundColor:
+                                        wallet.color ?? undefined,
+                                    }}
                                   />
                                   <span className="text-sm font-medium">
                                     {wallet.name}

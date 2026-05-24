@@ -433,6 +433,15 @@ export function GlobalCommandPalette() {
             Members
           </CommandItem>
           <CommandItem
+            value="Settings integrations"
+            onSelect={() =>
+              closeAndRun(() => router.push("/app/settings/integrations"))
+            }
+          >
+            <Landmark className="mr-2 size-4" />
+            Integrations
+          </CommandItem>
+          <CommandItem
             value="Settings preferences"
             onSelect={() =>
               closeAndRun(() => router.push("/app/settings/preferences"))

@@ -3,6 +3,7 @@
 import React from "react";
 import {
   Building,
+  Internet,
   Folder,
   Hashtag,
   Label,
@@ -81,6 +82,17 @@ const SettingsSidebar: React.FC = () => {
                 <Link href="/app/settings/members">
                   <MultiplePages className="size-4" />
                   Members
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === "/app/settings/integrations"}
+              >
+                <Link href="/app/settings/integrations">
+                  <Internet className="size-4" />
+                  Integrations
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

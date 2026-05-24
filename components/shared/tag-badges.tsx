@@ -29,6 +29,10 @@ const TagBadges = ({ transaction, className }: TagBadgesProps) => {
     setFilters({ label_id: labelId });
   };
 
+  const handleNeedsReviewClick = () => {
+    setFilters({ review_status: "needs_review" });
+  };
+
   return (
     <div
       className={cn(
@@ -57,6 +61,18 @@ const TagBadges = ({ transaction, className }: TagBadgesProps) => {
           </Badge>
         );
       })}
+      {transaction.needs_review && (
+        <Badge
+          variant="secondary"
+          className="cursor-pointer text-xs"
+          onClick={(event) => {
+            event.stopPropagation();
+            handleNeedsReviewClick();
+          }}
+        >
+          Review
+        </Badge>
+      )}
       {transaction.type === "transfer" && !transaction.transfer_id && (
         <LinkTransferButton transaction={transaction} />
       )}
@@ -77,8 +93,11 @@ const TagBadges = ({ transaction, className }: TagBadgesProps) => {
       {!!transaction.label_id && labelMap.get(transaction.label_id)?.color && (
         <button
           type="button"
-          onClick={() => handleLabelClick(transaction.label_id!)}
-          className="mx-2 cursor-pointer rounded-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          onClick={(event) => {
+            event.stopPropagation();
+            handleLabelClick(transaction.label_id!);
+          }}
+          className="ring-offset-background focus-visible:ring-ring mx-2 cursor-pointer rounded-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           aria-label="Filter by label"
         >
           <Color

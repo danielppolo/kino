@@ -6,6 +6,7 @@ import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import {
   Card,
   CardContent,
@@ -98,7 +99,9 @@ function BillBalanceChartRenderer({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => format(parseMonthDate(value), "MMM yyyy")}
+              tickFormatter={(value) =>
+                format(parseMonthDate(value), "MMM yyyy")
+              }
             />
             <YAxis
               tickLine={false}
@@ -243,9 +246,7 @@ export function BillBalanceLineChart({
       </CardHeader>
       {isLoading && (
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
-            Loading...
-          </div>
+          <ChartSkeleton />
         </CardContent>
       )}
       {error && (

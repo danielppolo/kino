@@ -12,6 +12,7 @@ import {
   YAxis,
 } from "recharts";
 import { useQuery } from "@tanstack/react-query";
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import {
   Card,
   CardContent,
@@ -65,8 +66,7 @@ export function FreedomMultiplierChart({
   const [, walletMap] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
   const controls = useChartControls();
-  const normalizationPercentile =
-    controls?.peakNormalizationPercentile ?? 0.97;
+  const normalizationPercentile = controls?.peakNormalizationPercentile ?? 0.97;
 
   const { data: monthlyStats, isLoading } = useQuery({
     queryKey: ["freedom-multiplier-stats", walletId, from, to],
@@ -82,84 +82,103 @@ export function FreedomMultiplierChart({
     },
   });
 
-  const { chartData, headlineMultiplier, headlineWindowMonths } = useMemo(() => {
-    if (!monthlyStats || monthlyStats.length === 0) {
+  const { chartData, headlineMultiplier, headlineWindowMonths } =
+    useMemo(() => {
+      if (!monthlyStats || monthlyStats.length === 0) {
+        return {
+          chartData: [],
+          headlineMultiplier: 0,
+          headlineWindowMonths: [] as string[],
+        };
+      }
+
+      // Group by month and convert to base currency
+      const byMonth: Record<string, { income: number; expense: number }> = {};
+      monthlyStats.forEach((s) => {
+        if (!byMonth[s.month]) byMonth[s.month] = { income: 0, expense: 0 };
+        const wallet = walletMap.get(s.wallet_id ?? "");
+        const currency = wallet?.currency ?? baseCurrency;
+        const income =
+          convertCurrency(
+            s.income_cents,
+            currency,
+            baseCurrency,
+            conversionRates,
+          ) / 100;
+        const expense =
+          Math.abs(
+            convertCurrency(
+              s.outcome_cents,
+              currency,
+              baseCurrency,
+              conversionRates,
+            ),
+          ) / 100;
+        byMonth[s.month].income += income;
+        byMonth[s.month].expense += expense;
+      });
+
+      const months = Object.keys(byMonth).sort(
+        (a, b) => new Date(a).getTime() - new Date(b).getTime(),
+      );
+
+      // Annualized burn = trimmed mean of monthly expenses × 12, but we use monthly avg burn
+      const allExpenses = months
+        .map((m) => byMonth[m].expense)
+        .filter((e) => e > 0);
+      const avgBurn = calculateTrimmedMean(allExpenses);
+      if (avgBurn === 0) return { chartData: [], currentMultiplier: 0 };
+
+      // Compute multiplier per month: net savings / avg monthly burn
+      const raw = months.map((month) => {
+        const { income, expense } = byMonth[month];
+        const netSavings = income - expense;
+        return {
+          month,
+          multiplier: netSavings / avgBurn,
+        };
+      });
+
+      // Add 3-month rolling average
+      const data = raw.map((point, i) => {
+        const window = raw.slice(Math.max(0, i - 2), i + 1);
+        const avg =
+          window.reduce((sum, p) => sum + p.multiplier, 0) / window.length;
+        return { ...point, rolling: avg };
+      });
+
+      const currentMonthKey = format(new Date(), "yyyy-MM-01");
+      const completedMonths = data.filter(
+        (point) => point.month < currentMonthKey,
+      );
+      const headlineWindow = completedMonths.slice(-HEADLINE_LOOKBACK_MONTHS);
+      const fallbackWindow =
+        headlineWindow.length > 0
+          ? headlineWindow
+          : data.slice(-Math.min(HEADLINE_LOOKBACK_MONTHS, data.length));
+      const headlineAverage =
+        fallbackWindow.length > 0
+          ? fallbackWindow.reduce((sum, point) => sum + point.multiplier, 0) /
+            fallbackWindow.length
+          : 0;
+      const { data: cappedData } = capChartOutliers(
+        data,
+        ["multiplier", "rolling"],
+        normalizationPercentile,
+      );
+
       return {
-        chartData: [],
-        headlineMultiplier: 0,
-        headlineWindowMonths: [] as string[],
+        chartData: cappedData,
+        headlineMultiplier: headlineAverage,
+        headlineWindowMonths: fallbackWindow.map((point) => point.month),
       };
-    }
-
-    // Group by month and convert to base currency
-    const byMonth: Record<string, { income: number; expense: number }> = {};
-    monthlyStats.forEach((s) => {
-      if (!byMonth[s.month]) byMonth[s.month] = { income: 0, expense: 0 };
-      const wallet = walletMap.get(s.wallet_id ?? "");
-      const currency = wallet?.currency ?? baseCurrency;
-      const income =
-        convertCurrency(s.income_cents, currency, baseCurrency, conversionRates) /
-        100;
-      const expense =
-        Math.abs(
-          convertCurrency(s.outcome_cents, currency, baseCurrency, conversionRates),
-        ) / 100;
-      byMonth[s.month].income += income;
-      byMonth[s.month].expense += expense;
-    });
-
-    const months = Object.keys(byMonth).sort(
-      (a, b) => new Date(a).getTime() - new Date(b).getTime(),
-    );
-
-    // Annualized burn = trimmed mean of monthly expenses × 12, but we use monthly avg burn
-    const allExpenses = months.map((m) => byMonth[m].expense).filter((e) => e > 0);
-    const avgBurn = calculateTrimmedMean(allExpenses);
-    if (avgBurn === 0) return { chartData: [], currentMultiplier: 0 };
-
-    // Compute multiplier per month: net savings / avg monthly burn
-    const raw = months.map((month) => {
-      const { income, expense } = byMonth[month];
-      const netSavings = income - expense;
-      return {
-        month,
-        multiplier: netSavings / avgBurn,
-      };
-    });
-
-    // Add 3-month rolling average
-    const data = raw.map((point, i) => {
-      const window = raw.slice(Math.max(0, i - 2), i + 1);
-      const avg =
-        window.reduce((sum, p) => sum + p.multiplier, 0) / window.length;
-      return { ...point, rolling: avg };
-    });
-
-    const currentMonthKey = format(new Date(), "yyyy-MM-01");
-    const completedMonths = data.filter((point) => point.month < currentMonthKey);
-    const headlineWindow =
-      completedMonths.slice(-HEADLINE_LOOKBACK_MONTHS);
-    const fallbackWindow =
-      headlineWindow.length > 0
-        ? headlineWindow
-        : data.slice(-Math.min(HEADLINE_LOOKBACK_MONTHS, data.length));
-    const headlineAverage =
-      fallbackWindow.length > 0
-        ? fallbackWindow.reduce((sum, point) => sum + point.multiplier, 0) /
-          fallbackWindow.length
-        : 0;
-    const { data: cappedData } = capChartOutliers(
-      data,
-      ["multiplier", "rolling"],
+    }, [
+      monthlyStats,
+      conversionRates,
+      baseCurrency,
+      walletMap,
       normalizationPercentile,
-    );
-
-    return {
-      chartData: cappedData,
-      headlineMultiplier: headlineAverage,
-      headlineWindowMonths: fallbackWindow.map((point) => point.month),
-    };
-  }, [monthlyStats, conversionRates, baseCurrency, walletMap, normalizationPercentile]);
+    ]);
 
   const percentageChange = useMemo(() => {
     if (chartData.length < 2) return 0;
@@ -183,12 +202,12 @@ export function FreedomMultiplierChart({
         <CardHeader>
           <CardTitle>Freedom Multiplier</CardTitle>
           <CardDescription>
-            Measures how many months of autonomy each month of work is buying after
-            covering your average burn.
+            Measures how many months of autonomy each month of work is buying
+            after covering your average burn.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">Loading...</div>
+          <ChartSkeleton />
         </CardContent>
       </Card>
     );
@@ -200,8 +219,8 @@ export function FreedomMultiplierChart({
         <CardHeader>
           <CardTitle>Freedom Multiplier</CardTitle>
           <CardDescription>
-            Measures how many months of autonomy each month of work is buying after
-            covering your average burn.
+            Measures how many months of autonomy each month of work is buying
+            after covering your average burn.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -234,11 +253,14 @@ export function FreedomMultiplierChart({
         </CardTitle>
         <CardDescription>
           Averaged across{" "}
-          <strong>{headlineWindowMonths.length || HEADLINE_LOOKBACK_MONTHS}</strong>{" "}
-          recent completed {headlineWindowMonths.length === 1 ? "month" : "months"}
-          , each month of income bought{" "}
-          <strong>{Math.max(0, headlineMultiplier).toFixed(1)}</strong> months of
-          future autonomy after covering average burn. That left leverage{" "}
+          <strong>
+            {headlineWindowMonths.length || HEADLINE_LOOKBACK_MONTHS}
+          </strong>{" "}
+          recent completed{" "}
+          {headlineWindowMonths.length === 1 ? "month" : "months"}, each month
+          of income bought{" "}
+          <strong>{Math.max(0, headlineMultiplier).toFixed(1)}</strong> months
+          of future autonomy after covering average burn. That left leverage{" "}
           {headlineMultiplier >= 1 ? "above" : "below"} break-even.
         </CardDescription>
       </CardHeader>
@@ -276,15 +298,17 @@ export function FreedomMultiplierChart({
                   | undefined;
                 const mult =
                   point?._original?.multiplier ??
-                  (payload.find((p) => p.dataKey === "multiplier")
-                    ?.value as number | undefined);
+                  (payload.find((p) => p.dataKey === "multiplier")?.value as
+                    | number
+                    | undefined);
                 const roll =
                   point?._original?.rolling ??
-                  (payload.find((p) => p.dataKey === "rolling")
-                    ?.value as number | undefined);
+                  (payload.find((p) => p.dataKey === "rolling")?.value as
+                    | number
+                    | undefined);
                 return (
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
-                    <div className="text-sm font-medium mb-1">
+                    <div className="mb-1 text-sm font-medium">
                       {format(parseMonthDate(label), "MMMM yyyy")}
                     </div>
                     {mult !== undefined && (

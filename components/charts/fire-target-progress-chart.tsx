@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { CircleHelp } from "lucide-react";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import { useChartControls } from "@/components/charts/shared/chart-controls-context";
 import { useFirePlanData } from "@/components/charts/shared/use-fire-plan-data";
 import { useForecastQuery } from "@/components/charts/shared/use-forecast-query";
@@ -67,7 +68,10 @@ function TermHelp({
             <CircleHelp className="size-3.5" />
           </button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="max-w-64 text-xs leading-relaxed">
+        <PopoverContent
+          align="start"
+          className="max-w-64 text-xs leading-relaxed"
+        >
           {description}
         </PopoverContent>
       </Popover>
@@ -258,7 +262,7 @@ export function FireTargetProgressChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">Loading...</div>
+          <ChartSkeleton variant="gauge" />
         </CardContent>
       </Card>
     );
@@ -293,8 +297,10 @@ export function FireTargetProgressChart({
             <>
               {" "}
               Tracked assets (
-              <strong>{formatCurrency(contextualAssetValue, baseCurrency)}</strong>)
-              stay separate as contextual fallback capital.
+              <strong>
+                {formatCurrency(contextualAssetValue, baseCurrency)}
+              </strong>
+              ) stay separate as contextual fallback capital.
             </>
           )}
         </CardDescription>
@@ -396,7 +402,9 @@ export function FireTargetProgressChart({
                   </div>
                 )}
               {item.range && (
-                <div className="text-muted-foreground text-xs">{item.range}</div>
+                <div className="text-muted-foreground text-xs">
+                  {item.range}
+                </div>
               )}
             </div>
           ))}
@@ -450,16 +458,18 @@ export function FireTargetProgressChart({
                       </span>
                     )}
                   </td>
-                  <td className="tabular-nums px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-right tabular-nums">
                     {formatCurrency(scenario.fullTarget, baseCurrency)}
                   </td>
-                  <td className="tabular-nums px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-right tabular-nums">
                     {hasSeparateDownshiftTarget
                       ? formatCurrency(scenario.downshiftTarget, baseCurrency)
                       : "Same as full FIRE"}
                   </td>
-                  <td className="tabular-nums px-3 py-2 text-right">
-                    <span style={{ color: getProgressColor(scenario.fullProgress) }}>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    <span
+                      style={{ color: getProgressColor(scenario.fullProgress) }}
+                    >
                       {(scenario.fullProgress * 100).toFixed(1)}%
                     </span>
                   </td>

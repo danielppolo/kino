@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { DefaultValues, FieldValues, Path, useForm } from "react-hook-form";
 import { Repeat2, Trash } from "lucide-react";
 import { toast } from "sonner";
@@ -12,7 +12,6 @@ import TemplateSelect from "./template-select";
 import { Button } from "@/components/ui/button";
 import { DrawerDialog } from "@/components/ui/drawer-dialog";
 import { Form } from "@/components/ui/form";
-import { runEntityFormSubmit } from "@/utils/entity-form-submit";
 
 interface EntityFormProps<T extends FieldValues> {
   title: string;
@@ -65,34 +64,16 @@ export function EntityForm<T extends FieldValues>({
   const form = useForm<T>({
     defaultValues: (entity || defaultValues) as DefaultValues<T>,
   });
-  const reopenValuesRef = useRef<T | null>(null);
 
   useEffect(() => {
     if (open) {
-      const reopenValues = reopenValuesRef.current;
-      if (reopenValues) {
-        form.reset(reopenValues);
-        reopenValuesRef.current = null;
-        return;
-      }
-
       form.reset(entity || defaultValues);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entity, open]);
 
   const handleSubmit = async (values: T) => {
-    const { error, resetValues } = await runEntityFormSubmit({
-      values,
-      addAnother,
-      onBeforeErrorReopen: (submittedValues) => {
-        reopenValuesRef.current = submittedValues;
-        form.reset(submittedValues);
-      },
-      onOpenChange,
-      onSubmit,
-    });
-
+    const { error, resetValues } = await onSubmit(values);
     if (error) {
       return toast.error(error);
     }

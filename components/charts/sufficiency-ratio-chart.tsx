@@ -14,6 +14,7 @@ import {
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import { useChartControls } from "@/components/charts/shared/chart-controls-context";
 import { useForecastQuery } from "@/components/charts/shared/use-forecast-query";
 import {
@@ -24,10 +25,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  ChartContainer,
-  ChartTooltip,
-} from "@/components/ui/chart";
+import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { TrendingIndicator } from "@/components/ui/trending-indicator";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import {
@@ -315,9 +313,7 @@ export function SufficiencyRatioChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
-            Loading...
-          </div>
+          <ChartSkeleton />
         </CardContent>
       </Card>
     );

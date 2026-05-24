@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 import { v4 as randomUUID } from "uuid";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -13,6 +14,7 @@ import { DescriptionInput } from "./description-input";
 import LabelCombobox from "./label-combobox";
 import TagMultiSelect from "./tag-multi-select";
 
+import { createPlaidTransactionRule } from "@/actions/create-plaid-transaction-rule";
 import { createTransaction } from "@/actions/create-transaction";
 import CategoryCombobox from "@/components/shared/category-combobox";
 import { EntityForm } from "@/components/shared/entity-form";
@@ -30,6 +32,11 @@ import {
 import { useTransactionForm } from "@/contexts/transaction-form-context";
 import { useWorkspace } from "@/contexts/workspace-context";
 import useFilters from "@/hooks/use-filters";
+import {
+  applyOptimisticTransaction,
+  findTransactionById,
+  type InfiniteTransactionData,
+} from "@/utils/optimistic-transactions";
 import { createClient } from "@/utils/supabase/client";
 import {
   deleteTransaction,
@@ -37,17 +44,6 @@ import {
 } from "@/utils/supabase/mutations";
 import { getBillsForTransaction } from "@/utils/supabase/queries";
 import { Transaction, TransactionList } from "@/utils/supabase/types";
-
-interface TransactionPage {
-  data: TransactionList[];
-  error: null;
-  count: number;
-}
-
-interface InfiniteTransactionData {
-  pages: TransactionPage[];
-  pageParams: number[];
-}
 
 interface ExpenseIncomeFormProps {
   walletId: string;
@@ -108,7 +104,8 @@ const ExpenseIncomeForm = ({
   >({
     mutationFn: async (values) => {
       const result = await createTransaction(values);
-      if (!result.success) throw new Error(result.error ?? "Failed to create transaction");
+      if (!result.success)
+        throw new Error(result.error ?? "Failed to create transaction");
       return { data: result.data ?? [] };
     },
     onMutate: async (newTransaction) => {
@@ -118,65 +115,58 @@ const ExpenseIncomeForm = ({
 
       const previousData =
         queryClient.getQueryData<InfiniteTransactionData>(transactionsQueryKey);
+      const existingTransaction = findTransactionById(
+        previousData,
+        newTransaction.id,
+      );
 
       const amountCents =
         newTransaction.type === "expense"
           ? -Math.round(newTransaction.amount * 100)
           : Math.round(newTransaction.amount * 100);
       const optimisticTransaction: TransactionList = {
-        id: randomUUID(),
+        ...existingTransaction,
+        id: newTransaction.id ?? randomUUID(),
         wallet_id: newTransaction.wallet_id,
         category_id: newTransaction.category_id || null,
         label_id: newTransaction.label_id || null,
         amount_cents: amountCents,
-        base_amount_cents: null,
-        created_at: null,
+        base_amount_cents: existingTransaction?.base_amount_cents ?? null,
+        created_at: existingTransaction?.created_at ?? null,
         currency: newTransaction.currency,
         date: newTransaction.date,
         description: newTransaction.description ?? null,
-        note: null,
+        needs_review: !newTransaction.category_id || !newTransaction.label_id,
+        note: existingTransaction?.note ?? null,
+        plaid_merchant_key: existingTransaction?.plaid_merchant_key ?? null,
+        plaid_merchant_name: existingTransaction?.plaid_merchant_name ?? null,
+        plaid_pending_transaction_id:
+          existingTransaction?.plaid_pending_transaction_id ?? null,
+        plaid_personal_finance_category_primary:
+          existingTransaction?.plaid_personal_finance_category_primary ?? null,
+        plaid_transaction_id: existingTransaction?.plaid_transaction_id ?? null,
         tag_ids: newTransaction.tags ?? null,
         tags: newTransaction.tags ?? null,
-        transfer_id: null,
-        transfer_wallet_id: null,
+        transfer_id: existingTransaction?.transfer_id ?? null,
+        transfer_wallet_id: existingTransaction?.transfer_wallet_id ?? null,
         type: newTransaction.type,
       };
 
       queryClient.setQueryData<InfiniteTransactionData>(
         transactionsQueryKey,
-        (old) => {
-          if (!old) {
-            return {
-              pages: [
-                {
-                  data: [optimisticTransaction],
-                  error: null,
-                  count: 1,
-                },
-              ],
-              pageParams: [0],
-            };
-          }
-
-          return {
-            ...old,
-            pages: old.pages.map((page, index) =>
-              index === 0
-                ? { ...page, data: [optimisticTransaction, ...page.data] }
-                : page,
-            ),
-          };
-        },
+        (old) =>
+          applyOptimisticTransaction(
+            old,
+            optimisticTransaction,
+            newTransaction.id,
+          ),
       );
 
       return { previousData, optimisticTransaction };
     },
     onError: (_err, _newTransaction, context) => {
       if (context?.previousData) {
-        queryClient.setQueryData(
-          transactionsQueryKey,
-          context.previousData,
-        );
+        queryClient.setQueryData(transactionsQueryKey, context.previousData);
       }
     },
     onSuccess: (data, _variables, context) => {
@@ -195,10 +185,19 @@ const ExpenseIncomeForm = ({
         currency: saved.currency,
         date: saved.date,
         description: saved.description ?? null,
+        needs_review: !saved.category_id || !saved.label_id,
         note: (saved as { note?: string | null }).note ?? null,
+        plaid_merchant_key: saved.plaid_merchant_key ?? null,
+        plaid_merchant_name: saved.plaid_merchant_name ?? null,
+        plaid_pending_transaction_id:
+          saved.plaid_pending_transaction_id ?? null,
+        plaid_personal_finance_category_primary:
+          saved.plaid_personal_finance_category_primary ?? null,
+        plaid_transaction_id: saved.plaid_transaction_id ?? null,
         tag_ids: savedTags,
         tags: savedTags,
-        transfer_id: (saved as { transfer_id?: string | null }).transfer_id ?? null,
+        transfer_id:
+          (saved as { transfer_id?: string | null }).transfer_id ?? null,
         transfer_wallet_id: null,
         type: saved.type,
       };
@@ -230,6 +229,23 @@ const ExpenseIncomeForm = ({
         queryClient.invalidateQueries({ queryKey: ["workspace-wallets"] }),
         queryClient.invalidateQueries({ queryKey: ["cashflow-breakdown"] }),
       ]);
+    },
+  });
+
+  const learnPlaidRuleMutation = useMutation({
+    mutationFn: createPlaidTransactionRule,
+    onSuccess: (result) => {
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success(
+        `Future Plaid imports from ${result.merchantName} will use this category.`,
+      );
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to save Plaid category rule: ${error.message}`);
     },
   });
 
@@ -318,6 +334,32 @@ const ExpenseIncomeForm = ({
           queryClient.invalidateQueries({ queryKey: ["bills"] });
           queryClient.invalidateQueries({ queryKey: ["bills-with-payments"] });
         }
+      }
+
+      const shouldOfferPlaidRuleLearning =
+        !!initialData?.id &&
+        !!initialData.plaid_transaction_id &&
+        !!initialData.plaid_merchant_key &&
+        values.category_id !== (initialData.category_id ?? "");
+
+      if (shouldOfferPlaidRuleLearning) {
+        const merchantName =
+          initialData.plaid_merchant_name ??
+          initialData.description ??
+          "this merchant";
+
+        toast.message("Learn category for future Plaid imports?", {
+          action: {
+            label: "Save rule",
+            onClick: () => {
+              learnPlaidRuleMutation.mutate({
+                categoryId: values.category_id,
+                transactionId: initialData.id!,
+              });
+            },
+          },
+          description: `${merchantName} in ${walletMap.get(values.wallet_id)?.name ?? "this wallet"}.`,
+        });
       }
 
       return {
@@ -436,18 +478,18 @@ const ExpenseIncomeForm = ({
           )}
         />
         <FormField
-        name="description"
-        render={({ field }) => (
-          <FormItem>
-            <FormControl>
-              <DescriptionInput
-                {...field}
-                value={field.value ?? ""}
-                workspaceId={activeWorkspace?.id}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <DescriptionInput
+                  {...field}
+                  value={field.value ?? ""}
+                  workspaceId={activeWorkspace?.id}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
         />
       </div>

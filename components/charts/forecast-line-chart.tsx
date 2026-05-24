@@ -1,6 +1,6 @@
 "use client";
 
-import { format } from "date-fns";
+import { differenceInCalendarMonths, format } from "date-fns";
 import {
   CartesianGrid,
   Line,
@@ -13,6 +13,7 @@ import {
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import { useChartControls } from "@/components/charts/shared/chart-controls-context";
 import { useForecastQuery } from "@/components/charts/shared/use-forecast-query";
 import {
@@ -191,6 +192,43 @@ export function ForecastLineChart({
     forecastMode === "with-income" ? withIncomeForecast : noIncomeForecast;
   const chartData: ChartPoint[] = [...historical, ...activeForecast];
 
+  const getChartPointValue = (point: ChartPoint) =>
+    point.total ?? point.forecast ?? 0;
+
+  const getSlopeStats = (month: string, currentValue: number) => {
+    const currentIndex = chartData.findIndex((point) => point.month === month);
+    if (currentIndex <= 0) return null;
+
+    const previousPoint = chartData[currentIndex - 1];
+    const previousValue = getChartPointValue(previousPoint);
+    const monthsBetween = Math.max(
+      1,
+      Math.abs(
+        differenceInCalendarMonths(
+          parseMonthDate(month),
+          parseMonthDate(previousPoint.month),
+        ),
+      ),
+    );
+    const delta = currentValue - previousValue;
+    const monthlySlope = delta / monthsBetween;
+    const savingSlope = Math.max(0, monthlySlope);
+    // 0 means no positive saving slope; 1 is approached as saving/month grows
+    // infinitely relative to monthly burn.
+    const slopeFactor =
+      effectiveMonthlyBurn > 0
+        ? savingSlope / (savingSlope + effectiveMonthlyBurn)
+        : savingSlope > 0
+          ? 1
+          : 0;
+
+    return {
+      delta,
+      monthlySlope,
+      slopeFactor,
+    };
+  };
+
   const chartConfig: ChartConfig = {
     total: {
       label: "Total Balance",
@@ -233,9 +271,7 @@ export function ForecastLineChart({
           <CardDescription>{description}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
-            Loading...
-          </div>
+          <ChartSkeleton />
         </CardContent>
       </Card>
     );
@@ -326,6 +362,7 @@ export function ForecastLineChart({
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
 
+                const month = String(label);
                 const totalEntry = payload.find((p) => p.dataKey === "total");
                 const forecastEntry = payload.find(
                   (p) => p.dataKey === "forecast",
@@ -335,12 +372,13 @@ export function ForecastLineChart({
                 const value = (entry?.value as number) ?? 0;
                 const lower = (entry?.payload as ChartPoint)?.lower;
                 const upper = (entry?.payload as ChartPoint)?.upper;
+                const slopeStats = getSlopeStats(month, value);
 
                 return (
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
                     <div className="grid gap-1.5">
                       <span className="text-sm font-medium">
-                        {format(parseMonthDate(label), "MMMM yyyy")}
+                        {format(parseMonthDate(month), "MMMM yyyy")}
                       </span>
                       <div className="flex items-center justify-between gap-4">
                         <span
@@ -359,6 +397,35 @@ export function ForecastLineChart({
                           />
                         </span>
                       </div>
+                      {slopeStats && (
+                        <div className="border-border grid gap-1 border-t pt-2">
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-muted-foreground text-xs">
+                              Slope factor
+                            </span>
+                            <span className="text-xs font-medium">
+                              {slopeStats.slopeFactor.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="text-muted-foreground text-xs">
+                            0 = no saving, 1 = unbounded saving slope
+                          </div>
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-muted-foreground text-xs">
+                              Monthly slope
+                            </span>
+                            <span className="text-xs font-medium">
+                              <Money
+                                cents={Math.round(
+                                  slopeStats.monthlySlope * 100,
+                                )}
+                                currency={baseCurrency}
+                                showSign
+                              />
+                            </span>
+                          </div>
+                        </div>
+                      )}
                       {isForecast &&
                         forecastMode === "with-income" &&
                         lower != null &&

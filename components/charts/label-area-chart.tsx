@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import Color from "../shared/color";
 import { TransactionLink } from "../shared/transaction-link";
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import { formatCurrency, parseMonthDate } from "@/utils/chart-helpers";
 
@@ -53,7 +54,14 @@ export default function LabelAreaChart({
   const { conversionRates, baseCurrency } = useCurrency();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["label-area-chart", walletId, workspaceWalletIds, from, to, type],
+    queryKey: [
+      "label-area-chart",
+      walletId,
+      workspaceWalletIds,
+      from,
+      to,
+      type,
+    ],
     queryFn: async () => {
       const supabase = await createClient();
       const { data, error } = await getMonthlyLabelStats(supabase, {
@@ -285,9 +293,7 @@ export default function LabelAreaChart({
           <CardTitle>{title}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
-            Loading...
-          </div>
+          <ChartSkeleton />
         </CardContent>
       </Card>
     );
@@ -373,7 +379,9 @@ export default function LabelAreaChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => formatCurrency(value / 100, baseCurrency)}
+              tickFormatter={(value) =>
+                formatCurrency(value / 100, baseCurrency)
+              }
             />
             <ChartTooltip
               reverseDirection={{
@@ -457,7 +465,8 @@ export default function LabelAreaChart({
       <CardFooter>
         <div className="flex w-full flex-col gap-3 text-sm">
           <div className="flex items-center gap-2 leading-none font-medium">
-            Total: <Money cents={total} currency={baseCurrency} /> | {labelCount} labels
+            Total: <Money cents={total} currency={baseCurrency} /> |{" "}
+            {labelCount} labels
           </div>
 
           {labelTotals.length > 0 && (

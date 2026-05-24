@@ -12,6 +12,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import { useChartControls } from "@/components/charts/shared/chart-controls-context";
 import { useFirePlanData } from "@/components/charts/shared/use-fire-plan-data";
 import { useForecastQuery } from "@/components/charts/shared/use-forecast-query";
@@ -168,7 +169,8 @@ export function FireProjectionChart({
       contextualAssetValue: contextualValue,
     }));
 
-    const confidenceByYear: Record<number, { lower: number; upper: number }> = {};
+    const confidenceByYear: Record<number, { lower: number; upper: number }> =
+      {};
     for (let year = 1; year <= forecastHorizonYears; year++) {
       const forecastPoint = forecastData?.forecast?.[year * 12 - 1];
       if (forecastPoint) {
@@ -251,7 +253,7 @@ export function FireProjectionChart({
   ]);
 
   const methodLabel =
-    forecastHorizonYears > 0 ? forecastData?.metadata?.method ?? null : null;
+    forecastHorizonYears > 0 ? (forecastData?.metadata?.method ?? null) : null;
   const showDownshiftTarget =
     targetLowerMonthlyIncome > 0 &&
     downshiftFireNumber > 0 &&
@@ -277,7 +279,7 @@ export function FireProjectionChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">Loading...</div>
+          <ChartSkeleton />
         </CardContent>
       </Card>
     );
@@ -302,14 +304,16 @@ export function FireProjectionChart({
             ? `Forecast controls the near-term path for ${forecastHorizonYears} year(s); after that the model uses ${formatCurrency(historicalNetMonthlySavings, baseCurrency)}/mo historical savings until retirement, then switches to spending-aware withdrawals.`
             : `0y forecast skips the forecast phase and projects directly from today using ${formatCurrency(historicalNetMonthlySavings, baseCurrency)}/mo historical savings until retirement.`}{" "}
           Full FIRE target:{" "}
-          <strong>{formatCurrency(fullFireNumber, baseCurrency)}</strong>{" "}
-          at {(selectedWR * 100).toFixed(1)}% WR.
+          <strong>{formatCurrency(fullFireNumber, baseCurrency)}</strong> at{" "}
+          {(selectedWR * 100).toFixed(1)}% WR.
           {showDownshiftTarget && (
             <>
               {" "}
               Downshift target:{" "}
-              <strong>{formatCurrency(downshiftFireNumber, baseCurrency)}</strong>
-              {" "}with{" "}
+              <strong>
+                {formatCurrency(downshiftFireNumber, baseCurrency)}
+              </strong>{" "}
+              with{" "}
               <strong>
                 {formatCurrency(targetLowerMonthlyIncome, baseCurrency)}/mo
               </strong>{" "}
@@ -321,7 +325,8 @@ export function FireProjectionChart({
               The inflection point is where accumulation turns into retirement
               withdrawals of{" "}
               <strong>
-                {formatCurrency(postRetirementMonthlyWithdrawal, baseCurrency)}/mo
+                {formatCurrency(postRetirementMonthlyWithdrawal, baseCurrency)}
+                /mo
               </strong>
               .
             </span>
@@ -329,7 +334,8 @@ export function FireProjectionChart({
           {fullFireReachedYear !== null && (
             <span className="mt-1 block text-green-600 dark:text-green-400">
               Full FIRE threshold in ~{fullFireReachedYear.toFixed(1)}y
-              {fullFireYearOptimistic !== null && fullFireYearPessimistic !== null
+              {fullFireYearOptimistic !== null &&
+              fullFireYearPessimistic !== null
                 ? ` (${fullFireYearOptimistic.toFixed(1)}–${fullFireYearPessimistic.toFixed(1)}y forecast range)`
                 : ""}
               .
@@ -383,8 +389,8 @@ export function FireProjectionChart({
                       </span>
                     </div>
                     <div className="text-muted-foreground mt-1 text-xs">
-                      Cashflow: {formatCurrency(point.cashflow, baseCurrency)}/mo{" "}
-                      {point.cashflow >= 0 ? "saved" : "withdrawn"}
+                      Cashflow: {formatCurrency(point.cashflow, baseCurrency)}
+                      /mo {point.cashflow >= 0 ? "saved" : "withdrawn"}
                     </div>
                     <div className="text-muted-foreground mt-0.5 text-xs">
                       Phase:{" "}
@@ -416,7 +422,8 @@ export function FireProjectionChart({
                     )}
                     {point.ciLower != null && point.ciUpper != null && (
                       <div className="text-muted-foreground mt-1 text-xs">
-                        Forecast range: {formatCurrency(point.ciLower, baseCurrency)}
+                        Forecast range:{" "}
+                        {formatCurrency(point.ciLower, baseCurrency)}
                         {" — "}
                         {formatCurrency(point.ciUpper, baseCurrency)}
                       </div>
@@ -424,7 +431,10 @@ export function FireProjectionChart({
                     {point.contextualAssetValue != null && (
                       <div className="text-muted-foreground mt-1 text-xs">
                         Tracked assets:{" "}
-                        {formatCurrency(point.contextualAssetValue, baseCurrency)}{" "}
+                        {formatCurrency(
+                          point.contextualAssetValue,
+                          baseCurrency,
+                        )}{" "}
                         excluded from FIRE capital
                       </div>
                     )}

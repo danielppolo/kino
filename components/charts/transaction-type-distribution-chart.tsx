@@ -6,6 +6,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import {
   Card,
   CardContent,
@@ -54,7 +55,12 @@ export function TransactionTypeDistributionChart({
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["transaction-type-distribution", walletId, effectiveFrom, effectiveTo],
+    queryKey: [
+      "transaction-type-distribution",
+      walletId,
+      effectiveFrom,
+      effectiveTo,
+    ],
     queryFn: async () => {
       const supabase = await createClient();
       const { data, error } = await getTransactionTypeDistribution(supabase, {
@@ -158,9 +164,7 @@ export function TransactionTypeDistributionChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
-            Loading...
-          </div>
+          <ChartSkeleton variant="pie" />
         </CardContent>
       </Card>
     );
@@ -230,7 +234,9 @@ export function TransactionTypeDistributionChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => format(parseMonthDate(value), "MMM yyyy")}
+              tickFormatter={(value) =>
+                format(parseMonthDate(value), "MMM yyyy")
+              }
             />
             <YAxis
               tickLine={false}
@@ -241,7 +247,9 @@ export function TransactionTypeDistributionChart({
             />
             <ChartTooltip
               cursor={false}
-              labelFormatter={(value) => format(parseMonthDate(value), "MMMM yyyy")}
+              labelFormatter={(value) =>
+                format(parseMonthDate(value), "MMMM yyyy")
+              }
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
 

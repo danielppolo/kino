@@ -5,6 +5,7 @@ import { Cell, Pie, PieChart } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import {
   Card,
   CardContent,
@@ -94,14 +95,10 @@ export function CurrencyExposureChart({
       <Card>
         <CardHeader>
           <CardTitle>Currency Exposure</CardTitle>
-          <CardDescription>
-            Transaction volume by currency
-          </CardDescription>
+          <CardDescription>Transaction volume by currency</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
-            Loading...
-          </div>
+          <ChartSkeleton variant="bar" />
         </CardContent>
       </Card>
     );
@@ -112,9 +109,7 @@ export function CurrencyExposureChart({
       <Card>
         <CardHeader>
           <CardTitle>Currency Exposure</CardTitle>
-          <CardDescription>
-            Transaction volume by currency
-          </CardDescription>
+          <CardDescription>Transaction volume by currency</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex h-64 items-center justify-center text-red-500">
@@ -130,9 +125,7 @@ export function CurrencyExposureChart({
       <Card>
         <CardHeader>
           <CardTitle>Currency Exposure</CardTitle>
-          <CardDescription>
-            Transaction volume by currency
-          </CardDescription>
+          <CardDescription>Transaction volume by currency</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex h-64 items-center justify-center text-gray-500">
@@ -147,9 +140,7 @@ export function CurrencyExposureChart({
     <Card>
       <CardHeader>
         <CardTitle>Currency Exposure</CardTitle>
-        <CardDescription>
-          Transaction volume by currency
-        </CardDescription>
+        <CardDescription>Transaction volume by currency</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
@@ -159,7 +150,9 @@ export function CurrencyExposureChart({
                 if (!active || !payload?.length) return null;
 
                 const data = payload[0].payload;
-                const percentage = ((data.amount / totalAmount) * 100).toFixed(1);
+                const percentage = ((data.amount / totalAmount) * 100).toFixed(
+                  1,
+                );
 
                 return (
                   <div className="bg-background rounded-lg border p-2 shadow-sm">
@@ -169,9 +162,11 @@ export function CurrencyExposureChart({
                           className="h-2 w-2 rounded-full"
                           style={{ backgroundColor: data.fill }}
                         />
-                        <span className="text-sm font-medium">{data.currency}</span>
+                        <span className="text-sm font-medium">
+                          {data.currency}
+                        </span>
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-muted-foreground text-xs">
                         <div>Amount: {data.amount.toFixed(2)}</div>
                         <div>Transactions: {data.count}</div>
                         <div>Percentage: {percentage}%</div>
@@ -201,7 +196,10 @@ export function CurrencyExposureChart({
           {chartData.map((item) => {
             const percentage = ((item.amount / totalAmount) * 100).toFixed(1);
             return (
-              <div key={item.currency} className="flex items-center justify-between">
+              <div
+                key={item.currency}
+                className="flex items-center justify-between"
+              >
                 <div className="flex items-center gap-2">
                   <div
                     className="h-2 w-2 rounded-full"

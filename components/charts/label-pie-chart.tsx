@@ -6,6 +6,7 @@ import { Cell, Pie, PieChart } from "recharts";
 
 import { useQuery } from "@tanstack/react-query";
 
+import { ChartSkeleton } from "@/components/charts/shared/chart-skeleton";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -146,9 +147,7 @@ export default function LabelPieChart({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
-            Loading...
-          </div>
+          <ChartSkeleton variant="pie" />
         </CardContent>
       </Card>
     );
@@ -219,7 +218,7 @@ export default function LabelPieChart({
                         />
                         <span className="text-sm font-medium">{item.name}</span>
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-muted-foreground text-xs">
                         <div className="flex items-center gap-2">
                           <span>Share:</span>
                           <span>{item.share.toFixed(1)}%</span>
@@ -274,7 +273,10 @@ export default function LabelPieChart({
           </div>
           <CollapsibleContent className="grid gap-2">
             {transformedData.map((item) => (
-              <div key={item.name} className="flex items-center justify-between">
+              <div
+                key={item.name}
+                className="flex items-center justify-between"
+              >
                 <div className="flex items-center gap-2">
                   <div
                     className="h-2 w-2 rounded-full"
