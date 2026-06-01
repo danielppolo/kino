@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Money } from "@/components/ui/money";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
+import { convertCurrency } from "@/utils/currency-conversion";
 import { createClient } from "@/utils/supabase/client";
 import { getTransferFlowData } from "@/utils/supabase/queries";
 
@@ -48,13 +49,34 @@ export function TransferFlowDiagramChart({
     },
   });
 
-  const [wallets, walletMap] = useWallets();
+  const [, walletMap] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
+
+  const getConvertedAmountCents = React.useCallback(
+    (amountCents: number, walletId: string) => {
+      const wallet = walletMap.get(walletId);
+
+      return convertCurrency(
+        amountCents,
+        wallet?.currency ?? baseCurrency,
+        baseCurrency,
+        conversionRates,
+      );
+    },
+    [baseCurrency, conversionRates, walletMap],
+  );
 
   const maxAmount = React.useMemo(() => {
     if (!transferData || transferData.length === 0) return 1;
-    return Math.max(...transferData.map((t) => t.total_amount_cents));
-  }, [transferData]);
+    return Math.max(
+      ...transferData.map((transfer) =>
+        getConvertedAmountCents(
+          transfer.total_amount_cents,
+          transfer.from_wallet_id,
+        ),
+      ),
+    );
+  }, [getConvertedAmountCents, transferData]);
 
   const getBarWidth = (amount: number) => {
     const minWidth = 20;
@@ -128,12 +150,11 @@ export function TransferFlowDiagramChart({
           {transferData.map((transfer, index) => {
             const fromWallet = walletMap.get(transfer.from_wallet_id);
             const toWallet = walletMap.get(transfer.to_wallet_id);
-
-            const fromRate = fromWallet
-              ? (conversionRates[fromWallet.currency]?.rate ?? 1)
-              : 1;
-            const amount = (transfer.total_amount_cents * fromRate) / 100;
-            const barWidth = getBarWidth(transfer.total_amount_cents);
+            const amountCents = getConvertedAmountCents(
+              transfer.total_amount_cents,
+              transfer.from_wallet_id,
+            );
+            const barWidth = getBarWidth(amountCents);
 
             return (
               <div key={index} className="space-y-2">
@@ -173,10 +194,7 @@ export function TransferFlowDiagramChart({
                     }}
                   />
                   <div className="flex items-center gap-2 text-sm">
-                    <Money
-                      cents={Math.round(amount * 100)}
-                      currency={baseCurrency}
-                    />
+                    <Money cents={amountCents} currency={baseCurrency} />
                     <span className="text-muted-foreground">
                       ({transfer.transfer_count} transfer
                       {transfer.transfer_count !== 1 ? "s" : ""})

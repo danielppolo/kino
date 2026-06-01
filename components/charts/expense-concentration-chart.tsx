@@ -21,8 +21,9 @@ import {
 import { Money } from "@/components/ui/money";
 import { useCurrency, useWallets } from "@/contexts/settings-context";
 import { ChartColors } from "@/utils/constants";
+import { buildExpenseConcentrationData } from "@/utils/expense-concentration";
 import { createClient } from "@/utils/supabase/client";
-import { getExpenseConcentration } from "@/utils/supabase/queries";
+import { getMonthlyCategoryStats } from "@/utils/supabase/queries";
 
 interface ExpenseConcentrationChartProps {
   walletId?: string;
@@ -47,9 +48,9 @@ export function ExpenseConcentrationChart({
   to,
   topN = 5,
 }: ExpenseConcentrationChartProps) {
-  const [wallets] = useWallets();
+  const [wallets, walletMap] = useWallets();
   const workspaceWalletIds = wallets.map((w) => w.id);
-  const { baseCurrency } = useCurrency();
+  const { baseCurrency, conversionRates } = useCurrency();
 
   const {
     data: concentrationData,
@@ -66,12 +67,12 @@ export function ExpenseConcentrationChart({
     ],
     queryFn: async () => {
       const supabase = await createClient();
-      const { data, error } = await getExpenseConcentration(supabase, {
+      const { data, error } = await getMonthlyCategoryStats(supabase, {
         walletId,
         workspaceWalletIds,
         from,
         to,
-        topN,
+        type: "expense",
       });
 
       if (error) throw error;
@@ -82,13 +83,19 @@ export function ExpenseConcentrationChart({
   const chartData = React.useMemo(() => {
     if (!concentrationData) return [];
 
-    return concentrationData.map((data, index) => ({
+    return buildExpenseConcentrationData({
+      rows: concentrationData,
+      walletMap,
+      conversionRates,
+      baseCurrency,
+      topN,
+    }).map((data, index) => ({
       category: data.category_name,
-      amount: data.total_cents / 100,
+      amountCents: data.total_cents,
       percentage: data.percentage,
       fill: COLORS[index % COLORS.length],
     }));
-  }, [concentrationData]);
+  }, [baseCurrency, concentrationData, conversionRates, topN, walletMap]);
 
   const config = chartData.reduce(
     (acc, item) => ({
@@ -188,7 +195,7 @@ export function ExpenseConcentrationChart({
                         <div className="flex items-center gap-2">
                           <span>Amount:</span>
                           <Money
-                            cents={Math.round(data.amount * 100)}
+                            cents={data.amountCents}
                             currency={baseCurrency}
                           />
                         </div>
@@ -201,7 +208,7 @@ export function ExpenseConcentrationChart({
             />
             <Pie
               data={chartData}
-              dataKey="amount"
+              dataKey="amountCents"
               nameKey="category"
               cx="50%"
               cy="50%"
@@ -232,10 +239,7 @@ export function ExpenseConcentrationChart({
                 <span className="text-muted-foreground">
                   {item.percentage.toFixed(1)}%
                 </span>
-                <Money
-                  cents={Math.round(item.amount * 100)}
-                  currency={baseCurrency}
-                />
+                <Money cents={item.amountCents} currency={baseCurrency} />
               </div>
             </div>
           ))}

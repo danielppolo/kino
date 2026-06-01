@@ -19,11 +19,10 @@ import {
   ChartTooltip,
 } from "@/components/ui/chart";
 import { Money } from "@/components/ui/money";
-import { useCurrency } from "@/contexts/settings-context";
-import { formatCurrency } from "@/utils/chart-helpers";
+import { useCurrency, useWallets } from "@/contexts/settings-context";
 import { ChartColors } from "@/utils/constants";
 import { createClient } from "@/utils/supabase/client";
-import { getTransactionSizeDistribution } from "@/utils/supabase/queries";
+import { buildTransactionSizeDistributionData } from "@/utils/transaction-size-distribution";
 
 interface TransactionSizeDistributionChartProps {
   walletId?: string;
@@ -38,37 +37,94 @@ export function TransactionSizeDistributionChart({
   to,
   type,
 }: TransactionSizeDistributionChartProps) {
+  const [wallets, walletMap] = useWallets();
+  const workspaceWalletIds = wallets.map((w) => w.id);
+  const { baseCurrency, conversionRates } = useCurrency();
+
   const {
     data: sizeData,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["transaction-size-distribution", walletId, from, to, type],
+    queryKey: [
+      "transaction-size-distribution",
+      walletId,
+      workspaceWalletIds,
+      from,
+      to,
+      type,
+    ],
     queryFn: async () => {
       const supabase = await createClient();
-      const { data, error } = await getTransactionSizeDistribution(supabase, {
-        walletId,
-        from,
-        to,
-        type,
-      });
+      const buildQuery = () => {
+        let query = supabase
+          .from("transactions")
+          .select("amount_cents, wallet_id")
+          .not("wallet_id", "is", null);
 
-      if (error) throw error;
-      return data;
+        if (walletId) {
+          query = query.eq("wallet_id", walletId);
+        } else if (workspaceWalletIds.length > 0) {
+          query = query.in("wallet_id", workspaceWalletIds);
+        }
+
+        if (from) {
+          query = query.gte("date", from);
+        }
+
+        if (to) {
+          query = query.lte("date", to);
+        }
+
+        if (type) {
+          query = query.eq("type", type);
+        }
+
+        return query;
+      };
+
+      const pageSize = 1000;
+      let fromIndex = 0;
+      let allData: Array<{
+        amount_cents: number | null;
+        wallet_id: string | null;
+      }> = [];
+
+      while (true) {
+        const { data, error } = await buildQuery().range(
+          fromIndex,
+          fromIndex + pageSize - 1,
+        );
+
+        if (error) throw error;
+
+        allData = allData.concat(data ?? []);
+
+        if (!data || data.length < pageSize) {
+          break;
+        }
+
+        fromIndex += pageSize;
+      }
+
+      return allData;
     },
   });
-
-  const { baseCurrency } = useCurrency();
 
   const chartData = React.useMemo(() => {
     if (!sizeData) return [];
 
-    return sizeData.map((data) => ({
+    return buildTransactionSizeDistributionData({
+      rows: sizeData,
+      walletMap,
+      conversionRates,
+      baseCurrency,
+    }).map((data) => ({
       range: data.range,
       count: data.count,
-      amount: data.total_amount_cents / 100,
+      amountCents: data.total_amount_cents,
     }));
-  }, [sizeData]);
+  }, [baseCurrency, conversionRates, sizeData, walletMap]);
 
   const chartConfig: ChartConfig = {
     count: {
@@ -181,7 +237,7 @@ export function TransactionSizeDistributionChart({
                         <div className="flex items-center gap-2">
                           <span>Total:</span>
                           <Money
-                            cents={Math.round(data.amount * 100)}
+                            cents={data.amountCents}
                             currency={baseCurrency}
                           />
                         </div>
