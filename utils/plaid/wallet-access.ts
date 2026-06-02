@@ -1,35 +1,26 @@
-import { createClient } from "@/utils/supabase/server";
+import {
+  AuthRequiredError,
+  ForbiddenError,
+  NotFoundError,
+  requireWalletAccess,
+} from "@/utils/auth/server";
 
 export async function getAuthorizedWallet(walletId: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    return await requireWalletAccess({ walletId });
+  } catch (error) {
+    if (error instanceof AuthRequiredError) {
+      return { error: "Unauthorized", status: 401 as const };
+    }
 
-  if (!user) {
-    return { error: "Unauthorized", status: 401 as const };
+    if (error instanceof NotFoundError) {
+      return { error: "Wallet not found", status: 404 as const };
+    }
+
+    if (error instanceof ForbiddenError) {
+      return { error: "Forbidden", status: 403 as const };
+    }
+
+    throw error;
   }
-
-  const { data: wallet, error: walletError } = await supabase
-    .from("wallets")
-    .select("*")
-    .eq("id", walletId)
-    .single();
-
-  if (walletError || !wallet) {
-    return { error: "Wallet not found", status: 404 as const };
-  }
-
-  const { data: membership, error: membershipError } = await supabase
-    .from("workspace_members")
-    .select("id")
-    .eq("workspace_id", wallet.workspace_id)
-    .eq("user_id", user.id)
-    .single();
-
-  if (membershipError || !membership) {
-    return { error: "Forbidden", status: 403 as const };
-  }
-
-  return { supabase, user, wallet };
 }

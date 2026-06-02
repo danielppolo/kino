@@ -1,12 +1,18 @@
-import { NextRequest, NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
+import { NextRequest, NextResponse } from "next/server";
 
-import { createServiceRoleClient } from "@/utils/supabase/server";
+import {
+  AuthRequiredError,
+  ForbiddenError,
+  NotFoundError,
+  resolveWalletScope,
+} from "@/utils/auth/server";
 import {
   calculateTrimmedMean,
   findRecoveryStartIndex,
   winsorize,
 } from "@/utils/chart-helpers";
+import { createServiceRoleClient } from "@/utils/supabase/server";
 
 // arima uses WASM — loaded natively by Node.js, listed in serverExternalPackages
 // so webpack doesn't try to bundle the binary.
@@ -15,6 +21,8 @@ const ARIMA = require("arima");
 
 const TRAINING_WINDOW = 36; // months
 const Z_95 = 1.96;
+const MAX_HORIZON_MONTHS = 48;
+const MIN_HORIZON_MONTHS = 1;
 
 export interface ForecastPoint {
   month: string;
@@ -148,7 +156,9 @@ const _computeForecast = unstable_cache(
     const currentBalance = balanceByMonth[lastSortedMonth];
 
     // Training uses only complete months so deltas represent full monthly cash flows.
-    const completeMonths = isPartialMonth ? sortedMonths.slice(0, -1) : sortedMonths;
+    const completeMonths = isPartialMonth
+      ? sortedMonths.slice(0, -1)
+      : sortedMonths;
 
     const rawBalanceSeries = completeMonths
       .map((m) => balanceByMonth[m])
@@ -171,7 +181,9 @@ const _computeForecast = unstable_cache(
     // causing a flat forecast when the current balance differs from that average.
     // Delta-based ARIMA captures cash-flow patterns (income/expense cycles) and
     // projects them forward from the ACTUAL current balance — no mean-reversion artefact.
-    const rawDeltas = trainingSeries.slice(1).map((v, i) => v - trainingSeries[i]);
+    const rawDeltas = trainingSeries
+      .slice(1)
+      .map((v, i) => v - trainingSeries[i]);
 
     // Need at least 3 deltas to fit a model
     if (rawDeltas.length < 3) {
@@ -214,7 +226,9 @@ const _computeForecast = unstable_cache(
       // Fallback: repeat the trimmed-mean delta (linear extrapolation)
       const avgDelta = calculateTrimmedMean(rawDeltas);
       predictedDeltas = Array(horizon).fill(avgDelta);
-      errors = Array(horizon).fill(Math.abs(avgDelta) * 0.5 + Math.abs(currentBalance) * 0.02);
+      errors = Array(horizon).fill(
+        Math.abs(avgDelta) * 0.5 + Math.abs(currentBalance) * 0.02,
+      );
       method = "linear-fallback";
     }
 
@@ -254,35 +268,199 @@ const _computeForecast = unstable_cache(
 // ---------------------------------------------------------------------------
 // Route handler
 // ---------------------------------------------------------------------------
+type ForecastRequestBody = {
+  walletId: string | null;
+  walletIds: string[];
+  horizon: number;
+  baseCurrency: string;
+  conversionRates: Record<string, { rate: number }>;
+};
+
+function isRateMap(value: unknown): value is Record<string, { rate: number }> {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.values(value).every(
+      (entry) =>
+        !!entry &&
+        typeof entry === "object" &&
+        typeof (entry as { rate?: unknown }).rate === "number" &&
+        Number.isFinite((entry as { rate: number }).rate),
+    )
+  );
+}
+
+function parseForecastBody(
+  body: unknown,
+): { data: ForecastRequestBody } | { error: string } {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return { error: "Invalid request body" };
+  }
+
+  const {
+    walletId = null,
+    walletIds = [],
+    horizon = 12,
+    baseCurrency,
+    conversionRates,
+  } = body as Record<string, unknown>;
+
+  if (typeof baseCurrency !== "string" || baseCurrency.trim().length === 0) {
+    return { error: "Missing baseCurrency or conversionRates" };
+  }
+
+  if (!isRateMap(conversionRates)) {
+    return { error: "Missing baseCurrency or conversionRates" };
+  }
+
+  if (
+    walletId !== null &&
+    walletId !== undefined &&
+    typeof walletId !== "string"
+  ) {
+    return { error: "Invalid walletId" };
+  }
+
+  if (
+    !Array.isArray(walletIds) ||
+    !walletIds.every((id) => typeof id === "string")
+  ) {
+    return { error: "Invalid walletIds" };
+  }
+
+  if (typeof horizon !== "number" || !Number.isFinite(horizon)) {
+    return { error: "Invalid horizon" };
+  }
+
+  return {
+    data: {
+      walletId: walletId ?? null,
+      walletIds,
+      horizon,
+      baseCurrency,
+      conversionRates,
+    },
+  };
+}
+
+function dedupeAndSortWalletIds(walletIds: string[]) {
+  return Array.from(new Set(walletIds)).sort();
+}
+
+function errorResponse(error: unknown) {
+  if (error instanceof AuthRequiredError) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (error instanceof ForbiddenError) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (error instanceof NotFoundError) {
+    return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
+  }
+
+  return null;
+}
+
+async function validateRequestedAggregateWallets({
+  requestedWalletIds,
+  scope,
+}: {
+  requestedWalletIds: string[];
+  scope: Awaited<ReturnType<typeof resolveWalletScope>>;
+}) {
+  const { data: requestedWallets, error } = await scope.supabase
+    .from("wallets")
+    .select("id, workspace_id")
+    .in("id", requestedWalletIds);
+
+  if (error) throw error;
+
+  const returnedWalletIds = new Set(
+    ((requestedWallets ?? []) as Array<{ id: string }>).map(
+      (wallet) => wallet.id,
+    ),
+  );
+
+  if (requestedWalletIds.some((id) => !returnedWalletIds.has(id))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const workspaceIds = new Set(
+    ((requestedWallets ?? []) as Array<{ workspace_id: string }>).map(
+      (wallet) => wallet.workspace_id,
+    ),
+  );
+
+  if (workspaceIds.size > 1) {
+    return NextResponse.json(
+      { error: "Wallets must belong to one workspace" },
+      { status: 400 },
+    );
+  }
+
+  if (workspaceIds.size === 1 && !workspaceIds.has(scope.workspace.id)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const {
-      walletId = null,
-      walletIds = [],
-      horizon = 12,
-      baseCurrency,
-      conversionRates,
-    } = body as {
-      walletId?: string | null;
-      walletIds?: string[];
-      horizon?: number;
-      baseCurrency: string;
-      conversionRates: Record<string, { rate: number }>;
-    };
+    const parsedBody = parseForecastBody(body);
 
-    if (!baseCurrency || !conversionRates) {
+    if ("error" in parsedBody) {
+      return NextResponse.json({ error: parsedBody.error }, { status: 400 });
+    }
+
+    const { walletId, walletIds, horizon, baseCurrency, conversionRates } =
+      parsedBody.data;
+    const requestedWalletIds = dedupeAndSortWalletIds(walletIds);
+
+    if (!walletId && requestedWalletIds.length === 0) {
       return NextResponse.json(
-        { error: "Missing baseCurrency or conversionRates" },
+        { error: "At least one wallet is required" },
         { status: 400 },
       );
     }
 
-    const clampedHorizon = Math.min(Math.max(1, horizon), 48);
+    const scope = await resolveWalletScope(
+      walletId
+        ? { walletId, requireActiveWorkspace: true }
+        : { requireActiveWorkspace: true },
+    );
+    const scopedWalletIds = dedupeAndSortWalletIds(scope.walletIds);
+
+    if (!walletId) {
+      const validationResponse = await validateRequestedAggregateWallets({
+        requestedWalletIds,
+        scope,
+      });
+
+      if (validationResponse) return validationResponse;
+
+      const scopedWalletIdSet = new Set(scopedWalletIds);
+      const hasUnscopedWallet = requestedWalletIds.some(
+        (id) => !scopedWalletIdSet.has(id),
+      );
+
+      if (hasUnscopedWallet) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    }
+
+    const clampedHorizon = Math.min(
+      Math.max(MIN_HORIZON_MONTHS, horizon),
+      MAX_HORIZON_MONTHS,
+    );
 
     const result = await _computeForecast(
-      walletId,
-      walletIds,
+      scope.walletId ?? null,
+      scopedWalletIds,
       clampedHorizon,
       baseCurrency,
       conversionRates,
@@ -290,6 +468,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
+    const mappedResponse = errorResponse(error);
+    if (mappedResponse) return mappedResponse;
+
     console.error("[/api/forecast] error:", error);
     return NextResponse.json(
       { error: "Failed to compute forecast" },

@@ -52,7 +52,6 @@ async function InfographicsPage({ searchParams }: PageParams) {
 
   return (
     <InfographicsTabs
-      filters={{ from: filters.from, to: filters.to }}
       billsEnabled={featureFlags.bills_enabled}
       autonomyEnabled={featureFlags.infographics_autonomy_enabled}
       fireEnabled={featureFlags.fire_enabled}

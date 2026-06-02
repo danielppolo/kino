@@ -8,11 +8,12 @@ const { fetchPlaidTransactions } = vi.hoisted(() => ({
 }));
 
 vi.mock("./server", async () => {
-  const actual = await vi.importActual<typeof import("./server")>("./server");
-
   return {
-    ...actual,
+    decryptWalletAccessToken: vi.fn((token: string) => token),
     fetchPlaidTransactions,
+    getPlaidPreviewTransactions: vi.fn((transactions) => transactions),
+    serializeWalletPlaidConnection: vi.fn((connection) => connection),
+    transactionMatchesImportStart: vi.fn(() => true),
   };
 });
 

@@ -43,9 +43,9 @@ import { TrendsChart } from "@/components/charts/trends-chart";
 import { WalletNetBalanceLineChart } from "@/components/charts/wallet-net-balance-line-chart";
 import PageHeader from "@/components/shared/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTransactionQueryState } from "@/hooks/use-transaction-query";
 
 interface InfographicsTabsProps {
-  filters: { from?: string; to?: string };
   billsEnabled: boolean;
   autonomyEnabled: boolean;
   fireEnabled: boolean;
@@ -53,7 +53,6 @@ interface InfographicsTabsProps {
 }
 
 export function InfographicsTabs({
-  filters,
   billsEnabled,
   autonomyEnabled,
   fireEnabled,
@@ -61,7 +60,12 @@ export function InfographicsTabs({
 }: InfographicsTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [queryFilters] = useTransactionQueryState();
   const [activeTab, setActiveTab] = useState(defaultTab);
+  const chartFilters = {
+    from: queryFilters.from || undefined,
+    to: queryFilters.to || undefined,
+  };
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
@@ -94,19 +98,34 @@ export function InfographicsTabs({
           <TabsContent value="autonomy">
             <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
               <div className="md:col-span-2 lg:col-span-4">
-                <AutonomyHorizonChart from={filters.from} to={filters.to} />
+                <AutonomyHorizonChart
+                  from={chartFilters.from}
+                  to={chartFilters.to}
+                />
               </div>
               <div className="md:col-span-2 lg:col-span-4">
-                <FreedomMultiplierChart from={filters.from} to={filters.to} />
+                <FreedomMultiplierChart
+                  from={chartFilters.from}
+                  to={chartFilters.to}
+                />
               </div>
               <div className="md:col-span-2 lg:col-span-4">
-                <SufficiencyRatioChart from={filters.from} to={filters.to} />
+                <SufficiencyRatioChart
+                  from={chartFilters.from}
+                  to={chartFilters.to}
+                />
               </div>
               <div className="md:col-span-2 lg:col-span-4">
-                <BurnRateDriftChart from={filters.from} to={filters.to} />
+                <BurnRateDriftChart
+                  from={chartFilters.from}
+                  to={chartFilters.to}
+                />
               </div>
               <div className="md:col-span-2 lg:col-span-4">
-                <ExplorationCapitalChart from={filters.from} to={filters.to} />
+                <ExplorationCapitalChart
+                  from={chartFilters.from}
+                  to={chartFilters.to}
+                />
               </div>
             </div>
           </TabsContent>
@@ -116,22 +135,37 @@ export function InfographicsTabs({
           <TabsContent value="fire">
             <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
               <div className="md:col-span-2 lg:col-span-4">
-                <FireTargetJustification from={filters.from} to={filters.to} />
+                <FireTargetJustification
+                  from={chartFilters.from}
+                  to={chartFilters.to}
+                />
               </div>
               <div className="md:col-span-2 lg:col-span-4">
-                <FireTargetProgressChart from={filters.from} to={filters.to} />
+                <FireTargetProgressChart
+                  from={chartFilters.from}
+                  to={chartFilters.to}
+                />
               </div>
               <div className="md:col-span-2 lg:col-span-4">
-                <FireProjectionChart from={filters.from} to={filters.to} />
+                <FireProjectionChart
+                  from={chartFilters.from}
+                  to={chartFilters.to}
+                />
               </div>
               <div className="md:col-span-2 lg:col-span-2">
-                <SavingsRateToFireChart from={filters.from} to={filters.to} />
+                <SavingsRateToFireChart
+                  from={chartFilters.from}
+                  to={chartFilters.to}
+                />
               </div>
               <div className="md:col-span-2 lg:col-span-2">
                 <PortfolioLayerChart />
               </div>
               <div className="md:col-span-2 lg:col-span-4">
-                <FireStressTestChart from={filters.from} to={filters.to} />
+                <FireStressTestChart
+                  from={chartFilters.from}
+                  to={chartFilters.to}
+                />
               </div>
             </div>
           </TabsContent>
@@ -140,13 +174,22 @@ export function InfographicsTabs({
         <TabsContent value="overview">
           <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
             <div className="md:col-span-2 lg:col-span-4">
-              <ForecastLineChart from={filters.from} to={filters.to} />
+              <ForecastLineChart
+                from={chartFilters.from}
+                to={chartFilters.to}
+              />
             </div>
             <div className="md:col-span-2 lg:col-span-4">
-              <AccumulatedAreaChart from={filters.from} to={filters.to} />
+              <AccumulatedAreaChart
+                from={chartFilters.from}
+                to={chartFilters.to}
+              />
             </div>
             <div className="md:col-span-2 lg:col-span-4">
-              <AvgSpendingVsIncomeChart from={filters.from} to={filters.to} />
+              <AvgSpendingVsIncomeChart
+                from={chartFilters.from}
+                to={chartFilters.to}
+              />
             </div>
           </div>
         </TabsContent>
@@ -155,31 +198,31 @@ export function InfographicsTabs({
           <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
             <div className="md:col-span-2 lg:col-span-4">
               <TransactionTypeDistributionChart
-                from={filters.from}
-                to={filters.to}
+                from={chartFilters.from}
+                to={chartFilters.to}
               />
             </div>
             <div className="md:col-span-2 lg:col-span-4">
               <TrendsChart
                 variant="categories"
-                from={filters.from}
-                to={filters.to}
+                from={chartFilters.from}
+                to={chartFilters.to}
                 type="expense"
               />
             </div>
             <div className="md:col-span-2 lg:col-span-4">
               <TrendsChart
                 variant="categories"
-                from={filters.from}
-                to={filters.to}
+                from={chartFilters.from}
+                to={chartFilters.to}
                 type="income"
               />
             </div>
             <div className="md:col-span-2 lg:col-span-4">
               <TrendsChart
                 variant="labels"
-                from={filters.from}
-                to={filters.to}
+                from={chartFilters.from}
+                to={chartFilters.to}
                 type="expense"
                 title="Expense Trends by Label"
               />
@@ -187,55 +230,56 @@ export function InfographicsTabs({
             <div className="md:col-span-2 lg:col-span-4">
               <TrendsChart
                 variant="labels"
-                from={filters.from}
-                to={filters.to}
+                from={chartFilters.from}
+                to={chartFilters.to}
                 type="income"
                 title="Income Trends by Label"
               />
             </div>
             <div className="md:col-span-2 lg:col-span-4">
-              <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 px-4 py-3">
-                <div className="text-sm font-semibold tracking-[0.08em] text-foreground">
+              <div className="border-border/70 bg-muted/20 rounded-2xl border border-dashed px-4 py-3">
+                <div className="text-foreground text-sm font-semibold tracking-[0.08em]">
                   Subjective Insights
                 </div>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Read labels as intention, not category, to spot drift, volatility, timing, and mismatch.
+                <p className="text-muted-foreground mt-1 text-sm">
+                  Read labels as intention, not category, to spot drift,
+                  volatility, timing, and mismatch.
                 </p>
               </div>
             </div>
             <div className="md:col-span-2 lg:col-span-4">
               <CategoryLabelHeatmapChart
-                from={filters.from}
-                to={filters.to}
+                from={chartFilters.from}
+                to={chartFilters.to}
               />
             </div>
             <div className="md:col-span-2 lg:col-span-2">
               <LabelVolatilityScatterChart
-                from={filters.from}
-                to={filters.to}
+                from={chartFilters.from}
+                to={chartFilters.to}
               />
             </div>
             <div className="md:col-span-2 lg:col-span-2">
               <LabelTimingHeatmapChart
-                from={filters.from}
-                to={filters.to}
+                from={chartFilters.from}
+                to={chartFilters.to}
               />
             </div>
             <div className="md:col-span-2 lg:col-span-4">
-              <LabelDriftChart from={filters.from} to={filters.to} />
+              <LabelDriftChart from={chartFilters.from} to={chartFilters.to} />
             </div>
             <div className="col-span-2">
               <LabelPieChart
-                from={filters.from}
-                to={filters.to}
+                from={chartFilters.from}
+                to={chartFilters.to}
                 type="expense"
                 title="Expenses by Label"
               />
             </div>
             <div className="col-span-2">
               <LabelPieChart
-                from={filters.from}
-                to={filters.to}
+                from={chartFilters.from}
+                to={chartFilters.to}
                 type="income"
                 title="Income by Label"
               />
@@ -247,20 +291,23 @@ export function InfographicsTabs({
           <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
             <div className="md:col-span-2 lg:col-span-2">
               <ExpenseConcentrationChart
-                from={filters.from}
-                to={filters.to}
+                from={chartFilters.from}
+                to={chartFilters.to}
                 topN={5}
               />
             </div>
             <div className="md:col-span-2 lg:col-span-2">
               <TransactionSizeDistributionChart
-                from={filters.from}
-                to={filters.to}
+                from={chartFilters.from}
+                to={chartFilters.to}
                 type="expense"
               />
             </div>
             <div className="md:col-span-2 lg:col-span-2">
-              <CurrencyExposureChart from={filters.from} to={filters.to} />
+              <CurrencyExposureChart
+                from={chartFilters.from}
+                to={chartFilters.to}
+              />
             </div>
           </div>
         </TabsContent>
@@ -269,52 +316,73 @@ export function InfographicsTabs({
           <TabsContent value="bills">
             <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
               <div className="md:col-span-2 lg:col-span-4">
-                <BillsHistoryChart from={filters.from} to={filters.to} />
+                <BillsHistoryChart
+                  from={chartFilters.from}
+                  to={chartFilters.to}
+                />
               </div>
               <div className="md:col-span-2 lg:col-span-4">
-                <BillDebtFlowChart from={filters.from} to={filters.to} />
+                <BillDebtFlowChart
+                  from={chartFilters.from}
+                  to={chartFilters.to}
+                />
               </div>
               <div className="md:col-span-2 lg:col-span-4">
                 <WalletNetBalanceLineChart
-                  from={filters.from}
-                  to={filters.to}
+                  from={chartFilters.from}
+                  to={chartFilters.to}
                 />
               </div>
               <div className="md:col-span-2 lg:col-span-4">
                 <RecurringVsOnetimeBillsChart
-                  from={filters.from}
-                  to={filters.to}
+                  from={chartFilters.from}
+                  to={chartFilters.to}
                 />
               </div>
               <div className="md:col-span-2 lg:col-span-4">
-                <BillPaymentTimelineChart from={filters.from} to={filters.to} />
+                <BillPaymentTimelineChart
+                  from={chartFilters.from}
+                  to={chartFilters.to}
+                />
               </div>
               <div className="md:col-span-2 lg:col-span-2">
-                <BillPaymentRateChart from={filters.from} to={filters.to} />
+                <BillPaymentRateChart
+                  from={chartFilters.from}
+                  to={chartFilters.to}
+                />
               </div>
               <div className="md:col-span-2 lg:col-span-2">
-                <BillVelocityGaugeChart from={filters.from} to={filters.to} />
+                <BillVelocityGaugeChart
+                  from={chartFilters.from}
+                  to={chartFilters.to}
+                />
               </div>
               <div className="md:col-span-2 lg:col-span-2">
                 <BillCoverageRatioChart />
               </div>
               <div className="md:col-span-2 lg:col-span-4">
                 <BillsVsDiscretionaryChart
-                  from={filters.from}
-                  to={filters.to}
+                  from={chartFilters.from}
+                  to={chartFilters.to}
                 />
               </div>
               <div className="md:col-span-2 lg:col-span-2">
-                <BillBurdenRatioChart from={filters.from} to={filters.to} />
+                <BillBurdenRatioChart
+                  from={chartFilters.from}
+                  to={chartFilters.to}
+                />
               </div>
               <div className="md:col-span-2 lg:col-span-2">
                 <ExpensePredictabilityChart
-                  from={filters.from}
-                  to={filters.to}
+                  from={chartFilters.from}
+                  to={chartFilters.to}
                 />
               </div>
               <div className="md:col-span-2 lg:col-span-4">
-                <CashFlowAfterBillsChart from={filters.from} to={filters.to} />
+                <CashFlowAfterBillsChart
+                  from={chartFilters.from}
+                  to={chartFilters.to}
+                />
               </div>
             </div>
           </TabsContent>
@@ -324,7 +392,7 @@ export function InfographicsTabs({
   );
 
   return (
-    <ChartControlsProvider from={filters.from} to={filters.to}>
+    <ChartControlsProvider from={chartFilters.from} to={chartFilters.to}>
       {content}
     </ChartControlsProvider>
   );
