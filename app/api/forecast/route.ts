@@ -460,7 +460,7 @@ export async function POST(request: NextRequest) {
 
     const result = await _computeForecast(
       scope.walletId ?? null,
-      scopedWalletIds,
+      walletId ? scopedWalletIds : requestedWalletIds,
       clampedHorizon,
       baseCurrency,
       conversionRates,

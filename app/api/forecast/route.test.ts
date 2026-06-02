@@ -289,7 +289,7 @@ describe("forecast route", () => {
     expect(mockedCreateServiceRoleClient).not.toHaveBeenCalled();
   });
 
-  it("dedupes requested aggregate wallet IDs and uses server-derived scope", async () => {
+  it("dedupes requested aggregate wallet IDs before forecasting", async () => {
     mockAuthorizedScope({
       walletId: null,
       walletIds: ["wallet-1", "wallet-2"],
@@ -319,6 +319,49 @@ describe("forecast route", () => {
       table: "wallet_monthly_balances",
       method: "in",
       args: ["wallet_id", ["wallet-1", "wallet-2"]],
+    });
+  });
+
+  it("forecasts aggregate requests with requested wallets instead of the full authorized scope", async () => {
+    mockAuthorizedScope({
+      walletId: null,
+      walletIds: ["wallet-1", "wallet-2"],
+    });
+    const serviceRole = createServiceRoleMock({
+      wallets: [
+        { id: "wallet-1", currency: "USD" },
+        { id: "wallet-2", currency: "USD" },
+      ],
+    });
+    mockedCreateServiceRoleClient.mockReturnValue(serviceRole.client as never);
+
+    const response = await POST(
+      createRequest(
+        validBody({
+          walletId: null,
+          walletIds: ["wallet-1"],
+        }),
+      ) as never,
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockedResolveWalletScope).toHaveBeenCalledWith({
+      requireActiveWorkspace: true,
+    });
+    expect(serviceRole.calls).toContainEqual({
+      table: "wallets",
+      method: "in",
+      args: ["id", ["wallet-1"]],
+    });
+    expect(serviceRole.calls).toContainEqual({
+      table: "wallet_monthly_balances",
+      method: "in",
+      args: ["wallet_id", ["wallet-1"]],
+    });
+    expect(serviceRole.calls).toContainEqual({
+      table: "monthly_stats",
+      method: "in",
+      args: ["wallet_id", ["wallet-1"]],
     });
   });
 

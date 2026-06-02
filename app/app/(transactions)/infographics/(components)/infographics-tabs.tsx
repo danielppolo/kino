@@ -43,7 +43,7 @@ import { TrendsChart } from "@/components/charts/trends-chart";
 import { WalletNetBalanceLineChart } from "@/components/charts/wallet-net-balance-line-chart";
 import PageHeader from "@/components/shared/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useTransactionQueryState } from "@/hooks/use-transaction-query";
+import { useLiveTransactionDateFilters } from "@/hooks/use-live-transaction-date-filters";
 
 interface InfographicsTabsProps {
   billsEnabled: boolean;
@@ -60,12 +60,8 @@ export function InfographicsTabs({
 }: InfographicsTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [queryFilters] = useTransactionQueryState();
+  const chartFilters = useLiveTransactionDateFilters();
   const [activeTab, setActiveTab] = useState(defaultTab);
-  const chartFilters = {
-    from: queryFilters.from || undefined,
-    to: queryFilters.to || undefined,
-  };
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);

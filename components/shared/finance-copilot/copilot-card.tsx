@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  useTransition,
-} from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import {
   AlertCircle,
   ArrowUpRight,
@@ -70,12 +65,25 @@ export function FinanceCopilotCard({
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [responseId, setResponseId] = useState<string | null>(null);
-  const [briefingSummary, setBriefingSummary] = useState<BriefingSummary | null>(null);
+  const [briefingSummary, setBriefingSummary] =
+    useState<BriefingSummary | null>(null);
   const [latestReply, setLatestReply] = useState<AssistantReply | null>(null);
   const [activeIntent, setActiveIntent] = useState<ChatIntent | null>(null);
   const [isPending, startTransition] = useTransition();
   const threadRef = useRef<HTMLDivElement | null>(null);
+  const scopeKey = JSON.stringify([walletId ?? null, from ?? null, to ?? null]);
+  const scopeKeyRef = useRef(scopeKey);
 
+  useEffect(() => {
+    scopeKeyRef.current = scopeKey;
+    setMessages([]);
+    setDraft("");
+    setError(null);
+    setResponseId(null);
+    setBriefingSummary(null);
+    setLatestReply(null);
+    setActiveIntent(null);
+  }, [scopeKey]);
 
   useEffect(() => {
     const container = threadRef.current;
@@ -105,6 +113,8 @@ export function FinanceCopilotCard({
     setActiveIntent(detectClientIntent(trimmed));
 
     startTransition(async () => {
+      const requestScopeKey = scopeKey;
+
       try {
         const response = await fetch("/api/ai/finance-chat", {
           method: "POST",
@@ -127,6 +137,10 @@ export function FinanceCopilotCard({
           throw new Error(payload?.error || "Finance copilot request failed.");
         }
 
+        if (scopeKeyRef.current !== requestScopeKey) {
+          return;
+        }
+
         setResponseId(
           typeof payload?.responseId === "string" ? payload.responseId : null,
         );
@@ -142,10 +156,17 @@ export function FinanceCopilotCard({
           },
         ]);
       } catch (sendError) {
+        if (scopeKeyRef.current !== requestScopeKey) {
+          return;
+        }
+
         setMessages((current) =>
           current.filter(
             (_, index) =>
-              !(index === current.length - 1 && current[index]?.content === trimmed),
+              !(
+                index === current.length - 1 &&
+                current[index]?.content === trimmed
+              ),
           ),
         );
         setError(
@@ -159,7 +180,7 @@ export function FinanceCopilotCard({
 
   return (
     <TooltipProvider delayDuration={150}>
-      <div className="grid h-full min-h-0 gap-0 bg-background xl:grid-cols-[minmax(0,1.6fr)_380px]">
+      <div className="bg-background grid h-full min-h-0 gap-0 xl:grid-cols-[minmax(0,1.6fr)_380px]">
         <div className="flex min-h-0 flex-col">
           <div
             ref={threadRef}
@@ -169,7 +190,7 @@ export function FinanceCopilotCard({
               <div className="flex h-full flex-col items-center justify-center gap-6 py-8">
                 <EmptyState
                   title="Finance Copilot"
-                  variant="compact" 
+                  variant="compact"
                   description={`Decision-first advisory chat for ${scopeLabel}`}
                 />
               </div>
@@ -192,7 +213,7 @@ export function FinanceCopilotCard({
                           className={cn(
                             "rounded-3xl px-4 py-3",
                             isUser
-                              ? "rounded-br-md border-0 bg-primary text-primary-foreground shadow-none"
+                              ? "bg-primary text-primary-foreground rounded-br-md border-0 shadow-none"
                               : cn(
                                   "rounded-bl-md",
                                   intentAccent(reply?.intent ?? "general"),
@@ -211,7 +232,9 @@ export function FinanceCopilotCard({
                                 <TooltipTrigger asChild>
                                   <div className="inline-flex">
                                     <Badge
-                                      variant={confidenceVariant(reply.confidence)}
+                                      variant={confidenceVariant(
+                                        reply.confidence,
+                                      )}
                                       className="rounded-full text-[10px]"
                                     >
                                       {reply.confidence} confidence
@@ -227,7 +250,7 @@ export function FinanceCopilotCard({
                           ) : null}
 
                           {isUser ? (
-                            <Text className="whitespace-pre-wrap text-sm leading-6 text-primary-foreground">
+                            <Text className="text-primary-foreground text-sm leading-6 whitespace-pre-wrap">
                               {message.content}
                             </Text>
                           ) : reply ? (
@@ -239,7 +262,9 @@ export function FinanceCopilotCard({
                                 className="border-primary/20 bg-primary/5 text-foreground"
                                 badge={
                                   <Badge
-                                    variant={confidenceVariant(reply.confidence)}
+                                    variant={confidenceVariant(
+                                      reply.confidence,
+                                    )}
                                     className="rounded-full px-2.5 py-1 text-[10px]"
                                   >
                                     {reply.confidence} confidence
@@ -287,7 +312,7 @@ export function FinanceCopilotCard({
                               />
                             </div>
                           ) : (
-                            <Text className="whitespace-pre-wrap text-sm leading-6">
+                            <Text className="text-sm leading-6 whitespace-pre-wrap">
                               {message.content}
                             </Text>
                           )}
@@ -326,7 +351,10 @@ export function FinanceCopilotCard({
                             ) : null}
 
                             {reply.risks.length > 0 ? (
-                              <RiskStack title="Watch-outs" items={reply.risks} />
+                              <RiskStack
+                                title="Watch-outs"
+                                items={reply.risks}
+                              />
                             ) : null}
 
                             {reply.followUpQuestions.length > 0 ? (
@@ -358,9 +386,9 @@ export function FinanceCopilotCard({
 
                 {isPending ? (
                   <div className="flex w-full justify-start gap-3">
-                    <Card className="w-full max-w-2xl rounded-3xl rounded-bl-md border-border/70 bg-muted/45 px-4 py-3">
+                    <Card className="border-border/70 bg-muted/45 w-full max-w-2xl rounded-3xl rounded-bl-md px-4 py-3">
                       <div className="mb-3 flex items-center gap-2 text-sm font-medium">
-                        <Loader2 className="size-4 animate-spin text-primary" />
+                        <Loader2 className="text-primary size-4 animate-spin" />
                         Copilot is {intentLoadingCopy(activeIntent)}
                       </div>
                       <div className="space-y-2">
@@ -375,7 +403,7 @@ export function FinanceCopilotCard({
             )}
           </div>
 
-          <div className="border-t border-border/70 bg-background/95 px-4 py-4 backdrop-blur md:px-6">
+          <div className="border-border/70 bg-background/95 border-t px-4 py-4 backdrop-blur md:px-6">
             <div className="mx-auto max-w-4xl space-y-3">
               <div className="flex items-end gap-3">
                 <Textarea
@@ -404,13 +432,15 @@ export function FinanceCopilotCard({
           </div>
         </div>
 
-        <aside className="hidden border-l border-border/70 bg-muted/20 xl:flex xl:min-h-0 xl:flex-col">
+        <aside className="border-border/70 bg-muted/20 hidden border-l xl:flex xl:min-h-0 xl:flex-col">
           <div className="space-y-5 overflow-y-auto p-5">
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <Gauge className="size-4 text-primary" />
-                  <Text strong className="text-sm">Bottom Line</Text>
+                  <Gauge className="text-primary size-4" />
+                  <Text strong className="text-sm">
+                    Bottom Line
+                  </Text>
                 </div>
                 {latestReply ? (
                   <Badge
@@ -421,7 +451,7 @@ export function FinanceCopilotCard({
                   </Badge>
                 ) : null}
               </div>
-              <Card className="rounded-2xl border-border/70 bg-background/70">
+              <Card className="border-border/70 bg-background/70 rounded-2xl">
                 <CardContent className="space-y-3 p-4">
                   <Text className="text-sm leading-7">
                     {latestReply?.summary ||
@@ -429,10 +459,16 @@ export function FinanceCopilotCard({
                   </Text>
                   {latestReply ? (
                     <div className="flex flex-wrap gap-2">
-                      <Badge variant="outline" className="rounded-full px-3 py-1">
+                      <Badge
+                        variant="outline"
+                        className="rounded-full px-3 py-1"
+                      >
                         {intentLabel(latestReply.intent)}
                       </Badge>
-                      <Badge variant="secondary" className="rounded-full px-3 py-1">
+                      <Badge
+                        variant="secondary"
+                        className="rounded-full px-3 py-1"
+                      >
                         {walletId ? "Wallet scope" : "Workspace scope"}
                       </Badge>
                     </div>
@@ -443,10 +479,12 @@ export function FinanceCopilotCard({
 
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <CalendarRange className="size-4 text-primary" />
-                <Text strong className="text-sm">Scope</Text>
+                <CalendarRange className="text-primary size-4" />
+                <Text strong className="text-sm">
+                  Scope
+                </Text>
               </div>
-              <Card className="rounded-2xl border-border/70 bg-background/70">
+              <Card className="border-border/70 bg-background/70 rounded-2xl">
                 <CardContent className="space-y-2 p-4">
                   <Text className="text-sm leading-6">
                     {briefingSummary?.scopeLabel || scopeLabel}
@@ -494,10 +532,12 @@ export function FinanceCopilotCard({
 
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <Landmark className="size-4 text-primary" />
-                <Text strong className="text-sm">Assets</Text>
+                <Landmark className="text-primary size-4" />
+                <Text strong className="text-sm">
+                  Assets
+                </Text>
               </div>
-              <Card className="rounded-2xl border-border/70 bg-background/70">
+              <Card className="border-border/70 bg-background/70 rounded-2xl">
                 <CardContent className="space-y-3 p-4">
                   {briefingSummary ? (
                     <>
@@ -533,10 +573,12 @@ export function FinanceCopilotCard({
 
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <Scale className="size-4 text-primary" />
-                <Text strong className="text-sm">Decision Factors</Text>
+                <Scale className="text-primary size-4" />
+                <Text strong className="text-sm">
+                  Decision Factors
+                </Text>
               </div>
-              <Card className="rounded-2xl border-border/70 bg-background/70">
+              <Card className="border-border/70 bg-background/70 rounded-2xl">
                 <CardContent className="space-y-3 p-4">
                   {latestReply?.decision ? (
                     <div className="space-y-3">
@@ -590,18 +632,23 @@ export function FinanceCopilotCard({
 
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <BrainCircuit className="size-4 text-primary" />
-                <Text strong className="text-sm">Evidence</Text>
+                <BrainCircuit className="text-primary size-4" />
+                <Text strong className="text-sm">
+                  Evidence
+                </Text>
               </div>
               <div className="space-y-2">
                 {latestReply?.evidence.length ? (
                   latestReply.evidence.map((item) => (
                     <Card
                       key={`${item.label}-${item.value}`}
-                      className="rounded-2xl border-border/70 bg-background/70"
+                      className="border-border/70 bg-background/70 rounded-2xl"
                     >
                       <CardContent className="p-4">
-                        <Text strong className="text-xs uppercase text-muted-foreground">
+                        <Text
+                          strong
+                          className="text-muted-foreground text-xs uppercase"
+                        >
                           {item.label}
                         </Text>
                         <Text className="mt-1 text-sm">{item.value}</Text>
@@ -614,7 +661,7 @@ export function FinanceCopilotCard({
                 ) : (
                   <EmptyState
                     title="No Evidence Yet"
-                    variant="compact" 
+                    variant="compact"
                     description="Evidence cards will appear here after the first answer."
                   />
                 )}
@@ -623,10 +670,12 @@ export function FinanceCopilotCard({
 
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <FileWarning className="size-4 text-primary" />
-                <Text strong className="text-sm">Watch-outs</Text>
+                <FileWarning className="text-primary size-4" />
+                <Text strong className="text-sm">
+                  Watch-outs
+                </Text>
               </div>
-              <Card className="rounded-3xl border-border/70 bg-background/70">
+              <Card className="border-border/70 bg-background/70 rounded-3xl">
                 <CardContent className="space-y-4 p-4">
                   <RiskStack
                     items={latestReply?.risks ?? []}

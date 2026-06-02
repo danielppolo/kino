@@ -24,7 +24,7 @@ import { TransactionSizeDistributionChart } from "@/components/charts/transactio
 import { TransactionTypeDistributionChart } from "@/components/charts/transaction-type-distribution-chart";
 import { TrendsChart } from "@/components/charts/trends-chart";
 import { WalletNetBalanceLineChart } from "@/components/charts/wallet-net-balance-line-chart";
-import { useTransactionQueryState } from "@/hooks/use-transaction-query";
+import { useLiveTransactionDateFilters } from "@/hooks/use-live-transaction-date-filters";
 
 interface WalletInfographicsGridProps {
   billsEnabled: boolean;
@@ -35,11 +35,7 @@ export function WalletInfographicsGrid({
   billsEnabled,
   walletId,
 }: WalletInfographicsGridProps) {
-  const [queryFilters] = useTransactionQueryState();
-  const chartFilters = {
-    from: queryFilters.from || undefined,
-    to: queryFilters.to || undefined,
-  };
+  const chartFilters = useLiveTransactionDateFilters();
 
   return (
     <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3">
