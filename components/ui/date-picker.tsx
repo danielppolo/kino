@@ -1,20 +1,11 @@
 "use client";
 
 import * as React from "react";
-import {
-  addDays,
-  addMonths,
-  format,
-  parse,
-  subDays,
-  subMonths,
-} from "date-fns";
+import { addDays, format, parse, subDays } from "date-fns";
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -52,23 +43,9 @@ function DaterPicker({
     }
   };
 
-  const handlePreviousMonth = () => {
-    if (date) {
-      const previousDate = subMonths(date, 1);
-      onChange(format(previousDate, "yyyy-MM-dd"));
-    }
-  };
-
   const handleNextDay = () => {
     if (date) {
       const nextDate = addDays(date, 1);
-      onChange(format(nextDate, "yyyy-MM-dd"));
-    }
-  };
-
-  const handleNextMonth = () => {
-    if (date) {
-      const nextDate = addMonths(date, 1);
       onChange(format(nextDate, "yyyy-MM-dd"));
     }
   };
@@ -85,17 +62,6 @@ function DaterPicker({
         type="button"
       >
         <ChevronLeft className="size-4" />
-      </Button>
-      <Button
-        variant={variant}
-        size="icon"
-        className="h-10 w-10 shrink"
-        onClick={handlePreviousMonth}
-        disabled={!date}
-        aria-label="Previous month"
-        type="button"
-      >
-        <ChevronsLeft className="size-4" />
       </Button>
       <Popover open={open} onOpenChange={setOpen} modal>
         <PopoverTrigger asChild>
@@ -125,17 +91,6 @@ function DaterPicker({
           />
         </PopoverContent>
       </Popover>
-      <Button
-        variant={variant}
-        size="icon"
-        className="h-10 w-10 shrink"
-        onClick={handleNextMonth}
-        disabled={!date}
-        aria-label="Next month"
-        type="button"
-      >
-        <ChevronsRight className="size-4" />
-      </Button>
       <Button
         variant={variant}
         size="icon"
