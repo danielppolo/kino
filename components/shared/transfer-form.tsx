@@ -11,7 +11,6 @@ import { AmountInput } from "./amount-input";
 import { DescriptionInput } from "./description-input";
 import WalletPicker from "./wallet-picker";
 
-import { createTransferTransaction } from "@/actions/create-transfer";
 import { EntityForm } from "@/components/shared/entity-form";
 import {
   FormControl,
@@ -21,8 +20,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useWallets } from "@/contexts/settings-context";
+import {
+  type TransferTransactionValues,
+  useCreateTransferTransaction,
+} from "@/hooks/use-create-transfer-transaction";
 import { invalidateWorkspaceQueries } from "@/utils/query-cache";
-import { Database } from "@/utils/supabase/database.types";
 import { deleteTransfer, updateTransfer } from "@/utils/supabase/mutations";
 import { Transaction } from "@/utils/supabase/types";
 
@@ -36,14 +38,7 @@ interface TransferFormProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-type TransferFormValues = Omit<
-  Database["public"]["Tables"]["transactions"]["Insert"],
-  "amount_cents" | "wallet_id"
-> & {
-  sender_wallet_id: string;
-  receiver_wallet_id: string;
-  amount: number;
-};
+type TransferFormValues = TransferTransactionValues;
 
 type TransferTransaction = Transaction & {
   transfer_id?: string | null;
@@ -64,25 +59,12 @@ const TransferForm = ({
   const currency = walletMap.get(walletId)?.currency ?? "USD";
   const isEdit = !!initialData;
   const queryClient = useQueryClient();
-
-  const createMutation = useMutation({
-    mutationFn: async (values: TransferFormValues) => {
-      const { sender_wallet_id, receiver_wallet_id, ...transaction } = values;
-      const { error } = await createTransferTransaction(
-        { ...transaction },
-        sender_wallet_id,
-        receiver_wallet_id,
-      );
-      if (error) throw new Error(error);
-    },
-    onSuccess: () => {
-      invalidateWorkspaceQueries(queryClient);
-    },
-  });
+  const createMutation = useCreateTransferTransaction();
 
   const updateMutation = useMutation({
     mutationFn: async (values: TransferFormValues) => {
-      const transferId = (initialData as TransferTransaction | undefined)?.transfer_id;
+      const transferId = (initialData as TransferTransaction | undefined)
+        ?.transfer_id;
       if (!transferId) throw new Error("No transfer ID provided");
       await updateTransfer(transferId, {
         description: values.description ?? undefined,
@@ -96,7 +78,8 @@ const TransferForm = ({
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const transferId = (initialData as TransferTransaction | undefined)?.transfer_id;
+      const transferId = (initialData as TransferTransaction | undefined)
+        ?.transfer_id;
       if (!transferId) throw new Error("No transfer ID provided");
       await deleteTransfer(transferId);
     },
