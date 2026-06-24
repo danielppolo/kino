@@ -36,6 +36,7 @@ import BulkTransactionEditForm from "./bulk-transaction-edit-form";
 import EmptyState from "./empty-state";
 import RowGroupHeader, { RowGroupHeaderLoading } from "./row-group-header";
 import TransactionRow from "./transaction-row";
+import TransactionRowTransferMenu from "./transaction-row-transfer-menu";
 
 import { useWallets } from "@/contexts/settings-context";
 import { useTransactionForm } from "@/contexts/transaction-form-context";
@@ -525,6 +526,7 @@ export default function TransactionList() {
                           <Copy className="mr-2 size-4" />
                           Duplicate
                         </ContextMenuItem>
+                        <TransactionRowTransferMenu transaction={transaction} />
                         <ContextMenuSeparator />
                         <ContextMenuItem
                           onClick={() => {

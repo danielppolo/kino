@@ -4,7 +4,6 @@ import SelectableRow from "./selectable-row";
 import TagBadges from "./tag-badges";
 import TransactionAmount from "./transaction-amount";
 import TransactionDescription from "./transaction-description";
-import TransactionRowTransferButton from "./transaction-row-transfer-button";
 
 import { TransactionList } from "@/utils/supabase/types";
 
@@ -35,9 +34,8 @@ export function TransactionRow({
       active={active}
     >
       <div className="shrink grow truncate">
-        <TransactionDescription transaction={transaction as any} />
+        <TransactionDescription transaction={transaction} />
       </div>
-      <TransactionRowTransferButton transaction={transaction} />
       <div className="shrink-0">
         <TagBadges transaction={transaction} />
       </div>
