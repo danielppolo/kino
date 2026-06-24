@@ -1,11 +1,20 @@
 "use client";
 
 import * as React from "react";
-import { addDays, format, parse, subDays } from "date-fns";
+import {
+  addDays,
+  addMonths,
+  format,
+  parse,
+  subDays,
+  subMonths,
+} from "date-fns";
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -43,9 +52,23 @@ function DaterPicker({
     }
   };
 
+  const handlePreviousMonth = () => {
+    if (date) {
+      const previousDate = subMonths(date, 1);
+      onChange(format(previousDate, "yyyy-MM-dd"));
+    }
+  };
+
   const handleNextDay = () => {
     if (date) {
       const nextDate = addDays(date, 1);
+      onChange(format(nextDate, "yyyy-MM-dd"));
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (date) {
+      const nextDate = addMonths(date, 1);
       onChange(format(nextDate, "yyyy-MM-dd"));
     }
   };
@@ -55,13 +78,24 @@ function DaterPicker({
       <Button
         variant={variant}
         size="icon"
-        className="h-9 w-9"
+        className="size-8 shrink-0"
+        onClick={handlePreviousMonth}
+        disabled={!date}
+        aria-label="Previous month"
+        type="button"
+      >
+        <ChevronsLeft className="size-4" />
+      </Button>
+      <Button
+        variant={variant}
+        size="icon"
+        className="size-8 shrink-0"
         onClick={handlePreviousDay}
         disabled={!date}
         aria-label="Previous day"
         type="button"
       >
-        <ChevronLeft className="h-4 w-4" />
+        <ChevronLeft className="size-4" />
       </Button>
       <Popover open={open} onOpenChange={setOpen} modal>
         <PopoverTrigger asChild>
@@ -90,13 +124,24 @@ function DaterPicker({
       <Button
         variant={variant}
         size="icon"
-        className="h-9 w-9"
+        className="size-8 shrink-0"
         onClick={handleNextDay}
         disabled={!date}
         aria-label="Next day"
         type="button"
       >
-        <ChevronRight className="h-4 w-4" />
+        <ChevronRight className="size-4" />
+      </Button>
+      <Button
+        variant={variant}
+        size="icon"
+        className="size-8 shrink-0"
+        onClick={handleNextMonth}
+        disabled={!date}
+        aria-label="Next month"
+        type="button"
+      >
+        <ChevronsRight className="size-4" />
       </Button>
     </div>
   );
