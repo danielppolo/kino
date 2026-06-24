@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { WalletCards } from "lucide-react";
 import { toast } from "sonner";
 
 import WalletPicker from "./wallet-picker";
@@ -25,8 +24,14 @@ export default function TransactionRowTransferButton({
   const currency = transaction.currency;
   const amountCents = transaction.amount_cents;
   const date = transaction.date;
+  const isEligibleIncome =
+    transaction.type === "income" &&
+    typeof amountCents === "number" &&
+    amountCents > 0 &&
+    !transaction.transfer_id &&
+    !transaction.transfer_wallet_id;
 
-  if (!sourceWalletId || !currency || !amountCents || !date) {
+  if (!isEligibleIncome || !sourceWalletId || !currency || !date) {
     return null;
   }
 
@@ -69,7 +74,7 @@ export default function TransactionRowTransferButton({
 
   return (
     <div
-      className="w-0 shrink-0 overflow-hidden opacity-0 transition-all group-hover:w-[116px] group-hover:opacity-100 focus-within:w-[116px] focus-within:opacity-100"
+      className="w-0 shrink-0 overflow-hidden opacity-0 transition-all group-hover:w-[72px] group-hover:opacity-100 focus-within:w-[72px] focus-within:opacity-100"
       onClick={(event) => event.stopPropagation()}
     >
       <WalletPicker
@@ -80,8 +85,7 @@ export default function TransactionRowTransferButton({
         size="sm"
         variant="secondary"
         placeholder="Transfer"
-        icon={<WalletCards className="size-3" />}
-        className="h-[22px] w-[116px] px-2 text-xs font-medium"
+        className="h-[22px] w-[72px] px-2.5 py-0.5 text-xs font-semibold uppercase"
       />
     </div>
   );
