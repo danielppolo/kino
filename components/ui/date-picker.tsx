@@ -74,22 +74,11 @@ function DaterPicker({
   };
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex w-full min-w-0 items-center gap-1">
       <Button
         variant={variant}
         size="icon"
-        className="size-8 shrink-0"
-        onClick={handlePreviousMonth}
-        disabled={!date}
-        aria-label="Previous month"
-        type="button"
-      >
-        <ChevronsLeft className="size-4" />
-      </Button>
-      <Button
-        variant={variant}
-        size="icon"
-        className="size-8 shrink-0"
+        className="h-10 w-10 shrink"
         onClick={handlePreviousDay}
         disabled={!date}
         aria-label="Previous day"
@@ -97,18 +86,33 @@ function DaterPicker({
       >
         <ChevronLeft className="size-4" />
       </Button>
+      <Button
+        variant={variant}
+        size="icon"
+        className="h-10 w-10 shrink"
+        onClick={handlePreviousMonth}
+        disabled={!date}
+        aria-label="Previous month"
+        type="button"
+      >
+        <ChevronsLeft className="size-4" />
+      </Button>
       <Popover open={open} onOpenChange={setOpen} modal>
         <PopoverTrigger asChild>
           <Button
             variant={variant}
             className={cn(
-              "w-full grow text-left font-normal",
+              "min-w-0 flex-1 justify-between text-left font-normal",
               "text-muted-foreground",
               className,
             )}
           >
-            {date ? format(date, "PP") : <span>Pick a date</span>}
-            {variant === "outline" && <CalendarIcon className="ml-2 h-4 w-4" />}
+            <span className="truncate">
+              {date ? format(date, "PP") : "Pick a date"}
+            </span>
+            {variant === "outline" && (
+              <CalendarIcon className="ml-2 size-4 shrink-0" />
+            )}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-0" align="start">
@@ -124,24 +128,24 @@ function DaterPicker({
       <Button
         variant={variant}
         size="icon"
-        className="size-8 shrink-0"
-        onClick={handleNextDay}
-        disabled={!date}
-        aria-label="Next day"
-        type="button"
-      >
-        <ChevronRight className="size-4" />
-      </Button>
-      <Button
-        variant={variant}
-        size="icon"
-        className="size-8 shrink-0"
+        className="h-10 w-10 shrink"
         onClick={handleNextMonth}
         disabled={!date}
         aria-label="Next month"
         type="button"
       >
         <ChevronsRight className="size-4" />
+      </Button>
+      <Button
+        variant={variant}
+        size="icon"
+        className="h-10 w-10 shrink"
+        onClick={handleNextDay}
+        disabled={!date}
+        aria-label="Next day"
+        type="button"
+      >
+        <ChevronRight className="size-4" />
       </Button>
     </div>
   );
