@@ -7,6 +7,11 @@ import { format } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import DaterPicker from "../ui/date-picker";
+import {
+  type AmountFormValue,
+  getAmountFormValue,
+  normalizeAmountFormValue,
+} from "./amount-form-value";
 import { AmountInput } from "./amount-input";
 import { DescriptionInput } from "./description-input";
 import WalletPicker from "./wallet-picker";
@@ -38,7 +43,9 @@ interface TransferFormProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-type TransferFormValues = TransferTransactionValues;
+type TransferFormValues = Omit<TransferTransactionValues, "amount"> & {
+  amount: AmountFormValue;
+};
 
 type TransferTransaction = Transaction & {
   transfer_id?: string | null;
@@ -62,7 +69,7 @@ const TransferForm = ({
   const createMutation = useCreateTransferTransaction();
 
   const updateMutation = useMutation({
-    mutationFn: async (values: TransferFormValues) => {
+    mutationFn: async (values: TransferTransactionValues) => {
       const transferId = (initialData as TransferTransaction | undefined)
         ?.transfer_id;
       if (!transferId) throw new Error("No transfer ID provided");
@@ -95,7 +102,9 @@ const TransferForm = ({
     date: initialData?.date ?? date,
     currency: initialData?.currency ?? currency,
     description: initialData?.description ?? undefined,
-    amount: initialData ? Math.abs(initialData.amount_cents) / 100 : 0,
+    amount: getAmountFormValue(
+      initialData ? Math.abs(initialData.amount_cents) / 100 : undefined,
+    ),
     category_id:
       initialData?.category_id ??
       process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID!,
@@ -103,7 +112,10 @@ const TransferForm = ({
   };
 
   const handleSubmit = async (data: TransferFormValues) => {
-    const normalizedData = { ...data, amount: Math.abs(data.amount) };
+    const normalizedData: TransferTransactionValues = {
+      ...data,
+      amount: Math.abs(normalizeAmountFormValue(data.amount)),
+    };
 
     if (isEdit) {
       try {
@@ -122,19 +134,21 @@ const TransferForm = ({
       if (addAnother) {
         // Reset all fields except date, using fresh default values
         const prevDate = normalizedData.date;
+        const resetValues: TransferFormValues = {
+          type: type,
+          sender_wallet_id: walletId,
+          receiver_wallet_id: "",
+          date: prevDate,
+          currency: currency,
+          description: undefined,
+          amount: "",
+          category_id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID!,
+          label_id: "",
+        };
+
         return {
           error: undefined,
-          resetValues: {
-            type: type,
-            sender_wallet_id: walletId,
-            receiver_wallet_id: "",
-            date: prevDate,
-            currency: currency,
-            description: undefined,
-            amount: 0,
-            category_id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID!,
-            label_id: "",
-          },
+          resetValues,
         };
       }
 
@@ -156,7 +170,7 @@ const TransferForm = ({
     date: transaction.date,
     currency: transaction.currency,
     description: transaction.description ?? undefined,
-    amount: Math.abs(transaction.amount_cents) / 100,
+    amount: getAmountFormValue(Math.abs(transaction.amount_cents) / 100),
     category_id: transaction.category_id,
     label_id: transaction.label_id ?? "",
   });

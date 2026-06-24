@@ -8,6 +8,11 @@ import { v4 as randomUUID } from "uuid";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import DaterPicker from "../ui/date-picker";
+import {
+  type AmountFormValue,
+  getAmountFormValue,
+  normalizeAmountFormValue,
+} from "./amount-form-value";
 import { AmountInput } from "./amount-input";
 import BillCombobox from "./bill-combobox";
 import { DescriptionInput } from "./description-input";
@@ -57,7 +62,7 @@ interface ExpenseIncomeFormProps {
 
 type ExpenseIncomeFormValues = {
   id?: string;
-  amount: number;
+  amount: AmountFormValue;
   type: "income" | "expense";
   date: string;
   description?: string;
@@ -67,6 +72,10 @@ type ExpenseIncomeFormValues = {
   currency: string;
   tags?: string[];
   bill_id?: string;
+};
+
+type ExpenseIncomeMutationValues = Omit<ExpenseIncomeFormValues, "amount"> & {
+  amount: number;
 };
 
 const ExpenseIncomeForm = ({
@@ -96,7 +105,7 @@ const ExpenseIncomeForm = ({
   const { mutateAsync, isPending } = useMutation<
     { data: Transaction[] },
     Error,
-    ExpenseIncomeFormValues,
+    ExpenseIncomeMutationValues,
     {
       previousData?: InfiniteTransactionData;
       optimisticTransaction: TransactionList;
@@ -283,11 +292,13 @@ const ExpenseIncomeForm = ({
     description: "",
     category_id: "",
     label_id: "",
-    amount: initialData
-      ? Math.abs(initialData.amount_cents) / 100
-      : billPrefill
-        ? billPrefill.amount / 100
-        : 0,
+    amount: getAmountFormValue(
+      initialData
+        ? Math.abs(initialData.amount_cents) / 100
+        : billPrefill
+          ? billPrefill.amount / 100
+          : undefined,
+    ),
     tags: initialData?.tags ?? [],
     bill_id: billPrefill?.billId ?? "",
   };
@@ -299,7 +310,12 @@ const ExpenseIncomeForm = ({
       const originalAmount = initialData
         ? Math.abs(initialData.amount_cents) / 100
         : 0;
-      const amountChanged = isEdit && values.amount !== originalAmount;
+      const amount = normalizeAmountFormValue(values.amount);
+      const mutationValues: ExpenseIncomeMutationValues = {
+        ...values,
+        amount,
+      };
+      const amountChanged = isEdit && amount !== originalAmount;
 
       // IMPORTANT: If editing and amount hasn't changed, preserve existing bill_payments
       // This prevents losing bill associations when editing other transaction fields
@@ -313,8 +329,8 @@ const ExpenseIncomeForm = ({
         }
       }
 
-      const result = await mutateAsync(values);
-      const transactionId = result?.data?.[0]?.id ?? values.id;
+      const result = await mutateAsync(mutationValues);
+      const transactionId = result?.data?.[0]?.id ?? mutationValues.id;
 
       // Handle bill linking
       if (transactionId) {
@@ -394,7 +410,7 @@ const ExpenseIncomeForm = ({
     transaction: Transaction,
   ): ExpenseIncomeFormValues => ({
     id: transaction.id,
-    amount: Math.abs(transaction.amount_cents) / 100,
+    amount: getAmountFormValue(Math.abs(transaction.amount_cents) / 100),
     type: transaction.type as "income" | "expense",
     date: transaction.date,
     description: transaction.description ?? undefined,
@@ -411,10 +427,11 @@ const ExpenseIncomeForm = ({
   });
 
   const handleRepeat = async (values: ExpenseIncomeFormValues) => {
-    const repeatValues: ExpenseIncomeFormValues = {
+    const repeatValues: ExpenseIncomeMutationValues = {
       ...values,
       id: undefined,
       date: format(Date.now(), "yyyy-MM-dd"),
+      amount: normalizeAmountFormValue(values.amount),
     };
 
     try {
@@ -450,6 +467,10 @@ const ExpenseIncomeForm = ({
     >
       <FormField
         name="amount"
+        rules={{
+          required: "Amount is required",
+          min: { value: 0.01, message: "Amount must be positive" },
+        }}
         render={({ field }) => (
           <FormItem>
             <FormControl>
