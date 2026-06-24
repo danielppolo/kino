@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { addDays, format, parse, subDays } from "date-fns";
+import { format, parse } from "date-fns";
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -9,7 +9,9 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { Calendar } from "@/components/ui/calendar";
+import { getAdjacentDateValue } from "@/components/ui/date-picker-utils";
 import {
   Popover,
   PopoverContent,
@@ -36,27 +38,22 @@ function DaterPicker({
     setOpen(false);
   };
 
-  const handlePreviousDay = () => {
-    if (date) {
-      const previousDate = subDays(date, 1);
-      onChange(format(previousDate, "yyyy-MM-dd"));
-    }
-  };
-
-  const handleNextDay = () => {
-    if (date) {
-      const nextDate = addDays(date, 1);
-      onChange(format(nextDate, "yyyy-MM-dd"));
+  const handleAdjacentDate = (
+    direction: "previous" | "next",
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    if (value && date) {
+      onChange(getAdjacentDateValue(value, direction, event.shiftKey));
     }
   };
 
   return (
-    <div className="flex w-full min-w-0 items-center gap-1">
+    <ButtonGroup className="w-full min-w-0">
       <Button
         variant={variant}
         size="icon"
         className="h-10 w-10 shrink"
-        onClick={handlePreviousDay}
+        onClick={(event) => handleAdjacentDate("previous", event)}
         disabled={!date}
         aria-label="Previous day"
         type="button"
@@ -95,14 +92,14 @@ function DaterPicker({
         variant={variant}
         size="icon"
         className="h-10 w-10 shrink"
-        onClick={handleNextDay}
+        onClick={(event) => handleAdjacentDate("next", event)}
         disabled={!date}
         aria-label="Next day"
         type="button"
       >
         <ChevronRight className="size-4" />
       </Button>
-    </div>
+    </ButtonGroup>
   );
 }
 
