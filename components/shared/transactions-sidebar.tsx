@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { endOfMonth, format, startOfMonth } from "date-fns";
-import { Plus, X } from "lucide-react";
+import { Bot, Home, Plus, X } from "lucide-react";
 import Link from "next/link";
 import {
   useParams,
@@ -122,27 +122,31 @@ export function TransactionsSidebar() {
 
   return (
     <SidebarWrapper>
-      <SidebarGroup>
-        <SidebarGroupLabel>Assistant</SidebarGroupLabel>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname.includes("/copilot")}
-              >
-                <Link href={copilotHref}>
-                  Copilot
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
+      <SidebarMenu className="px-2 pt-2">
+        <SidebarMenuItem>
+          <SidebarMenuButton asChild isActive={pathname === "/app"}>
+            <Link href="/app">
+              <Home className="size-4" />
+              Home
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+        <SidebarMenuItem>
+          <SidebarMenuButton asChild isActive={pathname.includes("/copilot")}>
+            <Link href={copilotHref}>
+              <Bot className="size-4" />
+              Copilot
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
 
       <SidebarGroup>
         <SidebarGroupLabel>Views</SidebarGroupLabel>
-        <SidebarGroupAction onClick={() => setSaveViewOpen(true)} title="Save current view">
+        <SidebarGroupAction
+          onClick={() => setSaveViewOpen(true)}
+          title="Save current view"
+        >
           <Plus />
         </SidebarGroupAction>
         <SidebarGroupContent>

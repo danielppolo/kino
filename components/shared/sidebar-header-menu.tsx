@@ -1,15 +1,13 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check } from "lucide-react";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 
 import { Money } from "@/components/ui/money";
 import { LazyIcon } from "@/components/ui/icon";
 import {
   SidebarMenu,
-  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
@@ -43,7 +41,9 @@ function WorkspaceGlyph({
     );
   }
   return (
-    <span className={compact ? "text-xs font-semibold" : "text-sm font-semibold"}>
+    <span
+      className={compact ? "text-xs font-semibold" : "text-sm font-semibold"}
+    >
       {initial}
     </span>
   );
@@ -69,55 +69,17 @@ export function SidebarHeaderMenu() {
   };
 
   const workspaceName = activeWorkspace?.name || "Loading...";
-  const hasMultipleWorkspaces = workspaces.length > 1;
 
-  // Single workspace - show simple button
-  if (!hasMultipleWorkspaces) {
-    return (
-      <SidebarMenu>
-        <SidebarMenuItem>
-          <SidebarMenuButton asChild size="lg">
-            <Link href="/app/transactions">
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary font-semibold text-sidebar-primary-foreground">
-                <WorkspaceGlyph
-                  icon={activeWorkspace?.icon ?? null}
-                  name={workspaceName}
-                />
-              </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="font-display truncate">{workspaceName}</span>
-                <Money
-                  cents={totalBalance}
-                  currency={baseCurrency}
-                  as="span"
-                  className="truncate text-xs"
-                />
-                {showOwedInBalance && (
-                  <span className="text-muted-foreground text-xs">
-                    (incl. owed)
-                  </span>
-                )}
-              </div>
-            </Link>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      </SidebarMenu>
-    );
-  }
-
-  // Multiple workspaces - show dropdown
   return (
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
-          <SidebarMenuButton
-            asChild
-            size="lg"
-            className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            disabled={isLoading || isSwitching}
-          >
-            <Link href="/app/transactions">
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary font-semibold text-sidebar-primary-foreground">
+          <DropdownMenuTrigger asChild disabled={isLoading || isSwitching}>
+            <SidebarMenuButton
+              size="lg"
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            >
+              <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg font-semibold">
                 <WorkspaceGlyph
                   icon={activeWorkspace?.icon ?? null}
                   name={workspaceName}
@@ -137,15 +99,7 @@ export function SidebarHeaderMenu() {
                   </span>
                 )}
               </div>
-            </Link>
-          </SidebarMenuButton>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuAction
-              disabled={isLoading || isSwitching}
-              aria-label="Open workspace switcher"
-            >
-              <ChevronsUpDown className="size-4" />
-            </SidebarMenuAction>
+            </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
             className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
