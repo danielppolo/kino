@@ -4,6 +4,8 @@ import { decryptWalletAccessToken } from "@/utils/plaid/server";
 import { syncWalletPlaidTransactions } from "@/utils/plaid/sync";
 import { getAuthorizedWallet } from "@/utils/plaid/wallet-access";
 
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
   try {
     const { walletId, plaidSyncStartAt } = (await request.json()) as {
