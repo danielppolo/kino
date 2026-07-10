@@ -6,6 +6,24 @@ import { getAuthorizedWallet } from "@/utils/plaid/wallet-access";
 
 export const maxDuration = 60;
 
+const MANUAL_PLAID_REFRESH_LOOKBACK_DAYS = 45;
+
+function getManualRefreshFetchStartAt(importStartAt: string) {
+  const importStartDate = new Date(importStartAt);
+  const lookbackStartDate = new Date();
+  lookbackStartDate.setDate(
+    lookbackStartDate.getDate() - MANUAL_PLAID_REFRESH_LOOKBACK_DAYS,
+  );
+
+  if (Number.isNaN(importStartDate.getTime())) {
+    return lookbackStartDate.toISOString();
+  }
+
+  return new Date(
+    Math.max(importStartDate.getTime(), lookbackStartDate.getTime()),
+  ).toISOString();
+}
+
 export async function POST(request: Request) {
   try {
     const { walletId, plaidSyncStartAt } = (await request.json()) as {
@@ -85,6 +103,7 @@ export async function POST(request: Request) {
       accessToken: decryptWalletAccessToken(
         wallet.plaid_access_token_encrypted,
       ),
+      fetchStartAt: getManualRefreshFetchStartAt(effectiveImportStartAt),
       importStartAt: effectiveImportStartAt,
     });
 

@@ -81,11 +81,13 @@ export async function syncWalletPlaidTransactions({
   supabase,
   wallet,
   accessToken,
+  fetchStartAt,
   importStartAt,
 }: {
   supabase: TypedSupabaseClient;
   wallet: WalletRow;
   accessToken: string;
+  fetchStartAt?: string | null;
   importStartAt?: string | null;
 }): Promise<PlaidTransactionsResponse> {
   if (!wallet.plaid_account_id) {
@@ -96,7 +98,7 @@ export async function syncWalletPlaidTransactions({
   const transactions = await fetchPlaidTransactions({
     accessToken,
     accountId: wallet.plaid_account_id,
-    startDate: effectiveImportStartAt ?? undefined,
+    startDate: fetchStartAt ?? effectiveImportStartAt ?? undefined,
   });
 
   const importableTransactions = getUniquePlaidTransactions(
