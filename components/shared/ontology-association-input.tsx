@@ -240,9 +240,9 @@ export function OntologyAssociationInput({
 
   return (
     <div className={cn("relative", className)}>
-      <div className="border-input bg-background focus-within:ring-ring flex min-h-24 flex-wrap items-start gap-1.5 rounded-md border px-3 py-2 text-sm shadow-xs focus-within:ring-2">
+      <div className="border-input bg-background focus-within:ring-ring flex min-h-28 flex-wrap content-start items-center gap-x-1.5 gap-y-1.5 rounded-lg border px-3 py-2.5 text-sm shadow-xs transition-[border-color,box-shadow] focus-within:ring-2 focus-within:ring-offset-2">
         {!hasVisibleValue ? (
-          <span className="text-muted-foreground pointer-events-none absolute px-0.5 py-1">
+          <span className="text-muted-foreground pointer-events-none absolute px-0.5 py-0.5">
             {placeholder}
           </span>
         ) : null}
@@ -251,7 +251,7 @@ export function OntologyAssociationInput({
           token.type === "text" ? (
             <input
               aria-label="Association note text"
-              className="placeholder:text-muted-foreground min-w-32 flex-1 bg-transparent px-0.5 py-1 outline-hidden"
+              className="placeholder:text-muted-foreground min-w-24 flex-[1_1_12rem] self-center bg-transparent px-0.5 py-0.5 leading-5 outline-hidden"
               key={token.id}
               ref={(node) => {
                 if (node) {
@@ -280,7 +280,7 @@ export function OntologyAssociationInput({
           ) : (
             <span
               className={cn(
-                "inline-flex h-7 items-center gap-1 rounded-full border px-2 text-xs font-medium",
+                "inline-flex h-6 shrink-0 items-center gap-1 rounded-md border px-1.5 text-xs font-medium leading-none shadow-xs",
                 token.type === "person"
                   ? "border-blue-200 bg-blue-50 text-blue-900"
                   : "border-emerald-200 bg-emerald-50 text-emerald-900",
@@ -288,14 +288,14 @@ export function OntologyAssociationInput({
               key={`${token.type}-${token.id}-${index}`}
             >
               {token.type === "person" ? (
-                <UserRound className="size-3" />
+                <UserRound className="size-3 shrink-0" />
               ) : (
-                <MapPin className="size-3" />
+                <MapPin className="size-3 shrink-0" />
               )}
               {token.name}
               <button
                 aria-label={`Remove ${token.name}`}
-                className="rounded-full p-0.5 hover:bg-black/10"
+                className="-mr-0.5 rounded-sm p-0.5 opacity-60 transition-opacity hover:bg-black/10 hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-current"
                 type="button"
                 onClick={() => updateTokens(removeAssociationAt(tokens, index))}
               >
@@ -307,13 +307,13 @@ export function OntologyAssociationInput({
       </div>
 
       {activeMention?.query && activeMention.query.length < 2 ? (
-        <div className="bg-popover text-muted-foreground absolute z-20 mt-1 w-full rounded-md border p-2 text-sm shadow-md">
+        <div className="bg-popover text-muted-foreground absolute z-20 mt-2 w-full rounded-lg border p-2.5 text-sm shadow-md">
           Type at least 2 characters after @.
         </div>
       ) : null}
 
       {activeMention && activeMention.query.length >= 2 ? (
-        <div className="bg-popover absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-md border p-1 shadow-md">
+        <div className="bg-popover absolute z-20 mt-2 max-h-64 w-full overflow-auto rounded-lg border p-1 shadow-md">
           {isLoading ? (
             <div className="text-muted-foreground px-3 py-2 text-sm">
               Searching...
@@ -328,7 +328,7 @@ export function OntologyAssociationInput({
 
           {items.map((item) => (
             <Button
-              className="h-auto w-full justify-start gap-2 px-3 py-2"
+              className="h-auto w-full justify-start gap-2 rounded-md px-2.5 py-2 text-sm"
               key={`${item.type}-${item.id}`}
               type="button"
               variant="ghost"
