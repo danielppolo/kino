@@ -15,6 +15,7 @@ import {
   ViewGrid,
   Wallet,
 } from "iconoir-react";
+import { Workflow } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -126,6 +127,17 @@ const SettingsSidebar: React.FC = () => {
                 <Link href="/app/settings/recurrent-transactions">
                   <RefreshDouble className="size-4" />
                   Periodic transactions
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === "/app/settings/transaction-rules"}
+              >
+                <Link href="/app/settings/transaction-rules">
+                  <Workflow className="size-4" />
+                  Automations
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

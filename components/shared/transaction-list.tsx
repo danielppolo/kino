@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
-import { Copy, Download, Pencil, Trash2 } from "lucide-react";
+import { Copy, Download, Pencil, Trash2, Workflow } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -37,6 +37,7 @@ import EmptyState from "./empty-state";
 import RowGroupHeader, { RowGroupHeaderLoading } from "./row-group-header";
 import TransactionRow from "./transaction-row";
 import TransactionRowTransferMenu from "./transaction-row-transfer-menu";
+import TransactionRuleForm from "./transaction-rule-form";
 
 import { useWallets } from "@/contexts/settings-context";
 import { useTransactionForm } from "@/contexts/transaction-form-context";
@@ -74,6 +75,9 @@ export default function TransactionList() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [singleDeleteId, setSingleDeleteId] = useState<string | null>(null);
+  const [ruleFormOpen, setRuleFormOpen] = useState(false);
+  const [ruleSeedTransaction, setRuleSeedTransaction] =
+    useState<TransactionList | null>(null);
   const [activeIndex, setActiveIndex] = useState(-1);
   const queryClient = useQueryClient();
 
@@ -526,6 +530,17 @@ export default function TransactionList() {
                           <Copy className="mr-2 size-4" />
                           Duplicate
                         </ContextMenuItem>
+                        {transaction.type !== "transfer" && (
+                          <ContextMenuItem
+                            onClick={() => {
+                              setRuleSeedTransaction(transaction);
+                              setRuleFormOpen(true);
+                            }}
+                          >
+                            <Workflow className="mr-2 size-4" />
+                            Create automation rule…
+                          </ContextMenuItem>
+                        )}
                         <TransactionRowTransferMenu transaction={transaction} />
                         <ContextMenuSeparator />
                         <ContextMenuItem
@@ -585,6 +600,14 @@ export default function TransactionList() {
           </TooltipButton>
         </BulkActions>
       )}
+      <TransactionRuleForm
+        open={ruleFormOpen}
+        onOpenChange={(open) => {
+          setRuleFormOpen(open);
+          if (!open) setRuleSeedTransaction(null);
+        }}
+        seedTransaction={ruleSeedTransaction}
+      />
       <BulkTransactionEditForm
         open={bulkOpen}
         onOpenChange={setBulkOpen}

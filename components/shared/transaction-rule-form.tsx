@@ -109,28 +109,17 @@ function buildDefaultDefinition(
     };
   }
 
-  const merchant =
-    transaction.plaid_merchant_key ||
-    transaction.plaid_merchant_name ||
-    transaction.description ||
-    "";
+  const description = transaction.description ?? "";
   const conditions: TransactionRuleCondition[] = [
-    { field: "wallet_id", operator: "is", value: transaction.wallet_id ?? "" },
-    { field: "type", operator: "is", value: transaction.type ?? "expense" },
     {
-      field: transaction.plaid_merchant_key ? "merchant" : "description",
+      field: "description",
       operator: "is",
-      value: merchant,
+      value: description,
     },
     {
       field: "amount",
       operator: "is",
       value: Math.abs(transaction.amount_cents ?? 0),
-    },
-    {
-      field: "currency",
-      operator: "is",
-      value: transaction.currency ?? "USD",
     },
   ];
 
@@ -143,7 +132,7 @@ function buildDefaultDefinition(
     conditions,
     enabled: true,
     matchMode: "all",
-    name: merchant ? `${merchant} automation` : "Transaction automation",
+    name: description ? `${description} automation` : "Transaction automation",
     priority,
     stopProcessing: false,
     triggerSource: "plaid",
