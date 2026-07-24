@@ -102,6 +102,8 @@ const transactionRowFromValues = ({
   description: toNullable(values.description),
   needs_review: !transferCategoryId || !toNullable(values.label_id),
   note: null,
+  ontology_associations: [],
+  ontology_entity_ids: [],
   plaid_merchant_key: null,
   plaid_merchant_name: null,
   plaid_pending_transaction_id: null,
@@ -133,6 +135,8 @@ const transactionRowFromSaved = ({
   description: transaction.description ?? null,
   needs_review: !transaction.category_id || !transaction.label_id,
   note: transaction.note ?? null,
+  ontology_associations: [],
+  ontology_entity_ids: [],
   plaid_merchant_key: transaction.plaid_merchant_key ?? null,
   plaid_merchant_name: transaction.plaid_merchant_name ?? null,
   plaid_pending_transaction_id:

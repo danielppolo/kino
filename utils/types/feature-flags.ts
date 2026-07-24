@@ -5,6 +5,7 @@ export interface FeatureFlags {
   bills_enabled: boolean;
   infographics_autonomy_enabled: boolean;
   fire_enabled: boolean;
+  ontology_associations_enabled: boolean;
   // Future flags:
   // analytics_enabled?: boolean;
   // ai_insights_enabled?: boolean;
@@ -14,15 +15,16 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   bills_enabled: true,
   infographics_autonomy_enabled: true,
   fire_enabled: true,
+  ontology_associations_enabled: false,
 };
 
 /**
  * Type guard to ensure feature flags object is valid
  */
 export function isValidFeatureFlags(flags: unknown): flags is FeatureFlags {
-  if (typeof flags !== 'object' || flags === null) return false;
+  if (typeof flags !== "object" || flags === null) return false;
   const f = flags as Record<string, unknown>;
-  return typeof f.bills_enabled === 'boolean';
+  return typeof f.bills_enabled === "boolean";
 }
 
 /**

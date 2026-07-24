@@ -19,6 +19,7 @@ type Filters = {
   description: string;
   id: string;
   review_status: string;
+  ontology_entity_id: string;
 };
 
 function useFilters(): Filters {

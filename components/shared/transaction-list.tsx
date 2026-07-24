@@ -485,7 +485,7 @@ export default function TransactionList() {
                   );
                   return (
                     <ContextMenu
-                      key={`${transaction.id}-${transaction.amount_cents}-${transaction.description ?? ""}-${transaction.tag_ids?.join(",") ?? ""}-${transaction.category_id}-${transaction.label_id}`}
+                      key={`${transaction.id}-${transaction.amount_cents}-${transaction.description ?? ""}-${transaction.tag_ids?.join(",") ?? ""}-${transaction.category_id}-${transaction.label_id}-${transaction.ontology_entity_ids?.join(",") ?? ""}`}
                     >
                       <ContextMenuTrigger className="block w-full">
                         <TransactionRow

@@ -20,6 +20,7 @@ export const transactionQueryState = {
   min_amount: parseAsString.withDefault(""),
   max_amount: parseAsString.withDefault(""),
   review_status: parseAsString.withDefault(""),
+  ontology_entity_id: parseAsString.withDefault(""),
 };
 
 export function useTransactionQueryState() {

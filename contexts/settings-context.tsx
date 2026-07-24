@@ -9,6 +9,7 @@ import { createClient } from "@/utils/supabase/client";
 import {
   listCategories,
   listLabels,
+  listOntologyEntities,
   listRealEstateAssets,
   listTags,
   listTransactionTemplates,
@@ -18,6 +19,7 @@ import {
 import {
   Category,
   Label,
+  OntologyEntity,
   RealEstateAsset,
   Tag,
   TransactionTemplate,
@@ -35,6 +37,7 @@ export interface CurrencyConversion {
 interface SettingsContextType {
   categories: Category[];
   labels: Label[];
+  ontologyEntities: OntologyEntity[];
   tags: Tag[];
   views: View[];
   templates: TransactionTemplate[];
@@ -101,6 +104,18 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
     staleTime: 1000 * 60 * 10,
   });
 
+  const { data: ontologyEntities = [] } = useQuery<OntologyEntity[]>({
+    queryKey: ["ontology-entities", workspaceId],
+    queryFn: async () => {
+      const supabase = await createClient();
+      const result = await listOntologyEntities(supabase, workspaceId);
+      if (result.error) throw result.error;
+      return result.data ?? [];
+    },
+    enabled: initialFeatureFlags.ontology_associations_enabled,
+    staleTime: 1000 * 60 * 5,
+  });
+
   const { data: tags = [] } = useSuspenseQuery<Tag[]>({
     queryKey: ["tags", workspaceId],
     queryFn: async () => {
@@ -161,6 +176,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   const value: SettingsContextType = {
     categories,
     labels,
+    ontologyEntities,
     tags,
     views,
     templates,
@@ -215,6 +231,23 @@ export const useLabels = (
   );
 
   return [list, map];
+};
+
+export const useOntologyEntities = (): [
+  OntologyEntity[],
+  Map<string, OntologyEntity>,
+] => {
+  const context = useContext(SettingsContext);
+  if (context === undefined) {
+    throw new Error(
+      "useOntologyEntities must be used within a SettingsProvider",
+    );
+  }
+
+  return [
+    context.ontologyEntities,
+    new Map(context.ontologyEntities.map((entity) => [entity.id, entity])),
+  ];
 };
 
 export const useTags = (key: keyof Tag = "id"): [Tag[], Map<string, Tag>] => {
@@ -277,7 +310,9 @@ export const useRealEstateAssets = (
 ): [RealEstateAsset[], Map<string, RealEstateAsset>] => {
   const context = useContext(SettingsContext);
   if (context === undefined) {
-    throw new Error("useRealEstateAssets must be used within a SettingsProvider");
+    throw new Error(
+      "useRealEstateAssets must be used within a SettingsProvider",
+    );
   }
 
   const list = context.realEstateAssets;

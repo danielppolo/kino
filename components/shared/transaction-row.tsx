@@ -59,6 +59,8 @@ export default memo(
     prevProps.transaction.date === nextProps.transaction.date &&
     prevProps.transaction.description === nextProps.transaction.description &&
     prevProps.transaction.label_id === nextProps.transaction.label_id &&
+    JSON.stringify(prevProps.transaction.ontology_associations) ===
+      JSON.stringify(nextProps.transaction.ontology_associations) &&
     prevProps.transaction.wallet_id === nextProps.transaction.wallet_id &&
     prevProps.transaction.transfer_id === nextProps.transaction.transfer_id &&
     prevProps.transaction.tag_ids?.join(",") ===

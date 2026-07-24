@@ -1,99 +1,74 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
+  buildAlgoliaObjectsRequest,
   buildAlgoliaSearchRequest,
   getOntologyAlgoliaConfig,
   mapOntologyHits,
   parseOntologySearchParams,
+  validateOntologyCardinality,
 } from "./ontology-associations";
 
-describe("ontology association search helpers", () => {
-  it("returns an empty query for blank or one-character input", () => {
-    expect(
-      parseOntologySearchParams(
-        new URL("http://localhost/api/ontology-associations/search?q=a")
-          .searchParams,
-      ),
-    ).toEqual({ query: "", limit: 8 });
+const config = {
+  appId: "APP123",
+  searchApiKey: "search-key",
+  indexName: "ontology index",
+};
 
-    expect(
-      parseOntologySearchParams(
-        new URL("http://localhost/api/ontology-associations/search?query=%20")
-          .searchParams,
-      ),
-    ).toEqual({ query: "", limit: 8 });
-  });
-
-  it("trims q or query and clamps limit to the supported range", () => {
+describe("ontology association helpers", () => {
+  it("parses workspace, supported types, query, and a clamped limit", () => {
     expect(
       parseOntologySearchParams(
         new URL(
-          "http://localhost/api/ontology-associations/search?query=alice&limit=200",
+          "http://localhost/search?workspaceId=workspace-1&q=alice&types=person,trip,invalid&limit=200",
         ).searchParams,
       ),
-    ).toEqual({ query: "alice", limit: 20 });
+    ).toEqual({
+      workspaceId: "workspace-1",
+      query: "alice",
+      types: ["person", "trip"],
+      limit: 20,
+    });
+  });
 
+  it("uses an empty query below two characters and all types by default", () => {
     expect(
       parseOntologySearchParams(
-        new URL(
-          "http://localhost/api/ontology-associations/search?q=paris&limit=0",
-        ).searchParams,
+        new URL("http://localhost/search?workspaceId=workspace-1&q=a")
+          .searchParams,
       ),
-    ).toEqual({ query: "paris", limit: 1 });
-  });
-
-  it("uses ontology Algolia env vars with generic Algolia names as fallback", () => {
-    expect(
-      getOntologyAlgoliaConfig({
-        ONTOLOGY_ALGOLIA_APP_ID: "ontology-app",
-        ONTOLOGY_ALGOLIA_SEARCH_API_KEY: "ontology-key",
-        ONTOLOGY_ALGOLIA_INDEX_NAME: "ontology-index",
-        ALGOLIA_APP_ID: "fallback-app",
-        ALGOLIA_SEARCH_API_KEY: "fallback-key",
-        ALGOLIA_INDEX_NAME: "fallback-index",
-      }),
     ).toEqual({
-      appId: "ontology-app",
-      searchApiKey: "ontology-key",
-      indexName: "ontology-index",
-    });
-
-    expect(
-      getOntologyAlgoliaConfig({
-        ALGOLIA_APP_ID: "fallback-app",
-        ALGOLIA_SEARCH_API_KEY: "fallback-key",
-        ALGOLIA_INDEX_NAME: "fallback-index",
-      }),
-    ).toEqual({
-      appId: "fallback-app",
-      searchApiKey: "fallback-key",
-      indexName: "fallback-index",
+      workspaceId: "workspace-1",
+      query: "",
+      types: ["person", "place", "organization", "trip"],
+      limit: 8,
     });
   });
 
-  it("returns missing keys without exposing configured values", () => {
+  it("requires dedicated ontology environment variables", () => {
     expect(
       getOntologyAlgoliaConfig({
-        ONTOLOGY_ALGOLIA_APP_ID: "ontology-app",
+        ALGOLIA_APP_ID: "generic-app",
+        ALGOLIA_SEARCH_API_KEY: "generic-key",
+        ALGOLIA_INDEX_NAME: "generic-index",
       }),
     ).toEqual({
       missing: [
+        "ONTOLOGY_ALGOLIA_APP_ID",
         "ONTOLOGY_ALGOLIA_SEARCH_API_KEY",
         "ONTOLOGY_ALGOLIA_INDEX_NAME",
       ],
     });
   });
 
-  it("builds a server-side Algolia REST search request for people and places", () => {
+  it("builds a workspace- and type-scoped search request", () => {
     expect(
-      buildAlgoliaSearchRequest(
-        {
-          appId: "APP123",
-          searchApiKey: "search-key",
-          indexName: "ontology index",
-        },
-        { query: "alice", limit: 5 },
-      ),
+      buildAlgoliaSearchRequest(config, {
+        workspaceId: 'workspace-"1',
+        query: "alice",
+        types: ["person", "organization"],
+        limit: 5,
+      }),
     ).toEqual({
       url: "https://APP123-dsn.algolia.net/1/indexes/ontology%20index/query",
       init: {
@@ -106,56 +81,91 @@ describe("ontology association search helpers", () => {
         body: JSON.stringify({
           query: "alice",
           hitsPerPage: 5,
-          filters: "type:person OR type:place",
+          filters:
+            'workspaceId:"workspace-\\"1" AND (type:person OR type:organization)',
         }),
       },
     });
   });
 
-  it("maps only person and place hits to the stable response shape", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("builds a batch source-object verification request", () => {
+    expect(buildAlgoliaObjectsRequest(config, ["one", "two"]).init.body).toBe(
+      JSON.stringify({
+        requests: [{ objectID: "one" }, { objectID: "two" }],
+      }),
+    );
+  });
 
+  it("maps all supported types, enforces workspace, and deduplicates canonical IDs", () => {
     expect(
-      mapOntologyHits([
-        {
-          objectID: "person-1",
-          type: "person",
-          canonicalName: "Ada Lovelace",
-          ontologyId: "ont-person-1",
-        },
-        {
-          objectID: "org-1",
-          type: "organization",
-          name: "Acme",
-        },
-        {
-          objectID: "place-1",
-          type: "place",
-          title: "Paris",
-          description: "France",
-          ontology_id: "ont-place-1",
-        },
-        {
-          objectID: "missing-name",
-          type: "person",
-        },
-      ]),
+      mapOntologyHits(
+        [
+          {
+            objectID: "person-1",
+            workspaceId: "workspace-1",
+            type: "person",
+            canonicalName: "Ada Lovelace",
+            ontologyId: "canonical-person",
+          },
+          {
+            objectID: "person-duplicate",
+            workspaceId: "workspace-1",
+            type: "person",
+            name: "Ada",
+            ontologyId: "canonical-person",
+          },
+          {
+            objectID: "org-1",
+            workspaceId: "workspace-1",
+            type: "organization",
+            name: "Acme",
+            ontology_id: "canonical-org",
+          },
+          {
+            objectID: "trip-1",
+            workspaceId: "other-workspace",
+            type: "trip",
+            name: "Summer",
+            ontologyId: "canonical-trip",
+          },
+        ],
+        "workspace-1",
+      ),
     ).toEqual([
       {
-        id: "person-1",
+        sourceObjectId: "person-1",
         type: "person",
         name: "Ada Lovelace",
-        ontologyId: "ont-person-1",
+        ontologyId: "canonical-person",
       },
       {
-        id: "place-1",
-        type: "place",
-        name: "Paris",
-        subtitle: "France",
-        ontologyId: "ont-place-1",
+        sourceObjectId: "org-1",
+        type: "organization",
+        name: "Acme",
+        ontologyId: "canonical-org",
       },
     ]);
+  });
 
-    warn.mockRestore();
+  it("validates people-many and singleton cardinalities", () => {
+    expect(
+      validateOntologyCardinality([
+        { type: "person", ontologyId: "one" },
+        { type: "person", ontologyId: "two" },
+        { type: "trip", ontologyId: "trip" },
+      ]),
+    ).toBe(true);
+    expect(
+      validateOntologyCardinality([
+        { type: "place", ontologyId: "one" },
+        { type: "place", ontologyId: "two" },
+      ]),
+    ).toBe(false);
+    expect(
+      validateOntologyCardinality([
+        { type: "person", ontologyId: "one" },
+        { type: "person", ontologyId: "one" },
+      ]),
+    ).toBe(false);
   });
 });

@@ -6,13 +6,49 @@ import {
   mapOntologyHits,
   parseOntologySearchParams,
 } from "@/utils/ontology-associations";
+import { createClient } from "@/utils/supabase/server";
+import {
+  DEFAULT_FEATURE_FLAGS,
+  parseFeatureFlags,
+} from "@/utils/types/feature-flags";
+
+function errorResponse(code: string, status: number, extra = {}) {
+  return NextResponse.json({ error: { code, ...extra } }, { status });
+}
 
 export async function GET(request: Request) {
-  const { query, limit } = parseOntologySearchParams(
-    new URL(request.url).searchParams,
-  );
+  const params = parseOntologySearchParams(new URL(request.url).searchParams);
 
-  if (!query) {
+  if (!params.workspaceId) return errorResponse("WORKSPACE_REQUIRED", 400);
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return errorResponse("UNAUTHORIZED", 401);
+
+  const [{ data: membership }, { data: workspace }] = await Promise.all([
+    supabase
+      .from("workspace_members")
+      .select("workspace_id")
+      .eq("workspace_id", params.workspaceId)
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("workspaces")
+      .select("feature_flags")
+      .eq("id", params.workspaceId)
+      .maybeSingle(),
+  ]);
+
+  if (!membership || !workspace) return errorResponse("FORBIDDEN", 403);
+  const flags = workspace.feature_flags
+    ? parseFeatureFlags(workspace.feature_flags)
+    : DEFAULT_FEATURE_FLAGS;
+  if (!flags.ontology_associations_enabled) {
+    return errorResponse("ONTOLOGY_ASSOCIATIONS_DISABLED", 403);
+  }
+  if (!params.query || params.types.length === 0) {
     return NextResponse.json({ items: [] });
   }
 
@@ -31,7 +67,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { url, init } = buildAlgoliaSearchRequest(config, { query, limit });
+    const { url, init } = buildAlgoliaSearchRequest(config, params);
     const response = await fetch(url, init);
 
     if (!response.ok) {
@@ -48,7 +84,9 @@ export async function GET(request: Request) {
 
     const data = (await response.json()) as { hits?: unknown[] };
 
-    return NextResponse.json({ items: mapOntologyHits(data.hits ?? []) });
+    return NextResponse.json({
+      items: mapOntologyHits(data.hits ?? [], params.workspaceId),
+    });
   } catch (error) {
     console.error("Ontology association search error", error);
 
