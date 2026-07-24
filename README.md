@@ -273,11 +273,17 @@ When adding tests, prefer colocated `*.test.ts` files and mock Supabase or netwo
 
 ## CI/CD
 
-[`.github/workflows/production.yml`](./github/workflows/production.yml) runs on pushes to `main` (and manual dispatch):
+[`.github/workflows/production.yml`](./.github/workflows/production.yml) runs on
+pushes to `main` (including merged pull requests) and supports manual dispatch:
 
 - Checks out the repo
-- Uses **Supabase CLI** with repository secrets: `SUPABASE_ACCESS_TOKEN`, `PRODUCTION_DB_PASSWORD`, `PRODUCTION_PROJECT_ID`
-- Runs `supabase link`, `supabase db push`, and `supabase functions deploy`
+- Uses a pinned **Supabase CLI** with repository secrets:
+  `SUPABASE_ACCESS_TOKEN`, `PRODUCTION_DB_PASSWORD`, and
+  `PRODUCTION_PROJECT_ID`
+- Links the production project, previews pending migrations, and applies them
+  with `supabase db push`
+- Deploys Edge Functions after migrations succeed
+- Serializes production runs so concurrent merges cannot race
 
 Ensure GitHub Actions secrets are configured before relying on this pipeline.
 
