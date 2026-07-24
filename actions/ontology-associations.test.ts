@@ -30,7 +30,13 @@ function createAuthorizedSupabase(enabled = true) {
       })),
     },
     from: vi.fn((table: string) => {
-      const query = {
+      type QueryMock = {
+        eq: ReturnType<typeof vi.fn>;
+        in: ReturnType<typeof vi.fn>;
+        maybeSingle: ReturnType<typeof vi.fn>;
+        select: ReturnType<typeof vi.fn>;
+      };
+      const query: QueryMock = {
         select: vi.fn(() => query),
         eq: vi.fn(() => query),
         in: vi.fn(() => query),

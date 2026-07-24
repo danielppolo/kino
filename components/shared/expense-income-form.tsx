@@ -40,6 +40,7 @@ import { useTransactionForm } from "@/contexts/transaction-form-context";
 import { useWorkspace } from "@/contexts/workspace-context";
 import useFilters from "@/hooks/use-filters";
 import {
+  haveSameOntologyAssociations,
   type OntologyAssociationItem,
   parseStoredOntologyAssociations,
 } from "@/utils/ontology-associations";
@@ -287,8 +288,13 @@ const ExpenseIncomeForm = ({
         return;
       }
 
+      const learnedFields = [
+        result.learnedCategory ? "category" : null,
+        result.learnedOntologyAssociations ? "canonical context" : null,
+      ].filter(Boolean);
+
       toast.success(
-        `Future Plaid imports from ${result.merchantName} will use this category.`,
+        `Future Plaid imports from ${result.merchantName} will reuse ${learnedFields.join(" and ")}.`,
       );
     },
     onError: (error: Error) => {
@@ -397,11 +403,29 @@ const ExpenseIncomeForm = ({
         }
       }
 
-      const shouldOfferPlaidRuleLearning =
+      const categoryChanged =
         !!initialData?.id &&
         !!initialData.plaid_transaction_id &&
         !!initialData.plaid_merchant_key &&
         values.category_id !== (initialData.category_id ?? "");
+      const initialOntologyAssociations = parseStoredOntologyAssociations(
+        (
+          initialData as unknown as
+            | { ontology_associations?: unknown }
+            | undefined
+        )?.ontology_associations,
+      );
+      const ontologyAssociationsChanged =
+        ontology_associations_enabled &&
+        !!initialData?.id &&
+        !!initialData.plaid_transaction_id &&
+        !!initialData.plaid_merchant_key &&
+        !haveSameOntologyAssociations(
+          initialOntologyAssociations,
+          values.ontologyAssociations,
+        );
+      const shouldOfferPlaidRuleLearning =
+        categoryChanged || ontologyAssociationsChanged;
 
       if (shouldOfferPlaidRuleLearning) {
         const merchantName =
@@ -409,13 +433,21 @@ const ExpenseIncomeForm = ({
           initialData.description ??
           "this merchant";
 
-        toast.message("Learn category for future Plaid imports?", {
+        const learnedDescription =
+          categoryChanged && ontologyAssociationsChanged
+            ? "category and canonical context"
+            : categoryChanged
+              ? "category"
+              : "canonical context";
+
+        toast.message(`Learn ${learnedDescription} for future imports?`, {
           action: {
             label: "Save rule",
             onClick: () => {
               learnPlaidRuleMutation.mutate({
-                categoryId: values.category_id,
                 transactionId: initialData.id!,
+                includeCategory: categoryChanged,
+                includeOntologyAssociations: ontologyAssociationsChanged,
               });
             },
           },

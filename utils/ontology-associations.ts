@@ -271,3 +271,18 @@ export function parseStoredOntologyAssociations(
     ];
   });
 }
+
+export function haveSameOntologyAssociations(
+  left: Pick<OntologyAssociationItem, "ontologyId" | "type">[],
+  right: Pick<OntologyAssociationItem, "ontologyId" | "type">[],
+) {
+  if (left.length !== right.length) return false;
+
+  const toKeys = (
+    items: Pick<OntologyAssociationItem, "ontologyId" | "type">[],
+  ) => items.map((item) => `${item.type}:${item.ontologyId}`).sort();
+  const leftKeys = toKeys(left);
+  const rightKeys = toKeys(right);
+
+  return leftKeys.every((key, index) => key === rightKeys[index]);
+}

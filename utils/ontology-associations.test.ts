@@ -4,6 +4,7 @@ import {
   buildAlgoliaObjectsRequest,
   buildAlgoliaSearchRequest,
   getOntologyAlgoliaConfig,
+  haveSameOntologyAssociations,
   mapOntologyHits,
   parseOntologySearchParams,
   validateOntologyCardinality,
@@ -166,6 +167,27 @@ describe("ontology association helpers", () => {
         { type: "person", ontologyId: "one" },
         { type: "person", ontologyId: "one" },
       ]),
+    ).toBe(false);
+  });
+
+  it("compares association sets independently of display data and order", () => {
+    expect(
+      haveSameOntologyAssociations(
+        [
+          { type: "person", ontologyId: "person-1" },
+          { type: "trip", ontologyId: "trip-1" },
+        ],
+        [
+          { type: "trip", ontologyId: "trip-1" },
+          { type: "person", ontologyId: "person-1" },
+        ],
+      ),
+    ).toBe(true);
+    expect(
+      haveSameOntologyAssociations(
+        [{ type: "person", ontologyId: "person-1" }],
+        [{ type: "person", ontologyId: "person-2" }],
+      ),
     ).toBe(false);
   });
 });

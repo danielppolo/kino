@@ -796,7 +796,7 @@ export type Database = {
       };
       plaid_transaction_rules: {
         Row: {
-          category_id: string;
+          category_id: string | null;
           created_at: string;
           id: string;
           merchant_key: string;
@@ -804,7 +804,7 @@ export type Database = {
           wallet_id: string;
         };
         Insert: {
-          category_id: string;
+          category_id?: string | null;
           created_at?: string;
           id?: string;
           merchant_key: string;
@@ -812,7 +812,7 @@ export type Database = {
           wallet_id: string;
         };
         Update: {
-          category_id?: string;
+          category_id?: string | null;
           created_at?: string;
           id?: string;
           merchant_key?: string;
@@ -832,6 +832,42 @@ export type Database = {
             columns: ["wallet_id"];
             isOneToOne: false;
             referencedRelation: "wallets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      plaid_transaction_rule_ontology_associations: {
+        Row: {
+          created_at: string;
+          entity_type: string;
+          ontology_entity_id: string;
+          rule_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          entity_type: string;
+          ontology_entity_id: string;
+          rule_id: string;
+        };
+        Update: {
+          created_at?: string;
+          entity_type?: string;
+          ontology_entity_id?: string;
+          rule_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "plaid_transaction_rule_ontology_associations_ontology_entity_id_entity_type_fkey";
+            columns: ["ontology_entity_id", "entity_type"];
+            isOneToOne: false;
+            referencedRelation: "ontology_entities";
+            referencedColumns: ["id", "entity_type"];
+          },
+          {
+            foreignKeyName: "plaid_transaction_rule_ontology_associations_rule_id_fkey";
+            columns: ["rule_id"];
+            isOneToOne: false;
+            referencedRelation: "plaid_transaction_rules";
             referencedColumns: ["id"];
           },
         ];
