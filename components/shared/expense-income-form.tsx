@@ -1,13 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
+import { Folder, Link2, Network, Repeat2, Trash } from "lucide-react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { v4 as randomUUID } from "uuid";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { SubmitButton } from "../submit-button";
 import DaterPicker from "../ui/date-picker";
+import { Switch } from "../ui/switch";
 import {
   type AmountFormValue,
   getAmountFormValue,
@@ -18,19 +22,32 @@ import BillCombobox from "./bill-combobox";
 import { DescriptionInput } from "./description-input";
 import LabelCombobox from "./label-combobox";
 import TagMultiSelect from "./tag-multi-select";
+import TemplateSelect from "./template-select";
 import { TransactionOntologyEditor } from "./transaction-ontology-editor";
 
 import { createPlaidTransactionRule } from "@/actions/create-plaid-transaction-rule";
 import { createTransaction } from "@/actions/create-transaction";
 import { replaceTransactionOntologyAssociations } from "@/actions/ontology-associations";
 import CategoryCombobox from "@/components/shared/category-combobox";
-import { EntityForm } from "@/components/shared/entity-form";
+import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
   FormControl,
   FormField,
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   useFeatureFlags,
   useTags,
@@ -528,150 +545,298 @@ const ExpenseIncomeForm = ({
     }
   };
 
+  const entityValues = initialData
+    ? convertToFormValues(initialData)
+    : undefined;
+  const form = useForm<ExpenseIncomeFormValues>({
+    defaultValues: entityValues ?? defaultValues,
+  });
+  const isEdit = Boolean(initialData);
+
+  useEffect(() => {
+    if (open) form.reset(entityValues ?? defaultValues);
+    // Reset only when the modal opens or the edited transaction changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData?.id, open]);
+
+  const submitForm = async (values: ExpenseIncomeFormValues) => {
+    const { error } = await handleSubmit(values);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+
+    toast.success(isEdit ? "Updated successfully!" : "Created successfully!");
+    if (!addAnother) onSuccess?.();
+  };
+
+  const deleteForm = async () => {
+    const { error } = await handleDelete();
+    if (error) {
+      toast.error(error);
+      return;
+    }
+
+    toast.success("Deleted successfully!");
+    onSuccess?.();
+  };
+
+  const repeatForm = async () => {
+    const { error } = await handleRepeat(form.getValues());
+    if (error) {
+      toast.error(error);
+      return;
+    }
+
+    toast.success("Repeated successfully!");
+    onSuccess?.();
+  };
+
   return (
-    <EntityForm
-      title={type}
-      type={type as "expense" | "income"}
-      entity={initialData ? convertToFormValues(initialData) : undefined}
-      open={open}
-      onOpenChange={onOpenChange}
-      onSuccess={onSuccess}
-      defaultValues={defaultValues}
-      onSubmit={handleSubmit}
-      onDelete={handleDelete}
-      addAnother={addAnother}
-      setAddAnother={setAddAnother}
-      isLoading={isPending}
-      isDeleting={deleteMutation.isPending}
-      onRepeat={initialData ? handleRepeat : undefined}
-      isRepeating={isPending}
-    >
-      <FormField
-        name="amount"
-        rules={{
-          required: "Amount is required",
-          min: { value: 0.01, message: "Amount must be positive" },
-        }}
-        render={({ field }) => (
-          <FormItem>
-            <FormControl>
-              <AmountInput {...field} autoFocus />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <div className="grid grid-cols-2 gap-4">
-        <FormField
-          name="category_id"
-          rules={{ required: "Category is required" }}
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <CategoryCombobox
-                  {...field}
-                  type={type}
-                  selectionType="combobox"
-                  className="w-full"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <DescriptionInput
-                  {...field}
-                  value={field.value ?? ""}
-                  workspaceId={activeWorkspace?.id}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <FormField
-          name="date"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormControl>
-                <DaterPicker {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex max-h-[90vh] w-[calc(100%-2rem)] max-w-4xl flex-col gap-0 overflow-hidden rounded-3xl p-0">
+        <Form {...form}>
+          <form
+            className="flex h-[min(34rem,90vh)] flex-col"
+            onSubmit={(event) => {
+              const submitter = (event.nativeEvent as SubmitEvent).submitter;
+              if (submitter?.getAttribute("type") !== "submit") {
+                event.preventDefault();
+                return;
+              }
+              void form.handleSubmit(submitForm)(event);
+            }}
+          >
+            <DialogHeader className="flex-row items-center gap-3 space-y-0 px-6 pt-6 sm:px-8">
+              <DialogTitle className="capitalize">
+                {isEdit ? `Edit ${type}` : `Add ${type}`}
+              </DialogTitle>
+              <span className="text-muted-foreground">›</span>
+              <TemplateSelect type={type} />
+            </DialogHeader>
 
-        <FormField
-          name="label_id"
-          rules={{ required: "Label is required" }}
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <LabelCombobox {...field} className="w-full" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-
-      <FormField
-        name="tags"
-        render={({ field }) => (
-          <FormItem>
-            <FormControl>
-              <TagMultiSelect
-                {...field}
-                options={availableTags}
-                className="w-full"
+            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-6 py-10 sm:px-8">
+              <FormField
+                name="amount"
+                rules={{
+                  required: "Amount is required",
+                  min: { value: 0.01, message: "Amount must be positive" },
+                }}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <AmountInput
+                        {...field}
+                        autoFocus
+                        variant="ghost"
+                        className="h-auto text-3xl font-semibold shadow-none focus-visible:ring-0 sm:text-4xl"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </FormControl>
-          </FormItem>
-        )}
-      />
+              <FormField
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <DescriptionInput
+                        {...field}
+                        value={field.value ?? ""}
+                        workspaceId={activeWorkspace?.id}
+                        variant="ghost"
+                        placeholder="Add description…"
+                        className="h-auto px-0 py-2 text-lg shadow-none focus-visible:ring-0"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-      {ontology_associations_enabled && activeWorkspace ? (
-        <FormField
-          name="ontologyAssociations"
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <TransactionOntologyEditor
-                  workspaceId={activeWorkspace.id}
-                  value={field.value ?? []}
-                  onChange={field.onChange}
+            <div className="border-t px-6 py-5 sm:px-8">
+              <div className="flex flex-wrap items-center gap-2">
+                <FormField
+                  name="category_id"
+                  rules={{ required: "Category is required" }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <CategoryCombobox
+                          {...field}
+                          type={type}
+                          selectionType="combobox"
+                          size="sm"
+                          icon={<Folder className="size-4" />}
+                          placeholder="Category"
+                          className="w-auto max-w-56 rounded-full"
+                        />
+                      </FormControl>
+                      <FormMessage className="sr-only" />
+                    </FormItem>
+                  )}
                 />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      ) : null}
+                <FormField
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <DaterPicker
+                          {...field}
+                          className="h-8 max-w-40 rounded-full"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="label_id"
+                  rules={{ required: "Label is required" }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <LabelCombobox
+                          {...field}
+                          size="sm"
+                          icon={<Link2 className="size-4" />}
+                          placeholder="Label"
+                          className="w-auto max-w-48 rounded-full"
+                        />
+                      </FormControl>
+                      <FormMessage className="sr-only" />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="tags"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <TagMultiSelect
+                          {...field}
+                          options={availableTags}
+                          placeholder="Tags"
+                          className="min-h-8 w-auto max-w-64 rounded-full px-1"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                {type === "expense" && bills_enabled ? (
+                  <FormField
+                    name="bill_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <BillCombobox
+                            {...field}
+                            walletId={walletId}
+                            size="sm"
+                            placeholder="Bill"
+                            className="w-auto max-w-52 rounded-full"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                ) : null}
+                {ontology_associations_enabled && activeWorkspace ? (
+                  <FormField
+                    name="ontologyAssociations"
+                    render={({ field }) => (
+                      <FormItem>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="gap-2 rounded-full"
+                            >
+                              <Network className="size-4" />
+                              {field.value?.length
+                                ? `Context · ${field.value.length}`
+                                : "Context"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            align="start"
+                            className="w-[min(38rem,calc(100vw-2rem))] p-0"
+                          >
+                            <TransactionOntologyEditor
+                              workspaceId={activeWorkspace.id}
+                              value={field.value ?? []}
+                              onChange={field.onChange}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </FormItem>
+                    )}
+                  />
+                ) : null}
+              </div>
 
-      {type === "expense" && bills_enabled && (
-        <FormField
-          name="bill_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <BillCombobox
-                  {...field}
-                  walletId={walletId}
-                  className="w-full"
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-      )}
-    </EntityForm>
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  {isEdit ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={repeatForm}
+                        disabled={isPending}
+                        aria-label="Repeat transaction"
+                      >
+                        <Repeat2 className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={deleteForm}
+                        disabled={deleteMutation.isPending}
+                        aria-label="Delete transaction"
+                      >
+                        <Trash className="size-4" />
+                      </Button>
+                    </>
+                  ) : null}
+                </div>
+                <div className="flex items-center gap-4">
+                  {!isEdit ? (
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="add-another"
+                        checked={addAnother}
+                        onCheckedChange={setAddAnother}
+                      />
+                      <label
+                        htmlFor="add-another"
+                        className="text-muted-foreground text-sm"
+                      >
+                        Create more
+                      </label>
+                    </div>
+                  ) : null}
+                  <SubmitButton
+                    type="submit"
+                    size="sm"
+                    disabled={isPending}
+                    isLoading={isPending}
+                    className="rounded-full px-5"
+                  >
+                    {isEdit ? "Update" : `Create ${type}`}
+                  </SubmitButton>
+                </div>
+              </div>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 };
 
