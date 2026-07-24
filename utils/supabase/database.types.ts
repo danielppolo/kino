@@ -392,6 +392,50 @@ export type Database = {
           },
         ];
       };
+      ontology_entities: {
+        Row: {
+          canonical_name: string;
+          created_at: string;
+          entity_type: string;
+          id: string;
+          ontology_id: string;
+          source_object_id: string;
+          subtitle: string | null;
+          updated_at: string;
+          workspace_id: string;
+        };
+        Insert: {
+          canonical_name: string;
+          created_at?: string;
+          entity_type: string;
+          id?: string;
+          ontology_id: string;
+          source_object_id: string;
+          subtitle?: string | null;
+          updated_at?: string;
+          workspace_id: string;
+        };
+        Update: {
+          canonical_name?: string;
+          created_at?: string;
+          entity_type?: string;
+          id?: string;
+          ontology_id?: string;
+          source_object_id?: string;
+          subtitle?: string | null;
+          updated_at?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ontology_entities_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       real_estate_asset_valuations: {
         Row: {
           asset_id: string;
@@ -752,7 +796,7 @@ export type Database = {
       };
       plaid_transaction_rules: {
         Row: {
-          category_id: string;
+          category_id: string | null;
           created_at: string;
           id: string;
           merchant_key: string;
@@ -760,7 +804,7 @@ export type Database = {
           wallet_id: string;
         };
         Insert: {
-          category_id: string;
+          category_id?: string | null;
           created_at?: string;
           id?: string;
           merchant_key: string;
@@ -768,7 +812,7 @@ export type Database = {
           wallet_id: string;
         };
         Update: {
-          category_id?: string;
+          category_id?: string | null;
           created_at?: string;
           id?: string;
           merchant_key?: string;
@@ -788,6 +832,42 @@ export type Database = {
             columns: ["wallet_id"];
             isOneToOne: false;
             referencedRelation: "wallets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      plaid_transaction_rule_ontology_associations: {
+        Row: {
+          created_at: string;
+          entity_type: string;
+          ontology_entity_id: string;
+          rule_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          entity_type: string;
+          ontology_entity_id: string;
+          rule_id: string;
+        };
+        Update: {
+          created_at?: string;
+          entity_type?: string;
+          ontology_entity_id?: string;
+          rule_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "plaid_transaction_rule_ontology_associations_ontology_entity_id_entity_type_fkey";
+            columns: ["ontology_entity_id", "entity_type"];
+            isOneToOne: false;
+            referencedRelation: "ontology_entities";
+            referencedColumns: ["id", "entity_type"];
+          },
+          {
+            foreignKeyName: "plaid_transaction_rule_ontology_associations_rule_id_fkey";
+            columns: ["rule_id"];
+            isOneToOne: false;
+            referencedRelation: "plaid_transaction_rules";
             referencedColumns: ["id"];
           },
         ];
@@ -823,6 +903,42 @@ export type Database = {
             columns: ["wallet_id"];
             isOneToOne: false;
             referencedRelation: "wallets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      transaction_ontology_associations: {
+        Row: {
+          created_at: string;
+          entity_type: string;
+          ontology_entity_id: string;
+          transaction_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          entity_type: string;
+          ontology_entity_id: string;
+          transaction_id: string;
+        };
+        Update: {
+          created_at?: string;
+          entity_type?: string;
+          ontology_entity_id?: string;
+          transaction_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "transaction_ontology_associations_ontology_entity_id_entity_type_fkey";
+            columns: ["ontology_entity_id", "entity_type"];
+            isOneToOne: false;
+            referencedRelation: "ontology_entities";
+            referencedColumns: ["id", "entity_type"];
+          },
+          {
+            foreignKeyName: "transaction_ontology_associations_transaction_id_fkey";
+            columns: ["transaction_id"];
+            isOneToOne: false;
+            referencedRelation: "transactions";
             referencedColumns: ["id"];
           },
         ];
@@ -1238,6 +1354,8 @@ export type Database = {
           label_id: string | null;
           needs_review: boolean | null;
           note: string | null;
+          ontology_associations: Json | null;
+          ontology_entity_ids: string[] | null;
           plaid_merchant_key: string | null;
           plaid_merchant_name: string | null;
           plaid_pending_transaction_id: string | null;

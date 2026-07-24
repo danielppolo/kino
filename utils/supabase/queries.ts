@@ -223,6 +223,7 @@ export interface Filters {
   min_amount?: string | undefined;
   max_amount?: string | undefined;
   review_status?: string | undefined;
+  ontology_entity_id?: string | undefined;
 }
 
 export const listTransactions = async (
@@ -250,6 +251,10 @@ export const listTransactions = async (
   // Filter by label_id if available
   if (params?.label_id) {
     query = query.eq("label_id", params.label_id);
+  }
+
+  if (params?.ontology_entity_id) {
+    query = query.contains("ontology_entity_ids", [params.ontology_entity_id]);
   }
 
   // Filter by category_id if available
@@ -380,6 +385,17 @@ export const listLabels = async (
   workspaceId: string,
 ) => {
   return client.from("labels").select("*").eq("workspace_id", workspaceId);
+};
+
+export const listOntologyEntities = async (
+  client: TypedSupabaseClient,
+  workspaceId: string,
+) => {
+  return client
+    .from("ontology_entities")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .order("canonical_name");
 };
 
 export const listCategories = async (

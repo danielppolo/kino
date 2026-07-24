@@ -5,9 +5,14 @@ import { Badge } from "../ui/badge";
 import Color from "./color";
 import LinkTransferButton from "./link-transfer-button";
 
-import { useLabels, useTags } from "@/contexts/settings-context";
+import {
+  useFeatureFlags,
+  useLabels,
+  useTags,
+} from "@/contexts/settings-context";
 import { useTransactionQueryState } from "@/hooks/use-transaction-query";
 import { cn } from "@/lib/utils";
+import { parseStoredOntologyAssociations } from "@/utils/ontology-associations";
 import { TransactionList } from "@/utils/supabase/types";
 
 interface TagBadgesProps {
@@ -20,6 +25,7 @@ const TagBadges = ({ transaction, className }: TagBadgesProps) => {
   const [, setFilters] = useTransactionQueryState();
   const [, tagMap] = useTags();
   const [, labelMap] = useLabels();
+  const { ontology_associations_enabled } = useFeatureFlags();
 
   const handleTagClick = (tagId: string) => {
     setFilters({ tag: tagId });
@@ -32,6 +38,9 @@ const TagBadges = ({ transaction, className }: TagBadgesProps) => {
   const handleNeedsReviewClick = () => {
     setFilters({ review_status: "needs_review" });
   };
+  const ontologyAssociations = ontology_associations_enabled
+    ? parseStoredOntologyAssociations(transaction.ontology_associations)
+    : [];
 
   return (
     <div
@@ -40,7 +49,7 @@ const TagBadges = ({ transaction, className }: TagBadgesProps) => {
         className,
       )}
     >
-      {transaction.tag_ids?.map((tagId: string, index) => {
+      {transaction.tag_ids?.map((tagId: string) => {
         const tag = tagMap.get(tagId);
         if (!tag) return null;
 
@@ -61,6 +70,24 @@ const TagBadges = ({ transaction, className }: TagBadgesProps) => {
           </Badge>
         );
       })}
+      {ontologyAssociations.slice(0, 3).map((association) => (
+        <Badge
+          className="bg-background cursor-pointer text-xs"
+          key={`${association.type}:${association.ontologyId}`}
+          variant="outline"
+          onClick={(event) => {
+            event.stopPropagation();
+            if (association.entityId) {
+              setFilters({ ontology_entity_id: association.entityId });
+            }
+          }}
+        >
+          {association.name}
+        </Badge>
+      ))}
+      {ontologyAssociations.length > 3 ? (
+        <Badge variant="secondary">+{ontologyAssociations.length - 3}</Badge>
+      ) : null}
       {transaction.needs_review && (
         <Badge
           variant="secondary"

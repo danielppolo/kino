@@ -79,8 +79,14 @@ export default function WorkspacesPage() {
   const updateWorkspaceConfigMutation = useMutation({
     mutationFn: async () => {
       if (!activeWorkspace) throw new Error("No active workspace");
-      await updateWorkspaceBaseCurrency(activeWorkspace.id, formState.baseCurrency);
-      await updateWorkspaceFeatureFlags(activeWorkspace.id, formState.featureFlags);
+      await updateWorkspaceBaseCurrency(
+        activeWorkspace.id,
+        formState.baseCurrency,
+      );
+      await updateWorkspaceFeatureFlags(
+        activeWorkspace.id,
+        formState.featureFlags,
+      );
     },
     onSuccess: () => {
       toast.success("Workspace configuration updated successfully");
@@ -97,14 +103,13 @@ export default function WorkspacesPage() {
   });
 
   const isDirty =
-    !activeWorkspace
-      ? false
-      : activeWorkspace.base_currency !== formState.baseCurrency ||
-        (activeWorkspace.feature_flags
-          ? parseFeatureFlags(activeWorkspace.feature_flags).bills_enabled !==
-            formState.featureFlags.bills_enabled
-          : DEFAULT_FEATURE_FLAGS.bills_enabled !==
-            formState.featureFlags.bills_enabled);
+    !!activeWorkspace &&
+    (activeWorkspace.base_currency !== formState.baseCurrency ||
+      JSON.stringify(
+        activeWorkspace.feature_flags
+          ? parseFeatureFlags(activeWorkspace.feature_flags)
+          : DEFAULT_FEATURE_FLAGS,
+      ) !== JSON.stringify(formState.featureFlags));
 
   const handleSave = () => {
     if (!isOwner) {
@@ -134,7 +139,9 @@ export default function WorkspacesPage() {
         <Button
           size="sm"
           onClick={handleSave}
-          disabled={updateWorkspaceConfigMutation.isPending || !isDirty || !isOwner}
+          disabled={
+            updateWorkspaceConfigMutation.isPending || !isDirty || !isOwner
+          }
         >
           Save
         </Button>
@@ -152,7 +159,8 @@ export default function WorkspacesPage() {
             <div>
               <h3 className="text-sm font-medium">Currency</h3>
               <p className="text-muted-foreground text-sm">
-                Base currency for this workspace. All amounts will be converted to this currency.
+                Base currency for this workspace. All amounts will be converted
+                to this currency.
               </p>
             </div>
             <Select
@@ -188,7 +196,10 @@ export default function WorkspacesPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label htmlFor="bills-enabled" className="text-sm font-medium">
+                  <Label
+                    htmlFor="bills-enabled"
+                    className="text-sm font-medium"
+                  >
                     Bills Management
                   </Label>
                   <p className="text-muted-foreground text-sm">
@@ -201,7 +212,10 @@ export default function WorkspacesPage() {
                   onCheckedChange={(checked) =>
                     setFormState((prev) => ({
                       ...prev,
-                      featureFlags: { ...prev.featureFlags, bills_enabled: checked },
+                      featureFlags: {
+                        ...prev.featureFlags,
+                        bills_enabled: checked,
+                      },
                     }))
                   }
                   disabled={!isOwner}
@@ -210,11 +224,15 @@ export default function WorkspacesPage() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <Label htmlFor="autonomy-enabled" className="text-sm font-medium">
+                  <Label
+                    htmlFor="autonomy-enabled"
+                    className="text-sm font-medium"
+                  >
                     Autonomy Framework
                   </Label>
                   <p className="text-muted-foreground text-sm">
-                    Show autonomy and financial independence charts in infographics
+                    Show autonomy and financial independence charts in
+                    infographics
                   </p>
                 </div>
                 <Switch
@@ -226,6 +244,35 @@ export default function WorkspacesPage() {
                       featureFlags: {
                         ...prev.featureFlags,
                         infographics_autonomy_enabled: checked,
+                      },
+                    }))
+                  }
+                  disabled={!isOwner}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label
+                    htmlFor="ontology-associations-enabled"
+                    className="text-sm font-medium"
+                  >
+                    Canonical transaction context
+                  </Label>
+                  <p className="text-muted-foreground text-sm">
+                    Associate canonical people, trips, places, and organizations
+                    with transactions
+                  </p>
+                </div>
+                <Switch
+                  id="ontology-associations-enabled"
+                  checked={formState.featureFlags.ontology_associations_enabled}
+                  onCheckedChange={(checked) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      featureFlags: {
+                        ...prev.featureFlags,
+                        ontology_associations_enabled: checked,
                       },
                     }))
                   }

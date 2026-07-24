@@ -1169,7 +1169,7 @@ export const updateWorkspaceFeatureFlags = async (
     .from("workspaces")
     .update({
       feature_flags:
-        featureFlags as Database["public"]["Tables"]["workspaces"]["Update"]["feature_flags"],
+        featureFlags as unknown as Database["public"]["Tables"]["workspaces"]["Update"]["feature_flags"],
     })
     .eq("id", workspaceId)
     .select()

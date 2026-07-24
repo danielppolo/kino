@@ -35,11 +35,18 @@ function createQueryResult<T>(result: T) {
 }
 
 function createSupabaseMock({
+  existingOntologyAssociations = [],
   existingTransactions,
+  learnedRules = [],
+  ontologyEnabled = false,
 }: {
+  existingOntologyAssociations?: Array<Record<string, unknown>>;
   existingTransactions: Array<Record<string, unknown>>;
+  learnedRules?: Array<Record<string, unknown>>;
+  ontologyEnabled?: boolean;
 }) {
   const upserts: Array<Record<string, unknown>> = [];
+  const ontologyAssociationInserts: Array<Record<string, unknown>> = [];
 
   const client = {
     from: vi.fn((table: string) => {
@@ -48,14 +55,35 @@ function createSupabaseMock({
       }
 
       if (table === "plaid_transaction_rules") {
-        return createQueryResult({ data: [], error: null });
+        return createQueryResult({ data: learnedRules, error: null });
       }
 
       if (table === "workspaces") {
         return createQueryResult({
-          data: { base_currency: "USD" },
+          data: {
+            base_currency: "USD",
+            feature_flags: {
+              bills_enabled: true,
+              ontology_associations_enabled: ontologyEnabled,
+            },
+          },
           error: null,
         });
+      }
+
+      if (table === "transaction_ontology_associations") {
+        return {
+          select: vi.fn(() =>
+            createQueryResult({
+              data: existingOntologyAssociations,
+              error: null,
+            }),
+          ),
+          insert: vi.fn(async (rows: Array<Record<string, unknown>>) => {
+            ontologyAssociationInserts.push(...rows);
+            return { error: null };
+          }),
+        };
       }
 
       if (table === "transactions") {
@@ -83,7 +111,7 @@ function createSupabaseMock({
     }),
   };
 
-  return { client, upserts };
+  return { client, ontologyAssociationInserts, upserts };
 }
 
 const wallet = {
@@ -157,5 +185,93 @@ describe("syncWalletPlaidTransactions", () => {
       description: "Custom coffee run",
       plaid_transaction_id: "plaid-transaction-id",
     });
+  });
+
+  it("applies learned canonical associations to imported transactions", async () => {
+    fetchPlaidTransactions.mockResolvedValue([plaidTransaction]);
+    const supabase = createSupabaseMock({
+      existingTransactions: [],
+      ontologyEnabled: true,
+      learnedRules: [
+        {
+          merchant_key: "plaid merchant",
+          category_id: "learned-category-id",
+          plaid_transaction_rule_ontology_associations: [
+            {
+              ontology_entity_id: "person-entity-id",
+              entity_type: "person",
+            },
+            {
+              ontology_entity_id: "trip-entity-id",
+              entity_type: "trip",
+            },
+          ],
+        },
+      ],
+    });
+
+    await syncWalletPlaidTransactions({
+      accessToken: "access-token",
+      supabase: supabase.client as never,
+      wallet: wallet as never,
+    });
+
+    expect(supabase.upserts).toHaveLength(1);
+    expect(supabase.upserts[0]).toMatchObject({
+      category_id: "learned-category-id",
+    });
+    expect(supabase.ontologyAssociationInserts).toEqual([
+      {
+        transaction_id: supabase.upserts[0].id,
+        ontology_entity_id: "person-entity-id",
+        entity_type: "person",
+      },
+      {
+        transaction_id: supabase.upserts[0].id,
+        ontology_entity_id: "trip-entity-id",
+        entity_type: "trip",
+      },
+    ]);
+  });
+
+  it("does not overwrite existing canonical context with a learned rule", async () => {
+    fetchPlaidTransactions.mockResolvedValue([plaidTransaction]);
+    const supabase = createSupabaseMock({
+      existingOntologyAssociations: [
+        { transaction_id: "existing-transaction-id" },
+      ],
+      existingTransactions: [
+        {
+          id: "existing-transaction-id",
+          category_id: null,
+          description: "Existing transaction",
+          label_id: null,
+          note: null,
+          plaid_pending_transaction_id: null,
+          plaid_transaction_id: "plaid-transaction-id",
+        },
+      ],
+      ontologyEnabled: true,
+      learnedRules: [
+        {
+          merchant_key: "plaid merchant",
+          category_id: null,
+          plaid_transaction_rule_ontology_associations: [
+            {
+              ontology_entity_id: "rule-place-id",
+              entity_type: "place",
+            },
+          ],
+        },
+      ],
+    });
+
+    await syncWalletPlaidTransactions({
+      accessToken: "access-token",
+      supabase: supabase.client as never,
+      wallet: wallet as never,
+    });
+
+    expect(supabase.ontologyAssociationInserts).toEqual([]);
   });
 });

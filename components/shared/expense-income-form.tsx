@@ -18,9 +18,11 @@ import BillCombobox from "./bill-combobox";
 import { DescriptionInput } from "./description-input";
 import LabelCombobox from "./label-combobox";
 import TagMultiSelect from "./tag-multi-select";
+import { TransactionOntologyEditor } from "./transaction-ontology-editor";
 
 import { createPlaidTransactionRule } from "@/actions/create-plaid-transaction-rule";
 import { createTransaction } from "@/actions/create-transaction";
+import { replaceTransactionOntologyAssociations } from "@/actions/ontology-associations";
 import CategoryCombobox from "@/components/shared/category-combobox";
 import { EntityForm } from "@/components/shared/entity-form";
 import {
@@ -37,6 +39,11 @@ import {
 import { useTransactionForm } from "@/contexts/transaction-form-context";
 import { useWorkspace } from "@/contexts/workspace-context";
 import useFilters from "@/hooks/use-filters";
+import {
+  haveSameOntologyAssociations,
+  type OntologyAssociationItem,
+  parseStoredOntologyAssociations,
+} from "@/utils/ontology-associations";
 import {
   applyOptimisticTransaction,
   findTransactionById,
@@ -72,6 +79,7 @@ type ExpenseIncomeFormValues = {
   currency: string;
   tags?: string[];
   bill_id?: string;
+  ontologyAssociations: OntologyAssociationItem[];
 };
 
 type ExpenseIncomeMutationValues = Omit<ExpenseIncomeFormValues, "amount"> & {
@@ -88,7 +96,7 @@ const ExpenseIncomeForm = ({
   onOpenChange,
 }: ExpenseIncomeFormProps) => {
   const [wallets, walletMap] = useWallets();
-  const { bills_enabled } = useFeatureFlags();
+  const { bills_enabled, ontology_associations_enabled } = useFeatureFlags();
   const { activeWorkspace } = useWorkspace();
   const filters = useFilters();
   const [availableTags] = useTags();
@@ -103,7 +111,10 @@ const ExpenseIncomeForm = ({
   ] as const;
 
   const { mutateAsync, isPending } = useMutation<
-    { data: Transaction[] },
+    {
+      data: Transaction[];
+      ontologyAssociations: OntologyAssociationItem[];
+    },
     Error,
     ExpenseIncomeMutationValues,
     {
@@ -112,10 +123,28 @@ const ExpenseIncomeForm = ({
     }
   >({
     mutationFn: async (values) => {
-      const result = await createTransaction(values);
+      const { ontologyAssociations, ...transactionValues } = values;
+      const result = await createTransaction(transactionValues);
       if (!result.success)
         throw new Error(result.error ?? "Failed to create transaction");
-      return { data: result.data ?? [] };
+
+      const transactionId = result.data?.[0]?.id ?? values.id;
+      let savedAssociations = ontologyAssociations;
+      if (ontology_associations_enabled && transactionId) {
+        const associationResult = await replaceTransactionOntologyAssociations(
+          transactionId,
+          ontologyAssociations,
+        );
+        if (!associationResult.success) {
+          throw new Error(associationResult.error.message);
+        }
+        savedAssociations = associationResult.items;
+      }
+
+      return {
+        data: result.data ?? [],
+        ontologyAssociations: savedAssociations,
+      };
     },
     onMutate: async (newTransaction) => {
       await queryClient.cancelQueries({
@@ -147,6 +176,11 @@ const ExpenseIncomeForm = ({
         description: newTransaction.description ?? null,
         needs_review: !newTransaction.category_id || !newTransaction.label_id,
         note: existingTransaction?.note ?? null,
+        ontology_associations:
+          newTransaction.ontologyAssociations as unknown as TransactionList["ontology_associations"],
+        ontology_entity_ids: newTransaction.ontologyAssociations.flatMap(
+          (item) => (item.entityId ? [item.entityId] : []),
+        ),
         plaid_merchant_key: existingTransaction?.plaid_merchant_key ?? null,
         plaid_merchant_name: existingTransaction?.plaid_merchant_name ?? null,
         plaid_pending_transaction_id:
@@ -196,6 +230,11 @@ const ExpenseIncomeForm = ({
         description: saved.description ?? null,
         needs_review: !saved.category_id || !saved.label_id,
         note: (saved as { note?: string | null }).note ?? null,
+        ontology_associations:
+          data.ontologyAssociations as unknown as TransactionList["ontology_associations"],
+        ontology_entity_ids: data.ontologyAssociations.flatMap((item) =>
+          item.entityId ? [item.entityId] : [],
+        ),
         plaid_merchant_key: saved.plaid_merchant_key ?? null,
         plaid_merchant_name: saved.plaid_merchant_name ?? null,
         plaid_pending_transaction_id:
@@ -249,8 +288,13 @@ const ExpenseIncomeForm = ({
         return;
       }
 
+      const learnedFields = [
+        result.learnedCategory ? "category" : null,
+        result.learnedOntologyAssociations ? "canonical context" : null,
+      ].filter(Boolean);
+
       toast.success(
-        `Future Plaid imports from ${result.merchantName} will use this category.`,
+        `Future Plaid imports from ${result.merchantName} will reuse ${learnedFields.join(" and ")}.`,
       );
     },
     onError: (error: Error) => {
@@ -301,6 +345,13 @@ const ExpenseIncomeForm = ({
     ),
     tags: initialData?.tags ?? [],
     bill_id: billPrefill?.billId ?? "",
+    ontologyAssociations: parseStoredOntologyAssociations(
+      (
+        initialData as unknown as
+          | { ontology_associations?: unknown }
+          | undefined
+      )?.ontology_associations,
+    ),
   };
 
   const handleSubmit = async (values: ExpenseIncomeFormValues) => {
@@ -352,11 +403,29 @@ const ExpenseIncomeForm = ({
         }
       }
 
-      const shouldOfferPlaidRuleLearning =
+      const categoryChanged =
         !!initialData?.id &&
         !!initialData.plaid_transaction_id &&
         !!initialData.plaid_merchant_key &&
         values.category_id !== (initialData.category_id ?? "");
+      const initialOntologyAssociations = parseStoredOntologyAssociations(
+        (
+          initialData as unknown as
+            | { ontology_associations?: unknown }
+            | undefined
+        )?.ontology_associations,
+      );
+      const ontologyAssociationsChanged =
+        ontology_associations_enabled &&
+        !!initialData?.id &&
+        !!initialData.plaid_transaction_id &&
+        !!initialData.plaid_merchant_key &&
+        !haveSameOntologyAssociations(
+          initialOntologyAssociations,
+          values.ontologyAssociations,
+        );
+      const shouldOfferPlaidRuleLearning =
+        categoryChanged || ontologyAssociationsChanged;
 
       if (shouldOfferPlaidRuleLearning) {
         const merchantName =
@@ -364,13 +433,21 @@ const ExpenseIncomeForm = ({
           initialData.description ??
           "this merchant";
 
-        toast.message("Learn category for future Plaid imports?", {
+        const learnedDescription =
+          categoryChanged && ontologyAssociationsChanged
+            ? "category and canonical context"
+            : categoryChanged
+              ? "category"
+              : "canonical context";
+
+        toast.message(`Learn ${learnedDescription} for future imports?`, {
           action: {
             label: "Save rule",
             onClick: () => {
               learnPlaidRuleMutation.mutate({
-                categoryId: values.category_id,
                 transactionId: initialData.id!,
+                includeCategory: categoryChanged,
+                includeOntologyAssociations: ontologyAssociationsChanged,
               });
             },
           },
@@ -424,6 +501,10 @@ const ExpenseIncomeForm = ({
       (transaction as { tags?: string[] | null }).tags ??
       undefined,
     bill_id: "",
+    ontologyAssociations: parseStoredOntologyAssociations(
+      (transaction as unknown as { ontology_associations?: unknown })
+        .ontology_associations,
+    ),
   });
 
   const handleRepeat = async (values: ExpenseIncomeFormValues) => {
@@ -555,6 +636,24 @@ const ExpenseIncomeForm = ({
           </FormItem>
         )}
       />
+
+      {ontology_associations_enabled && activeWorkspace ? (
+        <FormField
+          name="ontologyAssociations"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <TransactionOntologyEditor
+                  workspaceId={activeWorkspace.id}
+                  value={field.value ?? []}
+                  onChange={field.onChange}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      ) : null}
 
       {type === "expense" && bills_enabled && (
         <FormField

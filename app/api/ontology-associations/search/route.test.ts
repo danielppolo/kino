@@ -1,127 +1,150 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GET } from "./route";
 
-function request(url: string) {
-  return new Request(url);
+import { createClient } from "@/utils/supabase/server";
+
+vi.mock("@/utils/supabase/server", () => ({
+  createClient: vi.fn(),
+}));
+
+const mockedCreateClient = vi.mocked(createClient);
+
+function createSupabase({
+  user = { id: "user-1" } as { id: string } | null,
+  membership = { workspace_id: "workspace-1" } as {
+    workspace_id: string;
+  } | null,
+  enabled = true,
+} = {}) {
+  return {
+    auth: {
+      getUser: vi.fn(async () => ({ data: { user } })),
+    },
+    from: vi.fn((table: string) => {
+      type QueryMock = {
+        select: ReturnType<typeof vi.fn>;
+        eq: ReturnType<typeof vi.fn>;
+        maybeSingle: ReturnType<typeof vi.fn>;
+      };
+      const query: QueryMock = {
+        select: vi.fn(() => query),
+        eq: vi.fn(() => query),
+        maybeSingle: vi.fn(async () =>
+          table === "workspace_members"
+            ? { data: membership }
+            : {
+                data: {
+                  feature_flags: {
+                    bills_enabled: true,
+                    ontology_associations_enabled: enabled,
+                  },
+                },
+              },
+        ),
+      };
+      return query;
+    }),
+  };
+}
+
+function request(query: string) {
+  return new Request(
+    `http://localhost/api/ontology-associations/search?workspaceId=workspace-1&${query}`,
+  );
 }
 
 describe("ontology association search route", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.stubEnv("ONTOLOGY_ALGOLIA_APP_ID", "APP123");
+    vi.stubEnv("ONTOLOGY_ALGOLIA_SEARCH_API_KEY", "search-key");
+    vi.stubEnv("ONTOLOGY_ALGOLIA_INDEX_NAME", "ontology");
+  });
+
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
   });
 
-  it("returns an empty result for short queries without requiring Algolia env vars", async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
-
-    const response = await GET(
-      request("http://localhost/api/ontology-associations/search?q=a"),
+  it("requires authentication", async () => {
+    mockedCreateClient.mockResolvedValue(
+      createSupabase({ user: null }) as never,
     );
-
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ items: [] });
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("returns a clear 500 error when Algolia env vars are missing", async () => {
-    vi.stubEnv("ONTOLOGY_ALGOLIA_APP_ID", "");
-    vi.stubEnv("ONTOLOGY_ALGOLIA_SEARCH_API_KEY", "");
-    vi.stubEnv("ONTOLOGY_ALGOLIA_INDEX_NAME", "");
-    vi.stubEnv("ALGOLIA_APP_ID", "");
-    vi.stubEnv("ALGOLIA_SEARCH_API_KEY", "");
-    vi.stubEnv("ALGOLIA_INDEX_NAME", "");
-
-    const response = await GET(
-      request("http://localhost/api/ontology-associations/search?q=alice"),
-    );
-
-    expect(response.status).toBe(500);
+    const response = await GET(request("q=alice"));
+    expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({
-      error: {
-        code: "ONTOLOGY_ALGOLIA_ENV_MISSING",
-        missing: [
-          "ONTOLOGY_ALGOLIA_APP_ID",
-          "ONTOLOGY_ALGOLIA_SEARCH_API_KEY",
-          "ONTOLOGY_ALGOLIA_INDEX_NAME",
-        ],
-      },
+      error: { code: "UNAUTHORIZED" },
     });
   });
 
-  it("searches Algolia with people/place filters and returns stable items", async () => {
-    vi.stubEnv("ONTOLOGY_ALGOLIA_APP_ID", "APP123");
-    vi.stubEnv("ONTOLOGY_ALGOLIA_SEARCH_API_KEY", "search-key");
-    vi.stubEnv("ONTOLOGY_ALGOLIA_INDEX_NAME", "ontology");
+  it("rejects a non-member and a disabled workspace before Algolia", async () => {
+    mockedCreateClient.mockResolvedValue(
+      createSupabase({ membership: null }) as never,
+    );
+    expect((await GET(request("q=alice"))).status).toBe(403);
 
-    const fetchMock = vi.fn(async () => {
-      return new Response(
-        JSON.stringify({
-          hits: [
-            {
-              objectID: "person-1",
-              type: "person",
-              name: "Alice Smith",
-              subtitle: "Friend",
-              ontologyId: "ont-person-1",
-            },
-            {
-              objectID: "company-1",
-              type: "organization",
-              name: "Acme",
-              ontologyId: "ont-company-1",
-            },
-            {
-              objectID: "place-1",
-              type: "place",
-              name: "Paris",
-              ontologyId: "ont-place-1",
-            },
-          ],
-        }),
-      );
+    mockedCreateClient.mockResolvedValue(
+      createSupabase({ enabled: false }) as never,
+    );
+    const response = await GET(request("q=alice"));
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({
+      error: { code: "ONTOLOGY_ASSOCIATIONS_DISABLED" },
     });
+  });
+
+  it("returns a workspace-scoped stable result", async () => {
+    mockedCreateClient.mockResolvedValue(createSupabase() as never);
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        hits: [
+          {
+            objectID: "person-1",
+            workspaceId: "workspace-1",
+            type: "person",
+            name: "Alice",
+            ontologyId: "canonical-person",
+          },
+        ],
+      }),
+    );
     vi.stubGlobal("fetch", fetchMock);
 
-    const response = await GET(
-      request(
-        "http://localhost/api/ontology-associations/search?query=alice&limit=5",
-      ),
-    );
-
+    const response = await GET(request("q=alice&types=person&limit=5"));
     expect(response.status).toBe(200);
     expect(fetchMock).toHaveBeenCalledWith(
       "https://APP123-dsn.algolia.net/1/indexes/ontology/query",
       expect.objectContaining({
-        method: "POST",
-        headers: expect.objectContaining({
-          "X-Algolia-API-Key": "search-key",
-          "X-Algolia-Application-Id": "APP123",
-        }),
         body: JSON.stringify({
           query: "alice",
           hitsPerPage: 5,
-          filters: "type:person OR type:place",
+          filters: 'workspaceId:"workspace-1" AND (type:person)',
         }),
       }),
     );
     await expect(response.json()).resolves.toEqual({
       items: [
         {
-          id: "person-1",
+          sourceObjectId: "person-1",
           type: "person",
-          name: "Alice Smith",
-          subtitle: "Friend",
-          ontologyId: "ont-person-1",
-        },
-        {
-          id: "place-1",
-          type: "place",
-          name: "Paris",
-          ontologyId: "ont-place-1",
+          name: "Alice",
+          ontologyId: "canonical-person",
         },
       ],
+    });
+  });
+
+  it("does not expose configured values in missing-config errors", async () => {
+    mockedCreateClient.mockResolvedValue(createSupabase() as never);
+    vi.stubEnv("ONTOLOGY_ALGOLIA_SEARCH_API_KEY", "");
+    const response = await GET(request("q=alice"));
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        code: "ONTOLOGY_ALGOLIA_ENV_MISSING",
+        missing: ["ONTOLOGY_ALGOLIA_SEARCH_API_KEY"],
+      },
     });
   });
 });
