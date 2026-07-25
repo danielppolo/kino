@@ -78,6 +78,8 @@ interface TagMultiSelectProps {
   options: Tag[];
   placeholder?: string;
   className?: string;
+  compact?: boolean;
+  icon?: React.ReactNode;
 }
 
 const TagMultiSelect = React.forwardRef<HTMLButtonElement, TagMultiSelectProps>(
@@ -89,6 +91,8 @@ const TagMultiSelect = React.forwardRef<HTMLButtonElement, TagMultiSelectProps>(
       options,
       placeholder = "Select tags",
       className,
+      compact = false,
+      icon,
     },
     ref,
   ) => {
@@ -173,7 +177,15 @@ const TagMultiSelect = React.forwardRef<HTMLButtonElement, TagMultiSelectProps>(
             disabled={disabled}
             onClick={() => setOpen((o) => !o)}
           >
-            {value.length > 0 ? (
+            {compact ? (
+              <span className="flex items-center gap-2 px-2">
+                {icon}
+                <span>
+                  {placeholder}
+                  {value.length > 0 ? ` · ${value.length}` : ""}
+                </span>
+              </span>
+            ) : value.length > 0 ? (
               <div className="flex w-full items-center justify-between">
                 <div className="flex flex-wrap items-center">
                   {value.map((val) => (
@@ -225,7 +237,9 @@ const TagMultiSelect = React.forwardRef<HTMLButtonElement, TagMultiSelectProps>(
                   key={group}
                   heading={
                     <div className="flex items-center gap-2">
-                      {group in ICONS ? ICONS[group as keyof typeof ICONS] : null}
+                      {group in ICONS
+                        ? ICONS[group as keyof typeof ICONS]
+                        : null}
                       <Text className="text-muted-foreground">{group}</Text>
                     </div>
                   }

@@ -1,8 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { format } from "date-fns";
-import { Folder, Link2, Network, Repeat2, Trash } from "lucide-react";
+import { format, parse } from "date-fns";
+import {
+  CalendarDays,
+  Folder,
+  Network,
+  Repeat2,
+  Tags,
+  Trash,
+} from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { v4 as randomUUID } from "uuid";
@@ -10,7 +17,6 @@ import { v4 as randomUUID } from "uuid";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { SubmitButton } from "../submit-button";
-import DaterPicker from "../ui/date-picker";
 import { Switch } from "../ui/switch";
 import {
   type AmountFormValue,
@@ -23,6 +29,7 @@ import { DescriptionInput } from "./description-input";
 import LabelCombobox from "./label-combobox";
 import TagMultiSelect from "./tag-multi-select";
 import TemplateSelect from "./template-select";
+import { TransactionColorIcon } from "./transaction-color";
 import { TransactionOntologyEditor } from "./transaction-ontology-editor";
 
 import { createPlaidTransactionRule } from "@/actions/create-plaid-transaction-rule";
@@ -30,6 +37,7 @@ import { createTransaction } from "@/actions/create-transaction";
 import { replaceTransactionOntologyAssociations } from "@/actions/ontology-associations";
 import CategoryCombobox from "@/components/shared/category-combobox";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Dialog,
   DialogContent,
@@ -50,6 +58,7 @@ import {
 } from "@/components/ui/popover";
 import {
   useFeatureFlags,
+  useLabels,
   useTags,
   useWallets,
 } from "@/contexts/settings-context";
@@ -117,7 +126,9 @@ const ExpenseIncomeForm = ({
   const { activeWorkspace } = useWorkspace();
   const filters = useFilters();
   const [availableTags] = useTags();
+  const [, labelMap] = useLabels();
   const [addAnother, setAddAnother] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const queryClient = useQueryClient();
   const { billPrefill } = useTransactionForm();
   const workspaceWalletIds = wallets.map((wallet) => wallet.id);
@@ -554,7 +565,10 @@ const ExpenseIncomeForm = ({
   const isEdit = Boolean(initialData);
 
   useEffect(() => {
-    if (open) form.reset(entityValues ?? defaultValues);
+    if (open) {
+      form.reset(entityValues ?? defaultValues);
+      setDatePickerOpen(false);
+    }
     // Reset only when the modal opens or the edited transaction changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData?.id, open]);
@@ -682,12 +696,50 @@ const ExpenseIncomeForm = ({
                   name="date"
                   render={({ field }) => (
                     <FormItem>
-                      <FormControl>
-                        <DaterPicker
-                          {...field}
-                          className="h-8 max-w-40 rounded-full"
-                        />
-                      </FormControl>
+                      <Popover
+                        open={datePickerOpen}
+                        onOpenChange={setDatePickerOpen}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="gap-2 rounded-full font-normal"
+                          >
+                            <CalendarDays className="size-4" />
+                            {field.value
+                              ? format(
+                                  parse(field.value, "yyyy-MM-dd", new Date()),
+                                  "MMM d, yyyy",
+                                )
+                              : "Date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="start" className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={
+                              field.value
+                                ? parse(field.value, "yyyy-MM-dd", new Date())
+                                : undefined
+                            }
+                            defaultMonth={
+                              field.value
+                                ? parse(field.value, "yyyy-MM-dd", new Date())
+                                : undefined
+                            }
+                            onSelect={(selectedDate) => {
+                              field.onChange(
+                                selectedDate
+                                  ? format(selectedDate, "yyyy-MM-dd")
+                                  : undefined,
+                              );
+                              if (selectedDate) setDatePickerOpen(false);
+                            }}
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </FormItem>
                   )}
                 />
@@ -700,9 +752,14 @@ const ExpenseIncomeForm = ({
                         <LabelCombobox
                           {...field}
                           size="sm"
-                          icon={<Link2 className="size-4" />}
+                          icon={
+                            <TransactionColorIcon
+                              color={labelMap.get(field.value ?? "")?.color}
+                            />
+                          }
                           placeholder="Label"
-                          className="w-auto max-w-48 rounded-full"
+                          compact
+                          className="w-auto rounded-full"
                         />
                       </FormControl>
                       <FormMessage className="sr-only" />
@@ -718,7 +775,9 @@ const ExpenseIncomeForm = ({
                           {...field}
                           options={availableTags}
                           placeholder="Tags"
-                          className="min-h-8 w-auto max-w-64 rounded-full px-1"
+                          compact
+                          icon={<Tags className="size-4" />}
+                          className="min-h-8 w-auto rounded-full p-0"
                         />
                       </FormControl>
                     </FormItem>

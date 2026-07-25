@@ -11,6 +11,16 @@ interface TransactionColorProps {
   onUpdate: (transaction: Transaction, updates: Partial<Transaction>) => void;
 }
 
+export function TransactionColorIcon({ color }: { color?: string | null }) {
+  return (
+    <Color
+      size="sm"
+      color={color ?? "currentColor"}
+      className="text-muted-foreground"
+    />
+  );
+}
+
 const TransactionColor: React.FC<TransactionColorProps> = ({
   transaction,
   onUpdate,

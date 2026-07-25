@@ -14,6 +14,7 @@ interface LabelComboboxProps {
   placeholder?: string;
   className?: string;
   icon?: React.ReactNode;
+  compact?: boolean;
 }
 
 const LabelCombobox = ({
@@ -24,6 +25,7 @@ const LabelCombobox = ({
   placeholder = "Select label...",
   className,
   icon,
+  compact = false,
 }: LabelComboboxProps) => {
   const [labels] = useLabels();
 
@@ -52,6 +54,7 @@ const LabelCombobox = ({
       placeholder={placeholder}
       className={className}
       renderValue={(option) => {
+        if (compact) return placeholder;
         const label = option && labelMap.get(option.value);
         if (label) {
           return (
