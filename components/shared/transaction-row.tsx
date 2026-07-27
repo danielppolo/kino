@@ -84,26 +84,30 @@ export function TransactionRow({
         )}
         <TransactionDescription transaction={transaction} />
       </div>
-      <div className="flex shrink-0 items-center gap-1">
-        <TagBadges transaction={transaction} />
-        {!transaction.label_id && (
-          <div className="hidden md:block" onClick={stopRowClick}>
-            <LabelCombobox
-              aria-label="Add label"
-              comboboxVariant="icon"
-              size="sm"
-              variant="ghost"
-              value={null}
-              onChange={(labelId) => {
-                if (labelId) {
-                  updateMutation.mutate({ label_id: labelId });
-                }
-              }}
-              icon={<Color size="sm" className="size-2" />}
-              className="size-6 p-0"
-            />
-          </div>
-        )}
+      <div className="shrink-0">
+        <TagBadges
+          transaction={transaction}
+          emptyLabel={
+            !transaction.label_id ? (
+              <div onClick={stopRowClick}>
+                <LabelCombobox
+                  aria-label="Add label"
+                  comboboxVariant="icon"
+                  size="sm"
+                  variant="ghost"
+                  value={null}
+                  onChange={(labelId) => {
+                    if (labelId) {
+                      updateMutation.mutate({ label_id: labelId });
+                    }
+                  }}
+                  icon={<Color size="sm" className="size-1.5" />}
+                  className="size-6 p-0"
+                />
+              </div>
+            ) : undefined
+          }
+        />
       </div>
       <div className="shrink-0">
         <TransactionAmount

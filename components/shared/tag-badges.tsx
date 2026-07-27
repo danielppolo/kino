@@ -18,9 +18,10 @@ import { TransactionList } from "@/utils/supabase/types";
 interface TagBadgesProps {
   transaction: TransactionList;
   className?: string;
+  emptyLabel?: React.ReactNode;
 }
 
-const TagBadges = ({ transaction, className }: TagBadgesProps) => {
+const TagBadges = ({ transaction, className, emptyLabel }: TagBadgesProps) => {
   const router = useRouter();
   const [, setFilters] = useTransactionQueryState();
   const [, tagMap] = useTags();
@@ -41,6 +42,9 @@ const TagBadges = ({ transaction, className }: TagBadgesProps) => {
   const ontologyAssociations = ontology_associations_enabled
     ? parseStoredOntologyAssociations(transaction.ontology_associations)
     : [];
+  const labelColor = transaction.label_id
+    ? labelMap.get(transaction.label_id)?.color
+    : undefined;
 
   return (
     <div
@@ -117,23 +121,25 @@ const TagBadges = ({ transaction, className }: TagBadgesProps) => {
           {transaction.transfer_id.slice(-4)}
         </Badge>
       )}
-      {!!transaction.label_id && labelMap.get(transaction.label_id)?.color && (
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            handleLabelClick(transaction.label_id!);
-          }}
-          className="ring-offset-background focus-visible:ring-ring mx-2 cursor-pointer rounded-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-          aria-label="Filter by label"
-        >
-          <Color
-            size="sm"
-            color={labelMap.get(transaction.label_id!)?.color ?? ""}
-            className="size-1.5"
-          />
-        </button>
-      )}
+      {labelColor || emptyLabel ? (
+        <div className="flex size-6 shrink-0 items-center justify-center">
+          {labelColor ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                handleLabelClick(transaction.label_id!);
+              }}
+              className="ring-offset-background focus-visible:ring-ring flex size-6 cursor-pointer items-center justify-center rounded-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              aria-label="Filter by label"
+            >
+              <Color size="sm" color={labelColor} className="size-1.5" />
+            </button>
+          ) : (
+            emptyLabel
+          )}
+        </div>
+      ) : null}
     </div>
   );
 };
