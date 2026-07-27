@@ -69,6 +69,7 @@ export function TransactionRow({
             <CategoryCombobox
               selectionType="combobox"
               size="sm"
+              variant="ghost"
               type={transaction.type ?? undefined}
               value={null}
               onChange={(categoryId) => {
@@ -77,7 +78,7 @@ export function TransactionRow({
                 }
               }}
               placeholder="Add category"
-              className="text-muted-foreground h-6 w-auto border-dashed px-2"
+              className="text-muted-foreground h-auto w-auto rounded-none bg-transparent p-0 underline decoration-dashed underline-offset-4 hover:bg-transparent"
             />
           </div>
         )}
