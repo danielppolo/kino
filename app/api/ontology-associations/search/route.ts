@@ -69,6 +69,7 @@ export async function GET(request: Request) {
   try {
     const { url, init } = buildAlgoliaSearchRequest(config, params);
     console.log("url", url);
+    console.log("init", init);
     const response = await fetch(url, init);
 
     if (!response.ok) {
