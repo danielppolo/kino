@@ -201,12 +201,14 @@ interface TransactionOntologyEditorProps {
   workspaceId: string;
   value: OntologyAssociationItem[];
   onChange: (value: OntologyAssociationItem[]) => void;
+  type?: OntologyAssociationType;
 }
 
 export function TransactionOntologyEditor({
   workspaceId,
   value,
   onChange,
+  type,
 }: TransactionOntologyEditorProps) {
   const people = value.filter((item) => item.type === "person");
   const peopleIds = new Set(people.map((item) => item.sourceObjectId));
@@ -222,78 +224,80 @@ export function TransactionOntologyEditor({
   }
 
   return (
-    <section className="space-y-3 rounded-lg border p-3">
-      <div>
-        <h3 className="text-sm font-medium">Canonical context</h3>
-        <p className="text-muted-foreground text-xs">
-          Link the people and context involved in this transaction.
-        </p>
-      </div>
-
-      <div className="space-y-2">
-        <span className="text-sm">People</span>
-        {people.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5">
-            {people.map((person) => (
-              <Badge
-                className="gap-1 pr-1"
-                key={person.sourceObjectId}
-                variant="secondary"
-              >
-                <UserRound className="size-3" />
-                {person.name}
-                <button
-                  aria-label={`Remove ${person.name}`}
-                  className="rounded-full p-0.5 hover:bg-black/10"
-                  type="button"
-                  onClick={() =>
-                    onChange(
-                      value.filter(
-                        (item) => item.sourceObjectId !== person.sourceObjectId,
-                      ),
-                    )
-                  }
+    <section className="space-y-3">
+      {!type || type === "person" ? (
+        <div className="space-y-2">
+          <span className="text-sm">People</span>
+          {people.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {people.map((person) => (
+                <Badge
+                  className="gap-1 pr-1"
+                  key={person.sourceObjectId}
+                  variant="secondary"
                 >
-                  <X className="size-3" />
-                </button>
-              </Badge>
-            ))}
-          </div>
-        ) : null}
-        <OntologyPicker
-          excludedSourceIds={peopleIds}
-          type="person"
-          workspaceId={workspaceId}
-          onSelect={(item) => onChange([...value, item])}
-        />
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        {(["trip", "place", "organization"] as const).map((type) => {
-          const selected = value.find((item) => item.type === type);
-          return (
-            <div className="space-y-1.5" key={type}>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">{TYPE_META[type].label}</span>
-                {selected ? (
+                  <UserRound className="size-3" />
+                  {person.name}
                   <button
-                    className="text-muted-foreground hover:text-foreground text-xs"
+                    aria-label={`Remove ${person.name}`}
+                    className="rounded-full p-0.5 hover:bg-black/10"
                     type="button"
-                    onClick={() => replaceSingleton(type)}
+                    onClick={() =>
+                      onChange(
+                        value.filter(
+                          (item) =>
+                            item.sourceObjectId !== person.sourceObjectId,
+                        ),
+                      )
+                    }
                   >
-                    Clear
+                    <X className="size-3" />
                   </button>
-                ) : null}
-              </div>
-              <OntologyPicker
-                type={type}
-                value={selected}
-                workspaceId={workspaceId}
-                onSelect={(item) => replaceSingleton(type, item)}
-              />
+                </Badge>
+              ))}
             </div>
-          );
-        })}
+          ) : null}
+          <OntologyPicker
+            excludedSourceIds={peopleIds}
+            type="person"
+            workspaceId={workspaceId}
+            onSelect={(item) => onChange([...value, item])}
+          />
+        </div>
+      ) : null}
+
+      <div className={cn("grid gap-3", !type && "sm:grid-cols-3")}>
+        {(["trip", "place", "organization"] as const)
+          .filter((associationType) => !type || associationType === type)
+          .map((associationType) => {
+            const selected = value.find(
+              (item) => item.type === associationType,
+            );
+            return (
+              <div className="space-y-1.5" key={associationType}>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">
+                    {TYPE_META[associationType].label}
+                  </span>
+                  {selected ? (
+                    <button
+                      className="text-muted-foreground hover:text-foreground text-xs"
+                      type="button"
+                      onClick={() => replaceSingleton(associationType)}
+                    >
+                      Clear
+                    </button>
+                  ) : null}
+                </div>
+                <OntologyPicker
+                  type={associationType}
+                  value={selected}
+                  workspaceId={workspaceId}
+                  onSelect={(item) => replaceSingleton(associationType, item)}
+                />
+              </div>
+            );
+          })}
       </div>
     </section>
   );

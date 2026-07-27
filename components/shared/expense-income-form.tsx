@@ -1,16 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { format, parse } from "date-fns";
+import React, { useEffect, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { format, getYear, parse } from "date-fns";
 import {
+  Building2,
   CalendarDays,
   Folder,
-  Network,
+  MapPin,
+  MoreHorizontal,
+  Plane,
   Repeat2,
   Tags,
   Trash,
+  UserRound,
 } from "lucide-react";
-import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { v4 as randomUUID } from "uuid";
 
@@ -44,17 +48,31 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Form,
   FormControl,
   FormField,
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
+import { Kbd } from "@/components/ui/kbd";
 import {
   Popover,
+  PopoverAnchor,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   useFeatureFlags,
   useLabels,
@@ -66,6 +84,7 @@ import { useWorkspace } from "@/contexts/workspace-context";
 import useFilters from "@/hooks/use-filters";
 import {
   type OntologyAssociationItem,
+  type OntologyAssociationType,
   parseStoredOntologyAssociations,
 } from "@/utils/ontology-associations";
 import {
@@ -110,6 +129,40 @@ type ExpenseIncomeMutationValues = Omit<ExpenseIncomeFormValues, "amount"> & {
   amount: number;
 };
 
+type ShortcutHintProps = React.HTMLAttributes<HTMLDivElement> & {
+  label: string;
+  shortcut: string;
+  children: React.ReactNode;
+  controlRef?: React.Ref<HTMLDivElement>;
+};
+
+const ShortcutHint = React.forwardRef<HTMLDivElement, ShortcutHintProps>(
+  ({ label, shortcut, children, controlRef, ...props }, forwardedRef) => {
+    const setRef = (node: HTMLDivElement | null) => {
+      for (const ref of [controlRef, forwardedRef]) {
+        if (typeof ref === "function") ref(node);
+        else if (ref)
+          (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+      }
+    };
+
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div ref={setRef} {...props}>
+            {children}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent className="flex items-center gap-3">
+          <span>{label}</span>
+          <Kbd>{shortcut}</Kbd>
+        </TooltipContent>
+      </Tooltip>
+    );
+  },
+);
+ShortcutHint.displayName = "ShortcutHint";
+
 const ExpenseIncomeForm = ({
   walletId,
   date = format(Date.now(), "yyyy-MM-dd"),
@@ -127,6 +180,16 @@ const ExpenseIncomeForm = ({
   const [, labelMap] = useLabels();
   const [addAnother, setAddAnother] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [associationType, setAssociationType] =
+    useState<OntologyAssociationType>();
+  const [associationPickerOpen, setAssociationPickerOpen] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const categoryRef = useRef<HTMLDivElement>(null);
+  const dateRef = useRef<HTMLDivElement>(null);
+  const labelRef = useRef<HTMLDivElement>(null);
+  const tagsRef = useRef<HTMLDivElement>(null);
+  const billRef = useRef<HTMLDivElement>(null);
+  const moreRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const { billPrefill } = useTransactionForm();
   const workspaceWalletIds = wallets.map((wallet) => wallet.id);
@@ -497,6 +560,49 @@ const ExpenseIncomeForm = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData?.id, open]);
 
+  useEffect(() => {
+    if (!open) return;
+
+    const shortcuts: Record<string, React.RefObject<HTMLDivElement | null>> = {
+      c: categoryRef,
+      d: dateRef,
+      l: labelRef,
+      t: tagsRef,
+      b: billRef,
+      m: moreRef,
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+        event.preventDefault();
+        const submitButton = formRef.current?.querySelector<HTMLButtonElement>(
+          'button[type="submit"]',
+        );
+        if (submitButton) formRef.current?.requestSubmit(submitButton);
+        return;
+      }
+      const target = event.target as HTMLElement;
+      if (
+        event.metaKey ||
+        event.ctrlKey ||
+        event.altKey ||
+        target.matches(
+          "input:not([type='number']), textarea, [contenteditable='true']",
+        )
+      ) {
+        return;
+      }
+      const shortcut = shortcuts[event.key.toLowerCase()];
+      const button = shortcut?.current?.querySelector("button");
+      if (button) {
+        event.preventDefault();
+        button.click();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
+
   const submitForm = async (values: ExpenseIncomeFormValues) => {
     const { error } = await handleSubmit(values);
     if (error) {
@@ -533,291 +639,402 @@ const ExpenseIncomeForm = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[90vh] w-[calc(100%-2rem)] max-w-4xl flex-col gap-0 overflow-hidden rounded-3xl p-0">
-        <Form {...form}>
-          <form
-            className="flex h-[min(34rem,90vh)] flex-col"
-            onSubmit={(event) => {
-              const submitter = (event.nativeEvent as SubmitEvent).submitter;
-              if (submitter?.getAttribute("type") !== "submit") {
-                event.preventDefault();
-                return;
-              }
-              void form.handleSubmit(submitForm)(event);
-            }}
-          >
-            <DialogHeader className="flex-row items-center gap-3 space-y-0 px-6 pt-6 sm:px-8">
-              <DialogTitle className="capitalize">
-                {isEdit ? `Edit ${type}` : `Add ${type}`}
-              </DialogTitle>
-              <span className="text-muted-foreground">›</span>
-              <TemplateSelect type={type} />
-            </DialogHeader>
+        <TooltipProvider delayDuration={400}>
+          <Form {...form}>
+            <form
+              ref={formRef}
+              className="flex h-[min(34rem,90vh)] flex-col"
+              onSubmit={(event) => {
+                const submitter = (event.nativeEvent as SubmitEvent).submitter;
+                if (submitter?.getAttribute("type") !== "submit") {
+                  event.preventDefault();
+                  return;
+                }
+                void form.handleSubmit(submitForm)(event);
+              }}
+            >
+              <DialogHeader className="flex-row items-center gap-3 space-y-0 px-6 pt-6 sm:px-8">
+                <DialogTitle className="capitalize">
+                  {isEdit ? `Edit ${type}` : `Add ${type}`}
+                </DialogTitle>
+                <span className="text-muted-foreground">›</span>
+                <TemplateSelect type={type} />
+              </DialogHeader>
 
-            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-6 py-10 sm:px-8">
-              <FormField
-                name="amount"
-                rules={{
-                  required: "Amount is required",
-                  min: { value: 0.01, message: "Amount must be positive" },
-                }}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <AmountInput
-                        {...field}
-                        autoFocus
-                        variant="ghost"
-                        className="h-auto text-3xl font-semibold shadow-none focus-visible:ring-0 sm:text-4xl"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <DescriptionInput
-                        {...field}
-                        value={field.value ?? ""}
-                        workspaceId={activeWorkspace?.id}
-                        variant="ghost"
-                        placeholder="Add description…"
-                        className="h-auto px-0 py-2 text-lg shadow-none focus-visible:ring-0"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+              <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-6 py-10 sm:px-8">
+                <FormField
+                  name="amount"
+                  rules={{
+                    required: "Amount is required",
+                    min: { value: 0.01, message: "Amount must be positive" },
+                  }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <AmountInput
+                          {...field}
+                          autoFocus
+                          variant="ghost"
+                          className="h-auto [appearance:textfield] text-[2.8125rem] font-semibold shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none sm:text-[3.375rem] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <DescriptionInput
+                          {...field}
+                          value={field.value ?? ""}
+                          workspaceId={activeWorkspace?.id}
+                          variant="ghost"
+                          placeholder="Add description…"
+                          className="h-auto px-0 py-2 text-lg shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-            <div className="border-t px-6 py-5 sm:px-8">
-              <div className="flex flex-wrap items-center gap-2">
-                <FormField
-                  name="category_id"
-                  rules={{ required: "Category is required" }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <CategoryCombobox
-                          {...field}
-                          type={type}
-                          selectionType="combobox"
-                          size="sm"
-                          icon={<Folder className="size-4" />}
-                          placeholder="Category"
-                          className="w-auto max-w-56 rounded-full"
-                        />
-                      </FormControl>
-                      <FormMessage className="sr-only" />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  name="date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <Popover
-                        open={datePickerOpen}
-                        onOpenChange={setDatePickerOpen}
-                      >
-                        <PopoverTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="gap-2 rounded-full font-normal"
-                          >
-                            <CalendarDays className="size-4" />
-                            {field.value
-                              ? format(
-                                  parse(field.value, "yyyy-MM-dd", new Date()),
-                                  "MMM d, yyyy",
-                                )
-                              : "Date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent align="start" className="w-auto p-0">
-                          <Calendar
-                            mode="single"
-                            selected={
-                              field.value
-                                ? parse(field.value, "yyyy-MM-dd", new Date())
-                                : undefined
-                            }
-                            defaultMonth={
-                              field.value
-                                ? parse(field.value, "yyyy-MM-dd", new Date())
-                                : undefined
-                            }
-                            onSelect={(selectedDate) => {
-                              field.onChange(
-                                selectedDate
-                                  ? format(selectedDate, "yyyy-MM-dd")
-                                  : undefined,
-                              );
-                              if (selectedDate) setDatePickerOpen(false);
-                            }}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  name="label_id"
-                  rules={{ required: "Label is required" }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <LabelCombobox
-                          {...field}
-                          size="sm"
-                          icon={
-                            <TransactionColorIcon
-                              color={labelMap.get(field.value ?? "")?.color}
-                            />
-                          }
-                          placeholder="Label"
-                          compact
-                          className="w-auto rounded-full"
-                        />
-                      </FormControl>
-                      <FormMessage className="sr-only" />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  name="tags"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <TagMultiSelect
-                          {...field}
-                          options={availableTags}
-                          placeholder="Tags"
-                          compact
-                          icon={<Tags className="size-4" />}
-                          className="min-h-8 w-auto rounded-full p-0"
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                {type === "expense" && bills_enabled ? (
+              <div className="border-t px-6 py-5 sm:px-8">
+                <div className="flex flex-wrap items-center gap-2">
                   <FormField
-                    name="bill_id"
+                    name="category_id"
+                    rules={{ required: "Category is required" }}
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <BillCombobox
-                            {...field}
-                            walletId={walletId}
-                            size="sm"
-                            placeholder="Bill"
-                            className="w-auto max-w-52 rounded-full"
-                          />
+                          <ShortcutHint
+                            label="Select category"
+                            shortcut="C"
+                            controlRef={categoryRef}
+                          >
+                            <CategoryCombobox
+                              {...field}
+                              type={type}
+                              selectionType="combobox"
+                              size="sm"
+                              icon={<Folder className="size-4" />}
+                              placeholder="Category"
+                              className="w-auto max-w-56 rounded-full"
+                            />
+                          </ShortcutHint>
+                        </FormControl>
+                        <FormMessage className="sr-only" />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    name="date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <ShortcutHint
+                          label="Select date"
+                          shortcut="D"
+                          controlRef={dateRef}
+                        >
+                          <Popover
+                            open={datePickerOpen}
+                            onOpenChange={setDatePickerOpen}
+                          >
+                            <PopoverTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="gap-2 rounded-full font-normal"
+                              >
+                                <CalendarDays className="size-4" />
+                                {field.value
+                                  ? format(
+                                      parse(
+                                        field.value,
+                                        "yyyy-MM-dd",
+                                        new Date(),
+                                      ),
+                                      getYear(
+                                        parse(
+                                          field.value,
+                                          "yyyy-MM-dd",
+                                          new Date(),
+                                        ),
+                                      ) === getYear(new Date())
+                                        ? "MMM d"
+                                        : "MMM d, yyyy",
+                                    )
+                                  : "Date"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent align="start" className="w-80 p-0">
+                              <Calendar
+                                mode="single"
+                                selected={
+                                  field.value
+                                    ? parse(
+                                        field.value,
+                                        "yyyy-MM-dd",
+                                        new Date(),
+                                      )
+                                    : undefined
+                                }
+                                defaultMonth={
+                                  field.value
+                                    ? parse(
+                                        field.value,
+                                        "yyyy-MM-dd",
+                                        new Date(),
+                                      )
+                                    : undefined
+                                }
+                                onSelect={(selectedDate) => {
+                                  field.onChange(
+                                    selectedDate
+                                      ? format(selectedDate, "yyyy-MM-dd")
+                                      : undefined,
+                                  );
+                                  if (selectedDate) setDatePickerOpen(false);
+                                }}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </ShortcutHint>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    name="label_id"
+                    rules={{ required: "Label is required" }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <ShortcutHint
+                            label="Select label"
+                            shortcut="L"
+                            controlRef={labelRef}
+                          >
+                            <LabelCombobox
+                              {...field}
+                              size="sm"
+                              icon={
+                                <TransactionColorIcon
+                                  color={labelMap.get(field.value ?? "")?.color}
+                                />
+                              }
+                              placeholder="Label"
+                              className="w-auto rounded-full"
+                            />
+                          </ShortcutHint>
+                        </FormControl>
+                        <FormMessage className="sr-only" />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    name="tags"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <ShortcutHint
+                            label="Select tags"
+                            shortcut="T"
+                            controlRef={tagsRef}
+                          >
+                            <TagMultiSelect
+                              {...field}
+                              options={availableTags}
+                              placeholder="Tags"
+                              compact
+                              icon={<Tags className="size-4" />}
+                              className="min-h-8 w-auto rounded-full p-0"
+                            />
+                          </ShortcutHint>
                         </FormControl>
                       </FormItem>
                     )}
                   />
-                ) : null}
-                {ontology_associations_enabled && activeWorkspace ? (
-                  <FormField
-                    name="ontologyAssociations"
-                    render={({ field }) => (
-                      <FormItem>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="gap-2 rounded-full"
+                  {type === "expense" && bills_enabled ? (
+                    <FormField
+                      name="bill_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <ShortcutHint
+                              label="Select bill"
+                              shortcut="B"
+                              controlRef={billRef}
                             >
-                              <Network className="size-4" />
-                              {field.value?.length
-                                ? `Context · ${field.value.length}`
-                                : "Context"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent
-                            align="start"
-                            className="w-[min(38rem,calc(100vw-2rem))] p-0"
+                              <BillCombobox
+                                {...field}
+                                walletId={walletId}
+                                size="sm"
+                                placeholder="Bill"
+                                className="w-auto max-w-52 rounded-full"
+                              />
+                            </ShortcutHint>
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  ) : null}
+                  {ontology_associations_enabled && activeWorkspace ? (
+                    <FormField
+                      name="ontologyAssociations"
+                      render={({ field }) => (
+                        <FormItem>
+                          <Popover
+                            open={associationPickerOpen}
+                            onOpenChange={setAssociationPickerOpen}
                           >
-                            <TransactionOntologyEditor
-                              workspaceId={activeWorkspace.id}
-                              value={field.value ?? []}
-                              onChange={field.onChange}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </FormItem>
-                    )}
-                  />
-                ) : null}
-              </div>
+                            <DropdownMenu>
+                              <PopoverAnchor>
+                                <ShortcutHint
+                                  label="More options"
+                                  shortcut="M"
+                                  controlRef={moreRef}
+                                >
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="icon"
+                                      className="size-8 rounded-full"
+                                      aria-label="More transaction options"
+                                    >
+                                      <MoreHorizontal className="size-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                </ShortcutHint>
+                              </PopoverAnchor>
+                              <DropdownMenuContent
+                                align="start"
+                                className="w-52"
+                              >
+                                {(
+                                  [
+                                    ["person", "People", UserRound],
+                                    ["place", "Places", MapPin],
+                                    [
+                                      "organization",
+                                      "Organizations",
+                                      Building2,
+                                    ],
+                                    ["trip", "Trips", Plane],
+                                  ] as const
+                                ).map(([value, label, Icon]) => (
+                                  <DropdownMenuItem
+                                    key={value}
+                                    className="gap-2"
+                                    onSelect={() => {
+                                      setAssociationType(value);
+                                      window.setTimeout(
+                                        () => setAssociationPickerOpen(true),
+                                        0,
+                                      );
+                                    }}
+                                  >
+                                    <Icon className="size-4" />
+                                    {label}
+                                    {field.value?.filter(
+                                      (item: OntologyAssociationItem) =>
+                                        item.type === value,
+                                    ).length ? (
+                                      <span className="text-muted-foreground ml-auto text-xs">
+                                        {
+                                          field.value.filter(
+                                            (item: OntologyAssociationItem) =>
+                                              item.type === value,
+                                          ).length
+                                        }
+                                      </span>
+                                    ) : null}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                            <PopoverContent align="start" className="w-80 p-3">
+                              <TransactionOntologyEditor
+                                workspaceId={activeWorkspace.id}
+                                value={field.value ?? []}
+                                onChange={field.onChange}
+                                type={associationType}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </FormItem>
+                      )}
+                    />
+                  ) : null}
+                </div>
 
-              <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-2">
-                  {isEdit ? (
-                    <>
-                      <Button
-                        type="button"
-                        variant="outline"
+                <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    {isEdit ? (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={repeatForm}
+                          disabled={isPending}
+                          aria-label="Repeat transaction"
+                        >
+                          <Repeat2 className="size-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={deleteForm}
+                          disabled={deleteMutation.isPending}
+                          aria-label="Delete transaction"
+                        >
+                          <Trash className="size-4" />
+                        </Button>
+                      </>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center gap-4">
+                    {!isEdit ? (
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id="add-another"
+                          checked={addAnother}
+                          onCheckedChange={setAddAnother}
+                        />
+                        <label
+                          htmlFor="add-another"
+                          className="text-muted-foreground text-sm"
+                        >
+                          Create more
+                        </label>
+                      </div>
+                    ) : null}
+                    <ShortcutHint
+                      label={isEdit ? "Update transaction" : `Create ${type}`}
+                      shortcut="⌘ ↵"
+                    >
+                      <SubmitButton
+                        type="submit"
                         size="sm"
-                        onClick={repeatForm}
                         disabled={isPending}
-                        aria-label="Repeat transaction"
+                        isLoading={isPending}
+                        className="rounded-full px-5"
                       >
-                        <Repeat2 className="size-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={deleteForm}
-                        disabled={deleteMutation.isPending}
-                        aria-label="Delete transaction"
-                      >
-                        <Trash className="size-4" />
-                      </Button>
-                    </>
-                  ) : null}
-                </div>
-                <div className="flex items-center gap-4">
-                  {!isEdit ? (
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id="add-another"
-                        checked={addAnother}
-                        onCheckedChange={setAddAnother}
-                      />
-                      <label
-                        htmlFor="add-another"
-                        className="text-muted-foreground text-sm"
-                      >
-                        Create more
-                      </label>
-                    </div>
-                  ) : null}
-                  <SubmitButton
-                    type="submit"
-                    size="sm"
-                    disabled={isPending}
-                    isLoading={isPending}
-                    className="rounded-full px-5"
-                  >
-                    {isEdit ? "Update" : `Create ${type}`}
-                  </SubmitButton>
+                        {isEdit ? "Update" : `Create ${type}`}
+                      </SubmitButton>
+                    </ShortcutHint>
+                  </div>
                 </div>
               </div>
-            </div>
-          </form>
-        </Form>
+            </form>
+          </Form>
+        </TooltipProvider>
       </DialogContent>
     </Dialog>
   );
