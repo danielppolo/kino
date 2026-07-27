@@ -23,7 +23,7 @@ function rule(
     Pick<TransactionRule, "id" | "priority">,
 ): TransactionRule {
   return {
-    actions: { tagIds: [] },
+    actions: { ontologyAssociations: [], tagIds: [] },
     conditions: [{ field: "merchant", operator: "is", value: "acme roasters" }],
     createdAt: `2026-01-0${overrides.priority + 1}`,
     enabled: true,
@@ -76,6 +76,14 @@ describe("resolveTransactionRules", () => {
         rule({
           actions: {
             categoryId: "00000000-0000-4000-8000-000000000001",
+            ontologyAssociations: [
+              {
+                name: "Primary place",
+                ontologyId: "00000000-0000-4000-8000-000000000021",
+                sourceObjectId: "place-1",
+                type: "place",
+              },
+            ],
             tagIds: ["00000000-0000-4000-8000-000000000011"],
           },
           id: "category-rule",
@@ -85,6 +93,20 @@ describe("resolveTransactionRules", () => {
           actions: {
             categoryId: "00000000-0000-4000-8000-000000000002",
             labelId: "00000000-0000-4000-8000-000000000003",
+            ontologyAssociations: [
+              {
+                name: "Lower-priority place",
+                ontologyId: "00000000-0000-4000-8000-000000000022",
+                sourceObjectId: "place-2",
+                type: "place",
+              },
+              {
+                name: "Person",
+                ontologyId: "00000000-0000-4000-8000-000000000023",
+                sourceObjectId: "person-1",
+                type: "person",
+              },
+            ],
             tagIds: ["00000000-0000-4000-8000-000000000012"],
           },
           id: "label-rule",
@@ -99,6 +121,10 @@ describe("resolveTransactionRules", () => {
       "00000000-0000-4000-8000-000000000011",
       "00000000-0000-4000-8000-000000000012",
     ]);
+    expect(result.ontologyAssociations.map((item) => item.ontologyId)).toEqual([
+      "00000000-0000-4000-8000-000000000021",
+      "00000000-0000-4000-8000-000000000023",
+    ]);
   });
 
   it("stops after a matching stop-processing rule", () => {
@@ -108,6 +134,7 @@ describe("resolveTransactionRules", () => {
         rule({
           actions: {
             categoryId: "00000000-0000-4000-8000-000000000001",
+            ontologyAssociations: [],
             tagIds: [],
           },
           id: "stop",
@@ -117,6 +144,7 @@ describe("resolveTransactionRules", () => {
         rule({
           actions: {
             labelId: "00000000-0000-4000-8000-000000000003",
+            ontologyAssociations: [],
             tagIds: [],
           },
           id: "never",

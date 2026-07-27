@@ -21,15 +21,23 @@ function createQueryResult<T>(result: T) {
   type Query = {
     eq: ReturnType<typeof vi.fn>;
     in: ReturnType<typeof vi.fn>;
+    order: ReturnType<typeof vi.fn>;
     single: ReturnType<typeof vi.fn>;
     select: ReturnType<typeof vi.fn>;
+    then: (
+      resolve: (value: T) => unknown,
+      reject?: (reason: unknown) => unknown,
+    ) => Promise<unknown>;
   };
 
   const query = {} as Query;
   query.eq = vi.fn(() => query);
   query.in = vi.fn(async () => result);
+  query.order = vi.fn(() => query);
   query.single = vi.fn(async () => result);
   query.select = vi.fn(() => query);
+  query.then = (resolve, reject) =>
+    Promise.resolve(result).then(resolve, reject);
 
   return query;
 }
@@ -37,16 +45,18 @@ function createQueryResult<T>(result: T) {
 function createSupabaseMock({
   existingOntologyAssociations = [],
   existingTransactions,
-  learnedRules = [],
+  rules = [],
   ontologyEnabled = false,
 }: {
   existingOntologyAssociations?: Array<Record<string, unknown>>;
   existingTransactions: Array<Record<string, unknown>>;
-  learnedRules?: Array<Record<string, unknown>>;
+  rules?: Array<Record<string, unknown>>;
   ontologyEnabled?: boolean;
 }) {
   const upserts: Array<Record<string, unknown>> = [];
   const ontologyAssociationInserts: Array<Record<string, unknown>> = [];
+  const ruleApplicationUpserts: Array<Record<string, unknown>> = [];
+  const ruleTagUpserts: Array<Record<string, unknown>> = [];
 
   const client = {
     from: vi.fn((table: string) => {
@@ -54,8 +64,20 @@ function createSupabaseMock({
         return createQueryResult({ data: [], error: null });
       }
 
-      if (table === "plaid_transaction_rules") {
-        return createQueryResult({ data: learnedRules, error: null });
+      if (table === "transaction_rules") {
+        return createQueryResult({ data: rules, error: null });
+      }
+
+      if (table === "categories") {
+        return createQueryResult({
+          data: [
+            {
+              id: "00000000-0000-4000-8000-000000000010",
+              type: "expense",
+            },
+          ],
+          error: null,
+        });
       }
 
       if (table === "workspaces") {
@@ -86,6 +108,24 @@ function createSupabaseMock({
         };
       }
 
+      if (table === "transaction_tags") {
+        return {
+          upsert: vi.fn(async (rows: Array<Record<string, unknown>>) => {
+            ruleTagUpserts.push(...rows);
+            return { error: null };
+          }),
+        };
+      }
+
+      if (table === "transaction_rule_applications") {
+        return {
+          upsert: vi.fn(async (rows: Array<Record<string, unknown>>) => {
+            ruleApplicationUpserts.push(...rows);
+            return { error: null };
+          }),
+        };
+      }
+
       if (table === "transactions") {
         return {
           select: vi.fn(() =>
@@ -111,7 +151,13 @@ function createSupabaseMock({
     }),
   };
 
-  return { client, ontologyAssociationInserts, upserts };
+  return {
+    client,
+    ontologyAssociationInserts,
+    ruleApplicationUpserts,
+    ruleTagUpserts,
+    upserts,
+  };
 }
 
 const wallet = {
@@ -151,6 +197,29 @@ const plaidTransaction: PlaidFetchedTransaction = {
   plaid_personal_finance_category_primary: "FOOD_AND_DRINK",
   plaid_transaction_id: "plaid-transaction-id",
 };
+
+function createRule(actions: Record<string, unknown>) {
+  return {
+    actions: {
+      ontologyAssociations: [],
+      tagIds: [],
+      ...actions,
+    },
+    conditions: [
+      { field: "merchant", operator: "is", value: "plaid merchant" },
+    ],
+    created_at: "2026-01-01T00:00:00.000Z",
+    enabled: true,
+    id: "rule-id",
+    match_mode: "all",
+    name: "Plaid merchant",
+    priority: 0,
+    stop_processing: false,
+    trigger_source: "plaid",
+    updated_at: "2026-01-01T00:00:00.000Z",
+    workspace_id: "workspace-id",
+  };
+}
 
 describe("syncWalletPlaidTransactions", () => {
   beforeEach(() => {
@@ -192,21 +261,24 @@ describe("syncWalletPlaidTransactions", () => {
     const supabase = createSupabaseMock({
       existingTransactions: [],
       ontologyEnabled: true,
-      learnedRules: [
-        {
-          merchant_key: "plaid merchant",
-          category_id: "learned-category-id",
-          plaid_transaction_rule_ontology_associations: [
+      rules: [
+        createRule({
+          categoryId: "00000000-0000-4000-8000-000000000010",
+          ontologyAssociations: [
             {
-              ontology_entity_id: "person-entity-id",
-              entity_type: "person",
+              name: "Person",
+              ontologyId: "00000000-0000-4000-8000-000000000001",
+              sourceObjectId: "person-source-id",
+              type: "person",
             },
             {
-              ontology_entity_id: "trip-entity-id",
-              entity_type: "trip",
+              name: "Trip",
+              ontologyId: "00000000-0000-4000-8000-000000000002",
+              sourceObjectId: "trip-source-id",
+              type: "trip",
             },
           ],
-        },
+        }),
       ],
     });
 
@@ -218,17 +290,17 @@ describe("syncWalletPlaidTransactions", () => {
 
     expect(supabase.upserts).toHaveLength(1);
     expect(supabase.upserts[0]).toMatchObject({
-      category_id: "learned-category-id",
+      category_id: "00000000-0000-4000-8000-000000000010",
     });
     expect(supabase.ontologyAssociationInserts).toEqual([
       {
         transaction_id: supabase.upserts[0].id,
-        ontology_entity_id: "person-entity-id",
+        ontology_entity_id: "00000000-0000-4000-8000-000000000001",
         entity_type: "person",
       },
       {
         transaction_id: supabase.upserts[0].id,
-        ontology_entity_id: "trip-entity-id",
+        ontology_entity_id: "00000000-0000-4000-8000-000000000002",
         entity_type: "trip",
       },
     ]);
@@ -252,17 +324,17 @@ describe("syncWalletPlaidTransactions", () => {
         },
       ],
       ontologyEnabled: true,
-      learnedRules: [
-        {
-          merchant_key: "plaid merchant",
-          category_id: null,
-          plaid_transaction_rule_ontology_associations: [
+      rules: [
+        createRule({
+          ontologyAssociations: [
             {
-              ontology_entity_id: "rule-place-id",
-              entity_type: "place",
+              name: "Place",
+              ontologyId: "00000000-0000-4000-8000-000000000003",
+              sourceObjectId: "place-source-id",
+              type: "place",
             },
           ],
-        },
+        }),
       ],
     });
 

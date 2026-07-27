@@ -332,6 +332,7 @@ export async function previewTransactionRule(input: {
           categoryType === row.type &&
           !row.category_id) ||
         (definition.actions.labelId && !row.label_id) ||
+        definition.actions.ontologyAssociations.length > 0 ||
         definition.actions.tagIds.length > 0,
     ).length,
     overwriteCount: matches.filter(
@@ -409,13 +410,43 @@ export async function applyTransactionRuleToHistory(input: {
       if (tagError) throw new Error(tagError.message);
     }
 
-    if (Object.keys(update).length > 0 || rule.actions.tagIds.length > 0) {
+    let appliedOntologyAssociations: typeof rule.actions.ontologyAssociations =
+      [];
+    if (rule.actions.ontologyAssociations.length > 0) {
+      const { data: existingContext, error: contextError } = await supabase
+        .from("transaction_ontology_associations")
+        .select("transaction_id")
+        .eq("transaction_id", transaction.id)
+        .limit(1);
+      if (contextError) throw new Error(contextError.message);
+
+      if (!existingContext?.length) {
+        const { error: ontologyError } = await supabase
+          .from("transaction_ontology_associations")
+          .insert(
+            rule.actions.ontologyAssociations.map((association) => ({
+              entity_type: association.type,
+              ontology_entity_id: association.ontologyId,
+              transaction_id: transaction.id,
+            })),
+          );
+        if (ontologyError) throw new Error(ontologyError.message);
+        appliedOntologyAssociations = rule.actions.ontologyAssociations;
+      }
+    }
+
+    if (
+      Object.keys(update).length > 0 ||
+      rule.actions.tagIds.length > 0 ||
+      appliedOntologyAssociations.length > 0
+    ) {
       const { error: applicationError } = await supabase
         .from("transaction_rule_applications")
         .upsert(
           {
             applied_actions: {
               ...update,
+              ontologyAssociations: appliedOntologyAssociations,
               tagIds: rule.actions.tagIds,
             },
             execution_mode: "backfill",

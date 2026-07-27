@@ -31,6 +31,7 @@ function summarizeRule(rule: TransactionRule) {
     rule.actions.categoryId ? "category" : null,
     rule.actions.labelId ? "label" : null,
     rule.actions.tagIds.length > 0 ? "tags" : null,
+    rule.actions.ontologyAssociations.length > 0 ? "canonical context" : null,
   ]
     .filter(Boolean)
     .join(", ");
