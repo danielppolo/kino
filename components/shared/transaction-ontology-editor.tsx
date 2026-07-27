@@ -41,14 +41,18 @@ interface OntologyPickerProps {
   value?: OntologyAssociationItem;
   excludedSourceIds?: Set<string>;
   onSelect: (item: OntologyAssociationItem) => void;
+  embedded?: boolean;
+  onClose?: () => void;
 }
 
-function OntologyPicker({
+export function TransactionOntologyPicker({
   workspaceId,
   type,
   value,
   excludedSourceIds,
   onSelect,
+  embedded = false,
+  onClose,
 }: OntologyPickerProps) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -57,10 +61,11 @@ function OntologyPicker({
     "idle" | "loading" | "ready" | "error"
   >("idle");
   const { label, Icon } = TYPE_META[type];
+  const isOpen = embedded || open;
 
   React.useEffect(() => {
     const trimmedQuery = query.trim();
-    if (!open || trimmedQuery.length < 2) {
+    if (!isOpen || trimmedQuery.length < 2) {
       setItems([]);
       setStatus("idle");
       return;
@@ -102,7 +107,77 @@ function OntologyPicker({
       window.clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [open, query, type, workspaceId]);
+  }, [isOpen, query, type, workspaceId]);
+
+  const search = (
+    <div className="space-y-2">
+      <Input
+        autoFocus
+        aria-label={`Search ${label.toLowerCase()}s`}
+        placeholder={`Search ${label.toLowerCase()}s…`}
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+      />
+      <div className="max-h-56 overflow-y-auto">
+        {query.trim().length < 2 ? (
+          <p className="text-muted-foreground px-2 py-3 text-sm">
+            Type at least 2 characters.
+          </p>
+        ) : null}
+        {status === "loading" ? (
+          <p className="text-muted-foreground px-2 py-3 text-sm">Searching…</p>
+        ) : null}
+        {status === "error" ? (
+          <p className="text-destructive px-2 py-3 text-sm">
+            Search is temporarily unavailable.
+          </p>
+        ) : null}
+        {status === "ready" && items.length === 0 ? (
+          <p className="text-muted-foreground px-2 py-3 text-sm">
+            No {label.toLowerCase()}s found.
+          </p>
+        ) : null}
+        {items.map((item) => {
+          const excluded = excludedSourceIds?.has(item.sourceObjectId);
+          return (
+            <button
+              className={cn(
+                "hover:bg-accent flex w-full items-start gap-2 rounded-md px-2 py-2 text-left text-sm",
+                excluded && "pointer-events-none opacity-50",
+              )}
+              disabled={excluded}
+              key={item.sourceObjectId}
+              type="button"
+              onClick={() => {
+                onSelect(item);
+                setOpen(false);
+                onClose?.();
+              }}
+            >
+              <Check
+                className={cn(
+                  "mt-0.5 size-4 shrink-0",
+                  value?.sourceObjectId === item.sourceObjectId
+                    ? "opacity-100"
+                    : "opacity-0",
+                )}
+              />
+              <span className="min-w-0">
+                <span className="block truncate">{item.name}</span>
+                {item.subtitle ? (
+                  <span className="text-muted-foreground block truncate text-xs">
+                    {item.subtitle}
+                  </span>
+                ) : null}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  if (embedded) return search;
 
   return (
     <Popover
@@ -127,71 +202,8 @@ function OntologyPicker({
           <ChevronsUpDown className="text-muted-foreground size-4" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 space-y-2" align="start">
-        <Input
-          autoFocus
-          aria-label={`Search ${label.toLowerCase()}s`}
-          placeholder={`Search ${label.toLowerCase()}s…`}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-        <div className="max-h-56 overflow-y-auto">
-          {query.trim().length < 2 ? (
-            <p className="text-muted-foreground px-2 py-3 text-sm">
-              Type at least 2 characters.
-            </p>
-          ) : null}
-          {status === "loading" ? (
-            <p className="text-muted-foreground px-2 py-3 text-sm">
-              Searching…
-            </p>
-          ) : null}
-          {status === "error" ? (
-            <p className="text-destructive px-2 py-3 text-sm">
-              Search is temporarily unavailable.
-            </p>
-          ) : null}
-          {status === "ready" && items.length === 0 ? (
-            <p className="text-muted-foreground px-2 py-3 text-sm">
-              No {label.toLowerCase()}s found.
-            </p>
-          ) : null}
-          {items.map((item) => {
-            const excluded = excludedSourceIds?.has(item.sourceObjectId);
-            return (
-              <button
-                className={cn(
-                  "hover:bg-accent flex w-full items-start gap-2 rounded-md px-2 py-2 text-left text-sm",
-                  excluded && "pointer-events-none opacity-50",
-                )}
-                disabled={excluded}
-                key={item.sourceObjectId}
-                type="button"
-                onClick={() => {
-                  onSelect(item);
-                  setOpen(false);
-                }}
-              >
-                <Check
-                  className={cn(
-                    "mt-0.5 size-4 shrink-0",
-                    value?.sourceObjectId === item.sourceObjectId
-                      ? "opacity-100"
-                      : "opacity-0",
-                  )}
-                />
-                <span className="min-w-0">
-                  <span className="block truncate">{item.name}</span>
-                  {item.subtitle ? (
-                    <span className="text-muted-foreground block truncate text-xs">
-                      {item.subtitle}
-                    </span>
-                  ) : null}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+      <PopoverContent className="w-72" align="start">
+        {search}
       </PopoverContent>
     </Popover>
   );
@@ -257,7 +269,7 @@ export function TransactionOntologyEditor({
               ))}
             </div>
           ) : null}
-          <OntologyPicker
+          <TransactionOntologyPicker
             excludedSourceIds={peopleIds}
             type="person"
             workspaceId={workspaceId}
@@ -289,7 +301,7 @@ export function TransactionOntologyEditor({
                     </button>
                   ) : null}
                 </div>
-                <OntologyPicker
+                <TransactionOntologyPicker
                   type={associationType}
                   value={selected}
                   workspaceId={workspaceId}

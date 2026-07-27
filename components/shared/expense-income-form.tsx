@@ -33,7 +33,7 @@ import { DescriptionInput } from "./description-input";
 import LabelCombobox from "./label-combobox";
 import TagMultiSelect from "./tag-multi-select";
 import TemplateSelect from "./template-select";
-import { TransactionOntologyEditor } from "./transaction-ontology-editor";
+import { TransactionOntologyPicker } from "./transaction-ontology-editor";
 
 import { createTransaction } from "@/actions/create-transaction";
 import { replaceTransactionOntologyAssociations } from "@/actions/ontology-associations";
@@ -49,9 +49,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -64,6 +62,7 @@ import {
 import { Kbd } from "@/components/ui/kbd";
 import {
   Popover,
+  PopoverAnchor,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
@@ -83,6 +82,7 @@ import { useWorkspace } from "@/contexts/workspace-context";
 import useFilters from "@/hooks/use-filters";
 import {
   type OntologyAssociationItem,
+  type OntologyAssociationType,
   parseStoredOntologyAssociations,
 } from "@/utils/ontology-associations";
 import {
@@ -177,6 +177,10 @@ const ExpenseIncomeForm = ({
   const [availableTags] = useTags();
   const [addAnother, setAddAnother] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [associationPickerOpen, setAssociationPickerOpen] = useState(false);
+  const [associationType, setAssociationType] =
+    useState<OntologyAssociationType>("person");
+  const pendingAssociationTypeRef = useRef<OntologyAssociationType>();
   const formRef = useRef<HTMLFormElement>(null);
   const categoryRef = useRef<HTMLDivElement>(null);
   const dateRef = useRef<HTMLDivElement>(null);
@@ -669,8 +673,9 @@ const ExpenseIncomeForm = ({
                           {...field}
                           autoFocus
                           variant="ghost"
-                          symbolClassName="left-0 text-xl md:text-2xl"
-                          className="h-auto [appearance:textfield] pl-8 text-6xl font-semibold shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none sm:text-6xl lg:text-6xl [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                          currency={form.getValues("currency")}
+                          symbolClassName="text-xl md:text-2xl"
+                          className="h-auto [appearance:textfield] px-2 text-4xl font-semibold shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none sm:text-4xl lg:text-4xl [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                         />
                       </FormControl>
                       <FormMessage />
@@ -883,35 +888,69 @@ const ExpenseIncomeForm = ({
                       name="ontologyAssociations"
                       render={({ field }) => (
                         <FormItem>
-                          <DropdownMenu>
-                            <ShortcutHint
-                              label="More options"
-                              shortcut="M"
-                              controlRef={moreRef}
+                          <Popover
+                            open={associationPickerOpen}
+                            onOpenChange={setAssociationPickerOpen}
+                          >
+                            <DropdownMenu
+                              onOpenChange={(nextOpen) => {
+                                if (nextOpen) {
+                                  setAssociationPickerOpen(false);
+                                  return;
+                                }
+
+                                const nextType =
+                                  pendingAssociationTypeRef.current;
+                                if (!nextType) return;
+                                pendingAssociationTypeRef.current = undefined;
+                                window.requestAnimationFrame(() => {
+                                  setAssociationType(nextType);
+                                  setAssociationPickerOpen(true);
+                                });
+                              }}
                             >
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  className="size-8 rounded-full"
-                                  aria-label="More transaction options"
+                              <PopoverAnchor>
+                                <ShortcutHint
+                                  label="More options"
+                                  shortcut="M"
+                                  controlRef={moreRef}
                                 >
-                                  <MoreHorizontal className="size-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                            </ShortcutHint>
-                            <DropdownMenuContent align="start" className="w-52">
-                              {(
-                                [
-                                  ["person", "People", UserRound],
-                                  ["place", "Places", MapPin],
-                                  ["organization", "Organizations", Building2],
-                                  ["trip", "Trips", Plane],
-                                ] as const
-                              ).map(([value, label, Icon]) => (
-                                <DropdownMenuSub key={value}>
-                                  <DropdownMenuSubTrigger className="gap-2">
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="icon"
+                                      className="size-8 rounded-full"
+                                      aria-label="More transaction options"
+                                    >
+                                      <MoreHorizontal className="size-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                </ShortcutHint>
+                              </PopoverAnchor>
+                              <DropdownMenuContent
+                                align="start"
+                                className="w-52"
+                              >
+                                {(
+                                  [
+                                    ["person", "People", UserRound],
+                                    ["place", "Places", MapPin],
+                                    [
+                                      "organization",
+                                      "Organizations",
+                                      Building2,
+                                    ],
+                                    ["trip", "Trips", Plane],
+                                  ] as const
+                                ).map(([value, label, Icon]) => (
+                                  <DropdownMenuItem
+                                    key={value}
+                                    className="gap-2"
+                                    onSelect={() => {
+                                      pendingAssociationTypeRef.current = value;
+                                    }}
+                                  >
                                     <Icon className="size-4" />
                                     {label}
                                     {field.value?.filter(
@@ -927,19 +966,53 @@ const ExpenseIncomeForm = ({
                                         }
                                       </span>
                                     ) : null}
-                                  </DropdownMenuSubTrigger>
-                                  <DropdownMenuSubContent className="w-80 p-3">
-                                    <TransactionOntologyEditor
-                                      workspaceId={activeWorkspace.id}
-                                      value={field.value ?? []}
-                                      onChange={field.onChange}
-                                      type={value}
-                                    />
-                                  </DropdownMenuSubContent>
-                                </DropdownMenuSub>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                            <PopoverContent align="start" className="w-72 p-2">
+                              <TransactionOntologyPicker
+                                key={associationType}
+                                embedded
+                                workspaceId={activeWorkspace.id}
+                                type={associationType}
+                                value={(field.value ?? []).find(
+                                  (item: OntologyAssociationItem) =>
+                                    item.type === associationType,
+                                )}
+                                excludedSourceIds={
+                                  associationType === "person"
+                                    ? new Set(
+                                        (field.value ?? [])
+                                          .filter(
+                                            (item: OntologyAssociationItem) =>
+                                              item.type === "person",
+                                          )
+                                          .map(
+                                            (item: OntologyAssociationItem) =>
+                                              item.sourceObjectId,
+                                          ),
+                                      )
+                                    : undefined
+                                }
+                                onClose={() => setAssociationPickerOpen(false)}
+                                onSelect={(item) => {
+                                  const current = field.value ?? [];
+                                  if (associationType === "person") {
+                                    field.onChange([...current, item]);
+                                    return;
+                                  }
+                                  field.onChange([
+                                    ...current.filter(
+                                      (association: OntologyAssociationItem) =>
+                                        association.type !== associationType,
+                                    ),
+                                    item,
+                                  ]);
+                                }}
+                              />
+                            </PopoverContent>
+                          </Popover>
                         </FormItem>
                       )}
                     />
