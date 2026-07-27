@@ -17,6 +17,10 @@ import type {
 import { fetchConversion } from "@/utils/fetch-conversions-server";
 import { Database } from "@/utils/supabase/database.types";
 import {
+  parseTransactionRuleRow,
+  resolveTransactionRules,
+} from "@/utils/transaction-rules";
+import {
   DEFAULT_FEATURE_FLAGS,
   parseFeatureFlags,
 } from "@/utils/types/feature-flags";
@@ -147,49 +151,50 @@ export async function syncWalletPlaidTransactions({
         !ignoredPlaidTransactionIds.has(transaction.pending_transaction_id)),
   );
 
-  const merchantKeys = Array.from(
-    new Set(
-      transactionsToStore
-        .map((transaction) => transaction.plaid_merchant_key)
-        .filter((value): value is string => Boolean(value)),
-    ),
-  );
-
-  const { data: learnedRules, error: learnedRulesError } =
-    merchantKeys.length === 0
-      ? { data: [], error: null }
-      : await supabase
-          .from("plaid_transaction_rules")
-          .select(
-            "merchant_key, category_id, plaid_transaction_rule_ontology_associations(ontology_entity_id, entity_type)",
-          )
-          .eq("wallet_id", wallet.id)
-          .in("merchant_key", merchantKeys);
-
-  if (learnedRulesError) {
-    throw learnedRulesError;
-  }
-
-  const learnedRuleByMerchantKey = new Map(
-    (learnedRules ?? []).map((rule) => [
-      rule.merchant_key,
-      {
-        categoryId: rule.category_id,
-        ontologyAssociations:
-          rule.plaid_transaction_rule_ontology_associations ?? [],
-      },
-    ]),
-  );
-
-  const { data: workspace, error: workspaceError } = await supabase
-    .from("workspaces")
-    .select("base_currency, feature_flags")
-    .eq("id", wallet.workspace_id)
-    .single();
+  const [
+    { data: ruleRows, error: rulesError },
+    { data: workspace, error: workspaceError },
+  ] = await Promise.all([
+    supabase
+      .from("transaction_rules")
+      .select("*")
+      .eq("workspace_id", wallet.workspace_id)
+      .eq("enabled", true)
+      .eq("trigger_source", "plaid")
+      .order("priority")
+      .order("created_at"),
+    supabase
+      .from("workspaces")
+      .select("base_currency, feature_flags")
+      .eq("id", wallet.workspace_id)
+      .single(),
+  ]);
 
   if (workspaceError || !workspace) {
     throw workspaceError ?? new Error("Workspace not found");
   }
+  if (rulesError) throw rulesError;
+
+  const rules = (ruleRows ?? []).map(parseTransactionRuleRow);
+  const ruleCategoryIds = Array.from(
+    new Set(
+      rules
+        .map((rule) => rule.actions.categoryId)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+  const { data: ruleCategories, error: ruleCategoriesError } =
+    ruleCategoryIds.length === 0
+      ? { data: [], error: null }
+      : await supabase
+          .from("categories")
+          .select("id, type")
+          .eq("workspace_id", wallet.workspace_id)
+          .in("id", ruleCategoryIds);
+  if (ruleCategoriesError) throw ruleCategoriesError;
+  const ruleCategoryTypeById = new Map(
+    (ruleCategories ?? []).map((category) => [category.id, category.type]),
+  );
 
   const baseCurrency = workspace.base_currency;
   const featureFlags = workspace.feature_flags
@@ -253,6 +258,10 @@ export async function syncWalletPlaidTransactions({
   );
 
   const transactionRows: TransactionInsert[] = [];
+  const ruleApplicationRows: Database["public"]["Tables"]["transaction_rule_applications"]["Insert"][] =
+    [];
+  const ruleTagRows: Database["public"]["Tables"]["transaction_tags"]["Insert"][] =
+    [];
   const pendingTransactionUpdates: Array<{
     id: string;
     row: TransactionUpdate;
@@ -262,18 +271,6 @@ export async function syncWalletPlaidTransactions({
     string,
     Array<{ entity_type: string; ontology_entity_id: string }>
   >();
-
-  function recordOntologyRuleCandidate(
-    transactionId: string,
-    merchantKey: string | null,
-  ) {
-    if (!featureFlags.ontology_associations_enabled || !merchantKey) return;
-    const associations =
-      learnedRuleByMerchantKey.get(merchantKey)?.ontologyAssociations ?? [];
-    if (associations.length > 0) {
-      ontologyRuleCandidates.set(transactionId, associations);
-    }
-  }
 
   transactionsToStore.forEach((transaction) => {
     const transactionDate = transaction.date;
@@ -305,22 +302,54 @@ export async function syncWalletPlaidTransactions({
       pendingTransactionIdsToDelete.add(pendingExistingTransaction.id);
     }
 
+    const transactionId = currentExistingTransaction?.id ?? randomUUID();
+    const ruleResolution =
+      existingTransaction || rules.length === 0
+        ? undefined
+        : resolveTransactionRules({
+            candidate: {
+              amountCents: amountData.amount_cents,
+              currency,
+              description: transaction.merchant_name || transaction.name,
+              merchantKey: transaction.plaid_merchant_key,
+              merchantName:
+                transaction.plaid_merchant_name ??
+                transaction.merchant_name ??
+                null,
+              plaidCategory:
+                transaction.plaid_personal_finance_category_primary,
+              type: amountData.type,
+              walletId: wallet.id,
+            },
+            rules: rules.map((rule) => {
+              const categoryId = rule.actions.categoryId;
+              if (
+                !categoryId ||
+                ruleCategoryTypeById.get(categoryId) === amountData.type
+              ) {
+                return rule;
+              }
+              return {
+                ...rule,
+                actions: { ...rule.actions, categoryId: undefined },
+              };
+            }),
+          });
+
     const transactionRow = {
       amount_cents: amountData.amount_cents,
       base_amount_cents: signedBaseAmountCents,
       category_id:
         existingTransaction?.category_id ??
-        (transaction.plaid_merchant_key
-          ? (learnedRuleByMerchantKey.get(transaction.plaid_merchant_key)
-              ?.categoryId ?? null)
-          : null),
+        ruleResolution?.categoryId ??
+        null,
       conversion_rate_to_base: conversionRate,
       currency,
       date: transactionDate,
       description:
         existingTransaction?.description ??
         (transaction.merchant_name || transaction.name),
-      label_id: existingTransaction?.label_id ?? null,
+      label_id: existingTransaction?.label_id ?? ruleResolution?.labelId ?? null,
       note: existingTransaction?.note ?? null,
       plaid_merchant_key: transaction.plaid_merchant_key,
       plaid_merchant_name:
@@ -333,11 +362,36 @@ export async function syncWalletPlaidTransactions({
       wallet_id: wallet.id,
     } satisfies TransactionInsert;
 
-    if (!currentExistingTransaction && pendingExistingTransaction?.id) {
-      recordOntologyRuleCandidate(
-        pendingExistingTransaction.id,
-        transaction.plaid_merchant_key,
+    if (ruleResolution) {
+      ruleTagRows.push(
+        ...ruleResolution.tagIds.map((tagId) => ({
+          tag_id: tagId,
+          transaction_id: transactionId,
+        })),
       );
+      ruleApplicationRows.push(
+        ...ruleResolution.applications.map((application) => ({
+          applied_actions: application.appliedActions,
+          execution_mode: "live",
+          rule_id: application.ruleId,
+          transaction_id: transactionId,
+        })),
+      );
+      if (
+        featureFlags.ontology_associations_enabled &&
+        ruleResolution.ontologyAssociations.length > 0
+      ) {
+        ontologyRuleCandidates.set(
+          transactionId,
+          ruleResolution.ontologyAssociations.map((association) => ({
+            entity_type: association.type,
+            ontology_entity_id: association.ontologyId,
+          })),
+        );
+      }
+    }
+
+    if (!currentExistingTransaction && pendingExistingTransaction?.id) {
       pendingTransactionUpdates.push({
         id: pendingExistingTransaction.id,
         row: transactionRow,
@@ -346,20 +400,14 @@ export async function syncWalletPlaidTransactions({
     }
 
     if (currentExistingTransaction?.id) {
-      recordOntologyRuleCandidate(
-        currentExistingTransaction.id,
-        transaction.plaid_merchant_key,
-      );
       transactionRows.push({
         ...transactionRow,
         id: currentExistingTransaction.id,
       });
     } else {
-      const id = randomUUID();
-      recordOntologyRuleCandidate(id, transaction.plaid_merchant_key);
       transactionRows.push({
         ...transactionRow,
-        id,
+        id: transactionId,
       });
     }
   });
@@ -395,6 +443,22 @@ export async function syncWalletPlaidTransactions({
     if (error) {
       throw error;
     }
+  }
+
+  if (ruleTagRows.length > 0) {
+    const { error } = await supabase
+      .from("transaction_tags")
+      .upsert(ruleTagRows, { onConflict: "transaction_id,tag_id" });
+    if (error) throw error;
+  }
+
+  if (ruleApplicationRows.length > 0) {
+    const { error } = await supabase
+      .from("transaction_rule_applications")
+      .upsert(ruleApplicationRows, {
+        onConflict: "rule_id,transaction_id,execution_mode",
+      });
+    if (error) throw error;
   }
 
   if (ontologyRuleCandidates.size > 0) {

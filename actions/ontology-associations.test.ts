@@ -11,6 +11,7 @@ vi.mock("@/utils/supabase/server", () => ({
 const mockedCreateClient = vi.mocked(createClient);
 
 function createAuthorizedSupabase(enabled = true) {
+  const ontologyUpsert = vi.fn();
   const rows: Record<string, unknown> = {
     transactions: { id: "transaction-1", wallet_id: "wallet-1" },
     wallets: { workspace_id: "workspace-1" },
@@ -30,6 +31,37 @@ function createAuthorizedSupabase(enabled = true) {
       })),
     },
     from: vi.fn((table: string) => {
+      if (table === "ontology_entities") {
+        return {
+          upsert: ontologyUpsert.mockImplementation(() => ({
+            select: vi.fn(async () => ({
+              data: [
+                {
+                  id: "entity-1",
+                  entity_type: "person",
+                  ontology_id: "canonical-person",
+                  source_object_id: "person-1",
+                  canonical_name: "Alice",
+                  subtitle: null,
+                },
+              ],
+              error: null,
+            })),
+          })),
+        };
+      }
+      if (table === "transaction_ontology_associations") {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(async () => ({ data: [], error: null })),
+          })),
+          delete: vi.fn(() => ({
+            eq: vi.fn(async () => ({ error: null })),
+          })),
+          insert: vi.fn(async () => ({ error: null })),
+        };
+      }
+
       type QueryMock = {
         eq: ReturnType<typeof vi.fn>;
         in: ReturnType<typeof vi.fn>;
@@ -44,6 +76,7 @@ function createAuthorizedSupabase(enabled = true) {
       };
       return query;
     }),
+    ontologyUpsert,
   };
 }
 
@@ -112,8 +145,9 @@ describe("replaceTransactionOntologyAssociations", () => {
     );
   });
 
-  it("rejects a source object returned for another workspace", async () => {
-    mockedCreateClient.mockResolvedValue(createAuthorizedSupabase() as never);
+  it("accepts a verified source object without workspace metadata", async () => {
+    const supabase = createAuthorizedSupabase();
+    mockedCreateClient.mockResolvedValue(supabase as never);
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
@@ -121,7 +155,6 @@ describe("replaceTransactionOntologyAssociations", () => {
           results: [
             {
               objectID: "person-1",
-              workspaceId: "workspace-2",
               ontologyId: "canonical-person",
               type: "person",
               name: "Alice",
@@ -144,12 +177,25 @@ describe("replaceTransactionOntologyAssociations", () => {
     );
 
     expect(result).toEqual({
-      success: false,
-      error: {
-        code: "ONTOLOGY_SOURCE_MISSING",
-        message:
-          "One or more canonical objects are unavailable in this workspace.",
-      },
+      success: true,
+      items: [
+        {
+          sourceObjectId: "person-1",
+          ontologyId: "canonical-person",
+          type: "person",
+          name: "Alice",
+          entityId: "entity-1",
+        },
+      ],
     });
+    expect(supabase.ontologyUpsert).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          workspace_id: "workspace-1",
+          source_object_id: "person-1",
+        }),
+      ],
+      { onConflict: "workspace_id,entity_type,ontology_id" },
+    );
   });
 });

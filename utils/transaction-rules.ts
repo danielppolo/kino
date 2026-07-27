@@ -98,6 +98,18 @@ export const transactionRuleActionsSchema = z
   .object({
     categoryId: z.string().uuid().optional(),
     labelId: z.string().uuid().optional(),
+    ontologyAssociations: z
+      .array(
+        z.object({
+          entityId: z.string().optional(),
+          name: z.string().min(1),
+          ontologyId: z.string().uuid(),
+          sourceObjectId: z.string().min(1),
+          subtitle: z.string().optional(),
+          type: z.enum(["person", "place", "organization", "trip"]),
+        }),
+      )
+      .default([]),
     tagIds: z.array(z.string().uuid()).default([]),
   })
   .refine(
@@ -105,6 +117,7 @@ export const transactionRuleActionsSchema = z
       Boolean(
         actions.categoryId ||
           actions.labelId ||
+          actions.ontologyAssociations.length > 0 ||
           (actions.tagIds && actions.tagIds.length > 0),
       ),
     "Choose at least one action",
@@ -156,6 +169,7 @@ export interface TransactionRuleCandidate {
 export interface TransactionRuleResolution {
   categoryId?: string;
   labelId?: string;
+  ontologyAssociations: TransactionRuleActions["ontologyAssociations"];
   tagIds: string[];
   applications: Array<{
     appliedActions: TransactionRuleActions;
@@ -254,9 +268,12 @@ export function resolveTransactionRules({
   rules: TransactionRule[];
 }): TransactionRuleResolution {
   const resolution: TransactionRuleResolution = {
-    tagIds: [],
     applications: [],
+    ontologyAssociations: [],
+    tagIds: [],
   };
+  const ontologyKeys = new Set<string>();
+  const singletonOntologyTypes = new Set(["place", "organization", "trip"]);
   const tagIds = new Set<string>();
 
   for (const rule of [...rules].sort(
@@ -270,7 +287,10 @@ export function resolveTransactionRules({
       continue;
     }
 
-    const appliedActions: TransactionRuleActions = { tagIds: [] };
+    const appliedActions: TransactionRuleActions = {
+      ontologyAssociations: [],
+      tagIds: [],
+    };
     if (!resolution.categoryId && rule.actions.categoryId) {
       resolution.categoryId = rule.actions.categoryId;
       appliedActions.categoryId = rule.actions.categoryId;
@@ -285,10 +305,24 @@ export function resolveTransactionRules({
         appliedActions.tagIds.push(tagId);
       }
     }
+    for (const association of rule.actions.ontologyAssociations ?? []) {
+      const key = `${association.type}:${association.ontologyId}`;
+      const singletonAlreadySet =
+        singletonOntologyTypes.has(association.type) &&
+        resolution.ontologyAssociations.some(
+          (existing) => existing.type === association.type,
+        );
+      if (!ontologyKeys.has(key) && !singletonAlreadySet) {
+        ontologyKeys.add(key);
+        resolution.ontologyAssociations.push(association);
+        appliedActions.ontologyAssociations.push(association);
+      }
+    }
 
     if (
       appliedActions.categoryId ||
       appliedActions.labelId ||
+      appliedActions.ontologyAssociations.length > 0 ||
       appliedActions.tagIds.length > 0
     ) {
       resolution.applications.push({

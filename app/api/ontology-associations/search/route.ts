@@ -85,7 +85,7 @@ export async function GET(request: Request) {
     const data = (await response.json()) as { hits?: unknown[] };
 
     return NextResponse.json({
-      items: mapOntologyHits(data.hits ?? [], params.workspaceId),
+      items: mapOntologyHits(data.hits ?? []),
     });
   } catch (error) {
     console.error("Ontology association search error", error);

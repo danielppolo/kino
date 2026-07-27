@@ -102,16 +102,8 @@ export function getOntologyAlgoliaConfig(
   return { appId: appId!, searchApiKey: searchApiKey!, indexName: indexName! };
 }
 
-function escapeFilterValue(value: string) {
-  return value.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
-}
-
-export function buildOntologyFilter(
-  workspaceId: string,
-  types: OntologyAssociationType[],
-) {
-  const typeFilter = types.map((type) => `type:${type}`).join(" OR ");
-  return `workspaceId:"${escapeFilterValue(workspaceId)}" AND (${typeFilter})`;
+export function buildOntologyFilter(types: OntologyAssociationType[]) {
+  return types.map((type) => `type:${type}`).join(" OR ");
 }
 
 function buildRequestInit(config: OntologyAlgoliaConfig, body: unknown) {
@@ -135,7 +127,7 @@ export function buildAlgoliaSearchRequest(
     init: buildRequestInit(config, {
       query: params.query,
       hitsPerPage: params.limit,
-      filters: buildOntologyFilter(params.workspaceId, params.types),
+      filters: buildOntologyFilter(params.types),
     }),
   };
 }
@@ -160,10 +152,7 @@ function readString(record: Record<string, unknown>, keys: string[]) {
   return undefined;
 }
 
-export function mapOntologyHits(
-  hits: unknown[],
-  expectedWorkspaceId?: string,
-): OntologyAssociationItem[] {
+export function mapOntologyHits(hits: unknown[]): OntologyAssociationItem[] {
   const seen = new Set<string>();
 
   return hits.flatMap((hit) => {
@@ -171,9 +160,6 @@ export function mapOntologyHits(
     const record = hit as Record<string, unknown>;
     const type = record.type;
     if (!isOntologyAssociationType(type)) return [];
-
-    const workspaceId = readString(record, ["workspaceId", "workspace_id"]);
-    if (expectedWorkspaceId && workspaceId !== expectedWorkspaceId) return [];
 
     const sourceObjectId = readString(record, ["objectID", "id"]);
     const name = readString(record, [

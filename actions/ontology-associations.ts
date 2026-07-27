@@ -133,7 +133,7 @@ export async function replaceTransactionOntologyAssociations(
     }
 
     const data = (await response.json()) as { results?: unknown[] };
-    verifiedItems = mapOntologyHits(data.results ?? [], wallet.workspace_id);
+    verifiedItems = mapOntologyHits(data.results ?? []);
     const verifiedBySourceId = new Map(
       verifiedItems.map((item) => [item.sourceObjectId, item]),
     );
@@ -151,7 +151,7 @@ export async function replaceTransactionOntologyAssociations(
     ) {
       return failure(
         "ONTOLOGY_SOURCE_MISSING",
-        "One or more canonical objects are unavailable in this workspace.",
+        "One or more canonical objects are unavailable from the ontology service.",
       );
     }
   }

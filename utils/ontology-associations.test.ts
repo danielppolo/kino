@@ -62,10 +62,10 @@ describe("ontology association helpers", () => {
     });
   });
 
-  it("builds a workspace- and type-scoped search request", () => {
+  it("builds a type-scoped search request", () => {
     expect(
       buildAlgoliaSearchRequest(config, {
-        workspaceId: 'workspace-"1',
+        workspaceId: "workspace-1",
         query: "alice",
         types: ["person", "organization"],
         limit: 5,
@@ -82,8 +82,7 @@ describe("ontology association helpers", () => {
         body: JSON.stringify({
           query: "alice",
           hitsPerPage: 5,
-          filters:
-            'workspaceId:"workspace-\\"1" AND (type:person OR type:organization)',
+          filters: "type:person OR type:organization",
         }),
       },
     });
@@ -97,41 +96,37 @@ describe("ontology association helpers", () => {
     );
   });
 
-  it("maps all supported types, enforces workspace, and deduplicates canonical IDs", () => {
+  it("maps all supported types and deduplicates canonical IDs", () => {
     expect(
-      mapOntologyHits(
-        [
-          {
-            objectID: "person-1",
-            workspaceId: "workspace-1",
-            type: "person",
-            canonicalName: "Ada Lovelace",
-            ontologyId: "canonical-person",
-          },
-          {
-            objectID: "person-duplicate",
-            workspaceId: "workspace-1",
-            type: "person",
-            name: "Ada",
-            ontologyId: "canonical-person",
-          },
-          {
-            objectID: "org-1",
-            workspaceId: "workspace-1",
-            type: "organization",
-            name: "Acme",
-            ontology_id: "canonical-org",
-          },
-          {
-            objectID: "trip-1",
-            workspaceId: "other-workspace",
-            type: "trip",
-            name: "Summer",
-            ontologyId: "canonical-trip",
-          },
-        ],
-        "workspace-1",
-      ),
+      mapOntologyHits([
+        {
+          objectID: "person-1",
+          workspaceId: "workspace-1",
+          type: "person",
+          canonicalName: "Ada Lovelace",
+          ontologyId: "canonical-person",
+        },
+        {
+          objectID: "person-duplicate",
+          workspaceId: "workspace-1",
+          type: "person",
+          name: "Ada",
+          ontologyId: "canonical-person",
+        },
+        {
+          objectID: "org-1",
+          workspaceId: "workspace-1",
+          type: "organization",
+          name: "Acme",
+          ontology_id: "canonical-org",
+        },
+        {
+          objectID: "trip-1",
+          type: "trip",
+          name: "Summer",
+          ontologyId: "canonical-trip",
+        },
+      ]),
     ).toEqual([
       {
         sourceObjectId: "person-1",
@@ -144,6 +139,12 @@ describe("ontology association helpers", () => {
         type: "organization",
         name: "Acme",
         ontologyId: "canonical-org",
+      },
+      {
+        sourceObjectId: "trip-1",
+        type: "trip",
+        name: "Summer",
+        ontologyId: "canonical-trip",
       },
     ]);
   });

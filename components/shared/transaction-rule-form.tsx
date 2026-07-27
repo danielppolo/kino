@@ -9,6 +9,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import CategoryCombobox from "./category-combobox";
 import LabelCombobox from "./label-combobox";
 import TagMultiSelect from "./tag-multi-select";
+import { TransactionOntologyEditor } from "./transaction-ontology-editor";
 import WalletPicker from "./wallet-picker";
 
 import {
@@ -32,11 +33,13 @@ import {
 import { Switch } from "@/components/ui/switch";
 import {
   useCategories,
+  useFeatureFlags,
   useLabels,
   useTags,
   useWallets,
 } from "@/contexts/settings-context";
 import { useWorkspace } from "@/contexts/workspace-context";
+import { parseStoredOntologyAssociations } from "@/utils/ontology-associations";
 import {
   transactionRuleDefinitionSchema,
   type TransactionRule,
@@ -92,7 +95,7 @@ function buildDefaultDefinition(
 ): TransactionRuleDefinition {
   if (!transaction) {
     return {
-      actions: { tagIds: [] },
+      actions: { ontologyAssociations: [], tagIds: [] },
       conditions: [
         {
           field: "description",
@@ -127,6 +130,13 @@ function buildDefaultDefinition(
     actions: {
       categoryId: transaction.category_id ?? undefined,
       labelId: transaction.label_id ?? undefined,
+      ontologyAssociations: parseStoredOntologyAssociations(
+        (
+          transaction as TransactionList & {
+            ontology_associations?: unknown;
+          }
+        ).ontology_associations,
+      ),
       tagIds: transaction.tag_ids ?? [],
     },
     conditions,
@@ -161,6 +171,7 @@ export default function TransactionRuleForm({
   seedTransaction,
 }: TransactionRuleFormProps) {
   const { activeWorkspace } = useWorkspace();
+  const { ontology_associations_enabled } = useFeatureFlags();
   const [availableTags, tagMap] = useTags();
   const [, categoryMap] = useCategories();
   const [, labelMap] = useLabels();
@@ -294,6 +305,9 @@ export default function TransactionRuleForm({
             .map((tagId) => tagMap.get(tagId)?.title)
             .filter(Boolean)
             .join(", ")}`
+        : null,
+      definition.actions.ontologyAssociations.length > 0
+        ? "canonical context"
         : null,
     ]
       .filter(Boolean)
@@ -568,6 +582,18 @@ export default function TransactionRuleForm({
               }))
             }
           />
+          {ontology_associations_enabled && workspaceId ? (
+            <TransactionOntologyEditor
+              workspaceId={workspaceId}
+              value={definition.actions.ontologyAssociations}
+              onChange={(ontologyAssociations) =>
+                setDefinition((current) => ({
+                  ...current,
+                  actions: { ...current.actions, ontologyAssociations },
+                }))
+              }
+            />
+          ) : null}
         </section>
 
         <div className="bg-muted/50 rounded-md p-3 text-xs">

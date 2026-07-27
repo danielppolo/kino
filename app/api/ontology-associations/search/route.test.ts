@@ -94,14 +94,13 @@ describe("ontology association search route", () => {
     });
   });
 
-  it("returns a workspace-scoped stable result", async () => {
+  it("returns a stable result after local workspace authorization", async () => {
     mockedCreateClient.mockResolvedValue(createSupabase() as never);
     const fetchMock = vi.fn(async () =>
       Response.json({
         hits: [
           {
             objectID: "person-1",
-            workspaceId: "workspace-1",
             type: "person",
             name: "Alice",
             ontologyId: "canonical-person",
@@ -119,7 +118,7 @@ describe("ontology association search route", () => {
         body: JSON.stringify({
           query: "alice",
           hitsPerPage: 5,
-          filters: 'workspaceId:"workspace-1" AND (type:person)',
+          filters: "type:person",
         }),
       }),
     );

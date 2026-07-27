@@ -32,7 +32,6 @@ import TemplateSelect from "./template-select";
 import { TransactionColorIcon } from "./transaction-color";
 import { TransactionOntologyEditor } from "./transaction-ontology-editor";
 
-import { createPlaidTransactionRule } from "@/actions/create-plaid-transaction-rule";
 import { createTransaction } from "@/actions/create-transaction";
 import { replaceTransactionOntologyAssociations } from "@/actions/ontology-associations";
 import CategoryCombobox from "@/components/shared/category-combobox";
@@ -66,7 +65,6 @@ import { useTransactionForm } from "@/contexts/transaction-form-context";
 import { useWorkspace } from "@/contexts/workspace-context";
 import useFilters from "@/hooks/use-filters";
 import {
-  haveSameOntologyAssociations,
   type OntologyAssociationItem,
   parseStoredOntologyAssociations,
 } from "@/utils/ontology-associations";
@@ -308,28 +306,6 @@ const ExpenseIncomeForm = ({
     },
   });
 
-  const learnPlaidRuleMutation = useMutation({
-    mutationFn: createPlaidTransactionRule,
-    onSuccess: (result) => {
-      if (result.error) {
-        toast.error(result.error);
-        return;
-      }
-
-      const learnedFields = [
-        result.learnedCategory ? "category" : null,
-        result.learnedOntologyAssociations ? "canonical context" : null,
-      ].filter(Boolean);
-
-      toast.success(
-        `Future Plaid imports from ${result.merchantName} will reuse ${learnedFields.join(" and ")}.`,
-      );
-    },
-    onError: (error: Error) => {
-      toast.error(`Failed to save Plaid category rule: ${error.message}`);
-    },
-  });
-
   const deleteMutation = useMutation({
     mutationFn: deleteTransaction,
     onSuccess: () => {
@@ -429,58 +405,6 @@ const ExpenseIncomeForm = ({
           queryClient.invalidateQueries({ queryKey: ["bills"] });
           queryClient.invalidateQueries({ queryKey: ["bills-with-payments"] });
         }
-      }
-
-      const categoryChanged =
-        !!initialData?.id &&
-        !!initialData.plaid_transaction_id &&
-        !!initialData.plaid_merchant_key &&
-        values.category_id !== (initialData.category_id ?? "");
-      const initialOntologyAssociations = parseStoredOntologyAssociations(
-        (
-          initialData as unknown as
-            | { ontology_associations?: unknown }
-            | undefined
-        )?.ontology_associations,
-      );
-      const ontologyAssociationsChanged =
-        ontology_associations_enabled &&
-        !!initialData?.id &&
-        !!initialData.plaid_transaction_id &&
-        !!initialData.plaid_merchant_key &&
-        !haveSameOntologyAssociations(
-          initialOntologyAssociations,
-          values.ontologyAssociations,
-        );
-      const shouldOfferPlaidRuleLearning =
-        categoryChanged || ontologyAssociationsChanged;
-
-      if (shouldOfferPlaidRuleLearning) {
-        const merchantName =
-          initialData.plaid_merchant_name ??
-          initialData.description ??
-          "this merchant";
-
-        const learnedDescription =
-          categoryChanged && ontologyAssociationsChanged
-            ? "category and canonical context"
-            : categoryChanged
-              ? "category"
-              : "canonical context";
-
-        toast.message(`Learn ${learnedDescription} for future imports?`, {
-          action: {
-            label: "Save rule",
-            onClick: () => {
-              learnPlaidRuleMutation.mutate({
-                transactionId: initialData.id!,
-                includeCategory: categoryChanged,
-                includeOntologyAssociations: ontologyAssociationsChanged,
-              });
-            },
-          },
-          description: `${merchantName} in ${walletMap.get(values.wallet_id)?.name ?? "this wallet"}.`,
-        });
       }
 
       return {

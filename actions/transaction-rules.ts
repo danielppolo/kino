@@ -21,8 +21,11 @@ async function validateRuleTargets(
   const walletIds = definition.conditions
     .filter((condition) => condition.field === "wallet_id")
     .map((condition) => String(condition.value));
+  const ontologyIds = definition.actions.ontologyAssociations.map(
+    (association) => association.ontologyId,
+  );
 
-  const [categoryResult, labelResult, tagResult, walletResult] =
+  const [categoryResult, labelResult, tagResult, walletResult, ontologyResult] =
     await Promise.all([
       definition.actions.categoryId
         ? supabase
@@ -54,13 +57,21 @@ async function validateRuleTargets(
             .eq("workspace_id", workspaceId)
             .in("id", walletIds)
         : Promise.resolve({ data: [], error: null }),
+      ontologyIds.length > 0
+        ? supabase
+            .from("ontology_entities")
+            .select("id")
+            .eq("workspace_id", workspaceId)
+            .in("id", ontologyIds)
+        : Promise.resolve({ data: [], error: null }),
     ]);
 
   const firstError =
     categoryResult.error ||
     labelResult.error ||
     tagResult.error ||
-    walletResult.error;
+    walletResult.error ||
+    ontologyResult.error;
   if (firstError) throw new Error(firstError.message);
   if (definition.actions.categoryId && !categoryResult.data) {
     throw new Error("Category does not belong to this workspace");
@@ -79,6 +90,14 @@ async function validateRuleTargets(
     new Set(walletResult.data?.map((wallet) => wallet.id)).size
   ) {
     throw new Error("One or more wallets do not belong to this workspace");
+  }
+  if (
+    ontologyIds.length !==
+    new Set(ontologyResult.data?.map((entity) => entity.id)).size
+  ) {
+    throw new Error(
+      "One or more canonical context entities do not belong to this workspace",
+    );
   }
 }
 
