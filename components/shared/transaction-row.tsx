@@ -93,7 +93,7 @@ export function TransactionRow({
                 <LabelCombobox
                   aria-label="Add label"
                   comboboxVariant="icon"
-                  size="sm"
+                  size="icon"
                   variant="ghost"
                   value={null}
                   onChange={(labelId) => {
@@ -101,17 +101,17 @@ export function TransactionRow({
                       updateMutation.mutate({ label_id: labelId });
                     }
                   }}
-                  icon={<Color size="sm" className="size-1.5" />}
-                  className="size-6 p-0"
+                  icon={<Color size="sm" className="size-1.5 rounded-full" />}
+                  className="size-10 p-0"
                 />
               </div>
             ) : undefined
           }
         />
       </div>
-      <div className="w-24 shrink-0">
+      <div className="shrink-0">
         <TransactionAmount
-          className="w-full text-right"
+          className="text-right"
           amount={transaction.amount_cents!}
           currency={transaction.currency!}
         />

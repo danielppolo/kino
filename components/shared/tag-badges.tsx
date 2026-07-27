@@ -2,6 +2,7 @@ import React from "react";
 import { useRouter } from "next/navigation";
 
 import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
 import Color from "./color";
 import LinkTransferButton from "./link-transfer-button";
 
@@ -122,19 +123,24 @@ const TagBadges = ({ transaction, className, emptyLabel }: TagBadgesProps) => {
         </Badge>
       )}
       {labelColor || emptyLabel ? (
-        <div className="flex size-6 shrink-0 items-center justify-center">
+        <div className="flex size-10 shrink-0 items-center justify-center">
           {labelColor ? (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
               onClick={(event) => {
                 event.stopPropagation();
                 handleLabelClick(transaction.label_id!);
               }}
-              className="ring-offset-background focus-visible:ring-ring flex size-6 cursor-pointer items-center justify-center rounded-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
               aria-label="Filter by label"
             >
-              <Color size="sm" color={labelColor} className="size-1.5" />
-            </button>
+              <Color
+                size="sm"
+                color={labelColor}
+                className="size-1.5 rounded-full"
+              />
+            </Button>
           ) : (
             emptyLabel
           )}

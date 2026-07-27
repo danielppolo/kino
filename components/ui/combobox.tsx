@@ -29,7 +29,7 @@ interface ComboboxProps {
   "aria-label"?: string;
   variant?: "ghost" | "outline" | "default" | "secondary" | "destructive";
   comboboxVariant?: "icon" | "default";
-  size?: "sm" | "default" | "lg";
+  size?: "sm" | "default" | "lg" | "icon";
   options: ComboboxOption[];
   value: string;
   onChange: (value: string) => void;

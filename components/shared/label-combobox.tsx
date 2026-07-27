@@ -8,7 +8,7 @@ import { Label as LabelType } from "@/utils/supabase/types";
 
 interface LabelComboboxProps {
   "aria-label"?: string;
-  size?: "sm" | "default" | "lg";
+  size?: "sm" | "default" | "lg" | "icon";
   variant?: "ghost" | "outline" | "default" | "secondary" | "destructive";
   comboboxVariant?: "icon" | "default";
   value: string | null;
