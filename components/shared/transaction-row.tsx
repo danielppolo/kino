@@ -109,9 +109,9 @@ export function TransactionRow({
           }
         />
       </div>
-      <div className="shrink-0">
+      <div className="w-24 shrink-0">
         <TransactionAmount
-          className="text-right"
+          className="w-full text-right"
           amount={transaction.amount_cents!}
           currency={transaction.currency!}
         />
