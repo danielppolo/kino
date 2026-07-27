@@ -3,7 +3,7 @@ import clsx from "clsx";
 import { cn } from "@/utils/cn";
 
 interface ColorProps {
-  color: string;
+  color?: string | null;
   size?: "sm" | "md" | "lg";
   className?: string;
 }
@@ -16,10 +16,12 @@ export default function Color({ color, size = "md", className }: ColorProps) {
           "h-3 w-3": size === "sm",
           "h-5 w-5": size === "md",
           "h-8 w-8": size === "lg",
+          "border-muted-foreground/60 border border-dashed bg-transparent":
+            !color,
         }),
         className,
       )}
-      style={{ backgroundColor: color }}
+      style={color ? { backgroundColor: color } : undefined}
     />
   );
 }

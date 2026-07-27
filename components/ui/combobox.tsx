@@ -26,6 +26,7 @@ export interface ComboboxOption {
 }
 
 interface ComboboxProps {
+  "aria-label"?: string;
   variant?: "ghost" | "outline" | "default" | "secondary" | "destructive";
   comboboxVariant?: "icon" | "default";
   size?: "sm" | "default" | "lg";
@@ -68,6 +69,7 @@ function CommandAddItem({
 }
 
 export function Combobox({
+  "aria-label": ariaLabel,
   size = "default",
   variant = "outline",
   options,
@@ -111,6 +113,7 @@ export function Combobox({
           size={size}
           role="combobox"
           aria-expanded={open}
+          aria-label={ariaLabel}
           className={cn("w-[200px] justify-between gap-2", className)}
         >
           {icon}

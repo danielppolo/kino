@@ -7,8 +7,10 @@ import { useLabels } from "@/contexts/settings-context";
 import { Label as LabelType } from "@/utils/supabase/types";
 
 interface LabelComboboxProps {
+  "aria-label"?: string;
   size?: "sm" | "default" | "lg";
   variant?: "ghost" | "outline" | "default" | "secondary" | "destructive";
+  comboboxVariant?: "icon" | "default";
   value: string | null;
   onChange: (id: string) => void;
   placeholder?: string;
@@ -18,8 +20,10 @@ interface LabelComboboxProps {
 }
 
 const LabelCombobox = ({
+  "aria-label": ariaLabel,
   size = "default",
   variant = "outline",
+  comboboxVariant = "default",
   value,
   onChange,
   placeholder = "Select label...",
@@ -45,8 +49,10 @@ const LabelCombobox = ({
 
   return (
     <Combobox
+      aria-label={ariaLabel}
       variant={variant}
       size={size}
+      comboboxVariant={comboboxVariant}
       icon={icon}
       options={options}
       value={value ?? ""}
