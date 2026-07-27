@@ -11,10 +11,12 @@ export function AmountInput({
   defaultValue,
   variant = "outline",
   className,
+  symbolClassName,
   ...props
 }: React.HTMLAttributes<HTMLInputElement> & {
   defaultValue?: number;
   variant?: "ghost" | "outline";
+  symbolClassName?: string;
 }) {
   return (
     <div className="relative">
@@ -25,6 +27,7 @@ export function AmountInput({
         className={cn(
           className,
           "absolute top-1/2 left-2 -translate-y-1/2 transform",
+          symbolClassName,
         )}
       >
         $

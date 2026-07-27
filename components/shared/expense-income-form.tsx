@@ -33,7 +33,6 @@ import { DescriptionInput } from "./description-input";
 import LabelCombobox from "./label-combobox";
 import TagMultiSelect from "./tag-multi-select";
 import TemplateSelect from "./template-select";
-import { TransactionColorIcon } from "./transaction-color";
 import { TransactionOntologyEditor } from "./transaction-ontology-editor";
 
 import { createTransaction } from "@/actions/create-transaction";
@@ -50,7 +49,9 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -63,7 +64,6 @@ import {
 import { Kbd } from "@/components/ui/kbd";
 import {
   Popover,
-  PopoverAnchor,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
@@ -75,7 +75,6 @@ import {
 } from "@/components/ui/tooltip";
 import {
   useFeatureFlags,
-  useLabels,
   useTags,
   useWallets,
 } from "@/contexts/settings-context";
@@ -84,7 +83,6 @@ import { useWorkspace } from "@/contexts/workspace-context";
 import useFilters from "@/hooks/use-filters";
 import {
   type OntologyAssociationItem,
-  type OntologyAssociationType,
   parseStoredOntologyAssociations,
 } from "@/utils/ontology-associations";
 import {
@@ -177,12 +175,8 @@ const ExpenseIncomeForm = ({
   const { activeWorkspace } = useWorkspace();
   const filters = useFilters();
   const [availableTags] = useTags();
-  const [, labelMap] = useLabels();
   const [addAnother, setAddAnother] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
-  const [associationType, setAssociationType] =
-    useState<OntologyAssociationType>();
-  const [associationPickerOpen, setAssociationPickerOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const categoryRef = useRef<HTMLDivElement>(null);
   const dateRef = useRef<HTMLDivElement>(null);
@@ -675,7 +669,8 @@ const ExpenseIncomeForm = ({
                           {...field}
                           autoFocus
                           variant="ghost"
-                          className="h-auto [appearance:textfield] text-[2.8125rem] font-semibold shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none sm:text-[3.375rem] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                          symbolClassName="left-0 text-xl md:text-2xl"
+                          className="h-auto [appearance:textfield] pl-8 text-6xl font-semibold shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none sm:text-6xl lg:text-6xl [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                         />
                       </FormControl>
                       <FormMessage />
@@ -771,7 +766,13 @@ const ExpenseIncomeForm = ({
                                   : "Date"}
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent align="start" className="w-80 p-0">
+                            <PopoverContent
+                              align="start"
+                              side="top"
+                              sideOffset={8}
+                              avoidCollisions={false}
+                              className="w-80 p-0"
+                            >
                               <Calendar
                                 mode="single"
                                 selected={
@@ -821,11 +822,6 @@ const ExpenseIncomeForm = ({
                             <LabelCombobox
                               {...field}
                               size="sm"
-                              icon={
-                                <TransactionColorIcon
-                                  color={labelMap.get(field.value ?? "")?.color}
-                                />
-                              }
                               placeholder="Label"
                               className="w-auto rounded-full"
                             />
@@ -887,57 +883,35 @@ const ExpenseIncomeForm = ({
                       name="ontologyAssociations"
                       render={({ field }) => (
                         <FormItem>
-                          <Popover
-                            open={associationPickerOpen}
-                            onOpenChange={setAssociationPickerOpen}
-                          >
-                            <DropdownMenu>
-                              <PopoverAnchor>
-                                <ShortcutHint
-                                  label="More options"
-                                  shortcut="M"
-                                  controlRef={moreRef}
+                          <DropdownMenu>
+                            <ShortcutHint
+                              label="More options"
+                              shortcut="M"
+                              controlRef={moreRef}
+                            >
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  className="size-8 rounded-full"
+                                  aria-label="More transaction options"
                                 >
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="icon"
-                                      className="size-8 rounded-full"
-                                      aria-label="More transaction options"
-                                    >
-                                      <MoreHorizontal className="size-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                </ShortcutHint>
-                              </PopoverAnchor>
-                              <DropdownMenuContent
-                                align="start"
-                                className="w-52"
-                              >
-                                {(
-                                  [
-                                    ["person", "People", UserRound],
-                                    ["place", "Places", MapPin],
-                                    [
-                                      "organization",
-                                      "Organizations",
-                                      Building2,
-                                    ],
-                                    ["trip", "Trips", Plane],
-                                  ] as const
-                                ).map(([value, label, Icon]) => (
-                                  <DropdownMenuItem
-                                    key={value}
-                                    className="gap-2"
-                                    onSelect={() => {
-                                      setAssociationType(value);
-                                      window.setTimeout(
-                                        () => setAssociationPickerOpen(true),
-                                        0,
-                                      );
-                                    }}
-                                  >
+                                  <MoreHorizontal className="size-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                            </ShortcutHint>
+                            <DropdownMenuContent align="start" className="w-52">
+                              {(
+                                [
+                                  ["person", "People", UserRound],
+                                  ["place", "Places", MapPin],
+                                  ["organization", "Organizations", Building2],
+                                  ["trip", "Trips", Plane],
+                                ] as const
+                              ).map(([value, label, Icon]) => (
+                                <DropdownMenuSub key={value}>
+                                  <DropdownMenuSubTrigger className="gap-2">
                                     <Icon className="size-4" />
                                     {label}
                                     {field.value?.filter(
@@ -953,19 +927,19 @@ const ExpenseIncomeForm = ({
                                         }
                                       </span>
                                     ) : null}
-                                  </DropdownMenuItem>
-                                ))}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                            <PopoverContent align="start" className="w-80 p-3">
-                              <TransactionOntologyEditor
-                                workspaceId={activeWorkspace.id}
-                                value={field.value ?? []}
-                                onChange={field.onChange}
-                                type={associationType}
-                              />
-                            </PopoverContent>
-                          </Popover>
+                                  </DropdownMenuSubTrigger>
+                                  <DropdownMenuSubContent className="w-80 p-3">
+                                    <TransactionOntologyEditor
+                                      workspaceId={activeWorkspace.id}
+                                      value={field.value ?? []}
+                                      onChange={field.onChange}
+                                      type={value}
+                                    />
+                                  </DropdownMenuSubContent>
+                                </DropdownMenuSub>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </FormItem>
                       )}
                     />
