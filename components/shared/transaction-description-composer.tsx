@@ -3,7 +3,7 @@
 import * as React from "react";
 import * as chrono from "chrono-node";
 import { format } from "date-fns";
-import { AtSign, CalendarDays, Folder, Hash, Search } from "lucide-react";
+import { AtSign, CalendarDays, Folder, Hash } from "lucide-react";
 
 import { useCategories, useLabels } from "@/contexts/settings-context";
 import { cn } from "@/lib/utils";
@@ -35,6 +35,9 @@ interface TransactionDescriptionComposerProps {
   onDateChange: (date: string) => void;
   onOntologyAssociationChange: (value: OntologyAssociationItem[]) => void;
   ontologyAssociations: OntologyAssociationItem[];
+  categoryId: string;
+  labelId: string;
+  date: string;
 }
 
 const TRIGGER_LABELS: Record<Trigger, string> = {
@@ -42,6 +45,41 @@ const TRIGGER_LABELS: Record<Trigger, string> = {
   "#": "Select a label",
   $: "Select a category",
   "!": "Set a date in natural language",
+};
+
+const COMMAND_META: Record<
+  Trigger,
+  {
+    label: string;
+    Icon: typeof AtSign;
+    activeClassName: string;
+    iconClassName: string;
+  }
+> = {
+  "@": {
+    label: "Association",
+    Icon: AtSign,
+    activeClassName: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
+    iconClassName: "text-sky-700 dark:text-sky-300",
+  },
+  "#": {
+    label: "Label",
+    Icon: Hash,
+    activeClassName: "bg-violet-500/15 text-violet-700 dark:text-violet-300",
+    iconClassName: "text-violet-700 dark:text-violet-300",
+  },
+  $: {
+    label: "Category",
+    Icon: Folder,
+    activeClassName: "bg-amber-500/15 text-amber-800 dark:text-amber-300",
+    iconClassName: "text-amber-800 dark:text-amber-300",
+  },
+  "!": {
+    label: "Date",
+    Icon: CalendarDays,
+    activeClassName: "bg-teal-500/15 text-teal-800 dark:text-teal-300",
+    iconClassName: "text-teal-800 dark:text-teal-300",
+  },
 };
 
 function getActiveToken(value: string, cursor: number): ActiveToken | null {
@@ -77,6 +115,32 @@ function replaceToken(value: string, token: ActiveToken, replacement = "") {
   return `${value.slice(0, token.start)}${replacement}${value.slice(token.end)}`;
 }
 
+function HighlightedDescription({
+  value,
+  activeToken,
+}: {
+  value: string;
+  activeToken: ActiveToken | null;
+}) {
+  if (!activeToken) return <>{value || "\u200b"}</>;
+
+  const command = value.slice(activeToken.start, activeToken.end);
+  return (
+    <>
+      {value.slice(0, activeToken.start)}
+      <span
+        className={cn(
+          "rounded-md px-0.5 py-px font-medium",
+          COMMAND_META[activeToken.trigger].activeClassName,
+        )}
+      >
+        {command}
+      </span>
+      {value.slice(activeToken.end)}
+    </>
+  );
+}
+
 export function TransactionDescriptionComposer({
   value,
   onChange,
@@ -87,8 +151,12 @@ export function TransactionDescriptionComposer({
   onDateChange,
   onOntologyAssociationChange,
   ontologyAssociations,
+  categoryId,
+  labelId,
+  date,
 }: TransactionDescriptionComposerProps) {
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const highlightRef = React.useRef<HTMLDivElement>(null);
   const [cursor, setCursor] = React.useState(value.length);
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [ontologyItems, setOntologyItems] = React.useState<
@@ -99,6 +167,11 @@ export function TransactionDescriptionComposer({
   const [categories] = useCategories();
   const [labels] = useLabels();
   const activeToken = getActiveToken(value, cursor);
+  const selectedCategory = categories.find(
+    (category) => category.id === categoryId,
+  );
+  const selectedLabel = labels.find((label) => label.id === labelId);
+  const activeCommand = activeToken ? COMMAND_META[activeToken.trigger] : null;
 
   React.useEffect(() => {
     if (
@@ -292,52 +365,100 @@ export function TransactionDescriptionComposer({
     });
   };
 
-  const Icon =
-    activeToken?.trigger === "@"
-      ? AtSign
-      : activeToken?.trigger === "#"
-        ? Hash
-        : activeToken?.trigger === "$"
-          ? Folder
-          : CalendarDays;
-
   return (
-    <div className="bg-muted/20 focus-within:border-ring focus-within:ring-ring/50 relative rounded-xl border p-3 focus-within:ring-[3px]">
-      <textarea
-        ref={textareaRef}
-        value={value}
-        rows={3}
-        placeholder="Add description… Use @ for people or places, # for labels, $ for categories, and natural dates like 7 Jul."
-        aria-label="Transaction description"
-        className="placeholder:text-muted-foreground min-h-24 w-full resize-y border-0 bg-transparent p-0 text-lg shadow-none outline-none focus-visible:ring-0"
-        onChange={handleDescriptionChange}
-        onClick={(event) => setCursor(event.currentTarget.selectionStart)}
-        onKeyUp={(event) => setCursor(event.currentTarget.selectionStart)}
-        onKeyDown={handleKeyDown}
-      />
-      <div className="text-muted-foreground mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
-        <span>
-          <AtSign className="mr-1 inline size-3" />
-          Ontology
-        </span>
-        <span>
-          <Hash className="mr-1 inline size-3" />
-          Label
-        </span>
-        <span>
-          <Folder className="mr-1 inline size-3" />
-          Category
-        </span>
-        <span>
-          <CalendarDays className="mr-1 inline size-3" />
-          Natural date
-        </span>
+    <div className="bg-muted/20 focus-within:border-ring focus-within:ring-ring/50 relative rounded-2xl border p-3.5 shadow-sm transition-shadow focus-within:ring-[3px]">
+      <div className="relative min-h-24">
+        <div
+          ref={highlightRef}
+          aria-hidden="true"
+          className="text-foreground pointer-events-none absolute inset-0 overflow-hidden pr-1 text-lg leading-7 break-words whitespace-pre-wrap"
+        >
+          <HighlightedDescription value={value} activeToken={activeToken} />
+        </div>
+        <textarea
+          ref={textareaRef}
+          value={value}
+          rows={3}
+          placeholder="What was this for? Try @, #, $, or a date like 7 Jul"
+          aria-label="Transaction description"
+          className="caret-foreground placeholder:text-muted-foreground selection:bg-primary/20 relative z-10 min-h-24 w-full resize-y border-0 bg-transparent p-0 pr-1 text-lg leading-7 text-transparent shadow-none outline-none focus-visible:ring-0"
+          onChange={handleDescriptionChange}
+          onClick={(event) => setCursor(event.currentTarget.selectionStart)}
+          onKeyUp={(event) => setCursor(event.currentTarget.selectionStart)}
+          onKeyDown={handleKeyDown}
+          onScroll={(event) => {
+            const textarea = event.currentTarget;
+            if (highlightRef.current) {
+              highlightRef.current.scrollTop = textarea.scrollTop;
+              highlightRef.current.scrollLeft = textarea.scrollLeft;
+            }
+          }}
+        />
+      </div>
+      <div className="mt-3 flex flex-wrap gap-1.5 border-t pt-3">
+        {ontologyAssociations.map((association) => (
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full bg-sky-500/10 px-2.5 py-1 text-xs font-medium text-sky-800 dark:text-sky-200"
+            key={`${association.type}-${association.ontologyId}`}
+          >
+            <AtSign className="size-3" />
+            {association.name}
+          </span>
+        ))}
+        {selectedLabel ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/10 px-2.5 py-1 text-xs font-medium text-violet-800 dark:text-violet-200">
+            <Hash className="size-3" />
+            {selectedLabel.name}
+          </span>
+        ) : null}
+        {selectedCategory ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-900 dark:text-amber-200">
+            <Folder className="size-3" />
+            {selectedCategory.name}
+          </span>
+        ) : null}
+        {date ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-500/10 px-2.5 py-1 text-xs font-medium text-teal-900 dark:text-teal-200">
+            <CalendarDays className="size-3" />
+            {format(new Date(`${date}T00:00:00`), "MMM d, yyyy")}
+          </span>
+        ) : null}
+        {!ontologyAssociations.length && !selectedLabel && !selectedCategory ? (
+          <span className="text-muted-foreground px-1 py-1 text-xs">
+            Type{" "}
+            <kbd className="bg-background rounded border px-1 font-mono">@</kbd>{" "}
+            association,{" "}
+            <kbd className="bg-background rounded border px-1 font-mono">#</kbd>{" "}
+            label, or{" "}
+            <kbd className="bg-background rounded border px-1 font-mono">$</kbd>{" "}
+            category
+          </span>
+        ) : null}
       </div>
       {activeToken ? (
-        <div className="bg-popover text-popover-foreground absolute inset-x-0 top-full z-50 mt-2 overflow-hidden rounded-lg border p-1 shadow-lg">
-          <div className="text-muted-foreground flex items-center gap-2 px-2 py-1.5 text-xs">
-            <Icon className="size-3.5" />
-            {TRIGGER_LABELS[activeToken.trigger]}
+        <div className="bg-popover text-popover-foreground absolute inset-x-0 top-full z-50 mt-2 overflow-hidden rounded-xl border p-1.5 shadow-xl">
+          <div className="text-muted-foreground flex items-center gap-2 px-2 py-2 text-xs">
+            {activeCommand ? (
+              <span
+                className={cn(
+                  "grid size-6 place-items-center rounded-md",
+                  activeCommand.activeClassName,
+                )}
+              >
+                <activeCommand.Icon className="size-3.5" />
+              </span>
+            ) : null}
+            <span className="min-w-0 flex-1">
+              <span className="text-foreground block font-medium">
+                {activeCommand?.label}
+              </span>
+              <span className="block truncate">
+                {TRIGGER_LABELS[activeToken.trigger]}
+              </span>
+            </span>
+            <kbd className="bg-muted rounded border px-1.5 py-0.5 font-mono text-[10px]">
+              {activeToken.trigger}
+            </kbd>
           </div>
           {activeToken.trigger === "@" && activeToken.query.length < 2 ? (
             <p className="text-muted-foreground px-2 py-2 text-sm">
@@ -385,7 +506,14 @@ export function TransactionDescriptionComposer({
               }}
               onMouseEnter={() => setActiveIndex(index)}
             >
-              <Search className="text-muted-foreground mt-0.5 size-3.5 shrink-0" />
+              {activeCommand ? (
+                <activeCommand.Icon
+                  className={cn(
+                    "mt-0.5 size-3.5 shrink-0",
+                    activeCommand.iconClassName,
+                  )}
+                />
+              ) : null}
               <span className="min-w-0">
                 <span className="block truncate">{option.label}</span>
                 {option.subtitle ? (

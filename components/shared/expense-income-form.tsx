@@ -540,6 +540,9 @@ const ExpenseIncomeForm = ({
     defaultValues: entityValues ?? defaultValues,
   });
   const ontologyAssociations = form.watch("ontologyAssociations");
+  const categoryId = form.watch("category_id");
+  const labelId = form.watch("label_id");
+  const transactionDate = form.watch("date");
   const isEdit = Boolean(initialData);
 
   useEffect(() => {
@@ -706,6 +709,9 @@ const ExpenseIncomeForm = ({
                           workspaceId={activeWorkspace?.id}
                           type={type}
                           ontologyAssociations={ontologyAssociations ?? []}
+                          categoryId={categoryId ?? ""}
+                          labelId={labelId ?? ""}
+                          date={transactionDate ?? ""}
                           onOntologyAssociationChange={(value) =>
                             form.setValue("ontologyAssociations", value, {
                               shouldDirty: true,
