@@ -1,15 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { addDays, format, nextDay, startOfDay } from "date-fns";
-import { AtSign, CalendarDays, Folder, Hash, Search, Tags } from "lucide-react";
+import * as chrono from "chrono-node";
+import { format } from "date-fns";
+import { AtSign, CalendarDays, Folder, Hash, Search } from "lucide-react";
 
 import { useCategories, useLabels } from "@/contexts/settings-context";
 import { cn } from "@/lib/utils";
-import {
-  type OntologyAssociationItem,
-  type OntologyAssociationType,
-} from "@/utils/ontology-associations";
+import { type OntologyAssociationItem } from "@/utils/ontology-associations";
 
 type Trigger = "@" | "#" | "$" | "!";
 
@@ -46,16 +44,6 @@ const TRIGGER_LABELS: Record<Trigger, string> = {
   "!": "Set a date in natural language",
 };
 
-const WEEKDAYS: Record<string, number> = {
-  sunday: 0,
-  monday: 1,
-  tuesday: 2,
-  wednesday: 3,
-  thursday: 4,
-  friday: 5,
-  saturday: 6,
-};
-
 function getActiveToken(value: string, cursor: number): ActiveToken | null {
   const beforeCursor = value.slice(0, cursor);
   const match = /(^|\s)([@#$!])([^\s@#$!]*)$/.exec(beforeCursor);
@@ -71,46 +59,18 @@ function getActiveToken(value: string, cursor: number): ActiveToken | null {
 }
 
 function parseNaturalDate(input: string, referenceDate = new Date()) {
-  const query = input.trim().toLowerCase();
-  const today = startOfDay(referenceDate);
-  if (!query) return null;
-  if (query === "today") return today;
-  if (query === "tomorrow" || query === "tmr") return addDays(today, 1);
-  if (query === "yesterday") return addDays(today, -1);
+  return chrono.casual.parseDate(input, referenceDate, { forwardDate: true });
+}
 
-  const relative = /^(?:in )?(\d+)\s*(day|days|week|weeks)$/.exec(query);
-  if (relative) {
-    const amount = Number(relative[1]);
-    return addDays(today, amount * (relative[2].startsWith("week") ? 7 : 1));
-  }
+function findTrailingNaturalDate(value: string) {
+  const lastResult = chrono.casual
+    .parse(value, new Date(), { forwardDate: true })
+    .at(-1);
+  if (!lastResult) return null;
 
-  const weekday =
-    /^(next )?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)$/.exec(
-      query,
-    );
-  if (weekday) {
-    return nextDay(
-      today,
-      WEEKDAYS[weekday[2]] as Parameters<typeof nextDay>[1],
-    );
-  }
-
-  const absolute = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(query);
-  if (absolute) {
-    const candidate = new Date(
-      Number(absolute[1]),
-      Number(absolute[2]) - 1,
-      Number(absolute[3]),
-    );
-    return Number.isNaN(candidate.getTime()) ||
-      candidate.getFullYear() !== Number(absolute[1]) ||
-      candidate.getMonth() !== Number(absolute[2]) - 1 ||
-      candidate.getDate() !== Number(absolute[3])
-      ? null
-      : candidate;
-  }
-
-  return null;
+  const end = lastResult.index + lastResult.text.length;
+  if (end !== value.trimEnd().length) return null;
+  return { date: lastResult.start.date(), start: lastResult.index, end };
 }
 
 function replaceToken(value: string, token: ActiveToken, replacement = "") {
@@ -309,6 +269,29 @@ export function TransactionDescriptionComposer({
     }
   };
 
+  const handleDescriptionChange = (
+    event: React.ChangeEvent<HTMLTextAreaElement>,
+  ) => {
+    const nextValue = event.target.value;
+    const detectedDate = findTrailingNaturalDate(nextValue);
+    if (!detectedDate) {
+      onChange(nextValue);
+      setCursor(event.target.selectionStart);
+      return;
+    }
+
+    onDateChange(format(detectedDate.date, "yyyy-MM-dd"));
+    const description = `${nextValue.slice(0, detectedDate.start)}${nextValue.slice(
+      detectedDate.end,
+    )}`;
+    const nextCursor = detectedDate.start;
+    onChange(description);
+    setCursor(nextCursor);
+    window.requestAnimationFrame(() => {
+      textareaRef.current?.setSelectionRange(nextCursor, nextCursor);
+    });
+  };
+
   const Icon =
     activeToken?.trigger === "@"
       ? AtSign
@@ -324,13 +307,10 @@ export function TransactionDescriptionComposer({
         ref={textareaRef}
         value={value}
         rows={3}
-        placeholder="Add description… Use @ for people or places, # for labels, $ for categories, and ! for dates."
+        placeholder="Add description… Use @ for people or places, # for labels, $ for categories, and natural dates like 7 Jul."
         aria-label="Transaction description"
         className="placeholder:text-muted-foreground min-h-24 w-full resize-y border-0 bg-transparent p-0 text-lg shadow-none outline-none focus-visible:ring-0"
-        onChange={(event) => {
-          onChange(event.target.value);
-          setCursor(event.target.selectionStart);
-        }}
+        onChange={handleDescriptionChange}
         onClick={(event) => setCursor(event.currentTarget.selectionStart)}
         onKeyUp={(event) => setCursor(event.currentTarget.selectionStart)}
         onKeyDown={handleKeyDown}
