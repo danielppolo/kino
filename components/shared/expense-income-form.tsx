@@ -29,10 +29,10 @@ import {
 } from "./amount-form-value";
 import { AmountInput } from "./amount-input";
 import BillCombobox from "./bill-combobox";
-import { DescriptionInput } from "./description-input";
 import LabelCombobox from "./label-combobox";
 import TagMultiSelect from "./tag-multi-select";
 import TemplateSelect from "./template-select";
+import { TransactionDescriptionComposer } from "./transaction-description-composer";
 import { TransactionOntologyPicker } from "./transaction-ontology-editor";
 
 import { createTransaction } from "@/actions/create-transaction";
@@ -539,6 +539,7 @@ const ExpenseIncomeForm = ({
   const form = useForm<ExpenseIncomeFormValues>({
     defaultValues: entityValues ?? defaultValues,
   });
+  const ontologyAssociations = form.watch("ontologyAssociations");
   const isEdit = Boolean(initialData);
 
   useEffect(() => {
@@ -674,6 +675,7 @@ const ExpenseIncomeForm = ({
                     </FormItem>
                   )}
                 />
+                {/* Previous autocomplete description field — retained temporarily for comparison.
                 <FormField
                   name="description"
                   render={({ field }) => (
@@ -686,6 +688,46 @@ const ExpenseIncomeForm = ({
                           variant="ghost"
                           placeholder="Add description…"
                           className="h-auto px-0 py-2 text-lg shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                */}
+                <FormField
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <TransactionDescriptionComposer
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                          workspaceId={activeWorkspace?.id}
+                          type={type}
+                          ontologyAssociations={ontologyAssociations ?? []}
+                          onOntologyAssociationChange={(value) =>
+                            form.setValue("ontologyAssociations", value, {
+                              shouldDirty: true,
+                            })
+                          }
+                          onCategoryChange={(value) =>
+                            form.setValue("category_id", value, {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            })
+                          }
+                          onLabelChange={(value) =>
+                            form.setValue("label_id", value, {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            })
+                          }
+                          onDateChange={(value) =>
+                            form.setValue("date", value, {
+                              shouldDirty: true,
+                            })
+                          }
                         />
                       </FormControl>
                       <FormMessage />
