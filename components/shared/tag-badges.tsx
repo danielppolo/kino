@@ -21,12 +21,14 @@ interface TagBadgesProps {
   transaction: TransactionList;
   className?: string;
   onAssignLabel?: (labelId: string) => void;
+  showLabelCombobox?: boolean;
 }
 
 const TagBadges = ({
   transaction,
   className,
   onAssignLabel,
+  showLabelCombobox = true,
 }: TagBadgesProps) => {
   const router = useRouter();
   const [, setFilters] = useTransactionQueryState();
@@ -127,7 +129,8 @@ const TagBadges = ({
           {transaction.transfer_id.slice(-4)}
         </Badge>
       )}
-      {labelColor || (onAssignLabel && !transaction.label_id) ? (
+      {labelColor ||
+      (showLabelCombobox && onAssignLabel && !transaction.label_id) ? (
         <div
           className="flex size-10 shrink-0 items-center justify-center"
           onClick={(event) => event.stopPropagation()}

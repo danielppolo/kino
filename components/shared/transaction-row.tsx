@@ -125,6 +125,7 @@ export function TransactionRow({
       <div className="shrink-0">
         <TagBadges
           transaction={transaction}
+          showLabelCombobox={transaction.type !== "transfer"}
           onAssignLabel={(labelId) =>
             updateMutation.mutate({ label_id: labelId })
           }
