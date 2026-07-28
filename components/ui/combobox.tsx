@@ -114,7 +114,12 @@ export function Combobox({
           role="combobox"
           aria-expanded={open}
           aria-label={ariaLabel}
-          className={cn("w-[200px] justify-between gap-2", className)}
+          className={cn(
+            comboboxVariant === "icon"
+              ? "justify-center"
+              : "w-[200px] justify-between gap-2",
+            className,
+          )}
         >
           {icon}
           {comboboxVariant !== "icon" &&

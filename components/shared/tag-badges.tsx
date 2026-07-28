@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import Color from "./color";
+import LabelCombobox from "./label-combobox";
 import LinkTransferButton from "./link-transfer-button";
 
 import {
@@ -19,10 +20,14 @@ import { TransactionList } from "@/utils/supabase/types";
 interface TagBadgesProps {
   transaction: TransactionList;
   className?: string;
-  emptyLabel?: React.ReactNode;
+  onAssignLabel?: (labelId: string) => void;
 }
 
-const TagBadges = ({ transaction, className, emptyLabel }: TagBadgesProps) => {
+const TagBadges = ({
+  transaction,
+  className,
+  onAssignLabel,
+}: TagBadgesProps) => {
   const router = useRouter();
   const [, setFilters] = useTransactionQueryState();
   const [, tagMap] = useTags();
@@ -122,17 +127,17 @@ const TagBadges = ({ transaction, className, emptyLabel }: TagBadgesProps) => {
           {transaction.transfer_id.slice(-4)}
         </Badge>
       )}
-      {labelColor || emptyLabel ? (
-        <div className="flex size-10 shrink-0 items-center justify-center">
+      {labelColor || (onAssignLabel && !transaction.label_id) ? (
+        <div
+          className="flex size-10 shrink-0 items-center justify-center"
+          onClick={(event) => event.stopPropagation()}
+        >
           {labelColor ? (
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              onClick={(event) => {
-                event.stopPropagation();
-                handleLabelClick(transaction.label_id!);
-              }}
+              onClick={() => handleLabelClick(transaction.label_id!)}
               aria-label="Filter by label"
             >
               <Color
@@ -142,7 +147,20 @@ const TagBadges = ({ transaction, className, emptyLabel }: TagBadgesProps) => {
               />
             </Button>
           ) : (
-            emptyLabel
+            <LabelCombobox
+              aria-label="Add label"
+              comboboxVariant="icon"
+              size="icon"
+              variant="ghost"
+              value={null}
+              onChange={(labelId) => {
+                if (labelId) {
+                  onAssignLabel?.(labelId);
+                }
+              }}
+              icon={<Color size="sm" className="size-1.5 rounded-full" />}
+              className="size-10 p-0"
+            />
           )}
         </div>
       ) : null}

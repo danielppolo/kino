@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyOptimisticTransaction,
   type InfiniteTransactionData,
+  patchOptimisticTransaction,
 } from "@/utils/optimistic-transactions";
 import type { TransactionList } from "@/utils/supabase/types";
 
@@ -79,5 +80,51 @@ describe("applyOptimisticTransaction", () => {
       "new",
       "existing",
     ]);
+  });
+});
+
+describe("patchOptimisticTransaction", () => {
+  it("patches a matching transaction in place", () => {
+    const data: InfiniteTransactionData = {
+      pages: [
+        {
+          data: [transaction("first"), transaction("second")],
+          error: null,
+          count: 2,
+        },
+      ],
+      pageParams: [0],
+    };
+
+    const updated = patchOptimisticTransaction(data, "second", {
+      label_id: "label-2",
+      needs_review: false,
+    });
+
+    expect(updated?.pages[0].data.map((item) => item.id)).toEqual([
+      "first",
+      "second",
+    ]);
+    expect(updated?.pages[0].data[1].label_id).toBe("label-2");
+    expect(updated?.pages[0].data[1].needs_review).toBe(false);
+  });
+
+  it("leaves cache unchanged when the transaction is missing", () => {
+    const data: InfiniteTransactionData = {
+      pages: [
+        {
+          data: [transaction("existing")],
+          error: null,
+          count: 1,
+        },
+      ],
+      pageParams: [0],
+    };
+
+    const updated = patchOptimisticTransaction(data, "missing", {
+      label_id: "label-2",
+    });
+
+    expect(updated).toBe(data);
   });
 });

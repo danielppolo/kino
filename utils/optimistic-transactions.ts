@@ -44,18 +44,13 @@ export function applyOptimisticTransaction(
   }
 
   if (transactionId) {
-    let didReplace = false;
-    const pages = data.pages.map((page) => ({
-      ...page,
-      data: page.data.map((transaction) => {
-        if (transaction.id !== transactionId) return transaction;
-        didReplace = true;
-        return optimisticTransaction;
-      }),
-    }));
-
-    if (didReplace) {
-      return { ...data, pages };
+    const patched = patchOptimisticTransaction(
+      data,
+      transactionId,
+      optimisticTransaction,
+    );
+    if (patched !== data) {
+      return patched;
     }
   }
 
@@ -67,4 +62,24 @@ export function applyOptimisticTransaction(
         : page,
     ),
   };
+}
+
+export function patchOptimisticTransaction(
+  data: InfiniteTransactionData | undefined,
+  transactionId: string,
+  patch: Partial<TransactionList>,
+): InfiniteTransactionData | undefined {
+  if (!data) return data;
+
+  let didPatch = false;
+  const pages = data.pages.map((page) => ({
+    ...page,
+    data: page.data.map((transaction) => {
+      if (transaction.id !== transactionId) return transaction;
+      didPatch = true;
+      return { ...transaction, ...patch };
+    }),
+  }));
+
+  return didPatch ? { ...data, pages } : data;
 }

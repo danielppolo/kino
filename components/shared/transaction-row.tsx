@@ -6,14 +6,16 @@ import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import CategoryCombobox from "./category-combobox";
-import Color from "./color";
-import LabelCombobox from "./label-combobox";
 import SelectableRow from "./selectable-row";
 import TagBadges from "./tag-badges";
 import TransactionAmount from "./transaction-amount";
 import TransactionDescription from "./transaction-description";
 
 import { updateTransactions } from "@/actions/update-transactions";
+import {
+  type InfiniteTransactionData,
+  patchOptimisticTransaction,
+} from "@/utils/optimistic-transactions";
 import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { TransactionList } from "@/utils/supabase/types";
 
@@ -26,6 +28,10 @@ interface TransactionRowProps {
   active?: boolean;
 }
 
+type TransactionFieldUpdates = Partial<
+  Pick<TransactionList, "category_id" | "label_id">
+>;
+
 export function TransactionRow({
   transaction,
   onClick,
@@ -36,17 +42,49 @@ export function TransactionRow({
 }: TransactionRowProps) {
   const queryClient = useQueryClient();
   const updateMutation = useMutation({
-    mutationFn: async (
-      updates: Partial<Pick<TransactionList, "category_id" | "label_id">>,
-    ) => {
+    mutationFn: async (updates: TransactionFieldUpdates) => {
       const result = await updateTransactions([transaction.id!], updates);
       if (result.error) throw new Error(result.error);
     },
-    onSuccess: () => {
-      void invalidateWorkspaceQueries(queryClient);
+    onMutate: async (updates) => {
+      await queryClient.cancelQueries({ queryKey: ["transactions"] });
+
+      const previousQueries =
+        queryClient.getQueriesData<InfiniteTransactionData>({
+          queryKey: ["transactions"],
+        });
+
+      const nextCategoryId =
+        updates.category_id !== undefined
+          ? updates.category_id
+          : transaction.category_id;
+      const nextLabelId =
+        updates.label_id !== undefined
+          ? updates.label_id
+          : transaction.label_id;
+
+      queryClient.setQueriesData<InfiniteTransactionData>(
+        { queryKey: ["transactions"] },
+        (old) =>
+          patchOptimisticTransaction(old, transaction.id!, {
+            ...updates,
+            needs_review: !nextCategoryId || !nextLabelId,
+          }),
+      );
+
+      return { previousQueries };
     },
-    onError: (error: Error) => {
+    onError: (error, _updates, context) => {
+      context?.previousQueries.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
       toast.error(`Failed to update transaction: ${error.message}`);
+    },
+    onSuccess: () => {
+      toast.success("Transaction updated");
+    },
+    onSettled: () => {
+      void invalidateWorkspaceQueries(queryClient);
     },
   });
 
@@ -87,25 +125,8 @@ export function TransactionRow({
       <div className="shrink-0">
         <TagBadges
           transaction={transaction}
-          emptyLabel={
-            !transaction.label_id ? (
-              <div onClick={stopRowClick}>
-                <LabelCombobox
-                  aria-label="Add label"
-                  comboboxVariant="icon"
-                  size="icon"
-                  variant="ghost"
-                  value={null}
-                  onChange={(labelId) => {
-                    if (labelId) {
-                      updateMutation.mutate({ label_id: labelId });
-                    }
-                  }}
-                  icon={<Color size="sm" className="size-1.5 rounded-full" />}
-                  className="size-10 p-0"
-                />
-              </div>
-            ) : undefined
+          onAssignLabel={(labelId) =>
+            updateMutation.mutate({ label_id: labelId })
           }
         />
       </div>
