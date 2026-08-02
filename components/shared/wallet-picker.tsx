@@ -6,12 +6,15 @@ import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 import { useWallets } from "@/contexts/settings-context";
 import { Wallet } from "@/utils/supabase/types";
 
-const formatWalletLabel = (wallet: Wallet) =>
-  wallet.currency ? `${wallet.name} (${wallet.currency})` : wallet.name;
+const formatWalletLabel = (wallet: Wallet, showCurrency: boolean) =>
+  showCurrency && wallet.currency
+    ? `${wallet.name} ${wallet.currency}`
+    : wallet.name;
 
 interface WalletPickerProps {
   value?: string;
   currency?: string;
+  showCurrency?: boolean;
   exclude?: string;
   walletType?: Wallet["wallet_type"];
   onChange?: (id: string) => void;
@@ -26,6 +29,7 @@ const WalletPicker = ({
   onChange,
   value,
   currency,
+  showCurrency = true,
   exclude,
   walletType,
   size = "default",
@@ -46,7 +50,7 @@ const WalletPicker = ({
 
   const options: ComboboxOption[] = filteredWallets.map((wallet) => ({
     value: wallet.id,
-    label: formatWalletLabel(wallet),
+    label: formatWalletLabel(wallet, showCurrency),
     keywords: [wallet.name.toLowerCase(), wallet.currency ?? ""],
   }));
 
@@ -67,13 +71,13 @@ const WalletPicker = ({
         const wallet = option && walletMapMemo.get(option.value);
         if (wallet) {
           return (
-            <span className="flex items-center gap-2">
+            <span className="flex items-center gap-3">
               <span>{wallet.name}</span>
-              {wallet.currency && (
+              {showCurrency && wallet.currency ? (
                 <span className="text-muted-foreground text-xs">
-                  ({wallet.currency})
+                  {wallet.currency}
                 </span>
-              )}
+              ) : null}
             </span>
           );
         }
@@ -83,13 +87,13 @@ const WalletPicker = ({
         const wallet = walletMapMemo.get(option.value);
         if (wallet) {
           return (
-            <span className="flex items-center gap-2">
+            <span className="flex items-center gap-3">
               <span>{wallet.name}</span>
-              {wallet.currency && (
+              {showCurrency && wallet.currency ? (
                 <span className="text-muted-foreground text-xs">
-                  ({wallet.currency})
+                  {wallet.currency}
                 </span>
-              )}
+              ) : null}
             </span>
           );
         }
