@@ -10,6 +10,12 @@ import { Switch } from "../ui/switch";
 import TemplateSelect from "./template-select";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { DrawerDialog } from "@/components/ui/drawer-dialog";
 import { Form } from "@/components/ui/form";
 
@@ -37,6 +43,8 @@ interface EntityFormProps<T extends FieldValues> {
     values: T,
   ) => Promise<{ error?: string; resetValues?: T; setFocus?: string }>;
   isRepeating?: boolean;
+  appearance?: "default" | "transaction";
+  footerFields?: React.ReactNode;
 }
 
 export function EntityForm<T extends FieldValues>({
@@ -59,6 +67,8 @@ export function EntityForm<T extends FieldValues>({
   isDeleting,
   onRepeat,
   isRepeating,
+  appearance = "default",
+  footerFields,
 }: EntityFormProps<T>) {
   const isEdit = !!entity;
   const form = useForm<T>({
@@ -109,6 +119,96 @@ export function EntityForm<T extends FieldValues>({
     toast.success("Repeated successfully!");
     onSuccess?.();
   };
+
+  if (appearance === "transaction") {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="flex max-h-[90vh] w-[calc(100%-2rem)] max-w-4xl flex-col gap-0 overflow-hidden rounded-3xl p-0">
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(handleSubmit)}
+              className="flex h-[min(34rem,90vh)] flex-col"
+            >
+              <DialogHeader className="flex-row items-center gap-3 space-y-0 px-6 pt-6 sm:px-8">
+                <DialogTitle>
+                  {customTitle || `${isEdit ? "Edit" : "Add"} ${title}`}
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-10 sm:px-8">
+                {children}
+              </div>
+
+              <div className="border-t px-6 py-5 sm:px-8">
+                {footerFields ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {footerFields}
+                  </div>
+                ) : null}
+
+                <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    {type ? <TemplateSelect type={type} /> : null}
+                    {isEdit && onRepeat ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRepeat}
+                        disabled={isRepeating}
+                      >
+                        <Repeat2 className="size-4" />
+                      </Button>
+                    ) : null}
+                    {isEdit && onDelete ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleDelete}
+                        disabled={isDeleting}
+                        aria-label={`Delete ${title.toLowerCase()}`}
+                      >
+                        <Trash className="size-4" />
+                      </Button>
+                    ) : null}
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    {!isEdit ? (
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id={`add-another-${title.toLowerCase()}`}
+                          checked={addAnother}
+                          onCheckedChange={setAddAnother}
+                        />
+                        <label
+                          htmlFor={`add-another-${title.toLowerCase()}`}
+                          className="text-muted-foreground text-sm"
+                        >
+                          Create more
+                        </label>
+                      </div>
+                    ) : null}
+                    <SubmitButton
+                      type="submit"
+                      size="sm"
+                      disabled={isLoading}
+                      isLoading={isLoading}
+                      className="rounded-full px-5"
+                    >
+                      {submitLabel ||
+                        (isEdit ? "Update" : `Create ${title.toLowerCase()}`)}
+                    </SubmitButton>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <DrawerDialog

@@ -14,7 +14,6 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -22,6 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../ui/alert-dialog";
+import { Button } from "../ui/button";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -148,7 +148,7 @@ export default function TransactionList() {
     mutationFn: async (transactionIds: string[]) => {
       await deleteTransactions(transactionIds);
     },
-    onSuccess: () => {
+    onSuccess: (_data, transactionIds) => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["wallets"] });
       queryClient.invalidateQueries({ queryKey: ["workspace-wallets"] });
@@ -156,10 +156,11 @@ export default function TransactionList() {
       queryClient.invalidateQueries({ queryKey: ["wallet-owed-amounts"] });
       queryClient.invalidateQueries({ queryKey: ["bills"] });
       toast.success(
-        `${selected.length} transaction${selected.length > 1 ? "s" : ""} deleted`,
+        `${transactionIds.length} transaction${transactionIds.length > 1 ? "s" : ""} deleted`,
       );
       clearSelection();
       setDeleteConfirmOpen(false);
+      setSingleDeleteId(null);
     },
     onError: (error: Error) => {
       toast.error(`Failed to delete transactions: ${error.message}`);
@@ -185,14 +186,19 @@ export default function TransactionList() {
 
   const handleDeleteConfirm = () => {
     if (singleDeleteId) {
-      deleteMutation.mutate([singleDeleteId], {
-        onSuccess: () => {
-          setSingleDeleteId(null);
-        },
-      });
+      deleteMutation.mutate([singleDeleteId]);
     } else {
       deleteMutation.mutate(selected);
     }
+  };
+
+  const handleSingleDeleteClick = (transactionId: string) => {
+    // Let Radix finish dismissing the context menu before mounting another
+    // modal layer. Overlapping dismissals can leave pointer events disabled.
+    window.setTimeout(() => {
+      setSingleDeleteId(transactionId);
+      setDeleteConfirmOpen(true);
+    }, 0);
   };
 
   const toggleSelected = (id: string, shiftKey = false) => {
@@ -544,10 +550,9 @@ export default function TransactionList() {
                         <TransactionRowTransferMenu transaction={transaction} />
                         <ContextMenuSeparator />
                         <ContextMenuItem
-                          onClick={() => {
-                            setSingleDeleteId(transaction.id!);
-                            setDeleteConfirmOpen(true);
-                          }}
+                          onSelect={() =>
+                            handleSingleDeleteClick(transaction.id!)
+                          }
                         >
                           <Trash2 className="mr-2 size-4" />
                           Delete
@@ -625,6 +630,7 @@ export default function TransactionList() {
       <AlertDialog
         open={deleteConfirmOpen}
         onOpenChange={(open) => {
+          if (deleteMutation.isPending) return;
           setDeleteConfirmOpen(open);
           if (!open) setSingleDeleteId(null);
         }}
@@ -645,14 +651,17 @@ export default function TransactionList() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
+            <AlertDialogCancel disabled={deleteMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <Button
+              type="button"
               variant="destructive"
               onClick={handleDeleteConfirm}
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

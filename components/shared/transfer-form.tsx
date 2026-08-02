@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { format } from "date-fns";
+import { format, getYear, parse } from "date-fns";
+import { CalendarDays, WalletCards } from "lucide-react";
 import { toast } from "sonner";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import DaterPicker from "../ui/date-picker";
 import {
   type AmountFormValue,
   getAmountFormValue,
@@ -18,6 +18,8 @@ import { DescriptionInput } from "./description-input";
 import WalletPicker from "./wallet-picker";
 
 import { EntityForm } from "@/components/shared/entity-form";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   FormControl,
   FormField,
@@ -25,6 +27,11 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useWallets } from "@/contexts/settings-context";
 import type { TransferPrefill } from "@/contexts/transaction-form-context";
 import {
@@ -133,6 +140,7 @@ function WalletFieldWithConstraint({
   otherFieldName,
   walletId,
   exclude,
+  placeholder,
 }: {
   field: {
     value: string;
@@ -141,6 +149,7 @@ function WalletFieldWithConstraint({
   otherFieldName: "sender_wallet_id" | "receiver_wallet_id";
   walletId: string;
   exclude?: string;
+  placeholder: string;
 }) {
   const { setValue } = useFormContext<TransferFormValues>();
 
@@ -153,7 +162,10 @@ function WalletFieldWithConstraint({
 
   return (
     <WalletPicker
-      className="w-full"
+      size="sm"
+      icon={<WalletCards className="size-4" />}
+      placeholder={placeholder}
+      className="w-auto max-w-64 rounded-full"
       value={field.value}
       exclude={exclude}
       onChange={handleChange}
@@ -161,13 +173,9 @@ function WalletFieldWithConstraint({
   );
 }
 
-function TransferAmountAndWalletFields({
-  isEdit,
-  walletId,
+function TransferAmountFields({
   walletMap,
 }: {
-  isEdit: boolean;
-  walletId: string;
   walletMap: Map<string, Wallet>;
 }) {
   const { control } = useFormContext<TransferFormValues>();
@@ -181,89 +189,170 @@ function TransferAmountAndWalletFields({
     senderCurrency !== receiverCurrency;
 
   return (
-    <>
-      <div className={hasDifferentCurrencies ? "flex gap-4" : undefined}>
+    <div className={hasDifferentCurrencies ? "space-y-6" : undefined}>
+      <FormField
+        name="sender_amount"
+        rules={{
+          required: "Amount sent is required",
+          min: { value: 0.01, message: "Amount must be positive" },
+        }}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel
+              className={
+                hasDifferentCurrencies
+                  ? "text-muted-foreground text-xs font-normal uppercase"
+                  : "sr-only"
+              }
+            >
+              {hasDifferentCurrencies ? "Origin amount" : "Amount"}
+            </FormLabel>
+            <FormControl>
+              <AmountInput
+                {...field}
+                currency={senderCurrency}
+                autoFocus
+                variant="ghost"
+                symbolClassName="text-xl md:text-2xl"
+                className="h-auto [appearance:textfield] px-2 text-4xl font-semibold shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none sm:text-4xl lg:text-4xl [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {hasDifferentCurrencies ? (
         <FormField
-          name="sender_amount"
+          name="receiver_amount"
           rules={{
-            required: "Amount sent is required",
+            required: "Amount received is required",
             min: { value: 0.01, message: "Amount must be positive" },
           }}
           render={({ field }) => (
-            <FormItem className={hasDifferentCurrencies ? "flex-1" : undefined}>
-              <FormLabel>
-                {hasDifferentCurrencies ? "Amount sent" : "Amount"}
+            <FormItem>
+              <FormLabel className="text-muted-foreground text-xs font-normal uppercase">
+                Destination amount
               </FormLabel>
               <FormControl>
-                <AmountInput {...field} currency={senderCurrency} autoFocus />
+                <AmountInput
+                  {...field}
+                  currency={receiverCurrency}
+                  variant="ghost"
+                  symbolClassName="text-xl md:text-2xl"
+                  className="h-auto [appearance:textfield] px-2 text-4xl font-semibold shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none sm:text-4xl lg:text-4xl [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-
-        {hasDifferentCurrencies ? (
-          <FormField
-            name="receiver_amount"
-            rules={{
-              required: "Amount received is required",
-              min: { value: 0.01, message: "Amount must be positive" },
-            }}
-            render={({ field }) => (
-              <FormItem className="flex-1">
-                <FormLabel>Amount received</FormLabel>
-                <FormControl>
-                  <AmountInput {...field} currency={receiverCurrency} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        ) : null}
-      </div>
-
-      {!isEdit ? (
-        <div className="flex gap-4">
-          <FormField
-            name="sender_wallet_id"
-            rules={{ required: "Sender wallet is required" }}
-            render={({ field }) => (
-              <FormItem className="flex-1">
-                <FormLabel>Sender Wallet</FormLabel>
-                <FormControl>
-                  <WalletFieldWithConstraint
-                    field={field}
-                    otherFieldName="receiver_wallet_id"
-                    walletId={walletId}
-                    exclude={receiverWalletId}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            name="receiver_wallet_id"
-            rules={{ required: "Receiver wallet is required" }}
-            render={({ field }) => (
-              <FormItem className="flex-1">
-                <FormLabel>Receiver Wallet</FormLabel>
-                <FormControl>
-                  <WalletFieldWithConstraint
-                    field={field}
-                    otherFieldName="sender_wallet_id"
-                    walletId={walletId}
-                    exclude={senderWalletId}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
       ) : null}
+    </div>
+  );
+}
+
+function TransferWalletFields({ walletId }: { walletId: string }) {
+  const { control } = useFormContext<TransferFormValues>();
+  const senderWalletId = useWatch({ control, name: "sender_wallet_id" });
+  const receiverWalletId = useWatch({ control, name: "receiver_wallet_id" });
+
+  return (
+    <>
+      <FormField
+        name="sender_wallet_id"
+        rules={{ required: "Sender wallet is required" }}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="sr-only">Sender Wallet</FormLabel>
+            <FormControl>
+              <WalletFieldWithConstraint
+                field={field}
+                otherFieldName="receiver_wallet_id"
+                walletId={walletId}
+                exclude={receiverWalletId}
+                placeholder="Origin wallet"
+              />
+            </FormControl>
+            <FormMessage className="sr-only" />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        name="receiver_wallet_id"
+        rules={{ required: "Receiver wallet is required" }}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="sr-only">Receiver Wallet</FormLabel>
+            <FormControl>
+              <WalletFieldWithConstraint
+                field={field}
+                otherFieldName="sender_wallet_id"
+                walletId={walletId}
+                exclude={senderWalletId}
+                placeholder="Destination wallet"
+              />
+            </FormControl>
+            <FormMessage className="sr-only" />
+          </FormItem>
+        )}
+      />
     </>
+  );
+}
+
+function TransferDateField({
+  value,
+  onChange,
+}: {
+  value?: string;
+  onChange: (value?: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selectedDate = value
+    ? parse(value, "yyyy-MM-dd", new Date())
+    : undefined;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="gap-2 rounded-full font-normal"
+        >
+          <CalendarDays className="size-4" />
+          {selectedDate
+            ? format(
+                selectedDate,
+                getYear(selectedDate) === getYear(new Date())
+                  ? "MMM d"
+                  : "MMM d, yyyy",
+              )
+            : "Date"}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        side="top"
+        sideOffset={8}
+        avoidCollisions={false}
+        style={{ zIndex: 2147483647 }}
+        className="w-80 p-0"
+      >
+        <Calendar
+          mode="single"
+          selected={selectedDate}
+          defaultMonth={selectedDate}
+          onSelect={(date) => {
+            onChange(date ? format(date, "yyyy-MM-dd") : undefined);
+            if (date) setOpen(false);
+          }}
+        />
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -461,6 +550,7 @@ const TransferForm = ({
   return (
     <EntityForm
       title="Transfer"
+      appearance="transaction"
       entity={editValues}
       open={open}
       onOpenChange={onOpenChange}
@@ -476,43 +566,47 @@ const TransferForm = ({
         deleteMutation.isPending ||
         (isEdit && (transferPairQuery.isLoading || !!transferPairQuery.error))
       }
+      footerFields={
+        !isEdit ? (
+          <>
+            <TransferWalletFields walletId={walletId} />
+            <FormField
+              name="date"
+              rules={{ required: "Date is required" }}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="sr-only">Date</FormLabel>
+                  <FormControl>
+                    <TransferDateField {...field} />
+                  </FormControl>
+                  <FormMessage className="sr-only" />
+                </FormItem>
+              )}
+            />
+          </>
+        ) : undefined
+      }
     >
-      <TransferAmountAndWalletFields
-        isEdit={isEdit}
-        walletId={walletId}
-        walletMap={walletMap}
-      />
+      <TransferAmountFields walletMap={walletMap} />
 
       <FormField
         name="description"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Description</FormLabel>
+            <FormLabel className="sr-only">Description</FormLabel>
             <FormControl>
-              <DescriptionInput {...field} />
+              <DescriptionInput
+                {...field}
+                value={field.value ?? ""}
+                variant="ghost"
+                placeholder="Add description…"
+                className="h-auto px-0 py-2 text-lg shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
         )}
       />
-
-      {!isEdit && (
-        <>
-          <FormField
-            name="date"
-            rules={{ required: "Date is required" }}
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Date</FormLabel>
-                <FormControl>
-                  <DaterPicker {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </>
-      )}
     </EntityForm>
   );
 };
