@@ -10,6 +10,7 @@ interface BillPrefill {
 }
 
 export interface TransferPrefill {
+  sourceTransactionId: string;
   senderWalletId: string;
   receiverWalletId: string;
   senderAmount: number;

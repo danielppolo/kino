@@ -22,6 +22,7 @@ export async function createTransferTransaction(
   { sender_amount, receiver_amount, ...sourceTransaction }: SourceTransaction,
   senderWalletId: string,
   receiverWalletId: string,
+  sourceTransactionId?: string,
 ) {
   if (senderWalletId === receiverWalletId) {
     return {
@@ -75,6 +76,7 @@ export async function createTransferTransaction(
     omitBy(
       {
         ...sourceTransaction,
+        ...(sourceTransactionId ? { id: sourceTransactionId } : {}),
         wallet_id: senderWalletId,
         currency: senderWallet.currency,
         amount_cents: -senderAmountCents,
@@ -86,6 +88,7 @@ export async function createTransferTransaction(
     omitBy(
       {
         ...sourceTransaction,
+        ...(sourceTransactionId ? { id: uuidv4() } : {}),
         wallet_id: receiverWalletId,
         currency: receiverWallet.currency,
         amount_cents: receiverAmountCents,
@@ -98,10 +101,40 @@ export async function createTransferTransaction(
 
   type TransactionInsert =
     Database["public"]["Tables"]["transactions"]["Insert"];
-  const { data, error } = await supabase
-    .from("transactions")
-    .insert(transactionsToInsert as TransactionInsert[])
-    .select();
+  if (sourceTransactionId) {
+    const { data: existingSource, error: existingSourceError } = await supabase
+      .from("transactions")
+      .select("id, wallet_id, transfer_id")
+      .eq("id", sourceTransactionId)
+      .maybeSingle();
+
+    if (existingSourceError) {
+      return { error: existingSourceError.message, data: null };
+    }
+    if (!existingSource || existingSource.wallet_id !== senderWalletId) {
+      return {
+        error: "Source transaction not found in sender wallet",
+        data: null,
+      };
+    }
+    if (existingSource.transfer_id) {
+      return {
+        error: "Source transaction already belongs to a transfer",
+        data: null,
+      };
+    }
+  }
+
+  const transactionQuery = supabase.from("transactions");
+  const { data, error } = sourceTransactionId
+    ? await transactionQuery
+        .upsert(transactionsToInsert as TransactionInsert[], {
+          onConflict: "id",
+        })
+        .select()
+    : await transactionQuery
+        .insert(transactionsToInsert as TransactionInsert[])
+        .select();
 
   if (error) {
     return { error: error.message };

@@ -10,6 +10,7 @@ import type { TransactionList } from "@/utils/supabase/types";
 describe("getTransferDestinationWallets", () => {
   const transaction: Pick<
     TransactionList,
+    | "id"
     | "wallet_id"
     | "currency"
     | "amount_cents"
@@ -18,6 +19,7 @@ describe("getTransferDestinationWallets", () => {
     | "transfer_id"
     | "transfer_wallet_id"
   > = {
+    id: "transaction-1",
     wallet_id: "wallet-1",
     currency: "USD",
     amount_cents: 1234,
@@ -77,6 +79,7 @@ describe("getTransferDestinationWallets", () => {
 
 describe("getCrossCurrencyTransferPrefill", () => {
   const transaction = {
+    id: "transaction-source",
     wallet_id: "wallet-usd",
     currency: "USD",
     amount_cents: -1234,
@@ -92,6 +95,7 @@ describe("getCrossCurrencyTransferPrefill", () => {
         currency: "EUR",
       }),
     ).toEqual({
+      sourceTransactionId: "transaction-source",
       senderWalletId: "wallet-usd",
       receiverWalletId: "wallet-eur",
       senderAmount: 12.34,

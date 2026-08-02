@@ -343,6 +343,7 @@ const TransferForm = ({
     walletMap.get(defaultSenderWalletId)?.currency ===
       walletMap.get(defaultReceiverWalletId)?.currency;
   const defaultValues: TransferFormValues = {
+    source_transaction_id: transferPrefill?.sourceTransactionId,
     type: initialData?.type ?? type,
     sender_wallet_id: defaultSenderWalletId,
     receiver_wallet_id: defaultReceiverWalletId,
@@ -392,6 +393,7 @@ const TransferForm = ({
         // Reset all fields except date, using fresh default values
         const prevDate = normalizedData.date;
         const resetValues: TransferFormValues = {
+          source_transaction_id: undefined,
           type: type,
           sender_wallet_id: walletId,
           receiver_wallet_id: "",
