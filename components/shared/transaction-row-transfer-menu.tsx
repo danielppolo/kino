@@ -34,14 +34,14 @@ export function getTransferDestinationWallets<
   const currency = transaction.currency;
   const amountCents = transaction.amount_cents;
   const date = transaction.date;
-  const isEligibleIncome =
-    transaction.type === "income" &&
+  const isEligibleTransaction =
     typeof amountCents === "number" &&
-    amountCents > 0 &&
+    ((transaction.type === "income" && amountCents > 0) ||
+      (transaction.type === "expense" && amountCents < 0)) &&
     !transaction.transfer_id &&
     !transaction.transfer_wallet_id;
 
-  if (!isEligibleIncome || !sourceWalletId || !currency || !date) {
+  if (!isEligibleTransaction || !sourceWalletId || !currency || !date) {
     return [];
   }
 

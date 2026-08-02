@@ -36,6 +36,15 @@ describe("getTransferDestinationWallets", () => {
     ]);
   });
 
+  it("returns same-currency wallets except the source wallet for eligible expenses", () => {
+    expect(
+      getTransferDestinationWallets(
+        { ...transaction, type: "expense", amount_cents: -1234 },
+        wallets,
+      ),
+    ).toEqual([wallets[1]]);
+  });
+
   it("returns no wallets for transactions that already belong to a transfer", () => {
     expect(
       getTransferDestinationWallets(
@@ -45,9 +54,16 @@ describe("getTransferDestinationWallets", () => {
     ).toEqual([]);
   });
 
-  it("returns no wallets for non-income transactions", () => {
+  it("returns no wallets when the amount sign does not match the type", () => {
     expect(
       getTransferDestinationWallets({ ...transaction, type: "expense" }, wallets),
+    ).toEqual([]);
+
+    expect(
+      getTransferDestinationWallets(
+        { ...transaction, amount_cents: -1234 },
+        wallets,
+      ),
     ).toEqual([]);
   });
 });
