@@ -8,7 +8,8 @@ import TransferForm from "./transfer-form";
 import { useTransactionForm } from "@/contexts/transaction-form-context";
 
 function TransactionForm() {
-  const { open, type, walletId, initialData, setOpen } = useTransactionForm();
+  const { open, type, walletId, initialData, transferPrefill, setOpen } =
+    useTransactionForm();
 
   const [keyboardType, setKeyboardType] = useState<
     "transfer" | "income" | "expense" | undefined
@@ -62,6 +63,7 @@ function TransactionForm() {
         type="transfer"
         walletId={walletId}
         initialData={initialData}
+        transferPrefill={transferPrefill}
         onSuccess={() => {
           setKeyboardType(undefined);
           setOpen(false);

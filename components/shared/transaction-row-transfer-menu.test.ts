@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { getTransferDestinationWallets } from "./transaction-row-transfer-menu";
+import {
+  getCrossCurrencyTransferPrefill,
+  getTransferDestinationWallets,
+} from "./transaction-row-transfer-menu";
 
 import type { TransactionList } from "@/utils/supabase/types";
 
@@ -30,19 +33,20 @@ describe("getTransferDestinationWallets", () => {
     { id: "wallet-3", name: "Brokerage", currency: "EUR" },
   ];
 
-  it("returns same-currency wallets except the source wallet for eligible income", () => {
+  it("returns all wallets except the source wallet for eligible income", () => {
     expect(getTransferDestinationWallets(transaction, wallets)).toEqual([
       wallets[1],
+      wallets[2],
     ]);
   });
 
-  it("returns same-currency wallets except the source wallet for eligible expenses", () => {
+  it("returns all wallets except the source wallet for eligible expenses", () => {
     expect(
       getTransferDestinationWallets(
         { ...transaction, type: "expense", amount_cents: -1234 },
         wallets,
       ),
-    ).toEqual([wallets[1]]);
+    ).toEqual([wallets[1], wallets[2]]);
   });
 
   it("returns no wallets for transactions that already belong to a transfer", () => {
@@ -56,7 +60,10 @@ describe("getTransferDestinationWallets", () => {
 
   it("returns no wallets when the amount sign does not match the type", () => {
     expect(
-      getTransferDestinationWallets({ ...transaction, type: "expense" }, wallets),
+      getTransferDestinationWallets(
+        { ...transaction, type: "expense" },
+        wallets,
+      ),
     ).toEqual([]);
 
     expect(
@@ -65,5 +72,41 @@ describe("getTransferDestinationWallets", () => {
         wallets,
       ),
     ).toEqual([]);
+  });
+});
+
+describe("getCrossCurrencyTransferPrefill", () => {
+  const transaction = {
+    wallet_id: "wallet-usd",
+    currency: "USD",
+    amount_cents: -1234,
+    date: "2026-08-01",
+    description: "Move money",
+  };
+
+  it("seeds the transfer form for a cross-currency wallet", () => {
+    expect(
+      getCrossCurrencyTransferPrefill(transaction, {
+        id: "wallet-eur",
+        name: "Euro wallet",
+        currency: "EUR",
+      }),
+    ).toEqual({
+      senderWalletId: "wallet-usd",
+      receiverWalletId: "wallet-eur",
+      senderAmount: 12.34,
+      date: "2026-08-01",
+      description: "Move money",
+    });
+  });
+
+  it("keeps same-currency wallets on the immediate creation path", () => {
+    expect(
+      getCrossCurrencyTransferPrefill(transaction, {
+        id: "wallet-usd-2",
+        name: "Savings",
+        currency: "USD",
+      }),
+    ).toBeNull();
   });
 });

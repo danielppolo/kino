@@ -444,14 +444,26 @@ export const deleteTransfer = async (transferId: string) => {
 
 export const updateTransfer = async (
   transferId: string,
-  data: { description?: string; amount_cents: number },
+  data: {
+    description?: string;
+    sender_amount_cents: number;
+    receiver_amount_cents: number;
+  },
 ) => {
+  if (
+    !Number.isFinite(data.sender_amount_cents) ||
+    data.sender_amount_cents <= 0 ||
+    !Number.isFinite(data.receiver_amount_cents) ||
+    data.receiver_amount_cents <= 0
+  ) {
+    throw new Error("Transfer amounts must be positive");
+  }
+
   const supabase = await createClient();
 
-  // First, get the transactions to determine their categories
   const { data: transactions, error: fetchError } = await supabase
     .from("transactions")
-    .select("id, category_id")
+    .select("id, amount_cents")
     .eq("transfer_id", transferId);
 
   if (fetchError) throw new Error(fetchError.message);
@@ -459,30 +471,33 @@ export const updateTransfer = async (
     throw new Error("Invalid transfer: expected exactly 2 transactions");
   }
 
-  // Update each transaction with the correct amount sign based on direction
-  // categories (sender or receiver)
-  const updates = transactions.map((transaction) => {
-    const isOutgoing =
-      transaction.category_id ===
-      process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_OUT_ID;
-    const isIncoming =
-      transaction.category_id ===
-      process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_IN_ID;
+  const outgoingCount = transactions.filter(
+    (transaction) => transaction.amount_cents < 0,
+  ).length;
+  const incomingCount = transactions.filter(
+    (transaction) => transaction.amount_cents > 0,
+  ).length;
+  if (outgoingCount !== 1 || incomingCount !== 1) {
+    throw new Error(
+      "Invalid transfer: expected one outgoing and one incoming leg",
+    );
+  }
 
-    if (!isOutgoing && !isIncoming) {
-      throw new Error("Invalid transfer category");
-    }
+  const updates = transactions.map((transaction) => {
+    const amountCents =
+      transaction.amount_cents < 0
+        ? -Math.abs(data.sender_amount_cents)
+        : Math.abs(data.receiver_amount_cents);
 
     return supabase
       .from("transactions")
       .update({
         description: data.description,
-        amount_cents: isOutgoing ? -data.amount_cents : data.amount_cents,
+        amount_cents: amountCents,
       })
       .eq("id", transaction.id);
   });
 
-  // Execute all updates
   const results = await Promise.all(updates);
   const error = results.find((result) => result.error)?.error;
 

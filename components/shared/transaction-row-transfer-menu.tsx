@@ -10,10 +10,40 @@ import {
 } from "../ui/context-menu";
 
 import { useWallets } from "@/contexts/settings-context";
+import {
+  type TransferPrefill,
+  useTransactionForm,
+} from "@/contexts/transaction-form-context";
 import { useCreateTransferTransaction } from "@/hooks/use-create-transfer-transaction";
 import type { TransactionList, Wallet } from "@/utils/supabase/types";
 
 type TransferDestinationWallet = Pick<Wallet, "id" | "name" | "currency">;
+
+export function getCrossCurrencyTransferPrefill(
+  transaction: Pick<
+    TransactionList,
+    "wallet_id" | "currency" | "amount_cents" | "date" | "description"
+  >,
+  receiverWallet: TransferDestinationWallet,
+): TransferPrefill | null {
+  if (
+    !transaction.wallet_id ||
+    !transaction.currency ||
+    typeof transaction.amount_cents !== "number" ||
+    !transaction.date ||
+    receiverWallet.currency === transaction.currency
+  ) {
+    return null;
+  }
+
+  return {
+    senderWalletId: transaction.wallet_id,
+    receiverWalletId: receiverWallet.id,
+    senderAmount: Math.abs(transaction.amount_cents) / 100,
+    date: transaction.date,
+    description: transaction.description ?? undefined,
+  };
+}
 
 export function getTransferDestinationWallets<
   TWallet extends TransferDestinationWallet,
@@ -45,9 +75,7 @@ export function getTransferDestinationWallets<
     return [];
   }
 
-  return wallets.filter(
-    (wallet) => wallet.id !== sourceWalletId && wallet.currency === currency,
-  );
+  return wallets.filter((wallet) => wallet.id !== sourceWalletId);
 }
 
 interface TransactionRowTransferMenuProps {
@@ -59,6 +87,7 @@ export default function TransactionRowTransferMenu({
 }: TransactionRowTransferMenuProps) {
   const [wallets] = useWallets();
   const createTransferMutation = useCreateTransferTransaction();
+  const { openForm } = useTransactionForm();
   const destinationWallets = getTransferDestinationWallets(
     transaction,
     wallets,
@@ -73,8 +102,31 @@ export default function TransactionRowTransferMenu({
     const currency = transaction.currency;
     const amountCents = transaction.amount_cents;
     const date = transaction.date;
+    const destinationWallet = destinationWallets.find(
+      (wallet) => wallet.id === destinationWalletId,
+    );
 
-    if (!sourceWalletId || !currency || typeof amountCents !== "number" || !date) {
+    if (
+      !sourceWalletId ||
+      !currency ||
+      typeof amountCents !== "number" ||
+      !date ||
+      !destinationWallet
+    ) {
+      return;
+    }
+
+    const amount = Math.abs(amountCents) / 100;
+    const transferPrefill = getCrossCurrencyTransferPrefill(
+      transaction,
+      destinationWallet,
+    );
+    if (transferPrefill) {
+      openForm({
+        type: "transfer",
+        walletId: sourceWalletId,
+        transferPrefill,
+      });
       return;
     }
 
@@ -84,9 +136,9 @@ export default function TransactionRowTransferMenu({
         sender_wallet_id: sourceWalletId,
         receiver_wallet_id: destinationWalletId,
         date,
-        currency,
         description: transaction.description ?? undefined,
-        amount: Math.abs(amountCents) / 100,
+        sender_amount: amount,
+        receiver_amount: amount,
         category_id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID!,
         label_id: "",
       });

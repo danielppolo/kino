@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { useFormContext } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import DaterPicker from "../ui/date-picker";
 import {
@@ -25,13 +26,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useWallets } from "@/contexts/settings-context";
+import type { TransferPrefill } from "@/contexts/transaction-form-context";
 import {
   type TransferTransactionValues,
   useCreateTransferTransaction,
 } from "@/hooks/use-create-transfer-transaction";
 import { invalidateWorkspaceQueries } from "@/utils/query-cache";
+import { createClient } from "@/utils/supabase/client";
 import { deleteTransfer, updateTransfer } from "@/utils/supabase/mutations";
-import { Transaction } from "@/utils/supabase/types";
+import { Transaction, Wallet } from "@/utils/supabase/types";
 
 interface TransferFormProps {
   walletId: string;
@@ -41,16 +44,228 @@ interface TransferFormProps {
   initialData?: Transaction;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  transferPrefill?: TransferPrefill;
 }
 
-type TransferFormValues = Omit<TransferTransactionValues, "amount"> & {
-  amount: AmountFormValue;
+type TransferFormValues = Omit<
+  TransferTransactionValues,
+  "sender_amount" | "receiver_amount"
+> & {
+  sender_amount: AmountFormValue;
+  receiver_amount: AmountFormValue;
 };
 
 type TransferTransaction = Transaction & {
   transfer_id?: string | null;
   transfer_wallet_id?: string | null;
 };
+
+export function normalizeTransferAmounts({
+  senderAmount,
+  receiverAmount,
+  senderCurrency,
+  receiverCurrency,
+}: {
+  senderAmount: AmountFormValue;
+  receiverAmount: AmountFormValue;
+  senderCurrency?: string;
+  receiverCurrency?: string;
+}) {
+  const normalizedSenderAmount = Math.abs(
+    normalizeAmountFormValue(senderAmount),
+  );
+  const normalizedReceiverAmount =
+    senderCurrency && senderCurrency === receiverCurrency
+      ? normalizedSenderAmount
+      : Math.abs(normalizeAmountFormValue(receiverAmount));
+
+  return {
+    senderAmount: normalizedSenderAmount,
+    receiverAmount: normalizedReceiverAmount,
+  };
+}
+
+export function getTransferPairValues(
+  transactions: Array<
+    Pick<
+      Transaction,
+      | "amount_cents"
+      | "category_id"
+      | "date"
+      | "description"
+      | "label_id"
+      | "type"
+      | "wallet_id"
+    >
+  >,
+): TransferFormValues {
+  if (transactions.length !== 2) {
+    throw new Error("Invalid transfer: expected exactly 2 transactions");
+  }
+
+  const sender = transactions.find(
+    (transaction) => transaction.amount_cents < 0,
+  );
+  const receiver = transactions.find(
+    (transaction) => transaction.amount_cents > 0,
+  );
+  if (!sender || !receiver) {
+    throw new Error(
+      "Invalid transfer: expected one outgoing and one incoming leg",
+    );
+  }
+
+  return {
+    type: sender.type,
+    sender_wallet_id: sender.wallet_id,
+    receiver_wallet_id: receiver.wallet_id,
+    date: sender.date,
+    description: sender.description ?? undefined,
+    sender_amount: getAmountFormValue(Math.abs(sender.amount_cents) / 100),
+    receiver_amount: getAmountFormValue(receiver.amount_cents / 100),
+    category_id: sender.category_id,
+    label_id: sender.label_id ?? "",
+  };
+}
+
+function WalletFieldWithConstraint({
+  field,
+  otherFieldName,
+  walletId,
+  exclude,
+}: {
+  field: {
+    value: string;
+    onChange: (value: string) => void;
+  };
+  otherFieldName: "sender_wallet_id" | "receiver_wallet_id";
+  walletId: string;
+  exclude?: string;
+}) {
+  const { setValue } = useFormContext<TransferFormValues>();
+
+  const handleChange = (value: string) => {
+    field.onChange(value);
+    if (value !== walletId) {
+      setValue(otherFieldName, walletId, { shouldValidate: true });
+    }
+  };
+
+  return (
+    <WalletPicker
+      className="w-full"
+      value={field.value}
+      exclude={exclude}
+      onChange={handleChange}
+    />
+  );
+}
+
+function TransferAmountAndWalletFields({
+  isEdit,
+  walletId,
+  walletMap,
+}: {
+  isEdit: boolean;
+  walletId: string;
+  walletMap: Map<string, Wallet>;
+}) {
+  const { control } = useFormContext<TransferFormValues>();
+  const senderWalletId = useWatch({ control, name: "sender_wallet_id" });
+  const receiverWalletId = useWatch({ control, name: "receiver_wallet_id" });
+  const senderCurrency = walletMap.get(senderWalletId)?.currency;
+  const receiverCurrency = walletMap.get(receiverWalletId)?.currency;
+  const hasDifferentCurrencies =
+    !!senderCurrency &&
+    !!receiverCurrency &&
+    senderCurrency !== receiverCurrency;
+
+  return (
+    <>
+      <div className={hasDifferentCurrencies ? "flex gap-4" : undefined}>
+        <FormField
+          name="sender_amount"
+          rules={{
+            required: "Amount sent is required",
+            min: { value: 0.01, message: "Amount must be positive" },
+          }}
+          render={({ field }) => (
+            <FormItem className={hasDifferentCurrencies ? "flex-1" : undefined}>
+              <FormLabel>
+                {hasDifferentCurrencies ? "Amount sent" : "Amount"}
+              </FormLabel>
+              <FormControl>
+                <AmountInput {...field} currency={senderCurrency} autoFocus />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {hasDifferentCurrencies ? (
+          <FormField
+            name="receiver_amount"
+            rules={{
+              required: "Amount received is required",
+              min: { value: 0.01, message: "Amount must be positive" },
+            }}
+            render={({ field }) => (
+              <FormItem className="flex-1">
+                <FormLabel>Amount received</FormLabel>
+                <FormControl>
+                  <AmountInput {...field} currency={receiverCurrency} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        ) : null}
+      </div>
+
+      {!isEdit ? (
+        <div className="flex gap-4">
+          <FormField
+            name="sender_wallet_id"
+            rules={{ required: "Sender wallet is required" }}
+            render={({ field }) => (
+              <FormItem className="flex-1">
+                <FormLabel>Sender Wallet</FormLabel>
+                <FormControl>
+                  <WalletFieldWithConstraint
+                    field={field}
+                    otherFieldName="receiver_wallet_id"
+                    walletId={walletId}
+                    exclude={receiverWalletId}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            name="receiver_wallet_id"
+            rules={{ required: "Receiver wallet is required" }}
+            render={({ field }) => (
+              <FormItem className="flex-1">
+                <FormLabel>Receiver Wallet</FormLabel>
+                <FormControl>
+                  <WalletFieldWithConstraint
+                    field={field}
+                    otherFieldName="sender_wallet_id"
+                    walletId={walletId}
+                    exclude={senderWalletId}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+      ) : null}
+    </>
+  );
+}
 
 const TransferForm = ({
   walletId,
@@ -60,13 +275,37 @@ const TransferForm = ({
   initialData,
   open,
   onOpenChange,
+  transferPrefill,
 }: TransferFormProps) => {
   const [, walletMap] = useWallets();
   const [addAnother, setAddAnother] = useState(false);
-  const currency = walletMap.get(walletId)?.currency ?? "USD";
   const isEdit = !!initialData;
   const queryClient = useQueryClient();
   const createMutation = useCreateTransferTransaction();
+  const transferId = (initialData as TransferTransaction | undefined)
+    ?.transfer_id;
+
+  const transferPairQuery = useQuery({
+    queryKey: ["transfer", transferId],
+    queryFn: async () => {
+      if (!transferId) throw new Error("No transfer ID provided");
+
+      const { data, error } = await createClient()
+        .from("transactions")
+        .select("*")
+        .eq("transfer_id", transferId);
+
+      if (error) throw new Error(error.message);
+      return getTransferPairValues(data ?? []);
+    },
+    enabled: !!open && isEdit && !!transferId,
+  });
+
+  useEffect(() => {
+    if (transferPairQuery.error) {
+      toast.error(transferPairQuery.error.message);
+    }
+  }, [transferPairQuery.error]);
 
   const updateMutation = useMutation({
     mutationFn: async (values: TransferTransactionValues) => {
@@ -75,7 +314,8 @@ const TransferForm = ({
       if (!transferId) throw new Error("No transfer ID provided");
       await updateTransfer(transferId, {
         description: values.description ?? undefined,
-        amount_cents: values.amount * 100,
+        sender_amount_cents: Math.round(values.sender_amount * 100),
+        receiver_amount_cents: Math.round(values.receiver_amount * 100),
       });
     },
     onSuccess: () => {
@@ -95,15 +335,23 @@ const TransferForm = ({
     },
   });
 
+  const defaultSenderWalletId = transferPrefill?.senderWalletId ?? walletId;
+  const defaultReceiverWalletId = transferPrefill?.receiverWalletId ?? "";
+  const defaultSenderAmount = transferPrefill?.senderAmount;
+  const isDefaultSameCurrency =
+    !!defaultReceiverWalletId &&
+    walletMap.get(defaultSenderWalletId)?.currency ===
+      walletMap.get(defaultReceiverWalletId)?.currency;
   const defaultValues: TransferFormValues = {
     type: initialData?.type ?? type,
-    sender_wallet_id: initialData?.wallet_id ?? walletId,
-    receiver_wallet_id: "",
-    date: initialData?.date ?? date,
-    currency: initialData?.currency ?? currency,
-    description: initialData?.description ?? undefined,
-    amount: getAmountFormValue(
-      initialData ? Math.abs(initialData.amount_cents) / 100 : undefined,
+    sender_wallet_id: defaultSenderWalletId,
+    receiver_wallet_id: defaultReceiverWalletId,
+    date: transferPrefill?.date ?? initialData?.date ?? date,
+    description:
+      transferPrefill?.description ?? initialData?.description ?? undefined,
+    sender_amount: getAmountFormValue(defaultSenderAmount),
+    receiver_amount: getAmountFormValue(
+      isDefaultSameCurrency ? defaultSenderAmount : undefined,
     ),
     category_id:
       initialData?.category_id ??
@@ -112,9 +360,18 @@ const TransferForm = ({
   };
 
   const handleSubmit = async (data: TransferFormValues) => {
+    const senderCurrency = walletMap.get(data.sender_wallet_id)?.currency;
+    const receiverCurrency = walletMap.get(data.receiver_wallet_id)?.currency;
+    const { senderAmount, receiverAmount } = normalizeTransferAmounts({
+      senderAmount: data.sender_amount,
+      receiverAmount: data.receiver_amount,
+      senderCurrency,
+      receiverCurrency,
+    });
     const normalizedData: TransferTransactionValues = {
       ...data,
-      amount: Math.abs(normalizeAmountFormValue(data.amount)),
+      sender_amount: senderAmount,
+      receiver_amount: receiverAmount,
     };
 
     if (isEdit) {
@@ -139,9 +396,9 @@ const TransferForm = ({
           sender_wallet_id: walletId,
           receiver_wallet_id: "",
           date: prevDate,
-          currency: currency,
           description: undefined,
-          amount: "",
+          sender_amount: "",
+          receiver_amount: "",
           category_id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID!,
           label_id: "",
         };
@@ -160,20 +417,33 @@ const TransferForm = ({
     }
   };
 
-  const convertToFormValues = (
+  const getFallbackEditValues = (
     transaction: Transaction,
-  ): TransferFormValues => ({
-    type: transaction.type,
-    sender_wallet_id: transaction.wallet_id,
-    receiver_wallet_id:
-      (transaction as TransferTransaction).transfer_wallet_id ?? "",
-    date: transaction.date,
-    currency: transaction.currency,
-    description: transaction.description ?? undefined,
-    amount: getAmountFormValue(Math.abs(transaction.amount_cents) / 100),
-    category_id: transaction.category_id,
-    label_id: transaction.label_id ?? "",
-  });
+  ): TransferFormValues => {
+    const counterWalletId =
+      (transaction as TransferTransaction).transfer_wallet_id ?? "";
+    const isSender = transaction.amount_cents < 0;
+
+    return {
+      type: transaction.type,
+      sender_wallet_id: isSender ? transaction.wallet_id : counterWalletId,
+      receiver_wallet_id: isSender ? counterWalletId : transaction.wallet_id,
+      date: transaction.date,
+      description: transaction.description ?? undefined,
+      sender_amount: getAmountFormValue(
+        Math.abs(transaction.amount_cents) / 100,
+      ),
+      receiver_amount: getAmountFormValue(
+        Math.abs(transaction.amount_cents) / 100,
+      ),
+      category_id: transaction.category_id,
+      label_id: transaction.label_id ?? "",
+    };
+  };
+
+  const editValues =
+    transferPairQuery.data ??
+    (initialData ? getFallbackEditValues(initialData) : undefined);
 
   const handleDelete = async () => {
     try {
@@ -186,43 +456,10 @@ const TransferForm = ({
     }
   };
 
-  // Component to handle wallet field changes with constraint enforcement
-  const WalletFieldWithConstraint = ({
-    field,
-    otherFieldName,
-    currency: fieldCurrency,
-  }: {
-    field: {
-      value: string;
-      onChange: (value: string) => void;
-    };
-    otherFieldName: "sender_wallet_id" | "receiver_wallet_id";
-    currency: string;
-  }) => {
-    const { setValue } = useFormContext<TransferFormValues>();
-
-    const handleChange = (value: string) => {
-      field.onChange(value);
-      // If the changed field is not the walletId prop, set the other field to walletId
-      if (value !== walletId) {
-        setValue(otherFieldName, walletId);
-      }
-    };
-
-    return (
-      <WalletPicker
-        currency={fieldCurrency}
-        className="w-full"
-        value={field.value}
-        onChange={handleChange}
-      />
-    );
-  };
-
   return (
     <EntityForm
       title="Transfer"
-      entity={initialData ? convertToFormValues(initialData) : undefined}
+      entity={editValues}
       open={open}
       onOpenChange={onOpenChange}
       onSuccess={onSuccess}
@@ -234,24 +471,14 @@ const TransferForm = ({
       isLoading={
         createMutation.isPending ||
         updateMutation.isPending ||
-        deleteMutation.isPending
+        deleteMutation.isPending ||
+        (isEdit && (transferPairQuery.isLoading || !!transferPairQuery.error))
       }
     >
-      <FormField
-        name="amount"
-        rules={{
-          required: "Amount is required",
-          min: { value: 0.01, message: "Amount must be positive" },
-        }}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Amount</FormLabel>
-            <FormControl>
-              <AmountInput {...field} autoFocus />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
+      <TransferAmountAndWalletFields
+        isEdit={isEdit}
+        walletId={walletId}
+        walletMap={walletMap}
       />
 
       <FormField
@@ -282,44 +509,6 @@ const TransferForm = ({
               </FormItem>
             )}
           />
-
-          <div className="flex gap-4">
-            <FormField
-              name="sender_wallet_id"
-              rules={{ required: "Sender wallet is required" }}
-              render={({ field }) => (
-                <FormItem className="flex-1">
-                  <FormLabel>Sender Wallet</FormLabel>
-                  <FormControl>
-                    <WalletFieldWithConstraint
-                      field={field}
-                      otherFieldName="receiver_wallet_id"
-                      currency={currency}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              name="receiver_wallet_id"
-              rules={{ required: "Receiver wallet is required" }}
-              render={({ field }) => (
-                <FormItem className="flex-1">
-                  <FormLabel>Receiver Wallet</FormLabel>
-                  <FormControl>
-                    <WalletFieldWithConstraint
-                      field={field}
-                      otherFieldName="sender_wallet_id"
-                      currency={currency}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
         </>
       )}
     </EntityForm>

@@ -9,18 +9,28 @@ interface BillPrefill {
   amount: number; // amount in cents
 }
 
+export interface TransferPrefill {
+  senderWalletId: string;
+  receiverWalletId: string;
+  senderAmount: number;
+  date: string;
+  description?: string;
+}
+
 interface TransactionFormContextType {
   open: boolean;
   type?: "transfer" | "income" | "expense";
   walletId?: string;
   initialData?: Transaction;
   billPrefill?: BillPrefill;
+  transferPrefill?: TransferPrefill;
   setOpen: (open: boolean) => void;
   openForm: (params: {
     type?: "transfer" | "income" | "expense";
     walletId?: string;
     initialData?: Transaction;
     billPrefill?: BillPrefill;
+    transferPrefill?: TransferPrefill;
   }) => void;
 }
 
@@ -38,30 +48,34 @@ export function TransactionFormProvider({
   const [walletId, setWalletId] = useState<string>();
   const [initialData, setInitialData] = useState<Transaction>();
   const [billPrefill, setBillPrefill] = useState<BillPrefill>();
+  const [transferPrefill, setTransferPrefill] = useState<TransferPrefill>();
 
   const openForm = ({
     type: newType,
     walletId: newWalletId,
     initialData: newInitialData,
     billPrefill: newBillPrefill,
+    transferPrefill: newTransferPrefill,
   }: {
     type?: "transfer" | "income" | "expense";
     walletId?: string;
     initialData?: Transaction;
     billPrefill?: BillPrefill;
+    transferPrefill?: TransferPrefill;
   }) => {
     setType(newType);
     setWalletId(newWalletId);
     setInitialData(newInitialData);
     setBillPrefill(newBillPrefill);
+    setTransferPrefill(newTransferPrefill);
     setOpen(true);
   };
 
   const handleSetOpen = (newOpen: boolean) => {
     setOpen(newOpen);
     if (!newOpen) {
-      // Clear billPrefill when closing the form
       setBillPrefill(undefined);
+      setTransferPrefill(undefined);
     }
   };
 
@@ -73,6 +87,7 @@ export function TransactionFormProvider({
         walletId,
         initialData,
         billPrefill,
+        transferPrefill,
         setOpen: handleSetOpen,
         openForm,
       }}

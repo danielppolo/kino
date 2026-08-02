@@ -18,11 +18,12 @@ import type { Transaction, TransactionList } from "@/utils/supabase/types";
 
 export type TransferTransactionValues = Omit<
   Database["public"]["Tables"]["transactions"]["Insert"],
-  "amount_cents" | "wallet_id"
+  "amount_cents" | "currency" | "wallet_id"
 > & {
   sender_wallet_id: string;
   receiver_wallet_id: string;
-  amount: number;
+  sender_amount: number;
+  receiver_amount: number;
 };
 
 type CreateTransferResult = Awaited<
@@ -77,18 +78,20 @@ const transactionMatchesFilters = (
   return true;
 };
 
-const transactionRowFromValues = ({
+export const transactionRowFromValues = ({
   values,
   id,
   walletId,
   transferWalletId,
   amountCents,
+  currency,
 }: {
   values: TransferTransactionValues;
   id: string;
   walletId: string;
   transferWalletId: string;
   amountCents: number;
+  currency: string | null;
 }): TransactionList => ({
   id,
   wallet_id: walletId,
@@ -97,7 +100,7 @@ const transactionRowFromValues = ({
   amount_cents: amountCents,
   base_amount_cents: null,
   created_at: null,
-  currency: values.currency ?? null,
+  currency,
   date: values.date ?? null,
   description: toNullable(values.description),
   needs_review: !transferCategoryId || !toNullable(values.label_id),
@@ -153,7 +156,7 @@ const transactionRowFromSaved = ({
 
 export function useCreateTransferTransaction() {
   const queryClient = useQueryClient();
-  const [wallets] = useWallets();
+  const [wallets, walletMap] = useWallets();
   const filters = useFilters();
   const workspaceWalletIds = useMemo(
     () => wallets.map((wallet) => wallet.id),
@@ -189,8 +192,12 @@ export function useCreateTransferTransaction() {
 
       const previousData =
         queryClient.getQueryData<InfiniteTransactionData>(transactionsQueryKey);
-      const normalizedAmount = Math.abs(values.amount);
-      const amountCents = Math.round(normalizedAmount * 100);
+      const senderAmountCents = Math.round(
+        Math.abs(values.sender_amount) * 100,
+      );
+      const receiverAmountCents = Math.round(
+        Math.abs(values.receiver_amount) * 100,
+      );
       const optimisticSourceId = randomUUID();
       const optimisticDestinationId = randomUUID();
       const optimisticSource = transactionRowFromValues({
@@ -198,14 +205,16 @@ export function useCreateTransferTransaction() {
         id: optimisticSourceId,
         walletId: values.sender_wallet_id,
         transferWalletId: values.receiver_wallet_id,
-        amountCents: -amountCents,
+        amountCents: -senderAmountCents,
+        currency: walletMap.get(values.sender_wallet_id)?.currency ?? null,
       });
       const optimisticDestination = transactionRowFromValues({
         values,
         id: optimisticDestinationId,
         walletId: values.receiver_wallet_id,
         transferWalletId: values.sender_wallet_id,
-        amountCents,
+        amountCents: receiverAmountCents,
+        currency: walletMap.get(values.receiver_wallet_id)?.currency ?? null,
       });
 
       queryClient.setQueryData<InfiniteTransactionData>(

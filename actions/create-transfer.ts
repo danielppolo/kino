@@ -9,19 +9,17 @@ import { createClient } from "@/utils/supabase/server";
 
 type SourceTransaction = Omit<
   Database["public"]["Tables"]["transactions"]["Insert"],
-  "amount_cents"
+  "amount_cents" | "currency" | "wallet_id"
 > & {
-  amount: number;
+  sender_amount: number;
+  receiver_amount: number;
 };
 
-const isEmpty = (value: any) =>
+const isEmpty = (value: unknown) =>
   value === "" || value === null || value === undefined;
 
 export async function createTransferTransaction(
-  {
-    amount,
-    ...sourceTransaction
-  }: Omit<SourceTransaction, "wallet_id"> & { wallet_id?: string },
+  { sender_amount, receiver_amount, ...sourceTransaction }: SourceTransaction,
   senderWalletId: string,
   receiverWalletId: string,
 ) {
@@ -32,15 +30,54 @@ export async function createTransferTransaction(
     };
   }
 
+  const senderAmountCents = Math.round(sender_amount * 100);
+  const receiverAmountCents = Math.round(receiver_amount * 100);
+  if (
+    !Number.isFinite(sender_amount) ||
+    senderAmountCents <= 0 ||
+    !Number.isFinite(receiver_amount) ||
+    receiverAmountCents <= 0
+  ) {
+    return {
+      error: "Transfer amounts must be positive",
+      data: null,
+    };
+  }
+
   const supabase = await createClient();
+  const { data: wallets, error: walletsError } = await supabase
+    .from("wallets")
+    .select("id, currency, workspace_id")
+    .in("id", [senderWalletId, receiverWalletId]);
+
+  if (walletsError) {
+    return { error: walletsError.message, data: null };
+  }
+
+  const senderWallet = wallets?.find((wallet) => wallet.id === senderWalletId);
+  const receiverWallet = wallets?.find(
+    (wallet) => wallet.id === receiverWalletId,
+  );
+
+  if (!senderWallet || !receiverWallet) {
+    return { error: "Sender or receiver wallet not found", data: null };
+  }
+
+  if (senderWallet.workspace_id !== receiverWallet.workspace_id) {
+    return {
+      error: "Sender and receiver wallets must belong to the same workspace",
+      data: null,
+    };
+  }
+
   const transferId = uuidv4();
-  const normalized = Math.abs(amount);
   const transactionsToInsert = [
     omitBy(
       {
         ...sourceTransaction,
         wallet_id: senderWalletId,
-        amount_cents: Math.round(normalized * 100) * -1,
+        currency: senderWallet.currency,
+        amount_cents: -senderAmountCents,
         transfer_id: transferId,
         category_id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID,
       },
@@ -50,7 +87,8 @@ export async function createTransferTransaction(
       {
         ...sourceTransaction,
         wallet_id: receiverWalletId,
-        amount_cents: Math.round(normalized * 100),
+        currency: receiverWallet.currency,
+        amount_cents: receiverAmountCents,
         transfer_id: transferId,
         category_id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID,
       },
@@ -58,7 +96,8 @@ export async function createTransferTransaction(
     ),
   ];
 
-  type TransactionInsert = Database["public"]["Tables"]["transactions"]["Insert"];
+  type TransactionInsert =
+    Database["public"]["Tables"]["transactions"]["Insert"];
   const { data, error } = await supabase
     .from("transactions")
     .insert(transactionsToInsert as TransactionInsert[])
