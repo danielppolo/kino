@@ -815,9 +815,7 @@ const ExpenseIncomeForm = ({
                               align="start"
                               side="top"
                               sideOffset={8}
-                              avoidCollisions={false}
-                              style={{ zIndex: 2147483647 }}
-                              className="w-80 p-0"
+                              className="w-auto p-0"
                             >
                               <Calendar
                                 mode="single"

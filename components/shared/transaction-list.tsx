@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { Copy, Download, Pencil, Trash2, Workflow } from "lucide-react";
 import { toast } from "sonner";
+import { v4 as randomUUID } from "uuid";
 
 import {
   useInfiniteQuery,
@@ -46,6 +47,7 @@ import { useSelection } from "@/hooks/use-selection";
 import { PAGE_SIZE } from "@/utils/constants";
 import { convertTransactionsToCSV, downloadCSV } from "@/utils/csv-export";
 import { canUseGlobalShortcuts } from "@/utils/keyboard-shortcuts";
+import { applyOptimisticTransaction } from "@/utils/optimistic-transactions";
 import { createClient } from "@/utils/supabase/client";
 import {
   deleteTransactions,
@@ -83,6 +85,11 @@ export default function TransactionList() {
 
   // Get wallet IDs for workspace scoping
   const workspaceWalletIds = wallets.map((w) => w.id);
+  const transactionsQueryKey = [
+    "transactions",
+    filters,
+    workspaceWalletIds,
+  ] as const;
 
   const {
     data,
@@ -92,7 +99,7 @@ export default function TransactionList() {
     isFetchingNextPage,
     status,
   } = useInfiniteQuery<TransactionPage, Error, InfiniteTransactionData>({
-    queryKey: ["transactions", filters, workspaceWalletIds],
+    queryKey: transactionsQueryKey,
     queryFn: async ({ pageParam = 0 }) => {
       const supabase = createClient();
       const result = await listTransactions(supabase, {
@@ -168,15 +175,69 @@ export default function TransactionList() {
   });
 
   const duplicateMutation = useMutation({
-    mutationFn: duplicateTransaction,
+    mutationFn: (transaction: TransactionList) =>
+      duplicateTransaction(transaction.id!),
+    onMutate: async (transaction) => {
+      await queryClient.cancelQueries({ queryKey: transactionsQueryKey });
+
+      const today = new Date().toISOString().split("T")[0];
+      const remainsVisible =
+        !filters.id &&
+        !filters.tag &&
+        !filters.ontology_entity_id &&
+        (!filters.from ||
+          !filters.to ||
+          (today >= filters.from && today <= filters.to));
+      let optimisticId: string | undefined;
+
+      if (remainsVisible) {
+        optimisticId = randomUUID();
+        const optimisticTransaction: TransactionList = {
+          ...transaction,
+          id: optimisticId,
+          created_at: new Date().toISOString(),
+          date: today,
+          ontology_associations: [],
+          ontology_entity_ids: [],
+          tag_ids: [],
+          tags: [],
+        };
+
+        queryClient.setQueryData<InfiniteTransactionData>(
+          transactionsQueryKey,
+          (old) => applyOptimisticTransaction(old, optimisticTransaction),
+        );
+      }
+
+      return { optimisticId };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["wallets"] });
       queryClient.invalidateQueries({ queryKey: ["workspace-wallets"] });
       toast.success("Transaction duplicated");
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _transaction, context) => {
+      if (context?.optimisticId) {
+        queryClient.setQueryData<InfiniteTransactionData>(
+          transactionsQueryKey,
+          (old) =>
+            old
+              ? {
+                  ...old,
+                  pages: old.pages.map((page) => ({
+                    ...page,
+                    data: page.data.filter(
+                      (transaction) => transaction.id !== context.optimisticId,
+                    ),
+                  })),
+                }
+              : old,
+        );
+      }
       toast.error(`Failed to duplicate transaction: ${error.message}`);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
     },
   });
 
@@ -529,9 +590,7 @@ export default function TransactionList() {
                           Edit
                         </ContextMenuItem>
                         <ContextMenuItem
-                          onClick={() =>
-                            duplicateMutation.mutate(transaction.id!)
-                          }
+                          onClick={() => duplicateMutation.mutate(transaction)}
                         >
                           <Copy className="mr-2 size-4" />
                           Duplicate
