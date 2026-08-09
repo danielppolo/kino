@@ -20,7 +20,6 @@ export type TransferTransactionValues = Omit<
   Database["public"]["Tables"]["transactions"]["Insert"],
   "amount_cents" | "currency" | "wallet_id"
 > & {
-  source_transaction_id?: string;
   sender_wallet_id: string;
   receiver_wallet_id: string;
   sender_amount: number;
@@ -175,17 +174,11 @@ export function useCreateTransferTransaction() {
     OptimisticTransferContext
   >({
     mutationFn: async (values) => {
-      const {
-        sender_wallet_id,
-        receiver_wallet_id,
-        source_transaction_id,
-        ...transaction
-      } = values;
+      const { sender_wallet_id, receiver_wallet_id, ...transaction } = values;
       const result = await createTransferTransaction(
         { ...transaction },
         sender_wallet_id,
         receiver_wallet_id,
-        source_transaction_id,
       );
 
       if (result.error) {
@@ -205,7 +198,7 @@ export function useCreateTransferTransaction() {
       const receiverAmountCents = Math.round(
         Math.abs(values.receiver_amount) * 100,
       );
-      const optimisticSourceId = values.source_transaction_id ?? randomUUID();
+      const optimisticSourceId = randomUUID();
       const optimisticDestinationId = randomUUID();
       const optimisticSource = transactionRowFromValues({
         values,
@@ -232,11 +225,7 @@ export function useCreateTransferTransaction() {
             next = applyOptimisticTransaction(next, optimisticDestination);
           }
           if (transactionMatchesFilters(optimisticSource, filters)) {
-            next = applyOptimisticTransaction(
-              next,
-              optimisticSource,
-              values.source_transaction_id,
-            );
+            next = applyOptimisticTransaction(next, optimisticSource);
           }
           return next;
         },

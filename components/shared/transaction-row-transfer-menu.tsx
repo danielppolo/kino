@@ -23,13 +23,12 @@ type TransferDestinationWallet = Pick<Wallet, "id" | "name" | "currency">;
 export function getCrossCurrencyTransferPrefill(
   transaction: Pick<
     TransactionList,
-    "id" | "wallet_id" | "currency" | "amount_cents" | "date" | "description"
+    "wallet_id" | "currency" | "amount_cents" | "date" | "description"
   >,
   receiverWallet: TransferDestinationWallet,
 ): TransferPrefill | null {
   if (
     !transaction.wallet_id ||
-    !transaction.id ||
     !transaction.currency ||
     typeof transaction.amount_cents !== "number" ||
     !transaction.date ||
@@ -39,7 +38,6 @@ export function getCrossCurrencyTransferPrefill(
   }
 
   return {
-    sourceTransactionId: transaction.id,
     senderWalletId: transaction.wallet_id,
     receiverWalletId: receiverWallet.id,
     senderAmount: Math.abs(transaction.amount_cents) / 100,
@@ -53,7 +51,6 @@ export function getTransferDestinationWallets<
 >(
   transaction: Pick<
     TransactionList,
-    | "id"
     | "wallet_id"
     | "currency"
     | "amount_cents"
@@ -69,7 +66,6 @@ export function getTransferDestinationWallets<
   const amountCents = transaction.amount_cents;
   const date = transaction.date;
   const isEligibleTransaction =
-    !!transaction.id &&
     typeof amountCents === "number" &&
     ((transaction.type === "income" && amountCents > 0) ||
       (transaction.type === "expense" && amountCents < 0)) &&
@@ -103,7 +99,6 @@ export default function TransactionRowTransferMenu({
   }
 
   const handleCreateTransfer = async (destinationWalletId: string) => {
-    const sourceTransactionId = transaction.id;
     const sourceWalletId = transaction.wallet_id;
     const currency = transaction.currency;
     const amountCents = transaction.amount_cents;
@@ -113,7 +108,6 @@ export default function TransactionRowTransferMenu({
     );
 
     if (
-      !sourceTransactionId ||
       !sourceWalletId ||
       !currency ||
       typeof amountCents !== "number" ||
@@ -146,7 +140,6 @@ export default function TransactionRowTransferMenu({
         description: transaction.description ?? undefined,
         sender_amount: amount,
         receiver_amount: amount,
-        source_transaction_id: sourceTransactionId,
         category_id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID!,
         label_id: "",
       });

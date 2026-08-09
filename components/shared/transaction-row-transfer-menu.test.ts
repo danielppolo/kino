@@ -95,7 +95,6 @@ describe("getCrossCurrencyTransferPrefill", () => {
         currency: "EUR",
       }),
     ).toEqual({
-      sourceTransactionId: "transaction-source",
       senderWalletId: "wallet-usd",
       receiverWalletId: "wallet-eur",
       senderAmount: 12.34,
