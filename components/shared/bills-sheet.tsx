@@ -15,6 +15,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipButton } from "@/components/ui/tooltip-button";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -60,9 +61,24 @@ export function BillsSheet({ open, onOpenChange }: BillsSheetProps) {
               View and track your bills and payment schedules.
             </SheetDescription>
           </SheetHeader>
-          <div className="min-h-0 flex-1 overflow-hidden">
-            <BillsList walletId={walletId} />
-          </div>
+          <Tabs defaultValue="pending" className="flex min-h-0 flex-1 flex-col">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="pending">Pending</TabsTrigger>
+              <TabsTrigger value="paid">Paid</TabsTrigger>
+            </TabsList>
+            <TabsContent
+              value="pending"
+              className="mt-2 min-h-0 flex-1 overflow-hidden"
+            >
+              <BillsList walletId={walletId} status="pending" />
+            </TabsContent>
+            <TabsContent
+              value="paid"
+              className="mt-2 min-h-0 flex-1 overflow-hidden"
+            >
+              <BillsList walletId={walletId} status="paid" />
+            </TabsContent>
+          </Tabs>
         </SheetContent>
       </Sheet>
 

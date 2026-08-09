@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import Row, { RowLoading } from "@/components/ui/row";
-import { useCategories } from "@/contexts/settings-context";
 import { useTransactionForm } from "@/contexts/transaction-form-context";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
@@ -40,6 +39,7 @@ import { BillWithPayments, Transaction } from "@/utils/supabase/types";
 
 interface BillsListProps {
   walletId?: string;
+  status?: "pending" | "paid";
 }
 
 interface SplitConfirmation {
@@ -52,10 +52,9 @@ interface SplitConfirmation {
   otherTransactionIds: string[];
 }
 
-export default function BillsList({ walletId }: BillsListProps) {
+export default function BillsList({ walletId, status }: BillsListProps) {
   const { openForm } = useTransactionForm();
   const queryClient = useQueryClient();
-  const [, categoryMap] = useCategories();
   const [splitConfirmation, setSplitConfirmation] =
     useState<SplitConfirmation | null>(null);
   const [transactionSelectKey, setTransactionSelectKey] = useState(0);
@@ -109,16 +108,16 @@ export default function BillsList({ walletId }: BillsListProps) {
     ? []
     : allIncomeTransactions.filter((t) => !associatedTransactionIds.has(t.id!));
 
-  const sortedBills = !bills
+  const visibleBills = !bills
     ? []
-    : [...bills].sort((a, b) => {
-        // First sort by payment status (incomplete first)
-        if (a.payment_percentage < 100 && b.payment_percentage >= 100)
-          return -1;
-        if (a.payment_percentage >= 100 && b.payment_percentage < 100) return 1;
-        // Then sort by due date
-        return a.due_date.localeCompare(b.due_date);
-      });
+    : bills
+        .filter((bill) => {
+          if (!status) return true;
+
+          const isPaid = bill.payment_percentage >= 100;
+          return status === "paid" ? isPaid : !isPaid;
+        })
+        .toSorted((a, b) => b.due_date.localeCompare(a.due_date));
 
   const linkMutation = useMutation({
     mutationFn: async ({
@@ -314,10 +313,23 @@ export default function BillsList({ walletId }: BillsListProps) {
     );
   }
 
+  if (visibleBills.length === 0) {
+    return (
+      <EmptyState
+        title={`No ${status ?? "matching"} bills`}
+        description={
+          status === "paid"
+            ? "Bills will appear here once they are fully paid."
+            : "There are no bills awaiting payment."
+        }
+      />
+    );
+  }
+
   return (
     <>
       <div className="relative h-full w-full divide-y overflow-auto">
-        {sortedBills.map((bill) => {
+        {visibleBills.map((bill) => {
           const availableTransactions = getAvailableTransactionsForBill(bill);
 
           return (
