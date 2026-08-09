@@ -427,11 +427,16 @@ const TransferForm = ({
   const defaultSenderWalletId = transferPrefill?.senderWalletId ?? walletId;
   const defaultReceiverWalletId = transferPrefill?.receiverWalletId ?? "";
   const defaultSenderAmount = transferPrefill?.senderAmount;
+  const defaultReceiverAmount = transferPrefill?.receiverAmount;
   const isDefaultSameCurrency =
     !!defaultReceiverWalletId &&
     walletMap.get(defaultSenderWalletId)?.currency ===
       walletMap.get(defaultReceiverWalletId)?.currency;
   const defaultValues: TransferFormValues = {
+    converted_transaction_id: transferPrefill?.transactionIdToConvert,
+    converted_transaction_wallet_id: transferPrefill?.transactionIdToConvert
+      ? walletId
+      : undefined,
     type: initialData?.type ?? type,
     sender_wallet_id: defaultSenderWalletId,
     receiver_wallet_id: defaultReceiverWalletId,
@@ -440,7 +445,8 @@ const TransferForm = ({
       transferPrefill?.description ?? initialData?.description ?? undefined,
     sender_amount: getAmountFormValue(defaultSenderAmount),
     receiver_amount: getAmountFormValue(
-      isDefaultSameCurrency ? defaultSenderAmount : undefined,
+      defaultReceiverAmount ??
+        (isDefaultSameCurrency ? defaultSenderAmount : undefined),
     ),
     category_id:
       initialData?.category_id ??
@@ -481,6 +487,8 @@ const TransferForm = ({
         // Reset all fields except date, using fresh default values
         const prevDate = normalizedData.date;
         const resetValues: TransferFormValues = {
+          converted_transaction_id: undefined,
+          converted_transaction_wallet_id: undefined,
           type: type,
           sender_wallet_id: walletId,
           receiver_wallet_id: "",
@@ -585,6 +593,19 @@ const TransferForm = ({
         ) : undefined
       }
     >
+      {transferPrefill?.transactionIdToConvert ? (
+        <div
+          className="border-border bg-muted/50 rounded-md border px-3 py-2 text-sm"
+          role="note"
+        >
+          <p className="font-medium">Convert this transaction</p>
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            This transaction will become one side of the transfer. Its amount,
+            date, and description will be reused.
+          </p>
+        </div>
+      ) : null}
+
       <TransferAmountFields walletMap={walletMap} />
 
       <FormField

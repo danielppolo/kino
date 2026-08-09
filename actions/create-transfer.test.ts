@@ -20,7 +20,10 @@ const transaction = {
   receiver_amount: 92.5,
 };
 
-function createSupabase(wallets: Array<Record<string, string>>) {
+function createSupabase(
+  wallets: Array<Record<string, string>>,
+  existingTransaction?: Record<string, string | null>,
+) {
   const saveRows = (rows: Array<Record<string, unknown>>) => ({
     select: vi.fn(async () => ({
       data: rows.map((row, index) => ({
@@ -33,6 +36,9 @@ function createSupabase(wallets: Array<Record<string, string>>) {
   const insert = vi.fn((rows: Array<Record<string, unknown>>) => ({
     ...saveRows(rows),
   }));
+  const upsert = vi.fn((rows: Array<Record<string, unknown>>) =>
+    saveRows(rows),
+  );
   return {
     from: vi.fn((table: string) => {
       if (table === "wallets") {
@@ -45,9 +51,19 @@ function createSupabase(wallets: Array<Record<string, string>>) {
 
       return {
         insert,
+        upsert,
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            maybeSingle: vi.fn(async () => ({
+              data: existingTransaction ?? null,
+              error: null,
+            })),
+          })),
+        })),
       };
     }),
     insert,
+    upsert,
   };
 }
 
@@ -101,6 +117,85 @@ describe("createTransferTransaction", () => {
 
     expect(result.error).toBe("Sender and receiver wallets must be different");
     expect(mockedCreateClient).not.toHaveBeenCalled();
+  });
+
+  it("converts an expense by reusing it as the sender leg", async () => {
+    const supabase = createSupabase(
+      [
+        { id: "wallet-usd", currency: "USD", workspace_id: "workspace-1" },
+        { id: "wallet-eur", currency: "EUR", workspace_id: "workspace-1" },
+      ],
+      {
+        id: "source-transaction",
+        wallet_id: "wallet-usd",
+        transfer_id: null,
+      },
+    );
+    mockedCreateClient.mockResolvedValue(supabase as never);
+
+    const result = await createTransferTransaction(
+      transaction,
+      "wallet-usd",
+      "wallet-eur",
+      "source-transaction",
+    );
+
+    expect(result.error).toBeNull();
+    expect(supabase.insert).not.toHaveBeenCalled();
+    expect(supabase.upsert).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          id: "source-transaction",
+          wallet_id: "wallet-usd",
+          amount_cents: -10000,
+        }),
+        expect.objectContaining({
+          id: "destination-1",
+          wallet_id: "wallet-eur",
+          amount_cents: 9250,
+        }),
+      ],
+      { onConflict: "id" },
+    );
+  });
+
+  it("converts an income by reusing it as the receiver leg", async () => {
+    const supabase = createSupabase(
+      [
+        { id: "wallet-eur", currency: "EUR", workspace_id: "workspace-1" },
+        { id: "wallet-usd", currency: "USD", workspace_id: "workspace-1" },
+      ],
+      {
+        id: "source-transaction",
+        wallet_id: "wallet-usd",
+        transfer_id: null,
+      },
+    );
+    mockedCreateClient.mockResolvedValue(supabase as never);
+
+    const result = await createTransferTransaction(
+      transaction,
+      "wallet-eur",
+      "wallet-usd",
+      "source-transaction",
+    );
+
+    expect(result.error).toBeNull();
+    expect(supabase.upsert).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          id: "destination-1",
+          wallet_id: "wallet-eur",
+          amount_cents: -10000,
+        }),
+        expect.objectContaining({
+          id: "source-transaction",
+          wallet_id: "wallet-usd",
+          amount_cents: 9250,
+        }),
+      ],
+      { onConflict: "id" },
+    );
   });
 
   it("rejects non-positive amounts before accessing the database", async () => {

@@ -85,6 +85,7 @@ describe("getCrossCurrencyTransferPrefill", () => {
     amount_cents: -1234,
     date: "2026-08-01",
     description: "Move money",
+    type: "expense" as const,
   };
 
   it("seeds the transfer form for a cross-currency wallet", () => {
@@ -101,6 +102,40 @@ describe("getCrossCurrencyTransferPrefill", () => {
       date: "2026-08-01",
       description: "Move money",
     });
+  });
+
+  it("keeps an expense as the sending leg when converting it", () => {
+    expect(
+      getCrossCurrencyTransferPrefill(
+        { ...transaction, type: "expense" },
+        { id: "wallet-eur", name: "Euro wallet", currency: "EUR" },
+        "convert",
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        transactionIdToConvert: "transaction-source",
+        senderWalletId: "wallet-usd",
+        receiverWalletId: "wallet-eur",
+        senderAmount: 12.34,
+      }),
+    );
+  });
+
+  it("keeps an income as the receiving leg when converting it", () => {
+    expect(
+      getCrossCurrencyTransferPrefill(
+        { ...transaction, type: "income", amount_cents: 1234 },
+        { id: "wallet-eur", name: "Euro wallet", currency: "EUR" },
+        "convert",
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        transactionIdToConvert: "transaction-source",
+        senderWalletId: "wallet-eur",
+        receiverWalletId: "wallet-usd",
+        receiverAmount: 12.34,
+      }),
+    );
   });
 
   it("keeps same-currency wallets on the immediate creation path", () => {
