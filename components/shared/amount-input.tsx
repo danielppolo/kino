@@ -17,6 +17,7 @@ type AmountInputProps = Omit<
   defaultValue?: number;
   variant?: "ghost" | "outline";
   symbolClassName?: string;
+  currencyClassName?: string;
   currency?: string;
 };
 
@@ -27,6 +28,7 @@ export const AmountInput = React.forwardRef<HTMLInputElement, AmountInputProps>(
       variant = "outline",
       className,
       symbolClassName,
+      currencyClassName,
       currency,
       ...props
     },
@@ -63,7 +65,9 @@ export const AmountInput = React.forwardRef<HTMLInputElement, AmountInputProps>(
             align="inline-end"
             className={cn(variant === "ghost" && "pr-0")}
           >
-            <InputGroupText>{currency}</InputGroupText>
+            <InputGroupText className={currencyClassName}>
+              {currency}
+            </InputGroupText>
           </InputGroupAddon>
         ) : null}
       </InputGroup>

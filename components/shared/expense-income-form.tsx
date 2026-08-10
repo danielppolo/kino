@@ -685,7 +685,8 @@ const ExpenseIncomeForm = ({
                           autoFocus
                           variant="ghost"
                           currency={form.getValues("currency")}
-                          symbolClassName="text-xl md:text-2xl"
+                          symbolClassName="text-4xl font-semibold"
+                          currencyClassName="text-4xl font-semibold"
                           className="h-auto [appearance:textfield] px-2 text-4xl font-semibold shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none sm:text-4xl lg:text-4xl [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                         />
                       </FormControl>

@@ -3,7 +3,16 @@
 import * as React from "react";
 import * as chrono from "chrono-node";
 import { format } from "date-fns";
-import { AtSign, CalendarDays, Folder, Hash } from "lucide-react";
+import {
+  AtSign,
+  Building2,
+  CalendarDays,
+  Folder,
+  Hash,
+  MapPin,
+  Plane,
+  UserRound,
+} from "lucide-react";
 import { createPortal } from "react-dom";
 
 import { useCategories, useLabels } from "@/contexts/settings-context";
@@ -94,6 +103,13 @@ const COMMAND_META: Record<
   },
 };
 
+const ONTOLOGY_TYPE_ICONS = {
+  organization: Building2,
+  person: UserRound,
+  place: MapPin,
+  trip: Plane,
+} as const;
+
 function getActiveToken(value: string, cursor: number): ActiveToken | null {
   const beforeCursor = value.slice(0, cursor);
   const match = /(^|\s)([@#$!])([^\s@#$!]*)$/.exec(beforeCursor);
@@ -165,6 +181,27 @@ function removeInlineToken(value: string, token: string) {
   }
 
   return nextValue;
+}
+
+function removeInlineTokenRange(value: string, range: TokenRange) {
+  let start = range.start;
+  let end = range.end;
+
+  if (
+    value[end] === " " &&
+    end + 1 === value.length &&
+    start > 0 &&
+    value[start - 1] === " "
+  ) {
+    start -= 1;
+    end += 1;
+  } else if (value[end] === " ") end += 1;
+  else if (start > 0 && value[start - 1] === " ") start -= 1;
+
+  return {
+    cursor: start,
+    value: `${value.slice(0, start)}${value.slice(end)}`,
+  };
 }
 
 function getTokenRanges(value: string, tokens: InlineToken[]) {
@@ -271,6 +308,10 @@ export function TransactionDescriptionComposer({
   const [ontologyItems, setOntologyItems] = React.useState<
     OntologyAssociationItem[]
   >([]);
+  const [trackedDateToken, setTrackedDateToken] = React.useState<{
+    date: string;
+    text: string;
+  } | null>(null);
   const [isSearching, setIsSearching] = React.useState(false);
   const [searchFailed, setSearchFailed] = React.useState(false);
   const [categories] = useCategories();
@@ -288,9 +329,12 @@ export function TransactionDescriptionComposer({
   const inlineDateToken =
     formattedDateToken && hasInlineToken(value, formattedDateToken)
       ? formattedDateToken
-      : naturalDate && format(naturalDate.date, "yyyy-MM-dd") === date
-        ? value.slice(naturalDate.start, naturalDate.end)
-        : undefined;
+      : trackedDateToken?.date === date &&
+          hasInlineToken(value, trackedDateToken.text)
+        ? trackedDateToken.text
+        : naturalDate && format(naturalDate.date, "yyyy-MM-dd") === date
+          ? value.slice(naturalDate.start, naturalDate.end)
+          : undefined;
   const inlineTokens = React.useMemo<InlineToken[]>(
     () => [
       ...ontologyAssociations.map((association) => ({
@@ -353,6 +397,16 @@ export function TransactionDescriptionComposer({
     onChange(nextValue);
     setCursor((current) => Math.min(current, nextValue.length));
   }, [inlineTokens, onChange, value]);
+
+  React.useEffect(() => {
+    if (
+      trackedDateToken &&
+      (trackedDateToken.date !== date ||
+        !hasInlineToken(value, trackedDateToken.text))
+    ) {
+      setTrackedDateToken(null);
+    }
+  }, [date, trackedDateToken, value]);
 
   const updateSuggestionPosition = React.useCallback(() => {
     const anchor = commandAnchorRef.current;
@@ -441,7 +495,7 @@ export function TransactionDescriptionComposer({
       return ontologyItems.map((association) => ({
         id: association.sourceObjectId,
         label: association.name,
-        subtitle: association.subtitle ?? association.type,
+        subtitle: association.type,
         association,
       }));
     }
@@ -512,6 +566,7 @@ export function TransactionDescriptionComposer({
         replacement = `$${option.label} `;
       }
       if (activeToken.trigger === "!") {
+        setTrackedDateToken(null);
         onDateChange(option.id);
         replacement = `!${option.label} `;
       }
@@ -538,6 +593,51 @@ export function TransactionDescriptionComposer({
   );
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Backspace") {
+      const selectionStart = event.currentTarget.selectionStart;
+      const selectionEnd = event.currentTarget.selectionEnd;
+      const tokenRange = getTokenRanges(value, inlineTokens).find((range) => {
+        if (selectionStart !== selectionEnd) {
+          return selectionStart < range.end && selectionEnd > range.start;
+        }
+        return (
+          (selectionStart > range.start && selectionStart <= range.end) ||
+          (selectionStart === range.end + 1 && value[range.end] === " ")
+        );
+      });
+
+      if (tokenRange) {
+        event.preventDefault();
+        if (tokenRange.key.startsWith("ontology-")) {
+          onOntologyAssociationChange(
+            ontologyAssociations.filter(
+              (association) =>
+                `ontology-${association.type}-${association.ontologyId}` !==
+                tokenRange.key,
+            ),
+          );
+        } else if (tokenRange.key.startsWith("label-")) {
+          onLabelChange("");
+        } else if (tokenRange.key.startsWith("category-")) {
+          onCategoryChange("");
+        } else if (tokenRange.key.startsWith("date-")) {
+          setTrackedDateToken(null);
+          onDateChange("");
+        }
+
+        const nextDescription = removeInlineTokenRange(value, tokenRange);
+        onChange(nextDescription.value);
+        setCursor(nextDescription.cursor);
+        window.requestAnimationFrame(() => {
+          textareaRef.current?.setSelectionRange(
+            nextDescription.cursor,
+            nextDescription.cursor,
+          );
+        });
+        return;
+      }
+    }
+
     if (!activeToken) return;
     if (event.key === "Escape") {
       setCursor(-1);
@@ -603,17 +703,18 @@ export function TransactionDescriptionComposer({
         !hasInlineToken(nextValue, inlineDateToken),
     );
     if (dateTokenRemoved) {
+      setTrackedDateToken(null);
       onDateChange("");
     }
 
     const detectedDate = findTrailingNaturalDate(nextValue);
-    if (
-      detectedDate &&
-      !dateTokenRemoved &&
-      activeToken?.trigger !== "!" &&
-      format(detectedDate.date, "yyyy-MM-dd") !== date
-    ) {
-      onDateChange(format(detectedDate.date, "yyyy-MM-dd"));
+    if (detectedDate && !dateTokenRemoved && activeToken?.trigger !== "!") {
+      const detectedDateValue = format(detectedDate.date, "yyyy-MM-dd");
+      setTrackedDateToken({
+        date: detectedDateValue,
+        text: nextValue.slice(detectedDate.start, detectedDate.end),
+      });
+      if (detectedDateValue !== date) onDateChange(detectedDateValue);
     }
 
     onChange(nextValue);
@@ -732,43 +833,48 @@ export function TransactionDescriptionComposer({
                 </p>
               ) : null}
               <div role="listbox" aria-label={activeCommand?.label}>
-                {options.map((option, index) => (
-                  <button
-                    id={`${suggestionId}-option-${index}`}
-                    key={`${option.id}-${option.label}`}
-                    type="button"
-                    role="option"
-                    aria-selected={index === activeIndex}
-                    className={cn(
-                      "focus-visible:ring-ring flex w-full items-start gap-2 rounded-md px-2 py-2 text-left text-sm focus-visible:ring-2 focus-visible:outline-none",
-                      index === activeIndex &&
-                        "bg-accent text-accent-foreground",
-                    )}
-                    onMouseDown={(event) => {
-                      event.preventDefault();
-                      selectOption(option);
-                    }}
-                    onMouseEnter={() => setActiveIndex(index)}
-                  >
-                    {activeCommand ? (
-                      <activeCommand.Icon
-                        aria-hidden="true"
-                        className={cn(
-                          "mt-0.5 size-3.5 shrink-0",
-                          activeCommand.iconClassName,
-                        )}
-                      />
-                    ) : null}
-                    <span className="min-w-0">
-                      <span className="block truncate">{option.label}</span>
-                      {option.subtitle ? (
-                        <span className="text-muted-foreground block truncate text-xs">
-                          {option.subtitle}
-                        </span>
+                {options.map((option, index) => {
+                  const OptionIcon = option.association
+                    ? ONTOLOGY_TYPE_ICONS[option.association.type]
+                    : activeCommand?.Icon;
+                  return (
+                    <button
+                      id={`${suggestionId}-option-${index}`}
+                      key={`${option.id}-${option.label}`}
+                      type="button"
+                      role="option"
+                      aria-selected={index === activeIndex}
+                      className={cn(
+                        "focus-visible:ring-ring flex w-full items-start gap-2 rounded-md px-2 py-2 text-left text-sm focus-visible:ring-2 focus-visible:outline-none",
+                        index === activeIndex &&
+                          "bg-accent text-accent-foreground",
+                      )}
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        selectOption(option);
+                      }}
+                      onMouseEnter={() => setActiveIndex(index)}
+                    >
+                      {OptionIcon ? (
+                        <OptionIcon
+                          aria-hidden="true"
+                          className={cn(
+                            "mt-0.5 size-3.5 shrink-0",
+                            activeCommand?.iconClassName,
+                          )}
+                        />
                       ) : null}
-                    </span>
-                  </button>
-                ))}
+                      <span className="min-w-0">
+                        <span className="block truncate">{option.label}</span>
+                        {option.subtitle ? (
+                          <span className="text-muted-foreground block truncate text-xs">
+                            {option.subtitle}
+                          </span>
+                        ) : null}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>,
             document.body,
