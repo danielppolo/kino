@@ -223,7 +223,7 @@ function HighlightedDescription({
     content.push(
       <React.Fragment key={`${range.key}-${range.start}`}>
         <span
-          className={cn("rounded-md px-0.5 py-px font-medium", range.className)}
+          className={cn("rounded-[3px] box-decoration-clone", range.className)}
         >
           {value.slice(range.start, range.end)}
         </span>
@@ -281,9 +281,16 @@ export function TransactionDescriptionComposer({
   );
   const selectedLabel = labels.find((label) => label.id === labelId);
   const activeCommand = activeToken ? COMMAND_META[activeToken.trigger] : null;
-  const selectedDateToken = date
+  const formattedDateToken = date
     ? `!${format(new Date(`${date}T00:00:00`), "EEEE, MMMM d")}`
     : undefined;
+  const naturalDate = date ? findTrailingNaturalDate(value) : null;
+  const inlineDateToken =
+    formattedDateToken && hasInlineToken(value, formattedDateToken)
+      ? formattedDateToken
+      : naturalDate && format(naturalDate.date, "yyyy-MM-dd") === date
+        ? value.slice(naturalDate.start, naturalDate.end)
+        : undefined;
   const inlineTokens = React.useMemo<InlineToken[]>(
     () => [
       ...ontologyAssociations.map((association) => ({
@@ -309,11 +316,11 @@ export function TransactionDescriptionComposer({
             },
           ]
         : []),
-      ...(selectedDateToken
+      ...(inlineDateToken
         ? [
             {
               key: `date-${date}`,
-              text: selectedDateToken,
+              text: inlineDateToken,
               className: COMMAND_META["!"].activeClassName,
             },
           ]
@@ -321,9 +328,9 @@ export function TransactionDescriptionComposer({
     ],
     [
       date,
+      inlineDateToken,
       ontologyAssociations,
       selectedCategory,
-      selectedDateToken,
       selectedLabel,
     ],
   );
@@ -591,9 +598,9 @@ export function TransactionDescriptionComposer({
       onCategoryChange("");
     }
     const dateTokenRemoved = Boolean(
-      selectedDateToken &&
-        hasInlineToken(value, selectedDateToken) &&
-        !hasInlineToken(nextValue, selectedDateToken),
+      inlineDateToken &&
+        hasInlineToken(value, inlineDateToken) &&
+        !hasInlineToken(nextValue, inlineDateToken),
     );
     if (dateTokenRemoved) {
       onDateChange("");
