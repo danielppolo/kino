@@ -445,7 +445,9 @@ export const deleteTransfer = async (transferId: string) => {
 export const updateTransfer = async (
   transferId: string,
   data: {
-    description?: string;
+    description?: string | null;
+    date?: string;
+    label_id?: string | null;
     sender_amount_cents: number;
     receiver_amount_cents: number;
   },
@@ -492,7 +494,11 @@ export const updateTransfer = async (
     return supabase
       .from("transactions")
       .update({
-        description: data.description,
+        description: data.description || null,
+        ...(data.date ? { date: data.date } : {}),
+        ...(data.label_id !== undefined
+          ? { label_id: data.label_id || null }
+          : {}),
         amount_cents: amountCents,
       })
       .eq("id", transaction.id);
@@ -502,6 +508,7 @@ export const updateTransfer = async (
   const error = results.find((result) => result.error)?.error;
 
   if (error) throw new Error(error.message);
+  return transactions.map((transaction) => transaction.id);
 };
 
 export const mergeCategories = async (targetId: string, ids: string[]) => {

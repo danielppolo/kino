@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type MutableRefObject, useEffect, useRef, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { format, getYear, parse } from "date-fns";
 import { CalendarDays, WalletCards } from "lucide-react";
@@ -13,10 +13,13 @@ import {
   getAmountFormValue,
   normalizeAmountFormValue,
 } from "./amount-form-value";
-import { AmountInput } from "./amount-input";
-import { DescriptionInput } from "./description-input";
+import { TransactionAmountInput } from "./amount-input";
+import LabelCombobox from "./label-combobox";
+import { TransactionDescriptionComposer } from "./transaction-description-composer";
+import { TransactionOntologyMenu } from "./transaction-ontology-menu";
 import WalletPicker from "./wallet-picker";
 
+import { replaceTransactionOntologyAssociations } from "@/actions/ontology-associations";
 import { EntityForm } from "@/components/shared/entity-form";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -32,13 +35,18 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useWallets } from "@/contexts/settings-context";
+import { useFeatureFlags, useWallets } from "@/contexts/settings-context";
 import type { TransferPrefill } from "@/contexts/transaction-form-context";
+import { useWorkspace } from "@/contexts/workspace-context";
 import {
   type TransferTransactionValues,
   useCreateTransferTransaction,
 } from "@/hooks/use-create-transfer-transaction";
 import { invalidateWorkspaceQueries } from "@/utils/query-cache";
+import {
+  type OntologyAssociationItem,
+  parseStoredOntologyAssociations,
+} from "@/utils/ontology-associations";
 import { createClient } from "@/utils/supabase/client";
 import { deleteTransfer, updateTransfer } from "@/utils/supabase/mutations";
 import { Transaction, Wallet } from "@/utils/supabase/types";
@@ -60,12 +68,16 @@ type TransferFormValues = Omit<
 > & {
   sender_amount: AmountFormValue;
   receiver_amount: AmountFormValue;
+  ontologyAssociations: OntologyAssociationItem[];
 };
 
 type TransferTransaction = Transaction & {
   transfer_id?: string | null;
   transfer_wallet_id?: string | null;
 };
+
+const TRANSFER_DISABLED_TRIGGERS = ["$"] as const;
+const ignoreCategoryChange = () => undefined;
 
 export function normalizeTransferAmounts({
   senderAmount,
@@ -103,7 +115,7 @@ export function getTransferPairValues(
       | "label_id"
       | "type"
       | "wallet_id"
-    >
+    > & { ontology_associations?: unknown }
   >,
 ): TransferFormValues {
   if (transactions.length !== 2) {
@@ -132,6 +144,9 @@ export function getTransferPairValues(
     receiver_amount: getAmountFormValue(receiver.amount_cents / 100),
     category_id: sender.category_id,
     label_id: sender.label_id ?? "",
+    ontologyAssociations: parseStoredOntologyAssociations(
+      sender.ontology_associations,
+    ),
   };
 }
 
@@ -175,8 +190,10 @@ function WalletFieldWithConstraint({
 
 function TransferAmountFields({
   walletMap,
+  amountInputRef,
 }: {
   walletMap: Map<string, Wallet>;
+  amountInputRef: MutableRefObject<HTMLInputElement | null>;
 }) {
   const { control } = useFormContext<TransferFormValues>();
   const senderWalletId = useWatch({ control, name: "sender_wallet_id" });
@@ -208,13 +225,14 @@ function TransferAmountFields({
               {hasDifferentCurrencies ? "Origin amount" : "Amount"}
             </FormLabel>
             <FormControl>
-              <AmountInput
+              <TransactionAmountInput
                 {...field}
+                ref={(node) => {
+                  field.ref(node);
+                  amountInputRef.current = node;
+                }}
                 currency={senderCurrency}
                 autoFocus
-                variant="ghost"
-                symbolClassName="text-xl md:text-2xl"
-                className="h-auto [appearance:textfield] px-2 text-4xl font-semibold shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none sm:text-4xl lg:text-4xl [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               />
             </FormControl>
             <FormMessage />
@@ -235,12 +253,9 @@ function TransferAmountFields({
                 Destination amount
               </FormLabel>
               <FormControl>
-                <AmountInput
+                <TransactionAmountInput
                   {...field}
                   currency={receiverCurrency}
-                  variant="ghost"
-                  symbolClassName="text-xl md:text-2xl"
-                  className="h-auto [appearance:textfield] px-2 text-4xl font-semibold shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none sm:text-4xl lg:text-4xl [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
               </FormControl>
               <FormMessage />
@@ -249,6 +264,61 @@ function TransferAmountFields({
         />
       ) : null}
     </div>
+  );
+}
+
+function TransferDescriptionField({
+  workspaceId,
+  ontologyEnabled,
+}: {
+  workspaceId?: string;
+  ontologyEnabled: boolean;
+}) {
+  const { control, setValue } = useFormContext<TransferFormValues>();
+  const categoryId = useWatch({ control, name: "category_id" });
+  const labelId = useWatch({ control, name: "label_id" });
+  const transactionDate = useWatch({ control, name: "date" });
+  const ontologyAssociations = useWatch({
+    control,
+    name: "ontologyAssociations",
+  });
+
+  return (
+    <FormField
+      name="description"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel className="sr-only">Description</FormLabel>
+          <FormControl>
+            <TransactionDescriptionComposer
+              value={field.value ?? ""}
+              onChange={field.onChange}
+              workspaceId={ontologyEnabled ? workspaceId : undefined}
+              type="transfer"
+              disabledTriggers={TRANSFER_DISABLED_TRIGGERS}
+              ontologyAssociations={ontologyAssociations ?? []}
+              categoryId={categoryId ?? ""}
+              labelId={labelId ?? ""}
+              date={transactionDate ?? ""}
+              onOntologyAssociationChange={(value) =>
+                setValue("ontologyAssociations", value, { shouldDirty: true })
+              }
+              onCategoryChange={ignoreCategoryChange}
+              onLabelChange={(value) =>
+                setValue("label_id", value, {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })
+              }
+              onDateChange={(value) =>
+                setValue("date", value, { shouldDirty: true })
+              }
+            />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
   );
 }
 
@@ -367,7 +437,10 @@ const TransferForm = ({
   transferPrefill,
 }: TransferFormProps) => {
   const [, walletMap] = useWallets();
+  const { ontology_associations_enabled } = useFeatureFlags();
+  const { activeWorkspace } = useWorkspace();
   const [addAnother, setAddAnother] = useState(false);
+  const amountInputRef = useRef<HTMLInputElement | null>(null);
   const isEdit = !!initialData;
   const queryClient = useQueryClient();
   const createMutation = useCreateTransferTransaction();
@@ -385,7 +458,13 @@ const TransferForm = ({
         .eq("transfer_id", transferId);
 
       if (error) throw new Error(error.message);
-      return getTransferPairValues(data ?? []);
+      return {
+        ...getTransferPairValues(data ?? []),
+        ontologyAssociations: parseStoredOntologyAssociations(
+          (initialData as unknown as { ontology_associations?: unknown })
+            ?.ontology_associations,
+        ),
+      };
     },
     enabled: !!open && isEdit && !!transferId,
   });
@@ -401,11 +480,27 @@ const TransferForm = ({
       const transferId = (initialData as TransferTransaction | undefined)
         ?.transfer_id;
       if (!transferId) throw new Error("No transfer ID provided");
-      await updateTransfer(transferId, {
+      const transactionIds = await updateTransfer(transferId, {
         description: values.description ?? undefined,
+        date: values.date,
+        label_id: values.label_id || null,
         sender_amount_cents: Math.round(values.sender_amount * 100),
         receiver_amount_cents: Math.round(values.receiver_amount * 100),
       });
+      if (ontology_associations_enabled) {
+        const results = await Promise.all(
+          transactionIds.map((transactionId) =>
+            replaceTransactionOntologyAssociations(
+              transactionId,
+              values.ontologyAssociations ?? [],
+            ),
+          ),
+        );
+        const failedResult = results.find((result) => !result.success);
+        if (failedResult && !failedResult.success) {
+          throw new Error(failedResult.error.message);
+        }
+      }
     },
     onSuccess: () => {
       invalidateWorkspaceQueries(queryClient);
@@ -452,6 +547,13 @@ const TransferForm = ({
       initialData?.category_id ??
       process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID!,
     label_id: initialData?.label_id ?? "",
+    ontologyAssociations: parseStoredOntologyAssociations(
+      (
+        initialData as unknown as
+          | { ontology_associations?: unknown }
+          | undefined
+      )?.ontology_associations,
+    ),
   };
 
   const handleSubmit = async (data: TransferFormValues) => {
@@ -498,6 +600,7 @@ const TransferForm = ({
           receiver_amount: "",
           category_id: process.env.NEXT_PUBLIC_TRANSFER_CATEGORY_BETWEEN_ID!,
           label_id: "",
+          ontologyAssociations: [],
         };
 
         return {
@@ -535,6 +638,10 @@ const TransferForm = ({
       ),
       category_id: transaction.category_id,
       label_id: transaction.label_id ?? "",
+      ontologyAssociations: parseStoredOntologyAssociations(
+        (transaction as unknown as { ontology_associations?: unknown })
+          .ontology_associations,
+      ),
     };
   };
 
@@ -557,6 +664,7 @@ const TransferForm = ({
     <EntityForm
       title="Transfer"
       appearance="transaction"
+      initialFocusRef={amountInputRef}
       entity={editValues}
       open={open}
       onOpenChange={onOpenChange}
@@ -565,6 +673,7 @@ const TransferForm = ({
       onSubmit={handleSubmit}
       addAnother={addAnother}
       setAddAnother={setAddAnother}
+      setFocus="sender_amount"
       onDelete={handleDelete}
       isLoading={
         createMutation.isPending ||
@@ -573,24 +682,53 @@ const TransferForm = ({
         (isEdit && (transferPairQuery.isLoading || !!transferPairQuery.error))
       }
       footerFields={
-        !isEdit ? (
-          <>
-            <TransferWalletFields walletId={walletId} />
+        <>
+          {!isEdit ? <TransferWalletFields walletId={walletId} /> : null}
+          <FormField
+            name="date"
+            rules={{ required: "Date is required" }}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="sr-only">Date</FormLabel>
+                <FormControl>
+                  <TransferDateField {...field} />
+                </FormControl>
+                <FormMessage className="sr-only" />
+              </FormItem>
+            )}
+          />
+          <FormField
+            name="label_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="sr-only">Label</FormLabel>
+                <FormControl>
+                  <LabelCombobox
+                    {...field}
+                    size="sm"
+                    placeholder="Label"
+                    className="w-auto rounded-full"
+                  />
+                </FormControl>
+                <FormMessage className="sr-only" />
+              </FormItem>
+            )}
+          />
+          {ontology_associations_enabled && activeWorkspace ? (
             <FormField
-              name="date"
-              rules={{ required: "Date is required" }}
+              name="ontologyAssociations"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="sr-only">Date</FormLabel>
-                  <FormControl>
-                    <TransferDateField {...field} />
-                  </FormControl>
-                  <FormMessage className="sr-only" />
+                  <TransactionOntologyMenu
+                    workspaceId={activeWorkspace.id}
+                    value={field.value ?? []}
+                    onChange={field.onChange}
+                  />
                 </FormItem>
               )}
             />
-          </>
-        ) : undefined
+          ) : null}
+        </>
       }
     >
       {transferPrefill?.transactionIdToConvert ? (
@@ -606,25 +744,13 @@ const TransferForm = ({
         </div>
       ) : null}
 
-      <TransferAmountFields walletMap={walletMap} />
-
-      <FormField
-        name="description"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel className="sr-only">Description</FormLabel>
-            <FormControl>
-              <DescriptionInput
-                {...field}
-                value={field.value ?? ""}
-                variant="ghost"
-                placeholder="Add description…"
-                className="h-auto px-0 py-2 text-lg shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
+      <TransferAmountFields
+        walletMap={walletMap}
+        amountInputRef={amountInputRef}
+      />
+      <TransferDescriptionField
+        workspaceId={activeWorkspace?.id}
+        ontologyEnabled={ontology_associations_enabled}
       />
     </EntityForm>
   );

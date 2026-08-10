@@ -4,17 +4,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { format, getYear, parse } from "date-fns";
 import {
-  Building2,
   CalendarDays,
   Folder,
-  MapPin,
   MoreHorizontal,
-  Plane,
   Repeat2,
   Tags,
   Trash,
-  UserRound,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { v4 as randomUUID } from "uuid";
@@ -28,13 +23,13 @@ import {
   getAmountFormValue,
   normalizeAmountFormValue,
 } from "./amount-form-value";
-import { AmountInput } from "./amount-input";
+import { TransactionAmountInput } from "./amount-input";
 import BillCombobox from "./bill-combobox";
 import LabelCombobox from "./label-combobox";
 import TagMultiSelect from "./tag-multi-select";
 import TemplateSelect from "./template-select";
 import { TransactionDescriptionComposer } from "./transaction-description-composer";
-import { TransactionOntologyPicker } from "./transaction-ontology-editor";
+import { TransactionOntologyMenu } from "./transaction-ontology-menu";
 
 import { createTransaction } from "@/actions/create-transaction";
 import { replaceTransactionOntologyAssociations } from "@/actions/ontology-associations";
@@ -76,7 +71,6 @@ import { useWorkspace } from "@/contexts/workspace-context";
 import useFilters from "@/hooks/use-filters";
 import {
   type OntologyAssociationItem,
-  type OntologyAssociationType,
   parseStoredOntologyAssociations,
 } from "@/utils/ontology-associations";
 import {
@@ -171,9 +165,6 @@ const ExpenseIncomeForm = ({
   const [availableTags] = useTags();
   const [addAnother, setAddAnother] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
-  const [associationPickerOpen, setAssociationPickerOpen] = useState(false);
-  const [associationType, setAssociationType] =
-    useState<OntologyAssociationType>();
   const formRef = useRef<HTMLFormElement>(null);
   const amountInputRef = useRef<HTMLInputElement | null>(null);
   const categoryRef = useRef<HTMLDivElement>(null);
@@ -676,18 +667,14 @@ const ExpenseIncomeForm = ({
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <AmountInput
+                        <TransactionAmountInput
                           {...field}
                           ref={(node) => {
                             field.ref(node);
                             amountInputRef.current = node;
                           }}
                           autoFocus
-                          variant="ghost"
                           currency={form.getValues("currency")}
-                          symbolClassName="text-4xl font-semibold"
-                          currencyClassName="text-4xl font-semibold"
-                          className="h-auto [appearance:textfield] px-2 text-4xl font-semibold shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none sm:text-4xl lg:text-4xl [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                         />
                       </FormControl>
                       <FormMessage />
@@ -943,14 +930,11 @@ const ExpenseIncomeForm = ({
                       name="ontologyAssociations"
                       render={({ field }) => (
                         <FormItem>
-                          <Popover
-                            open={associationPickerOpen}
-                            onOpenChange={(nextOpen) => {
-                              setAssociationPickerOpen(nextOpen);
-                              if (!nextOpen) setAssociationType(undefined);
-                            }}
-                          >
-                            <PopoverTrigger asChild>
+                          <TransactionOntologyMenu
+                            workspaceId={activeWorkspace.id}
+                            value={field.value ?? []}
+                            onChange={field.onChange}
+                            trigger={
                               <ShortcutHint
                                 label="More options"
                                 shortcut="M"
@@ -966,148 +950,8 @@ const ExpenseIncomeForm = ({
                                   <MoreHorizontal className="size-4" />
                                 </Button>
                               </ShortcutHint>
-                            </PopoverTrigger>
-                            <PopoverContent
-                              align="start"
-                              className={
-                                associationType ? "w-72 p-2" : "w-52 p-1"
-                              }
-                            >
-                              {associationType ? (
-                                <div className="space-y-2">
-                                  {(field.value ?? []).some(
-                                    (item: OntologyAssociationItem) =>
-                                      item.type === associationType,
-                                  ) ? (
-                                    <div className="flex flex-wrap gap-1.5 border-b pb-2">
-                                      {(field.value ?? [])
-                                        .filter(
-                                          (item: OntologyAssociationItem) =>
-                                            item.type === associationType,
-                                        )
-                                        .map(
-                                          (item: OntologyAssociationItem) => (
-                                            <Button
-                                              key={item.sourceObjectId}
-                                              type="button"
-                                              variant="secondary"
-                                              size="sm"
-                                              className="h-7 max-w-full gap-1 rounded-full px-2 text-xs"
-                                              aria-label={`Remove ${item.name}`}
-                                              onClick={() =>
-                                                field.onChange(
-                                                  (field.value ?? []).filter(
-                                                    (
-                                                      current: OntologyAssociationItem,
-                                                    ) =>
-                                                      current.sourceObjectId !==
-                                                      item.sourceObjectId,
-                                                  ),
-                                                )
-                                              }
-                                            >
-                                              <span className="truncate">
-                                                {item.name}
-                                              </span>
-                                              <X
-                                                aria-hidden="true"
-                                                className="size-3 shrink-0"
-                                              />
-                                            </Button>
-                                          ),
-                                        )}
-                                    </div>
-                                  ) : null}
-                                  <TransactionOntologyPicker
-                                    key={associationType}
-                                    embedded
-                                    workspaceId={activeWorkspace.id}
-                                    type={associationType}
-                                    value={(field.value ?? []).find(
-                                      (item: OntologyAssociationItem) =>
-                                        item.type === associationType,
-                                    )}
-                                    excludedSourceIds={
-                                      associationType === "person"
-                                        ? new Set(
-                                            (field.value ?? [])
-                                              .filter(
-                                                (
-                                                  item: OntologyAssociationItem,
-                                                ) => item.type === "person",
-                                              )
-                                              .map(
-                                                (
-                                                  item: OntologyAssociationItem,
-                                                ) => item.sourceObjectId,
-                                              ),
-                                          )
-                                        : undefined
-                                    }
-                                    onClose={() => {
-                                      setAssociationPickerOpen(false);
-                                      setAssociationType(undefined);
-                                    }}
-                                    onSelect={(item) => {
-                                      const current = field.value ?? [];
-                                      if (associationType === "person") {
-                                        field.onChange([...current, item]);
-                                        return;
-                                      }
-                                      field.onChange([
-                                        ...current.filter(
-                                          (
-                                            association: OntologyAssociationItem,
-                                          ) =>
-                                            association.type !==
-                                            associationType,
-                                        ),
-                                        item,
-                                      ]);
-                                    }}
-                                  />
-                                </div>
-                              ) : (
-                                <div className="space-y-0.5">
-                                  {(
-                                    [
-                                      ["person", "People", UserRound],
-                                      ["place", "Places", MapPin],
-                                      [
-                                        "organization",
-                                        "Organizations",
-                                        Building2,
-                                      ],
-                                      ["trip", "Trips", Plane],
-                                    ] as const
-                                  ).map(([value, label, Icon]) => (
-                                    <button
-                                      key={value}
-                                      type="button"
-                                      className="hover:bg-accent focus-visible:bg-accent flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-none"
-                                      onClick={() => setAssociationType(value)}
-                                    >
-                                      <Icon className="size-4" />
-                                      {label}
-                                      {field.value?.filter(
-                                        (item: OntologyAssociationItem) =>
-                                          item.type === value,
-                                      ).length ? (
-                                        <span className="text-muted-foreground ml-auto text-xs">
-                                          {
-                                            field.value.filter(
-                                              (item: OntologyAssociationItem) =>
-                                                item.type === value,
-                                            ).length
-                                          }
-                                        </span>
-                                      ) : null}
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </PopoverContent>
-                          </Popover>
+                            }
+                          />
                         </FormItem>
                       )}
                     />

@@ -45,6 +45,7 @@ interface EntityFormProps<T extends FieldValues> {
   isRepeating?: boolean;
   appearance?: "default" | "transaction";
   footerFields?: React.ReactNode;
+  initialFocusRef?: React.RefObject<HTMLElement | null>;
 }
 
 export function EntityForm<T extends FieldValues>({
@@ -69,6 +70,7 @@ export function EntityForm<T extends FieldValues>({
   isRepeating,
   appearance = "default",
   footerFields,
+  initialFocusRef,
 }: EntityFormProps<T>) {
   const isEdit = !!entity;
   const form = useForm<T>({
@@ -123,7 +125,14 @@ export function EntityForm<T extends FieldValues>({
   if (appearance === "transaction") {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="flex max-h-[90vh] w-[calc(100%-2rem)] max-w-4xl flex-col gap-0 overflow-hidden rounded-3xl p-0">
+        <DialogContent
+          className="flex max-h-[90vh] w-[calc(100%-2rem)] max-w-4xl flex-col gap-0 overflow-hidden rounded-3xl p-0"
+          onOpenAutoFocus={(event) => {
+            if (!initialFocusRef?.current) return;
+            event.preventDefault();
+            initialFocusRef.current.focus();
+          }}
+        >
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(handleSubmit)}

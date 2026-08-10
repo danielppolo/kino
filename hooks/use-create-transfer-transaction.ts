@@ -6,8 +6,10 @@ import { v4 as randomUUID } from "uuid";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { createTransferTransaction } from "@/actions/create-transfer";
-import { useWallets } from "@/contexts/settings-context";
+import { replaceTransactionOntologyAssociations } from "@/actions/ontology-associations";
+import { useFeatureFlags, useWallets } from "@/contexts/settings-context";
 import useFilters from "@/hooks/use-filters";
+import type { OntologyAssociationItem } from "@/utils/ontology-associations";
 import {
   applyOptimisticTransaction,
   type InfiniteTransactionData,
@@ -26,6 +28,7 @@ export type TransferTransactionValues = Omit<
   receiver_wallet_id: string;
   sender_amount: number;
   receiver_amount: number;
+  ontologyAssociations?: OntologyAssociationItem[];
 };
 
 type CreateTransferResult = Awaited<
@@ -87,6 +90,7 @@ export const transactionRowFromValues = ({
   transferWalletId,
   amountCents,
   currency,
+  ontologyAssociations = [],
 }: {
   values: TransferTransactionValues;
   id: string;
@@ -94,6 +98,7 @@ export const transactionRowFromValues = ({
   transferWalletId: string;
   amountCents: number;
   currency: string | null;
+  ontologyAssociations?: OntologyAssociationItem[];
 }): TransactionList => ({
   id,
   wallet_id: walletId,
@@ -107,8 +112,11 @@ export const transactionRowFromValues = ({
   description: toNullable(values.description),
   needs_review: !transferCategoryId || !toNullable(values.label_id),
   note: null,
-  ontology_associations: [],
-  ontology_entity_ids: [],
+  ontology_associations:
+    ontologyAssociations as unknown as TransactionList["ontology_associations"],
+  ontology_entity_ids: ontologyAssociations.flatMap((item) =>
+    item.entityId ? [item.entityId] : [],
+  ),
   plaid_merchant_key: null,
   plaid_merchant_name: null,
   plaid_pending_transaction_id: null,
@@ -124,9 +132,11 @@ export const transactionRowFromValues = ({
 const transactionRowFromSaved = ({
   transaction,
   transferWalletId,
+  ontologyAssociations = [],
 }: {
   transaction: Transaction;
   transferWalletId: string;
+  ontologyAssociations?: OntologyAssociationItem[];
 }): TransactionList => ({
   id: transaction.id,
   wallet_id: transaction.wallet_id,
@@ -140,8 +150,11 @@ const transactionRowFromSaved = ({
   description: transaction.description ?? null,
   needs_review: !transaction.category_id || !transaction.label_id,
   note: transaction.note ?? null,
-  ontology_associations: [],
-  ontology_entity_ids: [],
+  ontology_associations:
+    ontologyAssociations as unknown as TransactionList["ontology_associations"],
+  ontology_entity_ids: ontologyAssociations.flatMap((item) =>
+    item.entityId ? [item.entityId] : [],
+  ),
   plaid_merchant_key: transaction.plaid_merchant_key ?? null,
   plaid_merchant_name: transaction.plaid_merchant_name ?? null,
   plaid_pending_transaction_id:
@@ -159,6 +172,7 @@ const transactionRowFromSaved = ({
 export function useCreateTransferTransaction() {
   const queryClient = useQueryClient();
   const [wallets, walletMap] = useWallets();
+  const { ontology_associations_enabled } = useFeatureFlags();
   const filters = useFilters();
   const workspaceWalletIds = useMemo(
     () => wallets.map((wallet) => wallet.id),
@@ -181,6 +195,7 @@ export function useCreateTransferTransaction() {
         receiver_wallet_id,
         converted_transaction_id,
         converted_transaction_wallet_id: _convertedTransactionWalletId,
+        ontologyAssociations = [],
         ...transaction
       } = values;
       const result = await createTransferTransaction(
@@ -192,6 +207,25 @@ export function useCreateTransferTransaction() {
 
       if (result.error) {
         throw new Error(result.error);
+      }
+
+      if (ontology_associations_enabled && result.data) {
+        const associationResults = await Promise.all([
+          replaceTransactionOntologyAssociations(
+            result.data.sourceTransaction.id,
+            ontologyAssociations,
+          ),
+          replaceTransactionOntologyAssociations(
+            result.data.destinationTransaction.id,
+            ontologyAssociations,
+          ),
+        ]);
+        const failedResult = associationResults.find(
+          (associationResult) => !associationResult.success,
+        );
+        if (failedResult && !failedResult.success) {
+          throw new Error(failedResult.error.message);
+        }
       }
 
       return result;
@@ -223,6 +257,7 @@ export function useCreateTransferTransaction() {
         transferWalletId: values.receiver_wallet_id,
         amountCents: -senderAmountCents,
         currency: walletMap.get(values.sender_wallet_id)?.currency ?? null,
+        ontologyAssociations: values.ontologyAssociations,
       });
       const optimisticDestination = transactionRowFromValues({
         values,
@@ -231,6 +266,7 @@ export function useCreateTransferTransaction() {
         transferWalletId: values.sender_wallet_id,
         amountCents: receiverAmountCents,
         currency: walletMap.get(values.receiver_wallet_id)?.currency ?? null,
+        ontologyAssociations: values.ontologyAssociations,
       });
 
       queryClient.setQueryData<InfiniteTransactionData>(
@@ -276,10 +312,12 @@ export function useCreateTransferTransaction() {
       const sourceTransaction = transactionRowFromSaved({
         transaction: result.data.sourceTransaction as Transaction,
         transferWalletId: values.receiver_wallet_id,
+        ontologyAssociations: values.ontologyAssociations,
       });
       const destinationTransaction = transactionRowFromSaved({
         transaction: result.data.destinationTransaction as Transaction,
         transferWalletId: values.sender_wallet_id,
+        ontologyAssociations: values.ontologyAssociations,
       });
 
       queryClient.setQueryData<InfiniteTransactionData>(

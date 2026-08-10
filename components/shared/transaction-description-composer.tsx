@@ -50,7 +50,8 @@ interface TransactionDescriptionComposerProps {
   value: string;
   onChange: (value: string) => void;
   workspaceId?: string;
-  type: "income" | "expense";
+  type: "income" | "expense" | "transfer";
+  disabledTriggers?: readonly Trigger[];
   onCategoryChange: (id: string) => void;
   onLabelChange: (id: string) => void;
   onDateChange: (date: string) => void;
@@ -109,6 +110,8 @@ const ONTOLOGY_TYPE_ICONS = {
   place: MapPin,
   trip: Plane,
 } as const;
+
+const NO_DISABLED_TRIGGERS: readonly Trigger[] = [];
 
 function getActiveToken(value: string, cursor: number): ActiveToken | null {
   const beforeCursor = value.slice(0, cursor);
@@ -283,6 +286,7 @@ export function TransactionDescriptionComposer({
   onChange,
   workspaceId,
   type,
+  disabledTriggers = NO_DISABLED_TRIGGERS,
   onCategoryChange,
   onLabelChange,
   onDateChange,
@@ -316,7 +320,14 @@ export function TransactionDescriptionComposer({
   const [searchFailed, setSearchFailed] = React.useState(false);
   const [categories] = useCategories();
   const [labels] = useLabels();
-  const activeToken = getActiveToken(value, cursor);
+  const parsedActiveToken = getActiveToken(value, cursor);
+  const activeToken =
+    parsedActiveToken && !disabledTriggers.includes(parsedActiveToken.trigger)
+      ? parsedActiveToken
+      : null;
+  const activeTokenStart = activeToken?.start;
+  const activeTokenEnd = activeToken?.end;
+  const activeTokenTrigger = activeToken?.trigger;
   const selectedCategory = categories.find(
     (category) => category.id === categoryId,
   );
@@ -429,7 +440,7 @@ export function TransactionDescriptionComposer({
   }, []);
 
   React.useLayoutEffect(() => {
-    if (!activeToken) return;
+    if (activeTokenStart === undefined) return;
 
     updateSuggestionPosition();
     const frame = window.requestAnimationFrame(updateSuggestionPosition);
@@ -440,7 +451,13 @@ export function TransactionDescriptionComposer({
       window.removeEventListener("resize", updateSuggestionPosition);
       window.removeEventListener("scroll", updateSuggestionPosition, true);
     };
-  }, [activeToken, updateSuggestionPosition, value]);
+  }, [
+    activeTokenEnd,
+    activeTokenStart,
+    activeTokenTrigger,
+    updateSuggestionPosition,
+    value,
+  ]);
 
   React.useEffect(() => {
     if (
@@ -740,7 +757,11 @@ export function TransactionDescriptionComposer({
           ref={textareaRef}
           value={value}
           rows={3}
-          placeholder="What was this for? Try @, #, $, or a date like 7 Jul…"
+          placeholder={
+            disabledTriggers.includes("$")
+              ? "What was this for? Try @, #, or a date like 7 Jul…"
+              : "What was this for? Try @, #, $, or a date like 7 Jul…"
+          }
           aria-label="Transaction description"
           aria-autocomplete="list"
           aria-controls={activeToken ? suggestionId : undefined}

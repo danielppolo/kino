@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/input-group";
 import { cn } from "@/lib/utils";
 
-type AmountInputProps = Omit<
+export type AmountInputProps = Omit<
   React.InputHTMLAttributes<HTMLInputElement>,
   "defaultValue"
 > & {
@@ -75,3 +75,21 @@ export const AmountInput = React.forwardRef<HTMLInputElement, AmountInputProps>(
   },
 );
 AmountInput.displayName = "AmountInput";
+
+export const TransactionAmountInput = React.forwardRef<
+  HTMLInputElement,
+  AmountInputProps
+>(({ className, currencyClassName, symbolClassName, ...props }, ref) => (
+  <AmountInput
+    {...props}
+    ref={ref}
+    variant="ghost"
+    symbolClassName={cn("text-4xl font-semibold", symbolClassName)}
+    currencyClassName={cn("text-4xl font-semibold", currencyClassName)}
+    className={cn(
+      "h-auto [appearance:textfield] px-2 text-4xl font-semibold shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none sm:text-4xl lg:text-4xl [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+      className,
+    )}
+  />
+));
+TransactionAmountInput.displayName = "TransactionAmountInput";
