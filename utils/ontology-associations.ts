@@ -137,9 +137,12 @@ export function buildAlgoliaObjectsRequest(
   sourceObjectIds: string[],
 ) {
   return {
-    url: `https://${config.appId}-dsn.algolia.net/1/indexes/${encodeURIComponent(config.indexName)}/objects`,
+    url: `https://${config.appId}-dsn.algolia.net/1/indexes/*/objects`,
     init: buildRequestInit(config, {
-      requests: sourceObjectIds.map((objectID) => ({ objectID })),
+      requests: sourceObjectIds.map((objectID) => ({
+        indexName: config.indexName,
+        objectID,
+      })),
     }),
   };
 }

@@ -89,11 +89,23 @@ describe("ontology association helpers", () => {
   });
 
   it("builds a batch source-object verification request", () => {
-    expect(buildAlgoliaObjectsRequest(config, ["one", "two"]).init.body).toBe(
-      JSON.stringify({
-        requests: [{ objectID: "one" }, { objectID: "two" }],
-      }),
-    );
+    expect(buildAlgoliaObjectsRequest(config, ["one", "two"])).toEqual({
+      url: "https://APP123-dsn.algolia.net/1/indexes/*/objects",
+      init: {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Algolia-API-Key": "search-key",
+          "X-Algolia-Application-Id": "APP123",
+        },
+        body: JSON.stringify({
+          requests: [
+            { indexName: "ontology index", objectID: "one" },
+            { indexName: "ontology index", objectID: "two" },
+          ],
+        }),
+      },
+    });
   });
 
   it("maps all supported types and deduplicates canonical IDs", () => {
