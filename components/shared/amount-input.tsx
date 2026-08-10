@@ -31,38 +31,43 @@ export const AmountInput = React.forwardRef<HTMLInputElement, AmountInputProps>(
       ...props
     },
     ref,
-  ) => (
-    <InputGroup
-      className={cn(
-        "h-auto",
-        variant === "ghost" &&
-          "border-0 bg-transparent shadow-none has-[[data-slot=input-group-control]:focus-visible]:ring-0 dark:bg-transparent",
-      )}
-    >
-      <InputGroupAddon className={cn(variant === "ghost" && "pl-0")}>
-        <InputGroupText className={symbolClassName}>$</InputGroupText>
-      </InputGroupAddon>
-      <InputGroupInput
-        ref={ref}
-        type="number"
-        step="any"
-        placeholder="0.00"
-        defaultValue={defaultValue ?? ""}
+  ) => {
+    const defaultValueProps =
+      props.value === undefined ? { defaultValue: defaultValue ?? "" } : {};
+
+    return (
+      <InputGroup
         className={cn(
-          className,
-          "border-0 shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none",
+          "h-auto",
+          variant === "ghost" &&
+            "border-0 bg-transparent shadow-none has-[[data-slot=input-group-control]:focus-visible]:ring-0 dark:bg-transparent",
         )}
-        {...props}
-      />
-      {currency ? (
-        <InputGroupAddon
-          align="inline-end"
-          className={cn(variant === "ghost" && "pr-0")}
-        >
-          <InputGroupText>{currency}</InputGroupText>
+      >
+        <InputGroupAddon className={cn(variant === "ghost" && "pl-0")}>
+          <InputGroupText className={symbolClassName}>$</InputGroupText>
         </InputGroupAddon>
-      ) : null}
-    </InputGroup>
-  ),
+        <InputGroupInput
+          ref={ref}
+          type="number"
+          step="any"
+          placeholder="0.00"
+          className={cn(
+            className,
+            "border-0 shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none",
+          )}
+          {...defaultValueProps}
+          {...props}
+        />
+        {currency ? (
+          <InputGroupAddon
+            align="inline-end"
+            className={cn(variant === "ghost" && "pr-0")}
+          >
+            <InputGroupText>{currency}</InputGroupText>
+          </InputGroupAddon>
+        ) : null}
+      </InputGroup>
+    );
+  },
 );
 AmountInput.displayName = "AmountInput";
