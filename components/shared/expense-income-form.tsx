@@ -62,7 +62,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  useCategories,
   useFeatureFlags,
+  useLabels,
   useTags,
   useWallets,
 } from "@/contexts/settings-context";
@@ -85,6 +87,7 @@ import {
 } from "@/utils/supabase/mutations";
 import { getBillsForTransaction } from "@/utils/supabase/queries";
 import { Transaction, TransactionList } from "@/utils/supabase/types";
+import { stripInlineDescriptionSelections } from "@/utils/transaction-description";
 
 interface ExpenseIncomeFormProps {
   walletId: string;
@@ -159,6 +162,8 @@ const ExpenseIncomeForm = ({
   onOpenChange,
 }: ExpenseIncomeFormProps) => {
   const [wallets, walletMap] = useWallets();
+  const [, categoryMap] = useCategories();
+  const [, labelMap] = useLabels();
   const { bills_enabled, ontology_associations_enabled } = useFeatureFlags();
   const { activeWorkspace } = useWorkspace();
   const filters = useFilters();
@@ -415,6 +420,12 @@ const ExpenseIncomeForm = ({
       const mutationValues: ExpenseIncomeMutationValues = {
         ...values,
         amount,
+        description: stripInlineDescriptionSelections(values.description, {
+          categoryName: categoryMap.get(values.category_id)?.name,
+          date: values.date,
+          labelName: labelMap.get(values.label_id)?.name,
+          ontologyAssociations: values.ontologyAssociations,
+        }),
       };
       const amountChanged = isEdit && amount !== originalAmount;
 

@@ -35,21 +35,26 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useFeatureFlags, useWallets } from "@/contexts/settings-context";
+import {
+  useFeatureFlags,
+  useLabels,
+  useWallets,
+} from "@/contexts/settings-context";
 import type { TransferPrefill } from "@/contexts/transaction-form-context";
 import { useWorkspace } from "@/contexts/workspace-context";
 import {
   type TransferTransactionValues,
   useCreateTransferTransaction,
 } from "@/hooks/use-create-transfer-transaction";
-import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import {
   type OntologyAssociationItem,
   parseStoredOntologyAssociations,
 } from "@/utils/ontology-associations";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { createClient } from "@/utils/supabase/client";
 import { deleteTransfer, updateTransfer } from "@/utils/supabase/mutations";
 import { Transaction, Wallet } from "@/utils/supabase/types";
+import { stripInlineDescriptionSelections } from "@/utils/transaction-description";
 
 interface TransferFormProps {
   walletId: string;
@@ -556,6 +561,8 @@ const TransferForm = ({
     ),
   };
 
+  const [, labelMap] = useLabels();
+
   const handleSubmit = async (data: TransferFormValues) => {
     const senderCurrency = walletMap.get(data.sender_wallet_id)?.currency;
     const receiverCurrency = walletMap.get(data.receiver_wallet_id)?.currency;
@@ -567,6 +574,14 @@ const TransferForm = ({
     });
     const normalizedData: TransferTransactionValues = {
       ...data,
+      description: stripInlineDescriptionSelections(
+        data.description ?? undefined,
+        {
+          date: data.date,
+          labelName: labelMap.get(data.label_id ?? "")?.name,
+          ontologyAssociations: data.ontologyAssociations,
+        },
+      ),
       sender_amount: senderAmount,
       receiver_amount: receiverAmount,
     };
