@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { MoreHorizontal, FileText } from "lucide-react";
+import { FileText, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 
 import { Text } from "../ui/typography";
@@ -27,6 +27,10 @@ interface WalletRowProps {
   onToggleSelect?: (event: React.MouseEvent<HTMLDivElement>) => void;
   active?: boolean;
 }
+
+const stopRowPropagation = (event: React.SyntheticEvent) => {
+  event.stopPropagation();
+};
 
 export function WalletRow({
   wallet,
@@ -62,17 +66,23 @@ export function WalletRow({
           />
           <ToggleWalletVisibility wallet={wallet} />
           <DropdownMenu>
-            <DropdownMenuTrigger
-              asChild
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground">
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label={`More options for ${wallet.name}`}
+                className="text-muted-foreground hover:bg-accent hover:text-foreground rounded p-1"
+                onPointerDown={stopRowPropagation}
+                onClick={stopRowPropagation}
+              >
                 <MoreHorizontal className="h-4 w-4" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
-                <Link href={`/app/wallets/${wallet.id}/statement`} className="flex items-center gap-2">
+                <Link
+                  href={`/app/wallets/${wallet.id}/statement`}
+                  className="flex items-center gap-2"
+                >
                   <FileText className="h-4 w-4" />
                   View Statement
                 </Link>
