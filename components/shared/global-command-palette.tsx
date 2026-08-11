@@ -16,6 +16,7 @@ import {
   HandCoins,
   Hash,
   Bookmark,
+  Brain,
   Landmark,
   Monitor,
   Moon,
@@ -406,15 +407,6 @@ export function GlobalCommandPalette() {
 
         <CommandGroup heading="Settings">
           <CommandItem
-            value="Settings workspaces"
-            onSelect={() =>
-              closeAndRun(() => router.push("/app/settings/workspaces"))
-            }
-          >
-            <Building2 className="mr-2 size-4" />
-            Workspaces
-          </CommandItem>
-          <CommandItem
             value="Settings wallets"
             onSelect={() =>
               closeAndRun(() => router.push("/app/settings/wallets"))
@@ -449,6 +441,15 @@ export function GlobalCommandPalette() {
           >
             <Settings className="mr-2 size-4" />
             Preferences
+          </CommandItem>
+          <CommandItem
+            value="Settings Finance Copilot"
+            onSelect={() =>
+              closeAndRun(() => router.push("/app/settings/finance-copilot"))
+            }
+          >
+            <Brain className="mr-2 size-4" />
+            Finance Copilot
           </CommandItem>
           <CommandItem
             value="Settings recurrent transactions"

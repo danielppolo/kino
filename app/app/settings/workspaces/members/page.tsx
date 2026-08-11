@@ -141,7 +141,7 @@ export default function WorkspaceMembersPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => router.push("/app/settings/workspaces")}
+            onClick={() => router.push("/app/settings/preferences")}
           >
             <ArrowLeft className="size-4" />
           </Button>

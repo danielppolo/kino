@@ -15,7 +15,7 @@ import {
   ViewGrid,
   Wallet,
 } from "iconoir-react";
-import { Workflow } from "lucide-react";
+import { Brain, Workflow } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -42,17 +42,6 @@ const SettingsSidebar: React.FC = () => {
         <SidebarGroupLabel>Workspace</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === "/app/settings/workspaces"}
-              >
-                <Link href="/app/settings/workspaces">
-                  <Building className="size-4" />
-                  Workspaces
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
@@ -105,6 +94,17 @@ const SettingsSidebar: React.FC = () => {
                 <Link href="/app/settings/preferences">
                   <User className="size-4" />
                   Preferences
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === "/app/settings/finance-copilot"}
+              >
+                <Link href="/app/settings/finance-copilot">
+                  <Brain className="size-4" />
+                  Finance Copilot
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

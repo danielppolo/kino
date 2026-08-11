@@ -5,9 +5,17 @@ import { toast } from "sonner";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import PageHeader from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemSeparator,
+  ItemTitle,
+} from "@/components/ui/item";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -17,7 +25,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { useWorkspace } from "@/contexts/workspace-context";
 import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import { createClient } from "@/utils/supabase/client";
@@ -25,71 +32,62 @@ import {
   updateUserPreferences,
   updateWorkspaceBaseCurrency,
   updateWorkspaceFeatureFlags,
-  updateWorkspaceFinanceMemory,
 } from "@/utils/supabase/mutations";
 import {
   DEFAULT_FEATURE_FLAGS,
   FeatureFlags,
   parseFeatureFlags,
 } from "@/utils/types/feature-flags";
-import {
-  createEmptyFinanceMemory,
-  type FinanceMemory,
-  type FinanceMemoryProfile,
-  formatStringList,
-  normalizeStringList,
-  parseFinanceMemory,
-} from "@/utils/types/finance-memory";
 
-const RISK_TOLERANCE_OPTIONS = [
-  "conservative",
-  "moderate",
-  "aggressive",
-  "custom",
-] as const;
-const LIQUIDITY_NEEDS_OPTIONS = ["low", "medium", "high"] as const;
-const TIME_HORIZON_OPTIONS = [
-  "short_term",
-  "medium_term",
-  "long_term",
-] as const;
+type BaseCurrency = "USD" | "MXN";
+type EditableFeatureFlag =
+  | "bills_enabled"
+  | "infographics_autonomy_enabled"
+  | "ontology_associations_enabled";
 
-type PreferencesFormState = {
-  userId: string | null;
-  baseCurrency: "USD" | "MXN";
-  phone: string;
+type PreferencesState = {
+  baseCurrency: BaseCurrency;
   featureFlags: FeatureFlags;
-  financeMemory: FinanceMemory;
+  phone: string;
+  userId: string | null;
 };
 
-function setNullableText(value: string) {
-  const trimmed = value.trim();
-  return trimmed ? trimmed : null;
-}
+const FEATURE_SETTINGS: Array<{
+  description: string;
+  id: string;
+  key: EditableFeatureFlag;
+  title: string;
+}> = [
+  {
+    id: "bills-enabled",
+    key: "bills_enabled",
+    title: "Bills Management",
+    description: "Track and manage recurring and one-time bills.",
+  },
+  {
+    id: "autonomy-enabled",
+    key: "infographics_autonomy_enabled",
+    title: "Autonomy Framework",
+    description:
+      "Show autonomy and financial independence charts in Infographics.",
+  },
+  {
+    id: "ontology-associations-enabled",
+    key: "ontology_associations_enabled",
+    title: "Canonical Transaction Context",
+    description:
+      "Associate canonical people, trips, places, and organizations with transactions.",
+  },
+];
 
-function updateProfileField(
-  financeMemory: FinanceMemory,
-  field: keyof FinanceMemoryProfile,
-  value: string | string[] | null,
-) {
-  return {
-    ...financeMemory,
-    profile: {
-      ...financeMemory.profile,
-      [field]: value,
-    },
-  };
-}
-
-export default function Page() {
+export default function PreferencesPage() {
   const queryClient = useQueryClient();
-  const { activeWorkspace } = useWorkspace();
-  const [formState, setFormState] = useState<PreferencesFormState>({
-    userId: null,
+  const { activeWorkspace, workspaceMembers } = useWorkspace();
+  const [state, setState] = useState<PreferencesState>({
     baseCurrency: "USD",
-    phone: "",
     featureFlags: DEFAULT_FEATURE_FLAGS,
-    financeMemory: createEmptyFinanceMemory(),
+    phone: "",
+    userId: null,
   });
 
   const { data: preferencesData, isLoading } = useQuery({
@@ -99,742 +97,260 @@ export default function Page() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-
-      const { data: userPrefs, error: prefsError } = await supabase
+      const { data: userPreferences, error } = await supabase
         .from("user_preferences")
         .select("user_id, phone")
         .maybeSingle();
 
-      if (prefsError) throw new Error(prefsError.message);
-
-      const baseCurrency = (activeWorkspace?.base_currency ?? "USD") as
-        | "USD"
-        | "MXN";
-      const featureFlags = activeWorkspace?.feature_flags
-        ? parseFeatureFlags(activeWorkspace.feature_flags)
-        : DEFAULT_FEATURE_FLAGS;
+      if (error) throw new Error(error.message);
 
       return {
-        userId: userPrefs?.user_id ?? user?.id ?? null,
-        baseCurrency,
-        phone: userPrefs?.phone ?? "",
-        featureFlags,
-        financeMemory: activeWorkspace?.finance_memory
-          ? parseFinanceMemory(activeWorkspace.finance_memory)
-          : createEmptyFinanceMemory(),
+        baseCurrency: (activeWorkspace?.base_currency ?? "USD") as BaseCurrency,
+        featureFlags: activeWorkspace?.feature_flags
+          ? parseFeatureFlags(activeWorkspace.feature_flags)
+          : DEFAULT_FEATURE_FLAGS,
+        phone: userPreferences?.phone ?? "",
+        userId: userPreferences?.user_id ?? user?.id ?? null,
       };
     },
-    enabled: !!activeWorkspace,
+    enabled: Boolean(activeWorkspace),
   });
 
   useEffect(() => {
-    if (!preferencesData) return;
-    setFormState({
-      userId: preferencesData.userId,
-      baseCurrency: preferencesData.baseCurrency,
-      phone: preferencesData.phone,
-      featureFlags: preferencesData.featureFlags,
-      financeMemory: preferencesData.financeMemory,
-    });
+    if (preferencesData) setState(preferencesData);
   }, [preferencesData]);
 
-  const updatePreferencesMutation = useMutation({
+  const isOwner = Boolean(
+    activeWorkspace &&
+      state.userId &&
+      workspaceMembers.some(
+        (member) =>
+          member.workspace_id === activeWorkspace.id &&
+          member.user_id === state.userId &&
+          member.role === "owner",
+      ),
+  );
+
+  const phoneMutation = useMutation({
     mutationFn: async () => {
-      if (!formState.userId) {
-        throw new Error("User not found");
-      }
-      if (!activeWorkspace) {
-        throw new Error("No active workspace");
-      }
-
-      const financeMemoryToSave: FinanceMemory = {
-        ...formState.financeMemory,
-        profile: {
-          ...formState.financeMemory.profile,
-          country_of_residence: setNullableText(
-            formState.financeMemory.profile.country_of_residence ?? "",
-          ),
-          tax_region: setNullableText(
-            formState.financeMemory.profile.tax_region ?? "",
-          ),
-          preferred_language: setNullableText(
-            formState.financeMemory.profile.preferred_language ?? "",
-          ),
-          base_planning_currency: setNullableText(
-            formState.financeMemory.profile.base_planning_currency ?? "",
-          ),
-          risk_tolerance: setNullableText(
-            formState.financeMemory.profile.risk_tolerance ?? "",
-          ),
-          liquidity_needs: setNullableText(
-            formState.financeMemory.profile.liquidity_needs ?? "",
-          ),
-          time_horizon: setNullableText(
-            formState.financeMemory.profile.time_horizon ?? "",
-          ),
-          preferred_explanation_style: setNullableText(
-            formState.financeMemory.profile.preferred_explanation_style ?? "",
-          ),
-          rebalancing_frequency: setNullableText(
-            formState.financeMemory.profile.rebalancing_frequency ?? "",
-          ),
-          dividend_vs_growth_preference: setNullableText(
-            formState.financeMemory.profile.dividend_vs_growth_preference ?? "",
-          ),
-          tax_sensitivity_preference: setNullableText(
-            formState.financeMemory.profile.tax_sensitivity_preference ?? "",
-          ),
-          fee_style_preference: setNullableText(
-            formState.financeMemory.profile.fee_style_preference ?? "",
-          ),
-        },
-        profile_updated_at: new Date().toISOString(),
-        provenance: {
-          profile: "user_declared",
-          derived_context: "system_derived",
-        },
-      };
-
+      if (!state.userId) throw new Error("User not found");
       await updateUserPreferences({
-        userId: formState.userId,
-        phone: formState.phone.trim() ? formState.phone.trim() : null,
+        userId: state.userId,
+        phone: state.phone.trim() || null,
       });
-
-      await updateWorkspaceBaseCurrency(
-        activeWorkspace.id,
-        formState.baseCurrency,
-      );
-
-      await updateWorkspaceFeatureFlags(
-        activeWorkspace.id,
-        formState.featureFlags,
-      );
-
-      await updateWorkspaceFinanceMemory(
-        activeWorkspace.id,
-        financeMemoryToSave,
-      );
     },
     onSuccess: () => {
-      toast.success("Preferences updated successfully");
-      void invalidateWorkspaceQueries(queryClient);
-      window.location.reload();
+      toast.success("Preferences updated");
+      void queryClient.invalidateQueries({ queryKey: ["user-preferences"] });
     },
     onError: (error: unknown) => {
-      if (error instanceof Error) {
-        toast.error(error.message);
-      } else {
-        toast.error("Failed to update preferences");
-      }
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update preferences",
+      );
     },
   });
 
-  const isDirty = useMemo(() => {
-    if (!preferencesData) return false;
+  const baseCurrencyMutation = useMutation({
+    mutationFn: async ({
+      next,
+    }: {
+      next: BaseCurrency;
+      previous: BaseCurrency;
+    }) => {
+      if (!activeWorkspace) throw new Error("No active workspace");
+      await updateWorkspaceBaseCurrency(activeWorkspace.id, next);
+    },
+    onMutate: ({ next }) => {
+      setState((current) => ({ ...current, baseCurrency: next }));
+    },
+    onSuccess: () => toast.success("Base currency updated"),
+    onError: (error, { previous }) => {
+      setState((current) => ({ ...current, baseCurrency: previous }));
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update currency",
+      );
+    },
+    onSettled: () => void invalidateWorkspaceQueries(queryClient),
+  });
 
+  const featureFlagsMutation = useMutation({
+    mutationFn: async ({
+      next,
+    }: {
+      next: FeatureFlags;
+      previous: FeatureFlags;
+    }) => {
+      if (!activeWorkspace) throw new Error("No active workspace");
+      await updateWorkspaceFeatureFlags(activeWorkspace.id, next);
+    },
+    onMutate: ({ next }) => {
+      setState((current) => ({ ...current, featureFlags: next }));
+    },
+    onSuccess: () => toast.success("Feature setting updated"),
+    onError: (error, { previous }) => {
+      setState((current) => ({ ...current, featureFlags: previous }));
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update feature",
+      );
+    },
+    onSettled: () => void invalidateWorkspaceQueries(queryClient),
+  });
+
+  const phoneIsDirty = useMemo(
+    () => Boolean(preferencesData && preferencesData.phone !== state.phone),
+    [preferencesData, state.phone],
+  );
+
+  if (!activeWorkspace) {
     return (
-      preferencesData.baseCurrency !== formState.baseCurrency ||
-      (preferencesData.phone ?? "") !== formState.phone ||
-      preferencesData.featureFlags.bills_enabled !==
-        formState.featureFlags.bills_enabled ||
-      preferencesData.featureFlags.infographics_autonomy_enabled !==
-        formState.featureFlags.infographics_autonomy_enabled ||
-      JSON.stringify(preferencesData.financeMemory) !==
-        JSON.stringify(formState.financeMemory)
+      <div className="flex h-full items-center justify-center">
+        <p className="text-muted-foreground">Loading workspace…</p>
+      </div>
     );
-  }, [formState, preferencesData]);
-
-  const handleSave = () => {
-    updatePreferencesMutation.mutate();
-  };
+  }
 
   return (
-    <div className="flex h-full flex-col">
-      <PageHeader>
-        <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold">Preferences</h2>
-        </div>
-        <Button
-          size="sm"
-          onClick={handleSave}
-          disabled={isLoading || updatePreferencesMutation.isPending || !isDirty}
-        >
-          Save
-        </Button>
-      </PageHeader>
+    <div className="h-full overflow-y-auto px-4 py-6">
+      <div className="max-w-3xl space-y-10">
+        {!isLoading && !isOwner ? (
+          <p className="text-muted-foreground text-sm">
+            Only workspace owners can modify workspace settings.
+          </p>
+        ) : null}
 
-      <div className="flex-1 space-y-8 overflow-y-auto px-4 py-6">
-        <div className="max-w-4xl space-y-8">
-          <div className="space-y-6">
-            <h3 className="text-lg font-medium">General</h3>
-
-            <div className="space-y-2">
-              <Label>Phone number</Label>
-              <Input
-                type="tel"
-                placeholder="Add your phone number"
-                value={formState.phone}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, phone: event.target.value }))
-                }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Base currency</Label>
-              <Select
-                value={formState.baseCurrency}
-                onValueChange={(value) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    baseCurrency: value as "USD" | "MXN",
-                  }))
-                }
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="MXN">MXN</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-4 border-t pt-6">
-            <h3 className="text-lg font-medium">Features</h3>
-            <p className="text-sm text-muted-foreground">
-              Control which features are enabled in your workspace.
-            </p>
-
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex-1">
-                <Label htmlFor="bills-enabled">Bills Management</Label>
-                <p className="text-sm text-muted-foreground">
-                  Track and manage recurring and one-time bills.
-                </p>
-              </div>
-              <Switch
-                id="bills-enabled"
-                checked={formState.featureFlags.bills_enabled}
-                onCheckedChange={(checked) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    featureFlags: {
-                      ...prev.featureFlags,
-                      bills_enabled: checked,
-                    },
-                  }))
-                }
-              />
-            </div>
-
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex-1">
-                <Label htmlFor="autonomy-enabled">Autonomy Framework</Label>
-                <p className="text-sm text-muted-foreground">
-                  Show autonomy and financial independence charts in infographics.
-                </p>
-              </div>
-              <Switch
-                id="autonomy-enabled"
-                checked={formState.featureFlags.infographics_autonomy_enabled}
-                onCheckedChange={(checked) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    featureFlags: {
-                      ...prev.featureFlags,
-                      infographics_autonomy_enabled: checked,
-                    },
-                  }))
-                }
-              />
-            </div>
-          </div>
-
-          <div className="space-y-6 border-t pt-6">
-            <div>
-              <h3 className="text-lg font-medium">Finance Copilot Memory</h3>
-              <p className="text-sm text-muted-foreground">
-                This workspace profile helps the copilot localize investment and
-                market suggestions. It is advisory context, not guaranteed live
-                market availability.
-              </p>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Country of residence</Label>
-                <Input
-                  value={formState.financeMemory.profile.country_of_residence ?? ""}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      financeMemory: updateProfileField(
-                        prev.financeMemory,
-                        "country_of_residence",
-                        event.target.value,
-                      ),
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Tax region</Label>
-                <Input
-                  value={formState.financeMemory.profile.tax_region ?? ""}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      financeMemory: updateProfileField(
-                        prev.financeMemory,
-                        "tax_region",
-                        event.target.value,
-                      ),
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Preferred language</Label>
-                <Input
-                  value={formState.financeMemory.profile.preferred_language ?? ""}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      financeMemory: updateProfileField(
-                        prev.financeMemory,
-                        "preferred_language",
-                        event.target.value,
-                      ),
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Base planning currency</Label>
-                <Input
-                  placeholder="USD, MXN, EUR..."
-                  value={
-                    formState.financeMemory.profile.base_planning_currency ?? ""
-                  }
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      financeMemory: updateProfileField(
-                        prev.financeMemory,
-                        "base_planning_currency",
-                        event.target.value.toUpperCase(),
-                      ),
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Risk tolerance</Label>
-                <Select
-                  value={formState.financeMemory.profile.risk_tolerance ?? "unset"}
-                  onValueChange={(value) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      financeMemory: updateProfileField(
-                        prev.financeMemory,
-                        "risk_tolerance",
-                        value === "unset" ? null : value,
-                      ),
-                    }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unset">Not set</SelectItem>
-                    {RISK_TOLERANCE_OPTIONS.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Liquidity needs</Label>
-                <Select
-                  value={formState.financeMemory.profile.liquidity_needs ?? "unset"}
-                  onValueChange={(value) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      financeMemory: updateProfileField(
-                        prev.financeMemory,
-                        "liquidity_needs",
-                        value === "unset" ? null : value,
-                      ),
-                    }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unset">Not set</SelectItem>
-                    {LIQUIDITY_NEEDS_OPTIONS.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Time horizon</Label>
-                <Select
-                  value={formState.financeMemory.profile.time_horizon ?? "unset"}
-                  onValueChange={(value) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      financeMemory: updateProfileField(
-                        prev.financeMemory,
-                        "time_horizon",
-                        value === "unset" ? null : value,
-                      ),
-                    }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unset">Not set</SelectItem>
-                    {TIME_HORIZON_OPTIONS.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Preferred explanation style</Label>
-                <Input
-                  value={
-                    formState.financeMemory.profile.preferred_explanation_style ??
-                    ""
-                  }
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      financeMemory: updateProfileField(
-                        prev.financeMemory,
-                        "preferred_explanation_style",
-                        event.target.value,
-                      ),
-                    }))
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Accessible markets</Label>
-                <Textarea
-                  placeholder="US&#10;Mexico&#10;EU"
-                  value={formatStringList(
-                    formState.financeMemory.profile.markets_accessible,
-                  )}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      financeMemory: updateProfileField(
-                        prev.financeMemory,
-                        "markets_accessible",
-                        normalizeStringList(event.target.value),
-                      ),
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Brokerage platforms</Label>
-                <Textarea
-                  placeholder="Interactive Brokers&#10;GBM&#10;Schwab"
-                  value={formatStringList(
-                    formState.financeMemory.profile.brokerage_platforms,
-                  )}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      financeMemory: updateProfileField(
-                        prev.financeMemory,
-                        "brokerage_platforms",
-                        normalizeStringList(event.target.value),
-                      ),
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Account types</Label>
-                <Textarea
-                  placeholder="Taxable&#10;Retirement&#10;Cash-only"
-                  value={formatStringList(
-                    formState.financeMemory.profile.account_types,
-                  )}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      financeMemory: updateProfileField(
-                        prev.financeMemory,
-                        "account_types",
-                        normalizeStringList(event.target.value),
-                      ),
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Accessible instruments</Label>
-                <Textarea
-                  placeholder="ETFs&#10;Bonds&#10;Money market funds"
-                  value={formatStringList(
-                    formState.financeMemory.profile.instruments_accessible,
-                  )}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      financeMemory: updateProfileField(
-                        prev.financeMemory,
-                        "instruments_accessible",
-                        normalizeStringList(event.target.value),
-                      ),
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Investment goals</Label>
-                <Textarea
-                  placeholder="Capital preservation&#10;Long-term growth"
-                  value={formatStringList(
-                    formState.financeMemory.profile.investment_goals,
-                  )}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      financeMemory: updateProfileField(
-                        prev.financeMemory,
-                        "investment_goals",
-                        normalizeStringList(event.target.value),
-                      ),
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Constraints</Label>
-                <Textarea
-                  placeholder="No leverage&#10;No derivatives&#10;Only local-currency assets"
-                  value={formatStringList(
-                    formState.financeMemory.profile.constraints,
-                  )}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      financeMemory: updateProfileField(
-                        prev.financeMemory,
-                        "constraints",
-                        normalizeStringList(event.target.value),
-                      ),
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Known limitations</Label>
-                <Textarea
-                  placeholder="No access to US ETFs&#10;Broker does not support options"
-                  value={formatStringList(
-                    formState.financeMemory.profile.known_limitations,
-                  )}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      financeMemory: updateProfileField(
-                        prev.financeMemory,
-                        "known_limitations",
-                        normalizeStringList(event.target.value),
-                      ),
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Low-fee vs active preference</Label>
-                <Input
-                  value={formState.financeMemory.profile.fee_style_preference ?? ""}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      financeMemory: updateProfileField(
-                        prev.financeMemory,
-                        "fee_style_preference",
-                        event.target.value,
-                      ),
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Dividend vs growth preference</Label>
-                <Input
-                  value={
-                    formState.financeMemory.profile
-                      .dividend_vs_growth_preference ?? ""
-                  }
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      financeMemory: updateProfileField(
-                        prev.financeMemory,
-                        "dividend_vs_growth_preference",
-                        event.target.value,
-                      ),
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Tax sensitivity preference</Label>
-                <Input
-                  value={
-                    formState.financeMemory.profile.tax_sensitivity_preference ??
-                    ""
-                  }
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      financeMemory: updateProfileField(
-                        prev.financeMemory,
-                        "tax_sensitivity_preference",
-                        event.target.value,
-                      ),
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Rebalancing frequency</Label>
-                <Input
-                  value={
-                    formState.financeMemory.profile.rebalancing_frequency ?? ""
-                  }
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      financeMemory: updateProfileField(
-                        prev.financeMemory,
-                        "rebalancing_frequency",
-                        event.target.value,
-                      ),
-                    }))
-                  }
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-6 border-t pt-6">
-            <div>
-              <h3 className="text-lg font-medium">Derived Context</h3>
-              <p className="text-sm text-muted-foreground">
-                This section is computed from structured finance data and may
-                update when the copilot runs.
-              </p>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                  Currencies held
-                </p>
-                <p className="mt-2 text-sm">
-                  {formState.financeMemory.derived_context.currencies_held.join(", ") ||
-                    "None derived yet"}
-                </p>
-              </div>
-              <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                  Wallet types
-                </p>
-                <p className="mt-2 text-sm">
-                  {formState.financeMemory.derived_context.wallet_types.join(", ") ||
-                    "None derived yet"}
-                </p>
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                  Asset exposure summary
-                </p>
-                <div className="mt-2 space-y-2 text-sm">
-                  {formState.financeMemory.derived_context
-                    .observed_asset_exposure_summary.length ? (
-                    formState.financeMemory.derived_context.observed_asset_exposure_summary.map(
-                      (item) => (
-                        <div key={`${item.label}-${item.detail}`}>
-                          <p className="font-medium">{item.label}</p>
-                          <p className="text-muted-foreground">{item.detail}</p>
-                        </div>
-                      ),
-                    )
-                  ) : (
-                    <p className="text-muted-foreground">None derived yet</p>
-                  )}
-                </div>
-              </div>
-              <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                  Liquidity and stability signals
-                </p>
-                <div className="mt-2 space-y-2 text-sm">
-                  {[
-                    ...formState.financeMemory.derived_context
-                      .income_stability_signals,
-                    ...formState.financeMemory.derived_context
-                      .liquidity_pressure_signals,
-                    ...formState.financeMemory.derived_context
-                      .recent_behavioral_notes,
-                  ].length ? (
-                    [
-                      ...formState.financeMemory.derived_context
-                        .income_stability_signals,
-                      ...formState.financeMemory.derived_context
-                        .liquidity_pressure_signals,
-                      ...formState.financeMemory.derived_context
-                        .recent_behavioral_notes,
-                    ].map((item) => (
-                      <p key={item} className="text-muted-foreground">
-                        {item}
-                      </p>
-                    ))
-                  ) : (
-                    <p className="text-muted-foreground">None derived yet</p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <p className="text-xs text-muted-foreground">
-              Profile updated at:{" "}
-              {formState.financeMemory.profile_updated_at ?? "Never"}.
-              Derived updated at:{" "}
-              {formState.financeMemory.derived_updated_at ?? "Not yet derived"}.
+        <section aria-labelledby="personal-settings" className="space-y-3">
+          <div>
+            <h2 id="personal-settings" className="text-base font-semibold">
+              Personal
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              Manage preferences associated with your account.
             </p>
           </div>
+          <ItemGroup>
+            <Item role="listitem" size="sm">
+              <ItemContent>
+                <ItemTitle>
+                  <Label htmlFor="phone-number">Phone Number</Label>
+                </ItemTitle>
+                <ItemDescription>
+                  Used for account and workspace communication.
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions className="w-64 shrink-0">
+                <Input
+                  id="phone-number"
+                  type="tel"
+                  placeholder="Add your phone number"
+                  value={state.phone}
+                  onChange={(event) =>
+                    setState((current) => ({
+                      ...current,
+                      phone: event.target.value,
+                    }))
+                  }
+                />
+              </ItemActions>
+            </Item>
+          </ItemGroup>
+        </section>
+
+        <section aria-labelledby="currency-settings" className="space-y-3">
+          <div>
+            <h2 id="currency-settings" className="text-base font-semibold">
+              Currency
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              Configure how values are reported across this workspace.
+            </p>
+          </div>
+          <ItemGroup>
+            <Item role="listitem" size="sm">
+              <ItemContent>
+                <ItemTitle>Base Currency</ItemTitle>
+                <ItemDescription>
+                  All amounts are converted to this currency.
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions className="shrink-0">
+                <Label htmlFor="base-currency" className="sr-only">
+                  Base Currency
+                </Label>
+                <Select
+                  value={state.baseCurrency}
+                  onValueChange={(next: BaseCurrency) =>
+                    baseCurrencyMutation.mutate({
+                      next,
+                      previous: state.baseCurrency,
+                    })
+                  }
+                  disabled={
+                    isLoading || !isOwner || baseCurrencyMutation.isPending
+                  }
+                >
+                  <SelectTrigger id="base-currency" className="w-24">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="MXN">MXN</SelectItem>
+                  </SelectContent>
+                </Select>
+              </ItemActions>
+            </Item>
+          </ItemGroup>
+        </section>
+
+        <section aria-labelledby="feature-settings" className="space-y-3">
+          <div>
+            <h2 id="feature-settings" className="text-base font-semibold">
+              Features
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              Control which capabilities are available in this workspace.
+            </p>
+          </div>
+          <ItemGroup>
+            {FEATURE_SETTINGS.map((setting, index) => (
+              <div key={setting.key} role="listitem">
+                {index > 0 ? <ItemSeparator /> : null}
+                <Item size="sm">
+                  <ItemContent>
+                    <ItemTitle>
+                      <Label htmlFor={setting.id}>{setting.title}</Label>
+                    </ItemTitle>
+                    <ItemDescription>{setting.description}</ItemDescription>
+                  </ItemContent>
+                  <ItemActions className="shrink-0">
+                    <Switch
+                      id={setting.id}
+                      checked={state.featureFlags[setting.key]}
+                      onCheckedChange={(checked) => {
+                        const previous = state.featureFlags;
+                        featureFlagsMutation.mutate({
+                          previous,
+                          next: { ...previous, [setting.key]: checked },
+                        });
+                      }}
+                      disabled={
+                        isLoading || !isOwner || featureFlagsMutation.isPending
+                      }
+                    />
+                  </ItemActions>
+                </Item>
+              </div>
+            ))}
+          </ItemGroup>
+        </section>
+
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            onClick={() => phoneMutation.mutate()}
+            disabled={isLoading || phoneMutation.isPending || !phoneIsDirty}
+          >
+            {phoneMutation.isPending ? "Saving…" : "Save Changes"}
+          </Button>
         </div>
       </div>
     </div>
