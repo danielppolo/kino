@@ -33,7 +33,7 @@ const LabelCombobox = ({
 }: LabelComboboxProps) => {
   const [labels] = useLabels();
 
-  const options: ComboboxOption[] = labels
+  const options: ComboboxOption[] = [...labels]
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((label) => ({
       value: label.id,

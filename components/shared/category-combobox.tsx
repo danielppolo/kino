@@ -15,6 +15,7 @@ import { Database } from "@/utils/supabase/database.types";
 import { createCategory } from "@/utils/supabase/mutations";
 
 interface CategoryComboboxProps {
+  "aria-label"?: string;
   selectionType: "combobox" | "checkbox";
   size?: "sm" | "default" | "lg";
   variant?: "ghost" | "outline" | "default" | "secondary" | "destructive";
@@ -27,6 +28,7 @@ interface CategoryComboboxProps {
 }
 
 const CategoryCombobox = ({
+  "aria-label": ariaLabel,
   selectionType = "combobox",
   size = "default",
   icon,
@@ -122,6 +124,7 @@ const CategoryCombobox = ({
 
         {selectedType && (
           <Combobox
+            aria-label={ariaLabel}
             variant={variant}
             size={size}
             icon={icon}
@@ -148,6 +151,7 @@ const CategoryCombobox = ({
 
   return (
     <Combobox
+      aria-label={ariaLabel}
       variant={variant}
       size={size}
       icon={icon}

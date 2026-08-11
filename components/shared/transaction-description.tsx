@@ -9,10 +9,12 @@ import { TransactionList } from "@/utils/supabase/types";
 
 interface TransactionDescriptionProps {
   transaction: TransactionList;
+  showCategory?: boolean;
 }
 
 const TransactionDescription: React.FC<TransactionDescriptionProps> = ({
   transaction,
+  showCategory = true,
 }) => {
   const [, walletsMap] = useWallets();
   const [, categoriesMap] = useCategories();
@@ -39,7 +41,7 @@ const TransactionDescription: React.FC<TransactionDescriptionProps> = ({
       : "";
   return (
     <div className="flex gap-1">
-      <Text>{categoryName}</Text>
+      {showCategory ? <Text>{categoryName}</Text> : null}
       <Text className="text-muted-foreground">{transaction.description}</Text>
     </div>
   );

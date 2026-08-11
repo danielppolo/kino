@@ -2,7 +2,6 @@ import React from "react";
 import { useRouter } from "next/navigation";
 
 import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
 import Color from "./color";
 import LabelCombobox from "./label-combobox";
 import LinkTransferButton from "./link-transfer-button";
@@ -20,7 +19,7 @@ import { TransactionList } from "@/utils/supabase/types";
 interface TagBadgesProps {
   transaction: TransactionList;
   className?: string;
-  onAssignLabel?: (labelId: string) => void;
+  onAssignLabel?: (labelId: string | null) => void;
   showLabelCombobox?: boolean;
 }
 
@@ -38,10 +37,6 @@ const TagBadges = ({
 
   const handleTagClick = (tagId: string) => {
     setFilters({ tag: tagId });
-  };
-
-  const handleLabelClick = (labelId: string) => {
-    setFilters({ label_id: labelId });
   };
 
   const handleNeedsReviewClick = () => {
@@ -129,42 +124,27 @@ const TagBadges = ({
           {transaction.transfer_id.slice(-4)}
         </Badge>
       )}
-      {labelColor ||
-      (showLabelCombobox && onAssignLabel && !transaction.label_id) ? (
+      {showLabelCombobox && onAssignLabel ? (
         <div
           className="flex size-10 shrink-0 items-center justify-center"
           onClick={(event) => event.stopPropagation()}
         >
-          {labelColor ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => handleLabelClick(transaction.label_id!)}
-              aria-label="Filter by label"
-            >
+          <LabelCombobox
+            aria-label={transaction.label_id ? "Update label" : "Add label"}
+            comboboxVariant="icon"
+            size="icon"
+            variant="ghost"
+            value={transaction.label_id}
+            onChange={(labelId) => onAssignLabel(labelId || null)}
+            icon={
               <Color
                 size="sm"
                 color={labelColor}
                 className="size-1.5 rounded-full"
               />
-            </Button>
-          ) : (
-            <LabelCombobox
-              aria-label="Add label"
-              comboboxVariant="icon"
-              size="icon"
-              variant="ghost"
-              value={null}
-              onChange={(labelId) => {
-                if (labelId) {
-                  onAssignLabel?.(labelId);
-                }
-              }}
-              icon={<Color size="sm" className="size-1.5 rounded-full" />}
-              className="size-10 p-0"
-            />
-          )}
+            }
+            className="size-10 p-0"
+          />
         </div>
       ) : null}
     </div>

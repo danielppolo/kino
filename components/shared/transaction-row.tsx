@@ -102,25 +102,29 @@ export function TransactionRow({
       active={active}
     >
       <div className="flex shrink grow items-center gap-1 truncate">
-        {!transaction.category_id && (
+        {transaction.type !== "transfer" ? (
           <div onClick={stopRowClick}>
             <CategoryCombobox
+              aria-label={
+                transaction.category_id ? "Update category" : "Add category"
+              }
               selectionType="combobox"
               size="sm"
               variant="ghost"
               type={transaction.type ?? undefined}
-              value={null}
-              onChange={(categoryId) => {
-                if (categoryId) {
-                  updateMutation.mutate({ category_id: categoryId });
-                }
-              }}
+              value={transaction.category_id}
+              onChange={(categoryId) =>
+                updateMutation.mutate({ category_id: categoryId || null })
+              }
               placeholder="Add category"
-              className="text-muted-foreground h-auto w-auto rounded-none bg-transparent p-0 underline decoration-dashed underline-offset-4 hover:bg-transparent"
+              className="h-auto w-auto max-w-40 rounded-none bg-transparent p-0 text-base hover:bg-transparent md:text-sm"
             />
           </div>
-        )}
-        <TransactionDescription transaction={transaction} />
+        ) : null}
+        <TransactionDescription
+          transaction={transaction}
+          showCategory={transaction.type === "transfer"}
+        />
       </div>
       <div className="shrink-0">
         <TagBadges
