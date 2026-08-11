@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { createClient } from "@/utils/supabase/server";
+import { createServiceRoleClient } from "@/utils/supabase/server";
 
 async function handle(request: NextRequest) {
-  if (request.headers.get("Authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (
+    request.headers.get("Authorization") !== `Bearer ${process.env.CRON_SECRET}`
+  ) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   try {
     const { error: balanceError } = await supabase.rpc(
