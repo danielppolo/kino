@@ -39,6 +39,7 @@ import RowGroupHeader, { RowGroupHeaderLoading } from "./row-group-header";
 import TransactionRow from "./transaction-row";
 import TransactionRowTransferMenu from "./transaction-row-transfer-menu";
 import TransactionRuleForm from "./transaction-rule-form";
+import TransactionRulePicker from "./transaction-rule-picker";
 
 import { useWallets } from "@/contexts/settings-context";
 import { useTransactionForm } from "@/contexts/transaction-form-context";
@@ -55,6 +56,7 @@ import {
 } from "@/utils/supabase/mutations";
 import { listTransactions } from "@/utils/supabase/queries";
 import { type Transaction, type TransactionList } from "@/utils/supabase/types";
+import type { TransactionRule } from "@/utils/transaction-rules";
 
 interface TransactionPage {
   data: TransactionList[];
@@ -78,8 +80,10 @@ export default function TransactionList() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [singleDeleteId, setSingleDeleteId] = useState<string | null>(null);
   const [ruleFormOpen, setRuleFormOpen] = useState(false);
+  const [rulePickerOpen, setRulePickerOpen] = useState(false);
   const [ruleSeedTransaction, setRuleSeedTransaction] =
     useState<TransactionList | null>(null);
+  const [selectedRule, setSelectedRule] = useState<TransactionRule>();
   const [activeIndex, setActiveIndex] = useState(-1);
   const queryClient = useQueryClient();
 
@@ -596,15 +600,29 @@ export default function TransactionList() {
                           Duplicate
                         </ContextMenuItem>
                         {transaction.type !== "transfer" && (
-                          <ContextMenuItem
-                            onClick={() => {
-                              setRuleSeedTransaction(transaction);
-                              setRuleFormOpen(true);
-                            }}
-                          >
-                            <Workflow className="mr-2 size-4" />
-                            Create automation rule…
-                          </ContextMenuItem>
+                          <>
+                            <ContextMenuItem
+                              onClick={() => {
+                                setSelectedRule(undefined);
+                                setRuleSeedTransaction(transaction);
+                                setRuleFormOpen(true);
+                              }}
+                            >
+                              <Workflow className="mr-2 size-4" />
+                              Create automation…
+                            </ContextMenuItem>
+                            <ContextMenuItem
+                              onSelect={() => {
+                                window.setTimeout(() => {
+                                  setRuleSeedTransaction(transaction);
+                                  setRulePickerOpen(true);
+                                }, 0);
+                              }}
+                            >
+                              <Workflow className="mr-2 size-4" />
+                              Improve automation…
+                            </ContextMenuItem>
+                          </>
                         )}
                         <TransactionRowTransferMenu transaction={transaction} />
                         <ContextMenuSeparator />
@@ -668,9 +686,35 @@ export default function TransactionList() {
         open={ruleFormOpen}
         onOpenChange={(open) => {
           setRuleFormOpen(open);
-          if (!open) setRuleSeedTransaction(null);
+          if (!open) {
+            setRuleSeedTransaction(null);
+            setSelectedRule(undefined);
+          }
         }}
+        rule={selectedRule}
         seedTransaction={ruleSeedTransaction}
+      />
+      <TransactionRulePicker
+        open={rulePickerOpen}
+        onOpenChange={(open) => {
+          setRulePickerOpen(open);
+          if (!open && !ruleFormOpen) setRuleSeedTransaction(null);
+        }}
+        transaction={ruleSeedTransaction}
+        onSelect={(rule) => {
+          setRulePickerOpen(false);
+          window.setTimeout(() => {
+            setSelectedRule(rule);
+            setRuleFormOpen(true);
+          }, 0);
+        }}
+        onCreate={() => {
+          setRulePickerOpen(false);
+          window.setTimeout(() => {
+            setSelectedRule(undefined);
+            setRuleFormOpen(true);
+          }, 0);
+        }}
       />
       <BulkTransactionEditForm
         open={bulkOpen}

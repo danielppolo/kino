@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -40,13 +40,19 @@ import {
 } from "@/contexts/settings-context";
 import { useWorkspace } from "@/contexts/workspace-context";
 import { parseStoredOntologyAssociations } from "@/utils/ontology-associations";
+import type { TransactionList } from "@/utils/supabase/types";
 import {
-  transactionRuleDefinitionSchema,
+  addImprovementCondition,
+  getRuleImprovementSuggestion,
+  transactionToRuleCandidate,
+} from "@/utils/transaction-rule-improvements";
+import {
+  matchesTransactionRule,
   type TransactionRule,
   type TransactionRuleCondition,
   type TransactionRuleDefinition,
+  transactionRuleDefinitionSchema,
 } from "@/utils/transaction-rules";
-import type { TransactionList } from "@/utils/supabase/types";
 
 interface TransactionRuleFormProps {
   defaultPriority?: number;
@@ -188,6 +194,10 @@ export default function TransactionRuleForm({
   const [previewDefinitionKey, setPreviewDefinitionKey] = useState<
     string | null
   >(null);
+  const [improvementDelta, setImprovementDelta] = useState<number | null>(null);
+  const [improvementValue, setImprovementValue] = useState("");
+  const [addedImprovementCondition, setAddedImprovementCondition] =
+    useState<TransactionRuleCondition | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -198,6 +208,15 @@ export default function TransactionRuleForm({
     );
     setPreview(null);
     setPreviewDefinitionKey(null);
+    setImprovementDelta(null);
+    setImprovementValue(
+      rule && seedTransaction
+        ? String(
+            getRuleImprovementSuggestion(rule, seedTransaction)?.value ?? "",
+          )
+        : "",
+    );
+    setAddedImprovementCondition(null);
   }, [defaultPriority, open, rule, seedTransaction]);
 
   const workspaceId = activeWorkspace?.id;
@@ -280,6 +299,51 @@ export default function TransactionRuleForm({
     onError: (error: Error) => toast.error(error.message),
   });
 
+  const improvementSuggestion = useMemo(
+    () =>
+      rule && seedTransaction
+        ? getRuleImprovementSuggestion(rule, seedTransaction)
+        : null,
+    [rule, seedTransaction],
+  );
+  const suggestionAdded = Boolean(
+    addedImprovementCondition &&
+      definition.conditions.some(
+        (condition) =>
+          condition.field === addedImprovementCondition.field &&
+          condition.operator === addedImprovementCondition.operator &&
+          String(condition.value).toLocaleLowerCase() ===
+            String(addedImprovementCondition.value).toLocaleLowerCase(),
+      ),
+  );
+  const seedMatchesDefinition = useMemo(() => {
+    if (!rule || !seedTransaction) return false;
+    return matchesTransactionRule(
+      { ...rule, ...definition },
+      transactionToRuleCandidate(seedTransaction),
+    );
+  }, [definition, rule, seedTransaction]);
+
+  const improvementPreviewMutation = useMutation({
+    mutationFn: async (nextDefinition: TransactionRuleDefinition) => {
+      if (!workspaceId || !rule) throw new Error("No automation selected");
+      const [before, after] = await Promise.all([
+        previewTransactionRule({
+          definition: getDefinition(rule),
+          workspaceId,
+        }),
+        previewTransactionRule({ definition: nextDefinition, workspaceId }),
+      ]);
+      return { after, delta: after.count - before.count, nextDefinition };
+    },
+    onSuccess: ({ after, delta, nextDefinition }) => {
+      setImprovementDelta(delta);
+      setPreview(after);
+      setPreviewDefinitionKey(JSON.stringify(nextDefinition));
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   const summary = useMemo(() => {
     const joiner = definition.matchMode === "all" ? " and " : " or ";
     const conditions = definition.conditions
@@ -344,16 +408,164 @@ export default function TransactionRuleForm({
     saveMutation.isPending ||
     deleteMutation.isPending ||
     previewMutation.isPending ||
+    improvementPreviewMutation.isPending ||
     historyMutation.isPending;
+
+  const addSuggestedPattern = () => {
+    const value = improvementValue.trim();
+    if (!improvementSuggestion || !value) return;
+    const addedCondition = { ...improvementSuggestion, value };
+    const nextDefinition = addImprovementCondition(definition, addedCondition);
+    setDefinition(nextDefinition);
+    setAddedImprovementCondition(addedCondition);
+    setImprovementDelta(null);
+    improvementPreviewMutation.mutate(nextDefinition);
+  };
+
+  const improvementMode = Boolean(rule && seedTransaction);
+  const transactionAmount = seedTransaction
+    ? new Intl.NumberFormat(undefined, {
+        currency: seedTransaction.currency ?? "USD",
+        style: "currency",
+      }).format((seedTransaction.amount_cents ?? 0) / 100)
+    : null;
+  const transactionDate = seedTransaction?.date
+    ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
+        new Date(`${seedTransaction.date}T00:00:00`),
+      )
+    : null;
 
   return (
     <DrawerDialog
-      title={rule ? "Edit automation" : "Add automation"}
-      description="When a Plaid transaction matches, automatically classify it."
+      title={
+        improvementMode
+          ? `Improve ${rule?.name}`
+          : rule
+            ? "Edit automation"
+            : "Add automation"
+      }
+      description={
+        improvementMode
+          ? "Teach this automation to recognize the selected transaction."
+          : "When a Plaid transaction matches, automatically classify it."
+      }
       open={open}
       onOpenChange={onOpenChange}
     >
       <div className="max-h-[70vh] space-y-5 overflow-y-auto pr-1">
+        {improvementMode && seedTransaction ? (
+          <section className="space-y-3 rounded-md border p-3">
+            <div>
+              <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                This Transaction
+              </p>
+              <div className="mt-1 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">
+                    {seedTransaction.plaid_merchant_name ||
+                      seedTransaction.description ||
+                      "Unnamed transaction"}
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    {[
+                      transactionDate,
+                      walletMap.get(seedTransaction.wallet_id ?? "")?.name,
+                      seedTransaction.type,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                </div>
+                <p className="shrink-0 text-sm font-medium tabular-nums">
+                  {transactionAmount}
+                </p>
+              </div>
+            </div>
+            <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
+              <dt className="text-muted-foreground">Merchant</dt>
+              <dd className="truncate">
+                {seedTransaction.plaid_merchant_name || "Unavailable"}
+              </dd>
+              <dt className="text-muted-foreground">Description</dt>
+              <dd className="break-words">
+                {seedTransaction.description || "Unavailable"}
+              </dd>
+              <dt className="text-muted-foreground">Plaid Category</dt>
+              <dd className="truncate">
+                {seedTransaction.plaid_personal_finance_category_primary ||
+                  "Unavailable"}
+              </dd>
+            </dl>
+
+            {improvementSuggestion ? (
+              <div className="bg-muted/50 rounded-md p-3 text-sm">
+                <p className="font-medium">Suggested Pattern</p>
+                {suggestionAdded ? (
+                  <div className="mt-2 space-y-1 text-xs">
+                    <p className="text-muted-foreground break-words capitalize">
+                      {addedImprovementCondition?.field.replaceAll("_", " ")}{" "}
+                      contains “{addedImprovementCondition?.value}”
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="size-4 text-emerald-600" />
+                      <span>
+                        {seedMatchesDefinition
+                          ? "This transaction now matches."
+                          : "Review the conditions before updating."}
+                        {improvementPreviewMutation.isPending
+                          ? " Checking past transactions…"
+                          : improvementDelta !== null
+                            ? ` ${Math.max(0, improvementDelta)} additional past transactions match.`
+                            : ""}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-2 space-y-2">
+                    <Label htmlFor="suggested-rule-pattern" className="sr-only">
+                      Suggested pattern value
+                    </Label>
+                    <div className="grid grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-2 text-xs">
+                      <span className="capitalize">
+                        {improvementSuggestion.field.replaceAll("_", " ")}
+                      </span>
+                      <span className="text-muted-foreground">contains</span>
+                      <Input
+                        id="suggested-rule-pattern"
+                        name="suggested-rule-pattern"
+                        autoComplete="off"
+                        value={improvementValue}
+                        onChange={(event) =>
+                          setImprovementValue(event.target.value)
+                        }
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={addSuggestedPattern}
+                      disabled={isBusy || improvementValue.trim().length === 0}
+                    >
+                      <Plus className="mr-2 size-4" />
+                      Add to Rule
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
+                <AlertCircle className="mt-0.5 size-4 shrink-0 text-amber-700" />
+                <p>
+                  This automation uses mixed or grouped-by-AND conditions.
+                  Review it manually so adding an OR pattern does not broaden
+                  the rule unexpectedly.
+                </p>
+              </div>
+            )}
+          </section>
+        ) : null}
+
         <div className="space-y-2">
           <Label htmlFor="rule-name">Name</Label>
           <Input
@@ -717,7 +929,11 @@ export default function TransactionRuleForm({
               onClick={() => saveMutation.mutate()}
               disabled={isBusy}
             >
-              {rule ? "Update" : "Create"}
+              {improvementMode
+                ? `Update ${rule?.name}`
+                : rule
+                  ? "Update"
+                  : "Create"}
             </Button>
           </div>
         </div>
