@@ -58,9 +58,10 @@ function useWalletsSettleReady(workspaceId: string | undefined) {
 }
 
 /**
- * Shows the locally cached balance first, then animates to the live value once
- * when settled data differs. After that (and on remounts/refreshes with the
- * same snapshot), updates are not animated.
+ * Shows the locally cached balance first, then animates to the live value when
+ * settled data differs. After the initial reveal, later live changes (e.g. from
+ * new transactions) keep animating. Remounts reuse the revealed session state so
+ * page transitions do not replay the cache → live transition.
  */
 export function useSessionBalanceAnimation(
   key: string,
@@ -87,21 +88,23 @@ export function useSessionBalanceAnimation(
     revealedRef.current = { key, value: hasSidebarBalanceRevealed(key) };
   }
 
-  const [displayCents, setDisplayCents] = useState(
-    () =>
-      (hasSidebarBalanceRevealed(key)
-        ? liveCents
-        : (readSidebarBalance(key) ?? liveCents)),
+  const [displayCents, setDisplayCents] = useState(() =>
+    hasSidebarBalanceRevealed(key)
+      ? liveCents
+      : (readSidebarBalance(key) ?? liveCents),
   );
-  const [animated, setAnimated] = useState(false);
+  // Once revealed, keep NumberFlow animations on so transaction updates animate.
+  const [animated, setAnimated] = useState(() =>
+    hasSidebarBalanceRevealed(key),
+  );
 
   useEffect(() => {
     if (revealedRef.current.value || hasSidebarBalanceRevealed(key)) {
       revealedRef.current = { key, value: true };
-      setAnimated(false);
+      markSidebarBalanceRevealed(key);
+      setAnimated(true);
       setDisplayCents(liveCents);
       writeSidebarBalance(key, liveCents);
-      markSidebarBalanceRevealed(key);
       return;
     }
 
@@ -113,22 +116,19 @@ export function useSessionBalanceAnimation(
 
     const baseline = baselineRef.current.value;
 
+    // Lock this key for the JS session so remounts don't replay cache → live.
+    markSidebarBalanceRevealed(key);
+    revealedRef.current = { key, value: true };
+    setAnimated(true);
+
     if (baseline === undefined || baseline === liveCents) {
-      setAnimated(false);
       setDisplayCents(liveCents);
       writeSidebarBalance(key, liveCents);
-      markSidebarBalanceRevealed(key);
-      revealedRef.current = { key, value: true };
       return;
     }
 
-    // Lock this key for the JS session so remounts don't replay the animation.
-    markSidebarBalanceRevealed(key);
-    revealedRef.current = { key, value: true };
-
     // Ensure NumberFlow sees the cached value before the live target.
     setDisplayCents(baseline);
-    setAnimated(true);
 
     const frame = requestAnimationFrame(() => {
       setDisplayCents(liveCents);
@@ -140,7 +140,6 @@ export function useSessionBalanceAnimation(
 
   const onAnimationsFinish = () => {
     writeSidebarBalance(key, liveCents);
-    setAnimated(false);
   };
 
   return {
