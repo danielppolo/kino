@@ -18,25 +18,10 @@ import SettingsListLoading from "@/components/shared/settings-list-loading";
 import TransactionRuleForm from "@/components/shared/transaction-rule-form";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Text } from "@/components/ui/typography";
 import { TooltipButton } from "@/components/ui/tooltip-button";
+import { Text } from "@/components/ui/typography";
 import { useWorkspace } from "@/contexts/workspace-context";
 import type { TransactionRule } from "@/utils/transaction-rules";
-
-function summarizeRule(rule: TransactionRule) {
-  const fields = rule.conditions
-    .map((condition) => condition.field.replaceAll("_", " "))
-    .join(rule.matchMode === "all" ? " + " : " or ");
-  const actions = [
-    rule.actions.categoryId ? "category" : null,
-    rule.actions.labelId ? "label" : null,
-    rule.actions.tagIds.length > 0 ? "tags" : null,
-    rule.actions.ontologyAssociations.length > 0 ? "canonical context" : null,
-  ]
-    .filter(Boolean)
-    .join(", ");
-  return `${fields} → ${actions}`;
-}
 
 export default function TransactionRulesSection() {
   const { activeWorkspace } = useWorkspace();
@@ -112,27 +97,8 @@ export default function TransactionRulesSection() {
                 setOpen(true);
               }}
             >
-              <Switch
-                checked={rule.enabled}
-                aria-label={`${rule.enabled ? "Disable" : "Enable"} ${rule.name}`}
-                onClick={(event) => event.stopPropagation()}
-                onCheckedChange={(enabled) =>
-                  enabledMutation.mutate({ enabled, id: rule.id })
-                }
-              />
               <div className="min-w-0 grow">
                 <Text className="truncate font-medium">{rule.name}</Text>
-                <p className="text-muted-foreground truncate text-xs">
-                  {summarizeRule(rule)}
-                </p>
-              </div>
-              <div className="text-muted-foreground hidden text-right text-xs sm:block">
-                <p>{rule.matchCount ?? 0} matches</p>
-                <p>
-                  {rule.lastMatchedAt
-                    ? `Last ${new Date(rule.lastMatchedAt).toLocaleDateString()}`
-                    : "Never run"}
-                </p>
               </div>
               <div className="flex">
                 <Button
@@ -162,6 +128,15 @@ export default function TransactionRulesSection() {
                   <ArrowDown className="size-4" />
                 </Button>
               </div>
+              <Switch
+                className="ml-2"
+                checked={rule.enabled}
+                aria-label={`${rule.enabled ? "Disable" : "Enable"} ${rule.name}`}
+                onClick={(event) => event.stopPropagation()}
+                onCheckedChange={(enabled) =>
+                  enabledMutation.mutate({ enabled, id: rule.id })
+                }
+              />
             </SelectableRow>
           ))
         )}

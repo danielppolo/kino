@@ -453,6 +453,27 @@ export default function TransactionRuleForm({
       onOpenChange={onOpenChange}
     >
       <div className="max-h-[70vh] space-y-5 overflow-y-auto pr-1">
+        {rule ? (
+          <dl className="bg-muted/50 grid grid-cols-2 gap-3 rounded-md p-3 text-sm">
+            <div>
+              <dt className="text-muted-foreground text-xs">Matches</dt>
+              <dd className="font-medium tabular-nums">
+                {rule.matchCount ?? 0}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground text-xs">Last Run</dt>
+              <dd className="font-medium">
+                {rule.lastMatchedAt
+                  ? new Intl.DateTimeFormat(undefined, {
+                      dateStyle: "medium",
+                    }).format(new Date(rule.lastMatchedAt))
+                  : "Never"}
+              </dd>
+            </div>
+          </dl>
+        ) : null}
+
         {improvementMode && seedTransaction ? (
           <section className="space-y-3 rounded-md border p-3">
             <div>
