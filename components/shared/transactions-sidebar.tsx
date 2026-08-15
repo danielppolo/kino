@@ -17,10 +17,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import SaveViewDialog from "./save-view-dialog";
 import { SidebarWrapper } from "./sidebar-wrapper";
 import { TransactionLink } from "./transaction-link";
-import { WalletTypeIcon } from "./wallet-type-icon";
 
+import { AnimatedMoney } from "@/components/ui/animated-money";
 import { Kbd } from "@/components/ui/kbd";
-import { Money } from "@/components/ui/money";
 import {
   SidebarGroup,
   SidebarGroupAction,
@@ -33,10 +32,12 @@ import {
 } from "@/components/ui/sidebar";
 import { useViews } from "@/contexts/settings-context";
 import { useTransactionForm } from "@/contexts/transaction-form-context";
+import { useWorkspace } from "@/contexts/workspace-context";
 import { useTotalBalance } from "@/hooks/use-total-balance";
 import { useTransactionQueryState } from "@/hooks/use-transaction-query";
 import { buildTransactionUrl } from "@/utils/build-transaction-url";
 import { canUseGlobalShortcuts } from "@/utils/keyboard-shortcuts";
+import { sidebarBalanceKey } from "@/utils/sidebar-balance-snapshot";
 import { deleteViews } from "@/utils/supabase/mutations";
 
 export function TransactionsSidebar() {
@@ -46,10 +47,13 @@ export function TransactionsSidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { walletsByCurrency, showOwedInBalance } = useTotalBalance();
+  const { walletsByCurrency, showOwedInBalance, isOwedReady } =
+    useTotalBalance();
+  const { activeWorkspace } = useWorkspace();
   const [views] = useViews();
   const queryClient = useQueryClient();
   const { open: formOpen } = useTransactionForm();
+  const workspaceId = activeWorkspace?.id ?? "workspace";
 
   // Get current month's start and end dates as fallback
   const now = new Date();
@@ -209,9 +213,14 @@ export function TransactionsSidebar() {
                         <span className="flex-1">{wallet.name}</span>
 
                         <span className="relative inline-flex min-w-fit items-center justify-center">
-                          <Money
+                          <AnimatedMoney
+                            balanceKey={sidebarBalanceKey(
+                              workspaceId,
+                              `wallet:${wallet.id}`,
+                            )}
                             cents={displayBalance}
                             currency={wallet.currency}
+                            ready={isOwedReady}
                             as="span"
                             className="text-muted-foreground text-xs group-hover/wallet-link:hidden"
                           />

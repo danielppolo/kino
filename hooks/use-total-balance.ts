@@ -18,7 +18,11 @@ export function useTotalBalance() {
     .sort((a, b) => a.name.localeCompare(b.name));
 
   // Query owed amounts for all wallets (only when toggle is ON)
-  const { data: owedByWallet = {} } = useQuery({
+  const {
+    data: owedByWallet = {},
+    fetchStatus: owedFetchStatus,
+    isFetched: isOwedFetched,
+  } = useQuery({
     queryKey: ["wallet-owed-amounts", wallets.map((w) => w.id)],
     queryFn: async () => {
       const supabase = await createClient();
@@ -33,6 +37,11 @@ export function useTotalBalance() {
     enabled: showOwedInBalance && wallets.length > 0,
     staleTime: 1000 * 15,
   });
+
+  const isOwedReady =
+    !showOwedInBalance ||
+    wallets.length === 0 ||
+    (owedFetchStatus === "idle" && isOwedFetched);
 
   // Calculate total balance (with optional owed amounts)
   const totalBalance = sortedWallets.reduce((total, wallet) => {
@@ -83,5 +92,6 @@ export function useTotalBalance() {
     sortedWallets: walletsWithOwed,
     baseCurrency,
     showOwedInBalance,
+    isOwedReady,
   };
 }
