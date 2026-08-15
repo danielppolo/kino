@@ -8,8 +8,15 @@ import TransferForm from "./transfer-form";
 import { useTransactionForm } from "@/contexts/transaction-form-context";
 
 function TransactionForm() {
-  const { open, type, walletId, initialData, transferPrefill, setOpen } =
-    useTransactionForm();
+  const {
+    open,
+    type,
+    walletId,
+    initialData,
+    transferPrefill,
+    setOpen,
+    openForm,
+  } = useTransactionForm();
 
   const [keyboardType, setKeyboardType] = useState<
     "transfer" | "income" | "expense" | undefined
@@ -21,17 +28,29 @@ function TransactionForm() {
         switch (e.key.toLowerCase()) {
           case "t":
             e.preventDefault();
-            setOpen(true);
+            if (walletId) {
+              openForm({ type: "transfer", walletId });
+            } else {
+              setOpen(true);
+            }
             setKeyboardType("transfer");
             break;
           case "e":
             e.preventDefault();
-            setOpen(true);
+            if (walletId) {
+              openForm({ type: "expense", walletId });
+            } else {
+              setOpen(true);
+            }
             setKeyboardType("expense");
             break;
           case "i":
             e.preventDefault();
-            setOpen(true);
+            if (walletId) {
+              openForm({ type: "income", walletId });
+            } else {
+              setOpen(true);
+            }
             setKeyboardType("income");
             break;
         }
@@ -42,7 +61,7 @@ function TransactionForm() {
       // document.addEventListener("keydown", down);
     }
     return () => document.removeEventListener("keydown", down);
-  }, [setOpen, open]);
+  }, [setOpen, open, openForm, walletId]);
 
   const handleOpenChange = (v: boolean) => {
     if (!v) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { DefaultValues, FieldValues, Path, useForm } from "react-hook-form";
 import { Repeat2, Trash } from "lucide-react";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { DrawerDialog } from "@/components/ui/drawer-dialog";
 import { Form } from "@/components/ui/form";
+import { runEntityFormSubmit } from "@/utils/entity-form-submit";
 
 interface EntityFormProps<T extends FieldValues> {
   title: string;
@@ -73,25 +74,41 @@ export function EntityForm<T extends FieldValues>({
   initialFocusRef,
 }: EntityFormProps<T>) {
   const isEdit = !!entity;
+  const pendingRestoreRef = useRef<T | null>(null);
   const form = useForm<T>({
     defaultValues: (entity || defaultValues) as DefaultValues<T>,
   });
 
   useEffect(() => {
     if (open) {
-      form.reset(entity || defaultValues);
+      if (pendingRestoreRef.current) {
+        form.reset(pendingRestoreRef.current);
+        pendingRestoreRef.current = null;
+      } else {
+        form.reset(entity || defaultValues);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entity, open]);
 
   const handleSubmit = async (values: T) => {
-    const { error, resetValues } = await onSubmit(values);
+    const { error, resetValues } = await runEntityFormSubmit({
+      values,
+      addAnother: !isEdit && addAnother,
+      onOpenChange,
+      onBeforeErrorReopen: (restoreValues) => {
+        pendingRestoreRef.current = restoreValues;
+      },
+      onSubmit,
+    });
+
     if (error) {
-      return toast.error(error);
+      toast.error(error);
+      return;
     }
 
     toast.success(isEdit ? "Updated successfully!" : "Created successfully!");
-    if (addAnother) {
+    if (!isEdit && addAnother) {
       if (resetValues) form.reset(resetValues);
       if (setFocus) form.setFocus(setFocus);
       return;

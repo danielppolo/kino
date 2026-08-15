@@ -71,6 +71,7 @@ import {
 import { useTransactionForm } from "@/contexts/transaction-form-context";
 import { useWorkspace } from "@/contexts/workspace-context";
 import useFilters from "@/hooks/use-filters";
+import { runEntityFormSubmit } from "@/utils/entity-form-submit";
 import {
   type OntologyAssociationItem,
   parseStoredOntologyAssociations,
@@ -180,6 +181,7 @@ const ExpenseIncomeForm = ({
   const moreRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const { billPrefill } = useTransactionForm();
+  const pendingRestoreRef = useRef<ExpenseIncomeFormValues | null>(null);
   const workspaceWalletIds = wallets.map((wallet) => wallet.id);
   const transactionsQueryKey = [
     "transactions",
@@ -551,7 +553,12 @@ const ExpenseIncomeForm = ({
 
   useEffect(() => {
     if (open) {
-      form.reset(entityValues ?? defaultValues);
+      if (pendingRestoreRef.current) {
+        form.reset(pendingRestoreRef.current);
+        pendingRestoreRef.current = null;
+      } else {
+        form.reset(entityValues ?? defaultValues);
+      }
       setDatePickerOpen(false);
       window.requestAnimationFrame(() => {
         amountInputRef.current?.focus();
@@ -605,14 +612,41 @@ const ExpenseIncomeForm = ({
   }, [open]);
 
   const submitForm = async (values: ExpenseIncomeFormValues) => {
-    const { error } = await handleSubmit(values);
+    const { error, resetValues } = await runEntityFormSubmit({
+      values,
+      addAnother: !isEdit && addAnother,
+      onOpenChange,
+      onBeforeErrorReopen: (restoreValues) => {
+        pendingRestoreRef.current = restoreValues;
+      },
+      onSubmit: handleSubmit,
+    });
+
     if (error) {
       toast.error(error);
       return;
     }
 
     toast.success(isEdit ? "Updated successfully!" : "Created successfully!");
-    if (!addAnother) onSuccess?.();
+    if (!isEdit && addAnother) {
+      if (resetValues) {
+        form.reset(resetValues);
+      } else {
+        form.reset({
+          ...defaultValues,
+          date: values.date,
+          type: values.type,
+          wallet_id: values.wallet_id,
+          currency: values.currency,
+        });
+      }
+      window.requestAnimationFrame(() => {
+        amountInputRef.current?.focus();
+      });
+      return;
+    }
+
+    onSuccess?.();
   };
 
   const deleteForm = async () => {
