@@ -4,21 +4,22 @@ import * as React from "react";
 import { Check } from "lucide-react";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 
-import { Money } from "@/components/ui/money";
-import { LazyIcon } from "@/components/ui/icon";
-import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
+import { AnimatedMoney } from "@/components/ui/animated-money";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useTotalBalance } from "@/hooks/use-total-balance";
+import { LazyIcon } from "@/components/ui/icon";
+import {
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar";
 import { useWorkspace } from "@/contexts/workspace-context";
+import { useTotalBalance } from "@/hooks/use-total-balance";
+import { sidebarBalanceKey } from "@/utils/sidebar-balance-snapshot";
 
 function WorkspaceGlyph({
   icon,
@@ -50,10 +51,14 @@ function WorkspaceGlyph({
 }
 
 export function SidebarHeaderMenu() {
-  const { totalBalance, baseCurrency, showOwedInBalance } = useTotalBalance();
+  const { totalBalance, baseCurrency, showOwedInBalance, isOwedReady } =
+    useTotalBalance();
   const { activeWorkspace, workspaces, switchWorkspace, isLoading } =
     useWorkspace();
   const [isSwitching, setIsSwitching] = React.useState(false);
+  const totalBalanceKey = activeWorkspace
+    ? sidebarBalanceKey(activeWorkspace.id, "total")
+    : "total";
 
   const handleSwitchWorkspace = async (workspaceId: string) => {
     if (workspaceId === activeWorkspace?.id) return;
@@ -87,9 +92,11 @@ export function SidebarHeaderMenu() {
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="font-display truncate">{workspaceName}</span>
-                <Money
+                <AnimatedMoney
+                  balanceKey={totalBalanceKey}
                   cents={totalBalance}
                   currency={baseCurrency}
+                  ready={isOwedReady}
                   as="span"
                   className="truncate text-xs"
                 />
