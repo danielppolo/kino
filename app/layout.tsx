@@ -18,22 +18,27 @@ const display = localFont({
   style: "normal",
 });
 
-const neueMachina = localFont({
+const untitledSans = localFont({
   src: [
     {
-      path: "./fonts/neue-machina/NeueMachina-Light.woff2",
+      path: "./fonts/untitled-sans/UntitledSansWeb-Light.woff2",
       weight: "300",
       style: "normal",
     },
     {
-      path: "./fonts/neue-machina/NeueMachina-Regular.woff2",
+      path: "./fonts/untitled-sans/UntitledSansWeb-LightItalic.woff2",
+      weight: "300",
+      style: "italic",
+    },
+    {
+      path: "./fonts/untitled-sans/UntitledSansWeb-Regular.woff2",
       weight: "400",
       style: "normal",
     },
     {
-      path: "./fonts/neue-machina/NeueMachina-Ultrabold.woff2",
-      weight: "800",
-      style: "normal",
+      path: "./fonts/untitled-sans/UntitledSansWeb-RegularItalic.woff2",
+      weight: "400",
+      style: "italic",
     },
   ],
   variable: "--font-sans",
@@ -84,7 +89,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${display.variable} ${neueMachina.variable} bg-sidebar`}
+      className={`${display.variable} ${untitledSans.variable} bg-sidebar`}
       suppressHydrationWarning
     >
       <body className="bg-sidebar">
