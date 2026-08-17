@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { Shapes } from "lucide-react";
+import { Building2, MapPin, Plane, UserRound } from "lucide-react";
 
 import { Combobox } from "@/components/ui/combobox";
 import {
@@ -9,6 +9,20 @@ import {
   useOntologyEntities,
 } from "@/contexts/settings-context";
 import { useTransactionQueryState } from "@/hooks/use-transaction-query";
+import {
+  ONTOLOGY_ASSOCIATION_TYPES,
+  type OntologyAssociationType,
+} from "@/utils/ontology-associations";
+
+const TYPE_META = {
+  person: { label: "Person", Icon: UserRound },
+  place: { label: "Place", Icon: MapPin },
+  organization: { label: "Organization", Icon: Building2 },
+  trip: { label: "Trip", Icon: Plane },
+} satisfies Record<
+  OntologyAssociationType,
+  { label: string; Icon: typeof UserRound }
+>;
 
 export default function OntologyFilter() {
   const { ontology_associations_enabled } = useFeatureFlags();
@@ -22,22 +36,53 @@ export default function OntologyFilter() {
   }, [filters.ontology_entity_id, ontology_associations_enabled, setFilters]);
 
   if (!ontology_associations_enabled || entities.length === 0) return null;
+  const selectedIds = filters.ontology_entity_id.split(",").filter(Boolean);
 
   return (
-    <Combobox
-      className="w-auto"
-      icon={<Shapes className="size-4" />}
-      options={entities.map((entity) => ({
-        value: entity.id,
-        label: entity.canonical_name,
-        keywords: [entity.entity_type, entity.subtitle ?? ""],
-      }))}
-      placeholder="Canonical context"
-      searchPlaceholder="Search saved context…"
-      size="sm"
-      value={filters.ontology_entity_id}
-      variant={filters.ontology_entity_id ? "secondary" : "ghost"}
-      onChange={(value) => setFilters({ ontology_entity_id: value || null })}
-    />
+    <>
+      {ONTOLOGY_ASSOCIATION_TYPES.map((type) => {
+        const typeEntities = entities.filter(
+          (entity) => entity.entity_type === type,
+        );
+        if (typeEntities.length === 0) return null;
+
+        const selectedId = selectedIds.find((id) =>
+          typeEntities.some((entity) => entity.id === id),
+        );
+        const { Icon, label } = TYPE_META[type];
+
+        return (
+          <div
+            className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors select-none data-disabled:pointer-events-none data-disabled:opacity-50"
+            key={type}
+          >
+            <Combobox
+              className="w-auto"
+              icon={<Icon className="size-4" />}
+              options={typeEntities.map((entity) => ({
+                value: entity.id,
+                label: entity.canonical_name,
+                keywords: [entity.subtitle ?? ""],
+              }))}
+              placeholder={label}
+              searchPlaceholder={`Search ${label.toLowerCase()}s…`}
+              size="sm"
+              value={selectedId ?? ""}
+              variant={selectedId ? "secondary" : "ghost"}
+              onChange={(value) => {
+                const nextIds = selectedIds.filter(
+                  (id) => !typeEntities.some((entity) => entity.id === id),
+                );
+                if (value) nextIds.push(value);
+                void setFilters({
+                  ontology_entity_id: nextIds.join(",") || null,
+                  page: null,
+                });
+              }}
+            />
+          </div>
+        );
+      })}
+    </>
   );
 }

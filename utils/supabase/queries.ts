@@ -254,7 +254,10 @@ export const listTransactions = async (
   }
 
   if (params?.ontology_entity_id) {
-    query = query.contains("ontology_entity_ids", [params.ontology_entity_id]);
+    query = query.contains(
+      "ontology_entity_ids",
+      params.ontology_entity_id.split(",").filter(Boolean),
+    );
   }
 
   // Filter by category_id if available

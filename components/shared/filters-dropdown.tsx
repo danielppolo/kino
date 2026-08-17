@@ -8,6 +8,7 @@ import DateRangeFilter from "@/app/app/(transactions)/transactions/(components)/
 import DescriptionFilter from "@/app/app/(transactions)/transactions/(components)/description-filter";
 import LabelFilter from "@/app/app/(transactions)/transactions/(components)/label-filter";
 import OntologyFilter from "@/app/app/(transactions)/transactions/(components)/ontology-filter";
+import ReviewStatusFilter from "@/app/app/(transactions)/transactions/(components)/review-status-filter";
 import TagFilter from "@/app/app/(transactions)/transactions/(components)/tag-filter";
 import TypeFilter from "@/app/app/(transactions)/transactions/(components)/type-filter";
 import {
@@ -39,14 +40,15 @@ export function FiltersDropdown() {
             <TypeFilter />
           </div>
           <div className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors select-none data-disabled:pointer-events-none data-disabled:opacity-50">
+            <ReviewStatusFilter />
+          </div>
+          <div className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors select-none data-disabled:pointer-events-none data-disabled:opacity-50">
             <AmountFilter />
           </div>
           <div className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors select-none data-disabled:pointer-events-none data-disabled:opacity-50">
             <LabelFilter />
           </div>
-          <div className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors select-none data-disabled:pointer-events-none data-disabled:opacity-50">
-            <OntologyFilter />
-          </div>
+          <OntologyFilter />
           <div className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors select-none data-disabled:pointer-events-none data-disabled:opacity-50">
             <CategoryFilter />
           </div>

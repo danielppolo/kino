@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertTriangle } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import MonthPagination from "../transactions/(components)/month-pagination";
@@ -17,19 +16,15 @@ import PageHeader from "@/components/shared/page-header";
 import { SortDropdown } from "@/components/shared/sort-dropdown";
 import TransactionTotal from "@/components/shared/transaction-total";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { TooltipButton } from "@/components/ui/tooltip-button";
 import { useFeatureFlags } from "@/contexts/settings-context";
-import { useTransactionQueryState } from "@/hooks/use-transaction-query";
 
 export function TransactionsHeader() {
   const [billsSheetOpen, setBillsSheetOpen] = useState(false);
   const { bills_enabled } = useFeatureFlags();
-  const [filters, setFilters] = useTransactionQueryState();
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const isCopilotRoute = pathname.startsWith("/app/copilot");
-  const reviewFilterActive = filters.review_status === "needs_review";
 
   useEffect(() => {
     if (!bills_enabled) return;
@@ -50,13 +45,6 @@ export function TransactionsHeader() {
     router.replace(query ? `${pathname}?${query}` : pathname);
   };
 
-  const handleToggleNeedsReview = () => {
-    setFilters({
-      page: null,
-      review_status: reviewFilterActive ? null : "needs_review",
-    });
-  };
-
   if (isCopilotRoute) {
     return null;
   }
@@ -75,18 +63,6 @@ export function TransactionsHeader() {
           )}
           <ChartToggle />
           <PlaidSyncButton />
-          <TooltipButton
-            variant={reviewFilterActive ? "secondary" : "ghost"}
-            size="sm"
-            tooltip={
-              reviewFilterActive
-                ? "Show all transactions"
-                : "Show transactions that need review"
-            }
-            onClick={handleToggleNeedsReview}
-          >
-            <AlertTriangle className="h-4 w-4" />
-          </TooltipButton>
           <SortDropdown />
           <FiltersDropdown />
           <AddTransactionDropdown />
