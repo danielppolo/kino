@@ -41,6 +41,8 @@ interface WorkspaceContextType {
   workspaces: Workspace[];
   workspaceMembers: WorkspaceMember[];
   conversionRates: Record<string, CurrencyConversion>;
+  areConversionRatesReady: boolean;
+  isConversionRatesFetching: boolean;
   switchWorkspace: (workspaceId: string) => Promise<void>;
   isLoading: boolean;
   refetch: () => Promise<void>;
@@ -171,13 +173,19 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({
   );
 
 
+  const baseCurrency = activeWorkspace?.base_currency || "USD";
+  const needsCurrencyConversion = walletCurrencies.some(
+    (currency) => currency !== baseCurrency,
+  );
+
   // Fetch conversion rates for all wallet currencies
   const {
     data: conversionRates = {},
+    isFetched: isConversionRatesFetched,
+    isFetching: isConversionRatesFetching,
+    isPlaceholderData: isConversionRatesPlaceholder,
     refetch: refetchConversionRates,
-  } = useQuery<
-    Record<string, CurrencyConversion>
-  >({
+  } = useQuery<Record<string, CurrencyConversion>>({
     queryKey: [
       "workspace-currency-conversions",
       activeWorkspace?.id,
@@ -187,15 +195,16 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({
     queryFn: async () => {
       if (!activeWorkspace) return {};
 
-      const baseCurrency = activeWorkspace.base_currency || "USD";
+      const workspaceBaseCurrency = activeWorkspace.base_currency || "USD";
 
       // If no wallets or all wallets use base currency, return base currency only
       if (
         walletCurrencies.length === 0 ||
-        (walletCurrencies.length === 1 && walletCurrencies[0] === baseCurrency)
+        (walletCurrencies.length === 1 &&
+          walletCurrencies[0] === workspaceBaseCurrency)
       ) {
         return {
-          [baseCurrency]: {
+          [workspaceBaseCurrency]: {
             rate: 1,
             lastUpdated: new Date().toISOString(),
             source: "direct",
@@ -210,7 +219,7 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({
         },
         body: JSON.stringify({
           currencies: walletCurrencies,
-          baseCurrency,
+          baseCurrency: workspaceBaseCurrency,
         }),
       });
 
@@ -226,6 +235,17 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({
     staleTime: 1000 * 60 * 60,
     refetchOnMount: true,
   });
+
+  const areConversionRatesReady =
+    walletCurrencies.length === 0 ||
+    !needsCurrencyConversion ||
+    (isConversionRatesFetched &&
+      !isConversionRatesPlaceholder &&
+      walletCurrencies.every(
+        (currency) =>
+          currency === baseCurrency ||
+          typeof conversionRates[currency]?.rate === "number",
+      ));
 
   const handleSwitchWorkspace = async (workspaceId: string) => {
     try {
@@ -252,6 +272,8 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({
     workspaces,
     workspaceMembers,
     conversionRates,
+    areConversionRatesReady,
+    isConversionRatesFetching,
     switchWorkspace: handleSwitchWorkspace,
     isLoading: workspacesLoading || preferencesLoading,
     refetch,

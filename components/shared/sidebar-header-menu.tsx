@@ -17,9 +17,13 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { Spinner } from "@/components/ui/spinner";
 import { useWorkspace } from "@/contexts/workspace-context";
 import { useTotalBalance } from "@/hooks/use-total-balance";
-import { sidebarBalanceKey } from "@/utils/sidebar-balance-snapshot";
+import {
+  readSidebarBalance,
+  sidebarBalanceKey,
+} from "@/utils/sidebar-balance-snapshot";
 
 function WorkspaceGlyph({
   icon,
@@ -51,14 +55,22 @@ function WorkspaceGlyph({
 }
 
 export function SidebarHeaderMenu() {
-  const { totalBalance, baseCurrency, showOwedInBalance, isOwedReady } =
-    useTotalBalance();
+  const {
+    totalBalance,
+    baseCurrency,
+    showOwedInBalance,
+    isTotalBalanceReady,
+    isTotalBalanceRefreshing,
+  } = useTotalBalance();
   const { activeWorkspace, workspaces, switchWorkspace, isLoading } =
     useWorkspace();
   const [isSwitching, setIsSwitching] = React.useState(false);
   const totalBalanceKey = activeWorkspace
     ? sidebarBalanceKey(activeWorkspace.id, "total")
     : "total";
+  const cachedTotalBalance = readSidebarBalance(totalBalanceKey);
+  const showTotalBalance =
+    isTotalBalanceReady || cachedTotalBalance !== undefined;
 
   const handleSwitchWorkspace = async (workspaceId: string) => {
     if (workspaceId === activeWorkspace?.id) return;
@@ -92,14 +104,21 @@ export function SidebarHeaderMenu() {
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="font-display truncate">{workspaceName}</span>
-                <AnimatedMoney
-                  balanceKey={totalBalanceKey}
-                  cents={totalBalance}
-                  currency={baseCurrency}
-                  ready={isOwedReady}
-                  as="span"
-                  className="truncate text-xs"
-                />
+                <span className="flex min-w-0 items-center gap-1.5">
+                  {showTotalBalance ? (
+                    <AnimatedMoney
+                      balanceKey={totalBalanceKey}
+                      cents={totalBalance}
+                      currency={baseCurrency}
+                      ready={isTotalBalanceReady}
+                      as="span"
+                      className="truncate text-xs"
+                    />
+                  ) : null}
+                  {isTotalBalanceRefreshing ? (
+                    <Spinner className="text-muted-foreground size-3 shrink-0" />
+                  ) : null}
+                </span>
                 {showOwedInBalance && (
                   <span className="text-muted-foreground text-xs">
                     (incl. owed)

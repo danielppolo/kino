@@ -59,9 +59,11 @@ function useWalletsSettleReady(workspaceId: string | undefined) {
 
 /**
  * Shows the locally cached balance first, then animates to the live value when
- * settled data differs. After the initial reveal, later live changes (e.g. from
- * new transactions) keep animating. Remounts reuse the revealed session state so
- * page transitions do not replay the cache → live transition.
+ * settled data differs. While `ready` is false, keeps showing the cached final
+ * amount instead of a partial live total. After the initial reveal, later live
+ * changes (e.g. from new transactions) keep animating. Remounts reuse the
+ * revealed session state so page transitions do not replay the cache → live
+ * transition.
  */
 export function useSessionBalanceAnimation(
   key: string,
@@ -88,29 +90,37 @@ export function useSessionBalanceAnimation(
     revealedRef.current = { key, value: hasSidebarBalanceRevealed(key) };
   }
 
-  const [displayCents, setDisplayCents] = useState(() =>
-    hasSidebarBalanceRevealed(key)
-      ? liveCents
-      : (readSidebarBalance(key) ?? liveCents),
-  );
+  const [displayCents, setDisplayCents] = useState(() => {
+    // Prefer the last converted snapshot so we never flash a partial FX total.
+    const cached = readSidebarBalance(key);
+    if (cached !== undefined) return cached;
+    if (hasSidebarBalanceRevealed(key)) return liveCents;
+    return liveCents;
+  });
   // Once revealed, keep NumberFlow animations on so transaction updates animate.
   const [animated, setAnimated] = useState(() =>
     hasSidebarBalanceRevealed(key),
   );
 
   useEffect(() => {
-    if (revealedRef.current.value || hasSidebarBalanceRevealed(key)) {
+    const alreadyRevealed =
+      revealedRef.current.value || hasSidebarBalanceRevealed(key);
+
+    if (!ready) {
+      setAnimated(false);
+      // Prefer the cached final balance over a partial live total (e.g. missing FX).
+      if (baselineRef.current.value !== undefined) {
+        setDisplayCents(baselineRef.current.value);
+      }
+      return;
+    }
+
+    if (alreadyRevealed) {
       revealedRef.current = { key, value: true };
       markSidebarBalanceRevealed(key);
       setAnimated(true);
       setDisplayCents(liveCents);
       writeSidebarBalance(key, liveCents);
-      return;
-    }
-
-    if (!ready) {
-      setAnimated(false);
-      setDisplayCents(baselineRef.current.value ?? liveCents);
       return;
     }
 

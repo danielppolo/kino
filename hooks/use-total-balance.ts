@@ -5,6 +5,7 @@ import {
   useSettings,
   useWallets,
 } from "@/contexts/settings-context";
+import { useWorkspace } from "@/contexts/workspace-context";
 import { createClient } from "@/utils/supabase/client";
 import { getWalletOwed } from "@/utils/supabase/queries";
 
@@ -12,10 +13,15 @@ export function useTotalBalance() {
   const [wallets] = useWallets();
   const { conversionRates, baseCurrency } = useCurrency();
   const { showOwedInBalance } = useSettings();
+  const { isConversionRatesFetching } = useWorkspace();
 
   const sortedWallets = wallets
     .filter((w) => w.visible)
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  const needsCurrencyConversion = sortedWallets.some(
+    (wallet) => wallet.currency !== baseCurrency,
+  );
 
   // Query owed amounts for all wallets (only when toggle is ON)
   const {
@@ -43,6 +49,17 @@ export function useTotalBalance() {
     wallets.length === 0 ||
     (owedFetchStatus === "idle" && isOwedFetched);
 
+  const areWalletConversionRatesReady = sortedWallets.every(
+    (wallet) =>
+      wallet.currency === baseCurrency ||
+      typeof conversionRates[wallet.currency]?.rate === "number",
+  );
+
+  const isTotalBalanceReady = isOwedReady && areWalletConversionRatesReady;
+  const isTotalBalanceRefreshing =
+    !isTotalBalanceReady ||
+    (needsCurrencyConversion && isConversionRatesFetching);
+
   // Calculate total balance (with optional owed amounts)
   const totalBalance = sortedWallets.reduce((total, wallet) => {
     const balance = wallet.balance_cents ?? 0;
@@ -53,10 +70,13 @@ export function useTotalBalance() {
     if (wallet.currency === baseCurrency) {
       return total + combined;
     }
-    const rate = conversionRates[wallet.currency]?.rate ?? 1;
+    const rate = conversionRates[wallet.currency]?.rate;
+    // Skip foreign wallets until a real conversion rate is available.
+    if (typeof rate !== "number") {
+      return total;
+    }
     return total + Math.round(combined * rate);
   }, 0);
-
 
   // Calculate total owed across all wallets
   const totalOwed = sortedWallets.reduce((total, wallet) => {
@@ -65,7 +85,10 @@ export function useTotalBalance() {
     if (wallet.currency === baseCurrency) {
       return total + owed;
     }
-    const rate = conversionRates[wallet.currency]?.rate ?? 1;
+    const rate = conversionRates[wallet.currency]?.rate;
+    if (typeof rate !== "number") {
+      return total;
+    }
     return total + Math.round(owed * rate);
   }, 0);
 
@@ -93,5 +116,7 @@ export function useTotalBalance() {
     baseCurrency,
     showOwedInBalance,
     isOwedReady,
+    isTotalBalanceReady,
+    isTotalBalanceRefreshing,
   };
 }
