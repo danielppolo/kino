@@ -1,16 +1,15 @@
 "use client";
 
-import { useMemo } from "react";
 import { RefreshCcw } from "lucide-react";
-import { useParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { TooltipButton } from "@/components/ui/tooltip-button";
+import { SidebarMenuAction } from "@/components/ui/sidebar";
 import { useWallets } from "@/contexts/settings-context";
-import { invalidateWorkspaceQueries } from "@/utils/query-cache";
+import { cn } from "@/lib/utils";
 import type { PlaidTransactionsResponse } from "@/utils/plaid/types";
+import { invalidateWorkspaceQueries } from "@/utils/query-cache";
 import type { Wallet } from "@/utils/supabase/types";
 
 async function syncPlaidWallet(wallet: Wallet) {
@@ -36,25 +35,20 @@ async function syncPlaidWallet(wallet: Wallet) {
   return json;
 }
 
-export function PlaidSyncButton() {
+interface PlaidSyncMenuActionProps {
+  walletId?: string;
+}
+
+export function PlaidSyncMenuAction({ walletId }: PlaidSyncMenuActionProps) {
   const [wallets] = useWallets();
-  const params = useParams<{ walletId?: string | string[] }>();
   const queryClient = useQueryClient();
-  const routeWalletId = Array.isArray(params.walletId)
-    ? params.walletId[0]
-    : params.walletId;
-  const plaidWallets = useMemo(() => {
-    const linkedWallets = wallets.filter(
-      (wallet) =>
-        wallet.plaid_account_id &&
-        wallet.plaid_sync_enabled &&
-        wallet.plaid_sync_start_at,
-    );
-
-    if (!routeWalletId) return linkedWallets;
-
-    return linkedWallets.filter((wallet) => wallet.id === routeWalletId);
-  }, [routeWalletId, wallets]);
+  const plaidWallets = wallets.filter(
+    (wallet) =>
+      (!walletId || wallet.id === walletId) &&
+      wallet.plaid_account_id &&
+      wallet.plaid_sync_enabled &&
+      wallet.plaid_sync_start_at,
+  );
 
   const syncMutation = useMutation({
     mutationFn: async () => {
@@ -78,24 +72,26 @@ export function PlaidSyncButton() {
     },
   });
 
-  if (plaidWallets.length === 0) {
-    return null;
-  }
+  if (plaidWallets.length === 0) return null;
+
+  const label =
+    plaidWallets.length === 1
+      ? `Sync ${plaidWallets[0].name}`
+      : `Sync ${plaidWallets.length} Plaid wallets`;
 
   return (
-    <TooltipButton
-      variant="ghost"
-      size="sm"
-      tooltip={
-        plaidWallets.length === 1
-          ? `Sync ${plaidWallets[0].name}`
-          : `Sync ${plaidWallets.length} Plaid wallets`
-      }
-      loading={syncMutation.isPending}
+    <SidebarMenuAction
+      aria-label={label}
+      title={label}
       disabled={syncMutation.isPending}
-      onClick={() => syncMutation.mutate()}
+      showOnHover
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        syncMutation.mutate();
+      }}
     >
-      <RefreshCcw className="h-4 w-4" />
-    </TooltipButton>
+      <RefreshCcw className={cn(syncMutation.isPending && "animate-spin")} />
+    </SidebarMenuAction>
   );
 }

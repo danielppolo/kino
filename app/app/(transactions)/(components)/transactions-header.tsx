@@ -7,7 +7,6 @@ import MonthPagination from "../transactions/(components)/month-pagination";
 import BillsBalanceBadge from "./bills-balance-badge";
 import BillsToggle from "./bills-toggle";
 import ChartToggle from "./chart-toggle";
-import { PlaidSyncButton } from "./plaid-sync-button";
 
 import { AddTransactionDropdown } from "@/components/shared/add-transaction-dropdown";
 import { BillsSheet } from "@/components/shared/bills-sheet";
@@ -62,7 +61,6 @@ export function TransactionsHeader() {
             <BillsToggle onOpenSheet={() => setBillsSheetOpen(true)} />
           )}
           <ChartToggle />
-          <PlaidSyncButton />
           <SortDropdown />
           <FiltersDropdown />
           <AddTransactionDropdown />

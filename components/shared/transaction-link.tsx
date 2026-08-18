@@ -3,8 +3,8 @@
 import { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { cn } from "@/lib/utils";
 
+import { cn } from "@/lib/utils";
 import { buildTransactionUrl } from "@/utils/build-transaction-url";
 
 interface TransactionLinkProps {
@@ -15,7 +15,6 @@ interface TransactionLinkProps {
   children: ReactNode;
   className?: string;
   preserveSearchParams?: boolean;
-  shortcut?: number;
 }
 
 export function TransactionLink({
@@ -26,7 +25,6 @@ export function TransactionLink({
   children,
   className,
   preserveSearchParams = true,
-  shortcut,
   ...props
 }: TransactionLinkProps) {
   const pathname = usePathname();

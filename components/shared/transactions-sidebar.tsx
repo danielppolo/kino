@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { endOfMonth, format, startOfMonth } from "date-fns";
 import { Bot, Home, Plus, X } from "lucide-react";
 import Link from "next/link";
@@ -14,12 +14,18 @@ import { toast } from "sonner";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { PlaidSyncMenuAction } from "./plaid-sync-menu-action";
 import SaveViewDialog from "./save-view-dialog";
 import { SidebarWrapper } from "./sidebar-wrapper";
 import { TransactionLink } from "./transaction-link";
 
 import { AnimatedMoney } from "@/components/ui/animated-money";
 import { Kbd } from "@/components/ui/kbd";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   SidebarGroup,
   SidebarGroupAction,
@@ -39,6 +45,79 @@ import { buildTransactionUrl } from "@/utils/build-transaction-url";
 import { canUseGlobalShortcuts } from "@/utils/keyboard-shortcuts";
 import { sidebarBalanceKey } from "@/utils/sidebar-balance-snapshot";
 import { deleteViews } from "@/utils/supabase/mutations";
+import type { Wallet } from "@/utils/supabase/types";
+
+interface WalletMenuItemProps {
+  wallet: Wallet & { owed_cents: number };
+  shortcut?: number;
+  isActive: boolean;
+  fromDate: string;
+  toDate: string;
+  displayBalance: number;
+  workspaceId: string;
+  isOwedReady: boolean;
+}
+
+function WalletMenuItem({
+  wallet,
+  shortcut,
+  isActive,
+  fromDate,
+  toDate,
+  displayBalance,
+  workspaceId,
+  isOwedReady,
+}: WalletMenuItemProps) {
+  const [hotkeyOpen, setHotkeyOpen] = useState(false);
+  const menuButton = (
+    <SidebarMenuButton
+      asChild
+      isActive={isActive}
+      onMouseEnter={
+        shortcut === undefined ? undefined : () => setHotkeyOpen(true)
+      }
+      onMouseLeave={
+        shortcut === undefined ? undefined : () => setHotkeyOpen(false)
+      }
+      onFocus={shortcut === undefined ? undefined : () => setHotkeyOpen(true)}
+      onBlur={shortcut === undefined ? undefined : () => setHotkeyOpen(false)}
+    >
+      <TransactionLink walletId={wallet.id} from={fromDate} to={toDate}>
+        <span className="flex-1">{wallet.name}</span>
+        <AnimatedMoney
+          balanceKey={sidebarBalanceKey(workspaceId, `wallet:${wallet.id}`)}
+          cents={displayBalance}
+          currency={wallet.currency}
+          ready={isOwedReady}
+          as="span"
+          className="text-muted-foreground min-w-fit text-xs"
+        />
+      </TransactionLink>
+    </SidebarMenuButton>
+  );
+
+  return (
+    <SidebarMenuItem>
+      {shortcut === undefined ? (
+        menuButton
+      ) : (
+        <Popover open={hotkeyOpen} onOpenChange={setHotkeyOpen}>
+          <PopoverTrigger asChild>{menuButton}</PopoverTrigger>
+          <PopoverContent
+            side="right"
+            align="center"
+            className="flex w-auto items-center gap-3 px-3 py-2"
+            onOpenAutoFocus={(event) => event.preventDefault()}
+          >
+            <span className="text-sm font-medium">Open {wallet.name}</span>
+            <Kbd>⌘ {shortcut}</Kbd>
+          </PopoverContent>
+        </Popover>
+      )}
+      <PlaidSyncMenuAction walletId={wallet.id} />
+    </SidebarMenuItem>
+  );
+}
 
 export function TransactionsSidebar() {
   const [saveViewOpen, setSaveViewOpen] = useState(false);
@@ -82,8 +161,12 @@ export function TransactionsSidebar() {
     deleteMutation.mutate(viewId);
   };
 
-  const walletShortcutTargets = Object.entries(walletsByCurrency).flatMap(
-    ([, currencyWallets]) => currencyWallets,
+  const walletShortcutTargets = useMemo(
+    () =>
+      Object.entries(walletsByCurrency).flatMap(
+        ([, currencyWallets]) => currencyWallets,
+      ),
+    [walletsByCurrency],
   );
   const copilotParams = new URLSearchParams(searchParams.toString());
   copilotParams.set("from", fromDate);
@@ -134,6 +217,7 @@ export function TransactionsSidebar() {
               Home
             </Link>
           </SidebarMenuButton>
+          <PlaidSyncMenuAction />
         </SidebarMenuItem>
         <SidebarMenuItem>
           <SidebarMenuButton asChild isActive={pathname.includes("/copilot")}>
@@ -199,40 +283,17 @@ export function TransactionsSidebar() {
                   : (wallet.balance_cents ?? 0);
 
                 return (
-                  <SidebarMenuItem key={wallet.id}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={walletId === wallet.id}
-                    >
-                      <TransactionLink
-                        walletId={wallet.id}
-                        from={fromDate}
-                        to={toDate}
-                        shortcut={shortcut}
-                      >
-                        <span className="flex-1">{wallet.name}</span>
-
-                        <span className="relative inline-flex min-w-fit items-center justify-center">
-                          <AnimatedMoney
-                            balanceKey={sidebarBalanceKey(
-                              workspaceId,
-                              `wallet:${wallet.id}`,
-                            )}
-                            cents={displayBalance}
-                            currency={wallet.currency}
-                            ready={isOwedReady}
-                            as="span"
-                            className="text-muted-foreground text-xs group-hover/wallet-link:hidden"
-                          />
-                          {shortcut !== undefined && (
-                            <div className="hidden group-hover/wallet-link:inline-flex">
-                              <Kbd>⌘ {shortcut}</Kbd>
-                            </div>
-                          )}
-                        </span>
-                      </TransactionLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  <WalletMenuItem
+                    key={wallet.id}
+                    wallet={wallet}
+                    shortcut={shortcut}
+                    isActive={walletId === wallet.id}
+                    fromDate={fromDate}
+                    toDate={toDate}
+                    displayBalance={displayBalance}
+                    workspaceId={workspaceId}
+                    isOwedReady={isOwedReady}
+                  />
                 );
               })}
             </SidebarMenu>
