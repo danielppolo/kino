@@ -23,8 +23,8 @@ import { AnimatedMoney } from "@/components/ui/animated-money";
 import { Kbd } from "@/components/ui/kbd";
 import {
   Popover,
+  PopoverAnchor,
   PopoverContent,
-  PopoverTrigger,
 } from "@/components/ui/popover";
 import {
   SidebarGroup,
@@ -79,18 +79,13 @@ function WalletMenuItem({
     <SidebarMenuButton
       asChild
       isActive={isActive}
-      className={cn(
-        canSync &&
-          "pr-8 md:pr-2! md:group-focus-within/menu-item:pr-8! md:group-hover/menu-item:pr-8!",
-      )}
+      className={cn(canSync && "pr-8 md:pr-2! md:group-hover/menu-item:pr-8!")}
       onMouseEnter={
         shortcut === undefined ? undefined : () => setHotkeyOpen(true)
       }
       onMouseLeave={
         shortcut === undefined ? undefined : () => setHotkeyOpen(false)
       }
-      onFocus={shortcut === undefined ? undefined : () => setHotkeyOpen(true)}
-      onBlur={shortcut === undefined ? undefined : () => setHotkeyOpen(false)}
     >
       <TransactionLink walletId={wallet.id} from={fromDate} to={toDate}>
         <span className="flex-1">{wallet.name}</span>
@@ -111,8 +106,8 @@ function WalletMenuItem({
       {shortcut === undefined ? (
         menuButton
       ) : (
-        <Popover open={hotkeyOpen} onOpenChange={setHotkeyOpen}>
-          <PopoverTrigger asChild>{menuButton}</PopoverTrigger>
+        <Popover open={hotkeyOpen}>
+          <PopoverAnchor asChild>{menuButton}</PopoverAnchor>
           <PopoverContent
             side="right"
             align="center"
@@ -232,8 +227,7 @@ export function TransactionsSidebar() {
             asChild
             isActive={pathname === "/app"}
             className={cn(
-              hasPlaidWallets &&
-                "pr-8 md:pr-2! md:group-focus-within/menu-item:pr-8! md:group-hover/menu-item:pr-8!",
+              hasPlaidWallets && "pr-8 md:pr-2! md:group-hover/menu-item:pr-8!",
             )}
           >
             <Link href="/app">

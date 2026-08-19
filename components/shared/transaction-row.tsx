@@ -103,7 +103,7 @@ export function TransactionRow({
     >
       <div className="flex shrink grow items-center gap-1 truncate">
         {transaction.type !== "transfer" ? (
-          <div onClick={stopRowClick}>
+          <div className="flex" onClick={stopRowClick}>
             <CategoryCombobox
               aria-label={
                 transaction.category_id ? "Update category" : "Add category"
