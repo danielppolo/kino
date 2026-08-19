@@ -36,11 +36,12 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { useViews } from "@/contexts/settings-context";
+import { useViews, useWallets } from "@/contexts/settings-context";
 import { useTransactionForm } from "@/contexts/transaction-form-context";
 import { useWorkspace } from "@/contexts/workspace-context";
 import { useTotalBalance } from "@/hooks/use-total-balance";
 import { useTransactionQueryState } from "@/hooks/use-transaction-query";
+import { cn } from "@/lib/utils";
 import { buildTransactionUrl } from "@/utils/build-transaction-url";
 import { canUseGlobalShortcuts } from "@/utils/keyboard-shortcuts";
 import { sidebarBalanceKey } from "@/utils/sidebar-balance-snapshot";
@@ -69,10 +70,19 @@ function WalletMenuItem({
   isOwedReady,
 }: WalletMenuItemProps) {
   const [hotkeyOpen, setHotkeyOpen] = useState(false);
+  const canSync = Boolean(
+    wallet.plaid_account_id &&
+      wallet.plaid_sync_enabled &&
+      wallet.plaid_sync_start_at,
+  );
   const menuButton = (
     <SidebarMenuButton
       asChild
       isActive={isActive}
+      className={cn(
+        canSync &&
+          "pr-8 md:pr-2! md:group-focus-within/menu-item:pr-8! md:group-hover/menu-item:pr-8!",
+      )}
       onMouseEnter={
         shortcut === undefined ? undefined : () => setHotkeyOpen(true)
       }
@@ -130,9 +140,16 @@ export function TransactionsSidebar() {
     useTotalBalance();
   const { activeWorkspace } = useWorkspace();
   const [views] = useViews();
+  const [wallets] = useWallets();
   const queryClient = useQueryClient();
   const { open: formOpen } = useTransactionForm();
   const workspaceId = activeWorkspace?.id ?? "workspace";
+  const hasPlaidWallets = wallets.some(
+    (wallet) =>
+      wallet.plaid_account_id &&
+      wallet.plaid_sync_enabled &&
+      wallet.plaid_sync_start_at,
+  );
 
   // Get current month's start and end dates as fallback
   const now = new Date();
@@ -211,7 +228,14 @@ export function TransactionsSidebar() {
     <SidebarWrapper>
       <SidebarMenu className="px-2 pt-2">
         <SidebarMenuItem>
-          <SidebarMenuButton asChild isActive={pathname === "/app"}>
+          <SidebarMenuButton
+            asChild
+            isActive={pathname === "/app"}
+            className={cn(
+              hasPlaidWallets &&
+                "pr-8 md:pr-2! md:group-focus-within/menu-item:pr-8! md:group-hover/menu-item:pr-8!",
+            )}
+          >
             <Link href="/app">
               <Home className="size-4" />
               Home

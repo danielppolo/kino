@@ -85,6 +85,7 @@ export function PlaidSyncMenuAction({ walletId }: PlaidSyncMenuActionProps) {
       title={label}
       disabled={syncMutation.isPending}
       showOnHover
+      className="transition-[opacity,transform] duration-150 ease-out group-focus-within/menu-item:translate-x-0 group-hover/menu-item:translate-x-0 md:translate-x-1"
       onClick={(event) => {
         event.preventDefault();
         event.stopPropagation();
